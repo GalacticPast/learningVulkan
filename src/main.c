@@ -1,6 +1,11 @@
+#include "core/logger.h"
 #include "defines.h"
-#include <stdio.h>
 
-i32 main(i32 argc, char **argv) {
-  printf("hello world!!, Im learning Vulkan \n");
+s32 main(s32 argc, char **argv)
+{
+    FATAL("FATAL %f", 3.192123);
+    ERROR("ERROR %d", 2);
+    DEBUG("DEBUG %d", 3);
+    INFO("INFO %d", 4);
+    TRACE("TRACE %d", 5);
 }
