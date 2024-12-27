@@ -4,12 +4,15 @@ echo "building project"
 
 
 CC=clang 
-includes=-Isrc/
-assembly=learningVulkan
-
+includes="-Isrc/"
+assembly="learningVulkan"
+defines="-Wall -Wextra -g3 -Wconversion -Wdouble-promotion -Wno-unused-parameter -Wno-unused-function -Wno-sign-conversion -fsanitize=undefined -fsanitize-trap"
 platform=$(echo "$XDG_SESSION_TYPE")
 
-
+if [[ $platform == "X11" ]]; then
+    #includes="$includes -lwayland-client -lrt"
+    defines="$defines -DPLATFORM_LINUX_X11"
+fi
 if [[ $platform == "wayland" ]]; then
     mkdir -p src/platform/wayland
     cd src/platform/wayland
@@ -31,10 +34,13 @@ if [[ $platform == "wayland" ]]; then
     cd ../../../
     
     includes="$includes -lwayland-client -lrt"
+    defines="$defines -DPLATFORM_LINUX_WAYLAND"
 fi
+
+
 
 
 c_file_names=$(find . -type f -name '*.c')
 
-echo $CC $c_file_names -o bin/$assembly $includes
-$CC $c_file_names -o bin/$assembly $includes
+echo $CC $c_file_names -o bin/$assembly $includes $defines
+$CC $c_file_names -o bin/$assembly $includes $defines

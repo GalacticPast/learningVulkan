@@ -1,6 +1,37 @@
 #include "core/logger.h"
 #include "defines.h"
 
+// C stuff
+#include <stdlib.h>
+
+// vulkan stuff
+#include "platform/platform.h"
+#include "vulkan/vulkan_backend.h"
+#include "vulkan/vulkan_types.h"
+
 s32 main(s32 argc, char **argv)
 {
+
+    char *application_name = "learningVulkan";
+    u32   x = 0;
+    u32   y = 0;
+    u32   width = 1280;
+    u32   height = 720;
+
+    platform_state plat_state = {};
+    vulkan_context vk_context = {};
+
+    if (!platform_startup(&plat_state, application_name, x, y, width, height))
+    {
+        FATAL("Platform Initialization failed");
+    }
+
+    if (!initialize_vulkan(&vk_context))
+    {
+        FATAL("Vulkan Initialization failed");
+    }
+
+    while (platform_pump_messages(&plat_state))
+    {
+    }
 }

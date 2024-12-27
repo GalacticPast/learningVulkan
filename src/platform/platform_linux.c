@@ -22,12 +22,12 @@
 
 typedef struct internal_state
 {
-    Display *display;
+    Display          *display;
     xcb_connection_t *connection;
-    xcb_window_t window;
-    xcb_screen_t *screen;
-    xcb_atom_t wm_protocols;
-    xcb_atom_t wm_delete_win;
+    xcb_window_t      window;
+    xcb_screen_t     *screen;
+    xcb_atom_t        wm_protocols;
+    xcb_atom_t        wm_delete_win;
 } internal_state;
 
 b8 platform_startup(platform_state *plat_state, const char *application_name, s32 x, s32 y, s32 width, s32 height)
@@ -56,7 +56,7 @@ b8 platform_startup(platform_state *plat_state, const char *application_name, s3
 
     // Loop through screens using iterator
     xcb_screen_iterator_t it = xcb_setup_roots_iterator(setup);
-    s32 screen_p = 0;
+    s32                   screen_p = 0;
     for (s32 s = screen_p; s > 0; s--)
     {
         xcb_screen_next(&it);
@@ -74,9 +74,8 @@ b8 platform_startup(platform_state *plat_state, const char *application_name, s3
     u32 event_mask = XCB_CW_BACK_PIXEL | XCB_CW_EVENT_MASK;
 
     // Listen for keyboard and mouse buttons
-    u32 event_values = XCB_EVENT_MASK_BUTTON_PRESS | XCB_EVENT_MASK_BUTTON_RELEASE | XCB_EVENT_MASK_KEY_PRESS |
-                       XCB_EVENT_MASK_KEY_RELEASE | XCB_EVENT_MASK_EXPOSURE | XCB_EVENT_MASK_POINTER_MOTION |
-                       XCB_EVENT_MASK_STRUCTURE_NOTIFY;
+    u32 event_values = XCB_EVENT_MASK_BUTTON_PRESS | XCB_EVENT_MASK_BUTTON_RELEASE | XCB_EVENT_MASK_KEY_PRESS | XCB_EVENT_MASK_KEY_RELEASE |
+                       XCB_EVENT_MASK_EXPOSURE | XCB_EVENT_MASK_POINTER_MOTION | XCB_EVENT_MASK_STRUCTURE_NOTIFY;
 
     // Values to be sent over XCB (bg colour, events)
     u32 value_list[] = {state->screen->black_pixel, event_values};
@@ -101,17 +100,14 @@ b8 platform_startup(platform_state *plat_state, const char *application_name, s3
 
     // Tell the server to notify when the window manager
     // attempts to destroy the window.
-    xcb_intern_atom_cookie_t wm_delete_cookie =
-        xcb_intern_atom(state->connection, 0, strlen("WM_DELETE_WINDOW"), "WM_DELETE_WINDOW");
-    xcb_intern_atom_cookie_t wm_protocols_cookie =
-        xcb_intern_atom(state->connection, 0, strlen("WM_PROTOCOLS"), "WM_PROTOCOLS");
+    xcb_intern_atom_cookie_t wm_delete_cookie = xcb_intern_atom(state->connection, 0, strlen("WM_DELETE_WINDOW"), "WM_DELETE_WINDOW");
+    xcb_intern_atom_cookie_t wm_protocols_cookie = xcb_intern_atom(state->connection, 0, strlen("WM_PROTOCOLS"), "WM_PROTOCOLS");
     xcb_intern_atom_reply_t *wm_delete_reply = xcb_intern_atom_reply(state->connection, wm_delete_cookie, NULL);
     xcb_intern_atom_reply_t *wm_protocols_reply = xcb_intern_atom_reply(state->connection, wm_protocols_cookie, NULL);
     state->wm_delete_win = wm_delete_reply->atom;
     state->wm_protocols = wm_protocols_reply->atom;
 
-    xcb_change_property(state->connection, XCB_PROP_MODE_REPLACE, state->window, wm_protocols_reply->atom, 4, 32, 1,
-                        &wm_delete_reply->atom);
+    xcb_change_property(state->connection, XCB_PROP_MODE_REPLACE, state->window, wm_protocols_reply->atom, 4, 32, 1, &wm_delete_reply->atom);
 
     // Map the window to the screen
     xcb_map_window(state->connection, state->window);
@@ -159,21 +155,21 @@ void platform_shutdown(platform_state *plat_state)
 typedef struct internal_state
 {
     /* Globals */
-    struct wl_display *wl_display;
-    struct wl_registry *wl_registry;
-    struct wl_shm *wl_shm;
-    struct wl_seat *wl_seat;
+    struct wl_display    *wl_display;
+    struct wl_registry   *wl_registry;
+    struct wl_shm        *wl_shm;
+    struct wl_seat       *wl_seat;
     struct wl_compositor *wl_compositor;
-    struct xdg_wm_base *xdg_wm_base;
+    struct xdg_wm_base   *xdg_wm_base;
 
     /* Objects */
-    struct wl_surface *wl_surface;
-    struct xdg_surface *xdg_surface;
+    struct wl_surface   *wl_surface;
+    struct xdg_surface  *xdg_surface;
     struct xdg_toplevel *xdg_toplevel;
 
     /* input */
     struct wl_keyboard *wl_keyboard;
-    struct wl_mouse *wl_mouse;
+    struct wl_mouse    *wl_mouse;
 
 } internal_state;
 
@@ -184,9 +180,9 @@ static void wl_keyboard_keymap(void *data, struct wl_keyboard *wl_keyboard, u32 
     struct internal_state *state = data;
 }
 
-static void wl_keyboard_enter(void *data, struct wl_keyboard *wl_keyboard, u32 serial, struct wl_surface *surface,
-                              struct wl_array *keys)
+static void wl_keyboard_enter(void *data, struct wl_keyboard *wl_keyboard, u32 serial, struct wl_surface *surface, struct wl_array *keys)
 {
+    DEBUG("Mouse in scope");
 }
 
 static void wl_keyboard_key(void *data, struct wl_keyboard *wl_keyboard, u32 serial, u32 time, u32 key, u32 state)
@@ -196,10 +192,11 @@ static void wl_keyboard_key(void *data, struct wl_keyboard *wl_keyboard, u32 ser
 
 static void wl_keyboard_leave(void *data, struct wl_keyboard *wl_keyboard, u32 serial, struct wl_surface *surface)
 {
+    DEBUG("Mouse not in scope");
 }
 
-static void wl_keyboard_modifiers(void *data, struct wl_keyboard *wl_keyboard, u32 serial, u32 mods_depressed,
-                                  u32 mods_latched, u32 mods_locked, u32 group)
+static void wl_keyboard_modifiers(void *data, struct wl_keyboard *wl_keyboard, u32 serial, u32 mods_depressed, u32 mods_latched, u32 mods_locked,
+                                  u32 group)
 {
 }
 
@@ -244,8 +241,7 @@ static void wl_seat_name(void *data, struct wl_seat *wl_seat, const char *name)
 struct wl_seat_listener wl_seat_listener = {.capabilities = wl_seat_capabilites, .name = wl_seat_name};
 
 // actual surface
-static void xdg_toplevel_configure(void *data, struct xdg_toplevel *xdg_toplevel, s32 width, s32 height,
-                                   struct wl_array *states)
+static void xdg_toplevel_configure(void *data, struct xdg_toplevel *xdg_toplevel, s32 width, s32 height, struct wl_array *states)
 {
 }
 
@@ -307,6 +303,7 @@ static const struct wl_registry_listener wl_registry_listener = {
 
 b8 platform_startup(platform_state *plat_state, const char *application_name, s32 x, s32 y, s32 width, s32 height)
 {
+    INFO("Initializing Linux-Walyand platform...");
     plat_state->internal_state = malloc(sizeof(internal_state));
     internal_state *state = (internal_state *)plat_state->internal_state;
 
@@ -352,7 +349,18 @@ b8 platform_startup(platform_state *plat_state, const char *application_name, s3
 
     wl_surface_commit(state->wl_surface);
 
+    DEBUG("Linux-Walyand platform initialized");
+
     return true;
+}
+
+b8 platform_pump_messages(platform_state *plat_state)
+{
+    internal_state *state = (internal_state *)plat_state->internal_state;
+
+    s32 result = wl_display_dispatch(state->wl_display);
+
+    return result == -1 ? false : true;
 }
 
 void platform_shutdown(platform_state *plat_state)
@@ -375,8 +383,9 @@ void platform_log_message(const char *buffer, log_levels level, u32 max_chars)
     u32 level_color[] = { 41,   31  ,   32  ,  34  ,  37 };
     
     // clang-format on 
-
+    
     printf("\033[0;%dm %s\n",level_color[level],buffer);
+    printf("\033[0;37m");
 
 }
 
