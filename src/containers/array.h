@@ -13,10 +13,16 @@ typedef enum array_header
     MAX_ARRAY_HEADER
 } array_header;
 
-void *array_create(u64 length, u64 stride);
-void  array_destroy(void *block);
-u64   array_get_length(void *block);
-u64   array_get_capacity(void *block);
+#define ARRAY_HEADER_SIZE (u64)sizeof(array_header) * (u64)sizeof(u64)
 
-void array_insert_at(void *block, s32 index, void *data);
-void array_push_value(void *block, void *value);
+void *array_create(u64 length, u64 stride);
+void  array_destroy(void *array);
+
+u64 array_get_length(void *array);
+u64 array_get_capacity(void *array);
+u64 array_get_stride(void *array);
+
+void *array_insert_at(void *array, s32 index, void *data);
+void *array_pop_at(void *array, s32 index);
+void *array_push_value(void *array, const void *value_ptr);
+void  array_pop_value(void *array);
