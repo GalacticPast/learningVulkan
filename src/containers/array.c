@@ -59,13 +59,14 @@ u64 array_get_stride(void *block)
 void *array_resize(void *block, u32 resize_factor)
 {
     u64 array_length = array_get_length(block);
+    u64 array_capacity = array_get_capacity(block);
     u64 array_stride = array_get_stride(block);
-    u64 array_size = array_length * array_stride;
+    u64 array_size = array_capacity * array_stride;
 
-    u64 *new_array = array_create(array_size * resize_factor, array_stride);
+    void *new_array = array_create(array_capacity * resize_factor, array_stride);
+
     memcpy(new_array, block, array_size);
-    // WARNING: verify this
-    array_set_length(new_array, array_size);
+    array_set_length(new_array, array_length);
 
     return new_array;
 }
@@ -83,7 +84,8 @@ void array_push_value(void *block, void *value)
         array_stride = array_get_stride(block);
         array_capacity = array_get_capacity(block);
     }
-    memcpy(block + array_length, value, array_stride);
+    void *ind_ptr = block + ((array_length + 1) * array_stride);
+    memcpy(ind_ptr, value, array_stride);
     array_set_length(block, array_length + 1);
 }
 

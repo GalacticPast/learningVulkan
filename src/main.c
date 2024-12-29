@@ -39,8 +39,13 @@ s32 main(s32 argc, char **argv)
 
     array_push_value(array, &num);
     array_push_value(array, &num1);
+    array_push_value(array, &num1);
+    array_push_value(array, &num1);
+    array_push_value(array, &num1);
+    array_push_value(array, &num1);
 
-    for (s32 i = 0; i < 2; i++)
+    u64 length = array_get_length(array);
+    for (s32 i = 0; i < length; i++)
     {
         printf("%d\n", array[i]);
     }
