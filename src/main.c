@@ -15,7 +15,7 @@ static b8 is_running = false;
 
 void print_array(int *array)
 {
-    u32 length = array_get_length(array);
+    s32 length = (s32)array_get_length(array);
     for (s32 i = 0; i < length; i++)
     {
         printf("%d ", array[i]);

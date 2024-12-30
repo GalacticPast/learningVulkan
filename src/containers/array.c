@@ -67,7 +67,6 @@ void *array_resize(void *array, u32 resize_factor)
     u64 array_length = array_get_length(array);
     u64 array_capacity = array_get_capacity(array);
     u64 array_stride = array_get_stride(array);
-    u64 array_size = array_capacity * array_stride;
 
     u64   new_array_capacity = array_capacity * resize_factor;
     void *new_array = __array_create(new_array_capacity, array_stride);
@@ -106,10 +105,8 @@ void *array_pop_at(void *array, s32 index)
 {
     u64 array_length = array_get_length(array);
     u64 array_stride = array_get_stride(array);
-    u64 array_capacity = array_get_capacity(array);
-    u64 array_size = array_length * array_stride;
 
-    if (index >= array_length || index < 0)
+    if (index >= (s32)array_length || index < 0)
     {
         ERROR("Provided Index:%d is out of bounds, index must be 0 <= index < %d . Exiting application", index, array_length);
         exit(1);
@@ -130,15 +127,14 @@ void *array_insert_at(void *array, s32 index, void *data)
     u64 array_length = array_get_length(array);
     u64 array_stride = array_get_stride(array);
     u64 array_capacity = array_get_capacity(array);
-    u64 array_size = array_length * array_stride;
 
-    if (index >= array_length || index < 0)
+    if (index >= (s32)array_length || index < 0)
     {
         ERROR("Provided Index:%d is out of bounds, index must be 0 <= index < %d . Exiting application", index, array_length);
         exit(1);
     }
 
-    if (index >= array_capacity)
+    if (index >= (s32)array_capacity)
     {
         array = array_resize(array, ARRAY_DEFAULT_RESIZE_FACTOR);
     }

@@ -173,6 +173,9 @@ typedef struct internal_state
     struct wl_keyboard *wl_keyboard;
     struct wl_mouse    *wl_mouse;
 
+    s32 width;
+    s32 height;
+
 } internal_state;
 
 u32 translate_keycode(u32 key);
@@ -237,9 +240,11 @@ static const struct wl_buffer_listener wl_buffer_listener = {
 
 static struct wl_buffer *draw_frame(struct internal_state *state)
 {
-    const int width = 1200, height = 720;
-    int       stride = width * 4;
-    int       size = stride * height;
+    const int width = state->width;
+    const int height = state->height;
+
+    int stride = width * 4;
+    int size = stride * height;
 
     int fd = allocate_shm_file(size);
     if (fd == -1)
@@ -261,7 +266,14 @@ static struct wl_buffer *draw_frame(struct internal_state *state)
     {
         for (int x = 0; x < width; ++x)
         {
-            data[y * width + x] = 0x00000000;
+            u8 alpha = 0xFF;
+            u8 red = 0xFF;
+            u8 green = 0xFF;
+            u8 blue = 0x00;
+
+            u32 color = ((u32)alpha << 24 | (u32)red << 16 | (u32)green << 8 | (u32)blue << 0);
+
+            data[y * width + x] = color;
         }
     }
 
@@ -275,7 +287,7 @@ static struct wl_buffer *draw_frame(struct internal_state *state)
 
 static void wl_keyboard_keymap(void *data, struct wl_keyboard *wl_keyboard, u32 format, s32 fd, u32 size)
 {
-    struct internal_state *state = data;
+    // struct internal_state *state = data;
 }
 
 static void wl_keyboard_enter(void *data, struct wl_keyboard *wl_keyboard, u32 serial, struct wl_surface *surface, struct wl_array *keys)
@@ -285,7 +297,7 @@ static void wl_keyboard_enter(void *data, struct wl_keyboard *wl_keyboard, u32 s
 
 static void wl_keyboard_key(void *data, struct wl_keyboard *wl_keyboard, u32 serial, u32 time, u32 key, u32 state)
 {
-    struct internal_state *internal_state = data;
+    // struct internal_state *internal_state = data;
 
     keys code = translate_keycode(key);
 
@@ -350,6 +362,13 @@ struct wl_seat_listener wl_seat_listener = {.capabilities = wl_seat_capabilites,
 // actual surface
 static void xdg_toplevel_configure(void *data, struct xdg_toplevel *xdg_toplevel, s32 width, s32 height, struct wl_array *states)
 {
+    internal_state *state = (internal_state *)data;
+
+    if (state->width != width || state->height != height)
+    {
+        state->width = width;
+        state->height = height;
+    }
 }
 
 static void xdg_toplevel_close(void *data, struct xdg_toplevel *xdg_toplevel)
@@ -422,6 +441,9 @@ b8 platform_startup(platform_state *plat_state, const char *application_name, s3
     INFO("Initializing Linux-Walyand platform...");
     plat_state->internal_state = malloc(sizeof(internal_state));
     internal_state *state = (internal_state *)plat_state->internal_state;
+
+    state->width = width;
+    state->height = height;
 
     state->wl_display = wl_display_connect(NULL);
     if (!state->wl_display)
@@ -908,10 +930,6 @@ u32 translate_keycode(u32 wl_keycode)
         }
         break;
         case 102: {
-            return MAX_KEYS;
-        }
-        break;
-        defualt: {
             return MAX_KEYS;
         }
         break;

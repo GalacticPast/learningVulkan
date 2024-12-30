@@ -43,4 +43,4 @@ fi
 c_file_names=$(find . -type f -name '*.c')
 
 echo $CC $c_file_names -o bin/$assembly $includes $defines
-$CC $c_file_names -o bin/$assembly $includes $defines
+time $CC $c_file_names -o bin/$assembly $includes $defines
