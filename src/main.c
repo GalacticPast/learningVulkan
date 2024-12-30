@@ -11,6 +11,8 @@
 #include "vulkan/vulkan_backend.h"
 #include "vulkan/vulkan_types.h"
 
+static b8 is_running = false;
+
 void print_array(int *array)
 {
     u32 length = array_get_length(array);
@@ -21,15 +23,16 @@ void print_array(int *array)
     printf("\n");
 }
 
-b8 it_works(event_type type, event_context data)
+b8 appilcaion_quit(event_type type, event_context data)
 {
-    INFO("EVENT SYSTEM WORKS");
-    return false;
+    INFO("APPLCATION QUIT MESSAGE recived");
+    is_running = false;
+    return true;
 }
 
 s32 main(s32 argc, char **argv)
 {
-
+    is_running = true;
     char *application_name = "learningVulkan";
     u32   x = 0;
     u32   y = 0;
@@ -40,8 +43,7 @@ s32 main(s32 argc, char **argv)
     vulkan_context vk_context = {};
 
     event_system_initialize();
-
-    event_register(ON_KEY_PRESS, it_works);
+    event_register(ON_APPLICATION_QUIT, appilcaion_quit);
 
     if (!platform_startup(&plat_state, application_name, x, y, width, height))
     {
@@ -52,4 +54,12 @@ s32 main(s32 argc, char **argv)
     {
         FATAL("Vulkan Initialization failed");
     }
+
+    while (platform_pump_messages(&plat_state) && is_running)
+    {
+    }
+
+    shutdown_vulkan(&vk_context);
+    platform_shutdown(&plat_state);
+    event_system_destroy();
 }

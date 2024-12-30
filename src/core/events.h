@@ -6,6 +6,7 @@
 
 typedef enum event_type
 {
+    ON_APPLICATION_QUIT,
     ON_KEY_PRESS,
     EVENT_TYPE_MAX_EVENT
 } event_type;
@@ -51,3 +52,5 @@ void event_system_destroy();
 // callback must point to the fucntion which you would like to be called when the event is trigerred/fired
 void event_register(event_type type, fp_on_event fp_on_event);
 void event_unregister(event_type type, fp_on_event fp_on_event);
+
+void event_fire(event_type type, event_context context);

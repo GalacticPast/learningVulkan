@@ -1,3 +1,5 @@
+#include "core/events.h"
+#include "core/input.h"
 #include "platform.h"
 
 #ifdef PLATFORM_LINUX
@@ -175,6 +177,102 @@ typedef struct internal_state
 
 u32 translate_keycode(u32 key);
 
+/* Shared memory support code */
+static void randname(char *buf)
+{
+    struct timespec ts;
+    clock_gettime(CLOCK_REALTIME, &ts);
+    long r = ts.tv_nsec;
+    for (int i = 0; i < 6; ++i)
+    {
+        buf[i] = 'A' + (r & 15) + (r & 16) * 2;
+        r >>= 5;
+    }
+}
+
+static int create_shm_file(void)
+{
+    int retries = 100;
+    do
+    {
+        char name[] = "/wl_shm-XXXXXX";
+        randname(name + sizeof(name) - 7);
+        --retries;
+        int fd = shm_open(name, O_RDWR | O_CREAT | O_EXCL, 0600);
+        if (fd >= 0)
+        {
+            shm_unlink(name);
+            return fd;
+        }
+    } while (retries > 0 && errno == EEXIST);
+    return -1;
+}
+
+static int allocate_shm_file(size_t size)
+{
+    int fd = create_shm_file();
+    if (fd < 0)
+        return -1;
+    int ret;
+    do
+    {
+        ret = ftruncate(fd, size);
+    } while (ret < 0 && errno == EINTR);
+    if (ret < 0)
+    {
+        close(fd);
+        return -1;
+    }
+    return fd;
+}
+static void wl_buffer_release(void *data, struct wl_buffer *wl_buffer)
+{
+    /* Sent by the compositor when it's no longer using this buffer */
+    wl_buffer_destroy(wl_buffer);
+}
+
+static const struct wl_buffer_listener wl_buffer_listener = {
+    .release = wl_buffer_release,
+};
+
+static struct wl_buffer *draw_frame(struct internal_state *state)
+{
+    const int width = 1200, height = 720;
+    int       stride = width * 4;
+    int       size = stride * height;
+
+    int fd = allocate_shm_file(size);
+    if (fd == -1)
+    {
+        return NULL;
+    }
+
+    u32 *data = mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+    if (data == MAP_FAILED)
+    {
+        close(fd);
+        return NULL;
+    }
+
+    struct wl_shm_pool *pool = wl_shm_create_pool(state->wl_shm, fd, size);
+    struct wl_buffer   *buffer = wl_shm_pool_create_buffer(pool, 0, width, height, stride, WL_SHM_FORMAT_ARGB8888);
+
+    for (int y = 0; y < height; ++y)
+    {
+        for (int x = 0; x < width; ++x)
+        {
+            data[y * width + x] = 0x00000000;
+        }
+    }
+
+    wl_shm_pool_destroy(pool);
+    close(fd);
+
+    munmap(data, size);
+    wl_buffer_add_listener(buffer, &wl_buffer_listener, NULL);
+    return buffer;
+}
+
 static void wl_keyboard_keymap(void *data, struct wl_keyboard *wl_keyboard, u32 format, s32 fd, u32 size)
 {
     struct internal_state *state = data;
@@ -182,12 +280,21 @@ static void wl_keyboard_keymap(void *data, struct wl_keyboard *wl_keyboard, u32 
 
 static void wl_keyboard_enter(void *data, struct wl_keyboard *wl_keyboard, u32 serial, struct wl_surface *surface, struct wl_array *keys)
 {
-    DEBUG("Mouse in scope");
+    DEBUG("Keyboard in scope");
 }
 
 static void wl_keyboard_key(void *data, struct wl_keyboard *wl_keyboard, u32 serial, u32 time, u32 key, u32 state)
 {
     struct internal_state *internal_state = data;
+
+    keys code = translate_keycode(key);
+
+    if (code == KEY_ESCAPE)
+    {
+        event_context context = {};
+        context.data.u32[0] = code;
+        event_fire(ON_APPLICATION_QUIT, context);
+    }
 }
 
 static void wl_keyboard_leave(void *data, struct wl_keyboard *wl_keyboard, u32 serial, struct wl_surface *surface)
@@ -253,7 +360,12 @@ struct xdg_toplevel_listener xdg_toplevel_listener = {.configure = xdg_toplevel_
 
 static void xdg_surface_configure(void *data, struct xdg_surface *xdg_surface, u32 serial)
 {
+    internal_state *state = (internal_state *)data;
+
     xdg_surface_ack_configure(xdg_surface, serial);
+    struct wl_buffer *buffer = draw_frame(state);
+    wl_surface_attach(state->wl_surface, buffer, 0, 0);
+    wl_surface_commit(state->wl_surface);
 }
 
 static const struct xdg_surface_listener xdg_surface_listener = {
@@ -275,7 +387,11 @@ static void registry_global(void *data, struct wl_registry *wl_registry, u32 nam
 {
     internal_state *state = data;
 
-    if (strcmp(interface, wl_compositor_interface.name) == 0)
+    if (strcmp(interface, wl_shm_interface.name) == 0)
+    {
+        state->wl_shm = wl_registry_bind(wl_registry, name, &wl_shm_interface, 1);
+    }
+    else if (strcmp(interface, wl_compositor_interface.name) == 0)
     {
         state->wl_compositor = wl_registry_bind(wl_registry, name, &wl_compositor_interface, 4);
     }
@@ -371,6 +487,436 @@ void platform_shutdown(platform_state *plat_state)
     xdg_surface_destroy(state->xdg_surface);
     wl_surface_destroy(state->wl_surface);
     wl_display_disconnect(state->wl_display);
+}
+
+u32 translate_keycode(u32 wl_keycode)
+{
+    switch (wl_keycode)
+    {
+        case 1: {
+            return KEY_ESCAPE;
+        }
+        break;
+        case 2: {
+            return MAX_KEYS;
+            // return KEY_NUMPAD1;
+        }
+        break;
+        case 3: {
+            return MAX_KEYS;
+            // return KEY_NUMPAD2;
+        }
+        break;
+        case 4: {
+            return MAX_KEYS;
+            // return KEY_NUMPAD3;
+        }
+        break;
+        case 5: {
+            return MAX_KEYS;
+            // return KEY_NUMPAD4;
+        }
+        break;
+        case 6: {
+            return MAX_KEYS;
+            // return KEY_NUMPAD5;
+        }
+        break;
+        case 7: {
+            return MAX_KEYS;
+            // return KEY_NUMPAD6;
+        }
+        break;
+        case 8: {
+            return MAX_KEYS;
+            // return KEY_NUMPAD7;
+        }
+        break;
+        case 9: {
+            return MAX_KEYS;
+            // return KEY_NUMPAD8;
+        }
+        break;
+        case 10: {
+            return MAX_KEYS;
+            // return KEY_NUMPAD9;
+        }
+        break;
+        case 11: {
+            return MAX_KEYS;
+            // return KEY_NUMPADMAX_KEYS;
+        }
+        break;
+        case 12: {
+            return MAX_KEYS;
+        }
+        break;
+        case 13: {
+            return MAX_KEYS;
+        }
+        break;
+        case 14: {
+            return MAX_KEYS;
+        }
+        break;
+        case 15: {
+            return MAX_KEYS;
+        }
+        break;
+        case 16: {
+            return KEY_Q;
+        }
+        break;
+        case 17: {
+            return KEY_W;
+        }
+        break;
+        case 18: {
+            return KEY_E;
+        }
+        break;
+        case 19: {
+            return KEY_R;
+        }
+        break;
+        case 20: {
+            return KEY_T;
+        }
+        break;
+        case 21: {
+            return KEY_Y;
+        }
+        break;
+        case 22: {
+            return KEY_U;
+        }
+        break;
+        case 23: {
+            return KEY_I;
+        }
+        break;
+        case 24: {
+            return KEY_O;
+        }
+        break;
+        case 25: {
+            return KEY_P;
+        }
+        break;
+        case 26: {
+            return MAX_KEYS;
+        }
+        break;
+        case 27: {
+            return MAX_KEYS;
+        }
+        break;
+        case 28: {
+            return MAX_KEYS;
+        }
+        break;
+        case 29: {
+            return MAX_KEYS;
+        }
+        break;
+        case 30: {
+            return KEY_A;
+        }
+        break;
+        case 31: {
+            return KEY_S;
+        }
+        break;
+        case 32: {
+            return KEY_D;
+        }
+        break;
+        case 33: {
+            return KEY_F;
+        }
+        break;
+        case 34: {
+            return KEY_G;
+        }
+        break;
+        case 35: {
+            return KEY_H;
+        }
+        break;
+        case 36: {
+            return KEY_J;
+        }
+        break;
+        case 37: {
+            return KEY_K;
+        }
+        break;
+        case 38: {
+            return KEY_L;
+        }
+        break;
+        case 39: {
+            return MAX_KEYS;
+        }
+        break;
+        case 40: {
+            return MAX_KEYS;
+        }
+        break;
+        case 41: {
+            return MAX_KEYS;
+        }
+        break;
+        case 42: {
+            return MAX_KEYS;
+        }
+        break;
+        case 43: {
+            return MAX_KEYS;
+        }
+        break;
+        case 44: {
+            return KEY_Z;
+        }
+        break;
+        case 45: {
+            return KEY_X;
+        }
+        break;
+        case 46: {
+            return KEY_C;
+        }
+        break;
+        case 47: {
+            return KEY_V;
+        }
+        break;
+        case 48: {
+            return KEY_B;
+        }
+        break;
+        case 49: {
+            return KEY_N;
+        }
+        break;
+        case 50: {
+            return KEY_M;
+        }
+        break;
+        case 51: {
+            return MAX_KEYS;
+        }
+        break;
+        case 52: {
+            return MAX_KEYS;
+        }
+        break;
+        case 53: {
+            return MAX_KEYS;
+        }
+        break;
+        case 54: {
+            return MAX_KEYS;
+        }
+        break;
+        case 55: {
+            return MAX_KEYS;
+        }
+        break;
+        case 56: {
+            return MAX_KEYS;
+        }
+        break;
+        case 57: {
+            return MAX_KEYS;
+        }
+        break;
+        case 58: {
+            return MAX_KEYS;
+        }
+        break;
+        case 59: {
+            return MAX_KEYS;
+        }
+        break;
+        case 60: {
+            return MAX_KEYS;
+        }
+        break;
+        case 61: {
+            return MAX_KEYS;
+        }
+        break;
+        case 62: {
+            return MAX_KEYS;
+        }
+        break;
+        case 63: {
+            return MAX_KEYS;
+        }
+        break;
+        case 64: {
+            return MAX_KEYS;
+        }
+        break;
+        case 65: {
+            return MAX_KEYS;
+        }
+        break;
+        case 66: {
+            return MAX_KEYS;
+        }
+        break;
+        case 67: {
+            return MAX_KEYS;
+        }
+        break;
+        case 68: {
+            return MAX_KEYS;
+        }
+        break;
+        case 69: {
+            return MAX_KEYS;
+        }
+        break;
+        case 70: {
+            return MAX_KEYS;
+        }
+        break;
+        case 71: {
+            return MAX_KEYS;
+        }
+        break;
+        case 72: {
+            return MAX_KEYS;
+        }
+        break;
+        case 73: {
+            return MAX_KEYS;
+        }
+        break;
+        case 74: {
+            return MAX_KEYS;
+        }
+        break;
+        case 75: {
+            return MAX_KEYS;
+        }
+        break;
+        case 76: {
+            return MAX_KEYS;
+        }
+        break;
+        case 77: {
+            return MAX_KEYS;
+        }
+        break;
+        case 78: {
+            return MAX_KEYS;
+        }
+        break;
+        case 79: {
+            return MAX_KEYS;
+        }
+        break;
+        case 80: {
+            return MAX_KEYS;
+        }
+        break;
+        case 81: {
+            return MAX_KEYS;
+        }
+        break;
+        case 82: {
+            return MAX_KEYS;
+        }
+        break;
+        case 83: {
+            return MAX_KEYS;
+        }
+        break;
+        case 84: {
+            return MAX_KEYS;
+        }
+        break;
+        case 85: {
+            return MAX_KEYS;
+        }
+        break;
+        case 86: {
+            return MAX_KEYS;
+        }
+        break;
+        case 87: {
+            return MAX_KEYS;
+        }
+        break;
+        case 88: {
+            return MAX_KEYS;
+        }
+        break;
+        case 89: {
+            return MAX_KEYS;
+        }
+        break;
+        case 90: {
+            return MAX_KEYS;
+        }
+        break;
+        case 91: {
+            return MAX_KEYS;
+        }
+        break;
+        case 92: {
+            return MAX_KEYS;
+        }
+        break;
+        case 93: {
+            return MAX_KEYS;
+        }
+        break;
+        case 94: {
+            return MAX_KEYS;
+        }
+        break;
+        case 95: {
+            return MAX_KEYS;
+        }
+        break;
+        case 96: {
+            return MAX_KEYS;
+        }
+        break;
+        case 97: {
+            return MAX_KEYS;
+        }
+        break;
+        case 98: {
+            return MAX_KEYS;
+        }
+        break;
+        case 99: {
+            return MAX_KEYS;
+        }
+        break;
+        case 100: {
+            return MAX_KEYS;
+        }
+        break;
+        case 101: {
+            return MAX_KEYS;
+        }
+        break;
+        case 102: {
+            return MAX_KEYS;
+        }
+        break;
+        defualt: {
+            return MAX_KEYS;
+        }
+        break;
+    }
+    return MAX_KEYS;
 }
 
 #endif

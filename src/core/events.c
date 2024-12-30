@@ -12,13 +12,26 @@ void event_system_initialize()
         ERROR("event_system already initialized");
     }
 
-    state.events = array_create(event_system);
+    state.events = array_create(event);
     is_initialized = true;
 
     INFO("Event system initialized");
 }
 void event_system_destroy()
 {
+    INFO("Destroying event system...");
+    u64 events_size = array_get_length(state.events);
+
+    for (u32 i = 0; i < events_size; i++)
+    {
+        if (state.events[i].listeners)
+        {
+            array_destroy(state.events[i].listeners);
+        }
+    }
+    array_destroy(state.events);
+    state.events = 0;
+    INFO("Event system destoryed");
 }
 
 void event_register(event_type type, fp_on_event fp_on_event)
@@ -69,4 +82,38 @@ void event_register(event_type type, fp_on_event fp_on_event)
 
 void event_unregister(event_type type, fp_on_event fp_on_event)
 {
+}
+
+void event_fire(event_type type, event_context context)
+{
+    if (!is_initialized)
+    {
+        ERROR("Event_system is not initialized!!");
+        return;
+    }
+
+    u64 events_size = array_get_length(state.events);
+
+    switch (type)
+    {
+        case ON_KEY_PRESS: {
+        }
+        break;
+        case ON_APPLICATION_QUIT: {
+            for (s32 i = 0; i < events_size; i++)
+            {
+                if (state.events[i].type == ON_APPLICATION_QUIT)
+                {
+                    u64 listeners_size = array_get_length(state.events[i].listeners);
+                    for (u32 j = 0; j < listeners_size; j++)
+                    {
+                        state.events[i].listeners[j].callback(ON_APPLICATION_QUIT, context);
+                    }
+                }
+            }
+        }
+        break;
+        default: {
+        }
+    }
 }
