@@ -4,7 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-void *array_create(u64 capacity, u64 stride)
+void *__array_create(u64 capacity, u64 stride)
 {
     u64 array_capacity = capacity;
     u64 array_stride = stride;
@@ -70,7 +70,7 @@ void *array_resize(void *array, u32 resize_factor)
     u64 array_size = array_capacity * array_stride;
 
     u64   new_array_capacity = array_capacity * resize_factor;
-    void *new_array = array_create(new_array_capacity, array_stride);
+    void *new_array = __array_create(new_array_capacity, array_stride);
     memcpy(new_array, array, array_length * array_stride);
     array_set_length(new_array, array_length);
 

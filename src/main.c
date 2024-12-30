@@ -1,4 +1,5 @@
 #include "containers/array.h"
+#include "core/events.h"
 #include "core/logger.h"
 #include "defines.h"
 
@@ -20,6 +21,12 @@ void print_array(int *array)
     printf("\n");
 }
 
+b8 it_works(event_type type, event_context data)
+{
+    INFO("EVENT SYSTEM WORKS");
+    return false;
+}
+
 s32 main(s32 argc, char **argv)
 {
 
@@ -31,6 +38,10 @@ s32 main(s32 argc, char **argv)
 
     platform_state plat_state = {};
     vulkan_context vk_context = {};
+
+    event_system_initialize();
+
+    event_register(ON_KEY_PRESS, it_works);
 
     if (!platform_startup(&plat_state, application_name, x, y, width, height))
     {

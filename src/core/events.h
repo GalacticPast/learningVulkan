@@ -6,7 +6,7 @@
 
 typedef enum event_type
 {
-    EVENT_TYPE_ON_KEY_PRESS,
+    ON_KEY_PRESS,
     EVENT_TYPE_MAX_EVENT
 } event_type;
 
@@ -44,6 +44,9 @@ typedef struct event_system
 {
     event *events;
 } event_system;
+
+void event_system_initialize();
+void event_system_destroy();
 
 // callback must point to the fucntion which you would like to be called when the event is trigerred/fired
 void event_register(event_type type, fp_on_event fp_on_event);

@@ -379,8 +379,8 @@ void platform_log_message(const char *buffer, log_levels level, u32 max_chars)
 {
     // clang-format off
     //  https://stackoverflow.com/questions/5412761/using-colors-with-printf
-    //                  FATAL  ERROR   DEBUG  INFO  TRACE 
-    u32 level_color[] = { 41,   31  ,   32  ,  34  ,  37 };
+    //                  FATAL  ERROR   DEBUG  WARN    INFO  TRACE 
+    u32 level_color[] = { 41,   31  ,   32  ,   33   ,  34  ,  37 };
     
     // clang-format on 
     
