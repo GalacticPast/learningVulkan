@@ -1,5 +1,6 @@
 #include "core/events.h"
 #include "core/input.h"
+#include "core/strings.h"
 #include "platform.h"
 
 #ifdef PLATFORM_LINUX
@@ -406,20 +407,20 @@ static void registry_global(void *data, struct wl_registry *wl_registry, u32 nam
 {
     internal_state *state = data;
 
-    if (strcmp(interface, wl_shm_interface.name) == 0)
+    if (string_compare(interface, wl_shm_interface.name))
     {
         state->wl_shm = wl_registry_bind(wl_registry, name, &wl_shm_interface, 1);
     }
-    else if (strcmp(interface, wl_compositor_interface.name) == 0)
+    else if (string_compare(interface, wl_compositor_interface.name))
     {
         state->wl_compositor = wl_registry_bind(wl_registry, name, &wl_compositor_interface, 4);
     }
-    else if (strcmp(interface, xdg_wm_base_interface.name) == 0)
+    else if (string_compare(interface, xdg_wm_base_interface.name))
     {
         state->xdg_wm_base = wl_registry_bind(wl_registry, name, &xdg_wm_base_interface, 1);
         xdg_wm_base_add_listener(state->xdg_wm_base, &xdg_wm_base_listener, state);
     }
-    else if (strcmp(interface, wl_seat_interface.name) == 0)
+    else if (string_compare(interface, wl_seat_interface.name))
     {
         state->wl_seat = wl_registry_bind(wl_registry, name, &wl_seat_interface, 1);
         wl_seat_add_listener(state->wl_seat, &wl_seat_listener, state);

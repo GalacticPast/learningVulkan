@@ -28,4 +28,4 @@ void *array_push_value(void *array, const void *value_ptr);
 void  array_pop_value(void *array);
 
 #define array_create(type) __array_create(ARRAY_DEFAULT_CAPACITY, sizeof(type))
-#define array_create_with_length(type, capacity) __array_create(capacity, sizeof(type))
+#define array_create_with_capacity(type, capacity) __array_create(capacity, sizeof(type))

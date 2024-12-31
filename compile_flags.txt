@@ -2,3 +2,5 @@
 src/
 -D
 PLATFORM_LINUX_WAYLAND
+-D
+_DEBUG

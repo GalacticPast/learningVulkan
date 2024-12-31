@@ -4,9 +4,9 @@ echo "building project"
 
 
 CC=clang 
-includes="-Isrc/"
+includes="-Isrc/ -lvulkan"
 assembly="learningVulkan"
-defines="-Wall -Wextra -g3 -Wconversion -Wdouble-promotion -Wno-unused-parameter -Wno-unused-function -Wno-sign-conversion -fsanitize=undefined -fsanitize-trap"
+defines="-D_DEBUG -Wall -Wextra -g3 -Wconversion -Wdouble-promotion -Wno-unused-parameter -Wno-unused-function -Wno-sign-conversion -fsanitize=undefined -fsanitize-trap"
 platform=$(echo "$XDG_SESSION_TYPE")
 
 if [[ $platform == "X11" ]]; then

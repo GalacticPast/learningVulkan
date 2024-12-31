@@ -33,14 +33,21 @@ b8 appilcaion_quit(event_type type, event_context data)
 s32 main(s32 argc, char **argv)
 {
     is_running = true;
-    char *application_name = "learningVulkan";
-    u32   x = 0;
-    u32   y = 0;
-    u32   width = 1280;
-    u32   height = 720;
+    const char *application_name = "learningVulkan";
+    u32         x = 0;
+    u32         y = 0;
+    u32         width = 1280;
+    u32         height = 720;
 
     platform_state plat_state = {};
     vulkan_context vk_context = {};
+
+    FATAL("Test %f", 3.14159);
+    ERROR("Test %f", 3.14159);
+    DEBUG("Test %f", 3.14159);
+    WARN("Test %f", 3.14159);
+    INFO("Test %f", 3.14159);
+    TRACE("Test %f", 3.14159);
 
     event_system_initialize();
     event_register(ON_APPLICATION_QUIT, appilcaion_quit);
@@ -48,11 +55,13 @@ s32 main(s32 argc, char **argv)
     if (!platform_startup(&plat_state, application_name, x, y, width, height))
     {
         FATAL("Platform Initialization failed");
+        return -1;
     }
 
-    if (!initialize_vulkan(&vk_context))
+    if (!initialize_vulkan(&vk_context, application_name))
     {
         FATAL("Vulkan Initialization failed");
+        return -1;
     }
 
     while (platform_pump_messages(&plat_state) && is_running)

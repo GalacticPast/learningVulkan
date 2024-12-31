@@ -1,3 +1,5 @@
+#pragma once
+
 #include "core/logger.h"
 #include "defines.h"
 
