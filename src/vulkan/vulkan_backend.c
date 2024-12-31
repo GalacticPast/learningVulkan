@@ -3,6 +3,7 @@
 #include "core/asserts.h"
 #include "core/logger.h"
 #include "core/strings.h"
+#include "vulkan/vulkan_device.h"
 
 VkBool32 debug_messenger_callback(VkDebugUtilsMessageSeverityFlagBitsEXT message_severity, VkDebugUtilsMessageTypeFlagsEXT message_types,
                                   const VkDebugUtilsMessengerCallbackDataEXT *callback_data, void *user_data);
@@ -57,17 +58,18 @@ b8 initialize_vulkan(vulkan_context *context, const char *application_name)
             return false;
         }
     }
+    array_destroy(layer_properties);
     INFO("Required vulkan layers found.");
     //
 
     // INFO: vulkan extensions
     u32 extension_count = 0;
 
-    char **required_extensions_name = array_create(const char *);
+    char **required_extension_names = array_create(const char *);
     char  *debug_utils = VK_EXT_DEBUG_UTILS_EXTENSION_NAME;
 
-    required_extensions_name = array_push_value(required_extensions_name, &debug_utils);
-    u32 required_extensions_count = (u32)array_get_length(required_extensions_name);
+    required_extension_names = array_push_value(required_extension_names, &debug_utils);
+    u32 required_extensions_count = (u32)array_get_length(required_extension_names);
 
     for (u32 i = 0; i < required_layer_count; i++)
     {
@@ -87,18 +89,20 @@ b8 initialize_vulkan(vulkan_context *context, const char *application_name)
             b8 found = false;
             for (u32 k = 0; k < extension_count; k++)
             {
-                if (string_compare(required_extensions_name[j], extension_properties[k].extensionName))
+                if (string_compare(required_extension_names[j], extension_properties[k].extensionName))
                 {
                     found = true;
                 }
             }
             if (!found)
             {
-                ERROR("Extension: %s required but not found.", required_extensions_name[i]);
+                ERROR("Extension: %s required but not found.", required_extension_names[i]);
                 return false;
             }
         }
+        array_destroy(extension_properties);
     }
+
     INFO("Required vulkan layer extensions found.");
 
     // INFO: create debug messenger
@@ -121,9 +125,15 @@ b8 initialize_vulkan(vulkan_context *context, const char *application_name)
     instance_create_info.enabledLayerCount = (u32)required_layer_count;
     instance_create_info.ppEnabledLayerNames = (const char *const *)required_layer_names;
     instance_create_info.enabledExtensionCount = (u32)required_extensions_count;
-    instance_create_info.ppEnabledExtensionNames = (const char *const *)required_extensions_name;
+    instance_create_info.ppEnabledExtensionNames = (const char *const *)required_extension_names;
 
     VK_CHECK(vkCreateInstance(&instance_create_info, 0, &context->instance));
+    // free the arrays
+    array_destroy(required_layer_names);
+    required_layer_names = 0;
+    array_destroy(required_extension_names);
+    required_extension_names = 0;
+    //
     INFO("Vulkan instance created");
 
     // INFO: get the fucntion address because its a extension function
@@ -137,6 +147,13 @@ b8 initialize_vulkan(vulkan_context *context, const char *application_name)
     }
     VK_CHECK(create_debug_utils_messenger(context->instance, &debug_messenger_create_info, 0, &context->debug_messenger));
     INFO("Debug messenger created");
+
+    // INFO: create logical device
+    if (!vulkan_create_logical_device(context))
+    {
+        ERROR("Vulkan Logical device creation failed");
+        return false;
+    }
 
     return true;
 }
