@@ -6,12 +6,12 @@ echo "building project"
 CC=clang 
 includes="-Isrc/ -lvulkan"
 assembly="learningVulkan"
-defines="-D_DEBUG -Wall -Wextra -g3 -Wconversion -Wdouble-promotion -Wno-unused-parameter -Wno-unused-function -Wno-sign-conversion -fsanitize=undefined -fsanitize-trap"
+compiler_flags="-D_DEBUG -Wall -Wextra -g3 -Wconversion -Wdouble-promotion -Wno-unused-parameter -Wno-unused-function -Wno-sign-conversion -fsanitize=undefined -fsanitize-trap"
 platform=$(echo "$XDG_SESSION_TYPE")
 
 if [[ $platform == "X11" ]]; then
     #includes="$includes -lwayland-client -lrt"
-    defines="$defines -DPLATFORM_LINUX_X11"
+    compiler_flags="$compiler_flags -DPLATFORM_LINUX_X11"
 fi
 if [[ $platform == "wayland" ]]; then
     mkdir -p src/platform/wayland
@@ -34,7 +34,7 @@ if [[ $platform == "wayland" ]]; then
     cd ../../../
     
     includes="$includes -lwayland-client -lrt"
-    defines="$defines -DPLATFORM_LINUX_WAYLAND"
+    compiler_flags="$compiler_flags -DPLATFORM_LINUX_WAYLAND"
 fi
 
 
@@ -42,5 +42,5 @@ fi
 
 c_file_names=$(find . -type f -name '*.c')
 
-echo $CC $c_file_names -o bin/$assembly $includes $defines
-time $CC $c_file_names -o bin/$assembly $includes $defines
+echo $CC $c_file_names -o bin/$assembly $includes $compiler_flags
+time $CC $c_file_names -o bin/$assembly $includes $compiler_flags
