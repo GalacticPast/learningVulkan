@@ -949,7 +949,7 @@ void platform_log_message(const char *buffer, log_levels level, u32 max_chars)
     
     // clang-format on 
     
-    printf("\033[0;%dm %s\n",level_color[level],buffer);
+    printf("\033[0;%dm %s",level_color[level],buffer);
     printf("\033[0;37m");
 
 }
