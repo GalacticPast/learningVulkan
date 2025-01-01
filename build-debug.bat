@@ -30,11 +30,11 @@ FOR /R %%f in (*.c) do (
 )
 
 set assembly=learningVulkan
-set compilerFlags=-g -shared -Wvarargs -Wall -Werror
+set compiler_flags=-D_DEBUG -Wall -Wextra -g -Wconversion -Wdouble-promotion -Wno-unused-parameter -Wno-unused-function -Wno-sign-conversion -fsanitize=undefined -fsanitize-trap
 
-set includeFlags=-Isrc -I%VULKAN_SDK%/Include
-set linkerFlags=-luser32 -lvulkan-1 -L%VULKAN_SDK%/Lib
-set defines=-D_DEBUG -DKEXPORT -D_CRT_SECURE_NO_WARNINGS -DPLATFORM_WINDOWS
+set includes=-Isrc -I%VULKAN_SDK%/Include
+set linker_flags= -luser32 -lvulkan-1 -L%VULKAN_SDK%/Lib
 
 echo "Building %assembly%%..."
-clang %c_file_names% %compilerFlags% -o bin/%assembly%.exe %defines% %includeFlags% %linkerFlags%
+echo clang %c_file_names% %compiler_flags% -o bin/%assembly% %includes% %linker_flags% 
+clang %c_file_names% %compiler_flags% -o bin/%assembly% %includes% %linker_flags% 

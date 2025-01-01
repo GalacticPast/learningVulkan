@@ -1,11 +1,14 @@
 #pragma once
 
 #if _DEBUG
-#if PLATFORM_LINUX_X11 || PLATFORM_LINUX_WAYLAND
+#ifdef PLATFORM_LINUX
 #define debugbreak() __builtin_trap()
-#elif PLATFORM_WINDOWS
+#endif
+
+#ifdef PLATFORM_WINDOWS
 #define debugbreak() __debugbreak()
 #endif
+
 #define ASSERT(expr)                                                                                                                                 \
     if (expr)                                                                                                                                        \
     {                                                                                                                                                \
