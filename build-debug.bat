@@ -37,4 +37,4 @@ set linker_flags= -luser32 -lvulkan-1 -L%VULKAN_SDK%/Lib
 
 echo "Building %assembly%%..."
 echo clang %c_file_names% %compiler_flags% -o bin/%assembly% %includes% %linker_flags% 
-clang %c_file_names% %compiler_flags% -o bin/%assembly% %includes% %linker_flags% 
+clang %c_file_names% %compiler_flags% -o bin/%assembly%.exe %includes% %linker_flags% 

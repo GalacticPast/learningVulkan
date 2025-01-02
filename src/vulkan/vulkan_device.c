@@ -17,6 +17,7 @@ b8 select_physical_device(vulkan_context *context);
 
 b8 vulkan_create_logical_device(vulkan_context *context)
 {
+    INFO("Creating vulkan logical device...");
     if (!select_physical_device(context))
     {
         ERROR("Couldnt select a physcial device aka GPU");
@@ -36,6 +37,7 @@ b8 vulkan_create_logical_device(vulkan_context *context)
     device_create_info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
     device_create_info.pNext = 0;
     device_create_info.flags = 0;
+
     // INFO: hard coded to one because we only need one queue
     device_create_info.queueCreateInfoCount = 1;
     device_create_info.pQueueCreateInfos = &graphics_queue_create_info;
@@ -45,7 +47,8 @@ b8 vulkan_create_logical_device(vulkan_context *context)
 
     VK_CHECK(vkCreateDevice(context->device.physical, &device_create_info, 0, &context->device.logical));
     INFO("Vulkan Logical device created");
-
+    
+    INFO("Obtaining queue families...");
     vkGetDeviceQueue(context->device.logical, context->device.graphics_queue_index, 0, &context->device.graphics_queue);
     INFO("Queues obtained");
 
@@ -55,10 +58,11 @@ b8 vulkan_create_logical_device(vulkan_context *context)
 b8 select_physical_device(vulkan_context *context)
 {
     // INFO: enumerate physical devices aka GPU'S
+    INFO("Selecting physical device (aka gpu)...");
 
     u32 gpu_count = 0;
     VK_CHECK(vkEnumeratePhysicalDevices(context->instance, &gpu_count, 0));
-    INFO("No of GPU's: %d", gpu_count);
+    DEBUG("No of GPU's: %d", gpu_count);
 
     if (gpu_count == 0)
     {
@@ -78,9 +82,11 @@ b8 select_physical_device(vulkan_context *context)
     {
         VkPhysicalDeviceProperties physical_properties = {};
         vkGetPhysicalDeviceProperties(physical_devices[i], &physical_properties);
+
         VkPhysicalDeviceFeatures physical_features = {};
         vkGetPhysicalDeviceFeatures(physical_devices[i], &physical_features);
-        INFO("Physical Device Name: %s", physical_properties.deviceName);
+
+        DEBUG("Physical Device Name: %s", physical_properties.deviceName);
 
         if ((device_requirements.is_discrete && physical_properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU) &&
             (device_requirements.geometry_shader && physical_features.geometryShader))
@@ -90,12 +96,14 @@ b8 select_physical_device(vulkan_context *context)
             queue_family_indicies indicies = {};
 
             u32 queue_family_count = 0;
+
             vkGetPhysicalDeviceQueueFamilyProperties(physical_devices[i], &queue_family_count, 0);
             VkQueueFamilyProperties *queue_family_properties = array_create_with_capacity(VkQueueFamilyProperties, queue_family_count);
+
             vkGetPhysicalDeviceQueueFamilyProperties(physical_devices[i], &queue_family_count, queue_family_properties);
             array_set_length(queue_family_properties, queue_family_count);
 
-            INFO("No of queue families %d", queue_family_count);
+            DEBUG("No of queue families %d", queue_family_count);
 
             b8 graphics_queue_family_found = false;
             for (u32 j = 0; j < queue_family_count; j++)
@@ -112,7 +120,8 @@ b8 select_physical_device(vulkan_context *context)
                 ERROR("Graphics quueue family required but not found");
                 return false;
             }
-            INFO("Graphics queue family index: %d", indicies.graphics_queue_index);
+            DEBUG("Graphics queue family index: %d", indicies.graphics_queue_index);
+
             context->device.physical = physical_devices[i];
             context->device.physical_device_properties = physical_properties;
             context->device.physical_device_features = physical_features;

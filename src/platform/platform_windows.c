@@ -11,6 +11,11 @@
 #include <windows.h>
 #include <windowsx.h> // param input extraction
 
+#define VK_USE_PLATFORM_WIN32_KHR
+#include <vulkan/vulkan.h>
+
+#include "vulkan/vulkan_types.h"
+
 typedef struct internal_state
 {
     HINSTANCE h_instance;
@@ -23,6 +28,7 @@ LRESULT CALLBACK win32_process_message(HWND hwnd, u32 msg, WPARAM w_param, LPARA
 
 b8 platform_startup(platform_state *plat_state, const char *application_name, s32 x, s32 y, s32 width, s32 height)
 {
+    INFO("initializing windows platform startup...");
     plat_state->internal_state = malloc(sizeof(internal_state));
     internal_state *state = (internal_state *)plat_state->internal_state;
 
@@ -40,7 +46,7 @@ b8 platform_startup(platform_state *plat_state, const char *application_name, s3
     wc.hIcon = icon;
     wc.hCursor = LoadCursor(NULL, IDC_ARROW); // NULL; // Manage the cursor manually
     wc.hbrBackground = NULL;                  // Transparent
-    wc.lpszClassName = "kohi_window_class";
+    wc.lpszClassName = "learning_vulkan_class";
 
     if (!RegisterClassA(&wc))
     {
@@ -49,8 +55,8 @@ b8 platform_startup(platform_state *plat_state, const char *application_name, s3
     }
 
     // Create window
-    u32 client_x = x;
-    u32 client_y = y;
+    u32 client_x = x == 0 ? 500 : x;
+    u32 client_y = y == 0 ? 500 : y;
     u32 client_width = width;
     u32 client_height = height;
 
@@ -78,7 +84,7 @@ b8 platform_startup(platform_state *plat_state, const char *application_name, s3
     window_width += border_rect.right - border_rect.left;
     window_height += border_rect.bottom - border_rect.top;
 
-    HWND handle = CreateWindowExA(window_ex_style, "kohi_window_class", application_name, window_style, window_x, window_y, window_width,
+    HWND handle = CreateWindowExA(window_ex_style, "learning_vulkan_class", application_name, window_style, window_x, window_y, window_width,
                                   window_height, 0, 0, state->h_instance, 0);
 
     if (handle == 0)
@@ -201,6 +207,28 @@ LRESULT CALLBACK win32_process_message(HWND hwnd, u32 msg, WPARAM w_param, LPARA
     }
 
     return DefWindowProcA(hwnd, msg, w_param, l_param);
+}
+
+b8 platform_create_vulkan_surface(platform_state *plat_state, vulkan_context *context)
+{
+    internal_state *state = (internal_state *)plat_state->internal_state;
+
+    VkWin32SurfaceCreateInfoKHR win32_surface_create_info = {};
+
+    win32_surface_create_info.sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
+    win32_surface_create_info.pNext = 0;
+    win32_surface_create_info.flags = 0;
+    win32_surface_create_info.hinstance = state->h_instance;
+    win32_surface_create_info.hwnd = state->hwnd;
+
+    VK_CHECK(vkCreateWin32SurfaceKHR(context->instance, &win32_surface_create_info, 0, &context->surface));
+    return true;
+}
+void *platform_get_required_surface_extensions(char **required_extension_names)
+{
+    char *win32_surface_extension = VK_KHR_WIN32_SURFACE_EXTENSION_NAME;
+    required_extension_names = array_push_value(required_extension_names, &win32_surface_extension);
+    return required_extension_names;
 }
 
 #endif
