@@ -1,15 +1,18 @@
-#include "vulkan_backend.h"
 #include "containers/array.h"
-#include "core/asserts.h"
+
 #include "core/logger.h"
 #include "core/strings.h"
+
+#include "platform/platform.h"
+
 #include "vulkan/vulkan_device.h"
+#include "vulkan_backend.h"
 
 VkBool32 debug_messenger_callback(VkDebugUtilsMessageSeverityFlagBitsEXT message_severity, VkDebugUtilsMessageTypeFlagsEXT message_types,
                                   const VkDebugUtilsMessengerCallbackDataEXT *callback_data, void *user_data);
 void     debug_messenger_destroy(vulkan_context *context);
 
-b8 initialize_vulkan(vulkan_context *context, const char *application_name)
+b8 initialize_vulkan(struct platform_state *plat_state, vulkan_context *context, const char *application_name)
 {
 
     VkApplicationInfo app_info = {};
@@ -117,6 +120,10 @@ b8 initialize_vulkan(vulkan_context *context, const char *application_name)
     debug_messenger_create_info.pfnUserCallback = debug_messenger_callback;
     debug_messenger_create_info.pUserData = 0;
 
+    // get platform surface extensions
+    required_extension_names = platform_get_required_surface_extensions(required_extension_names);
+    required_extensions_count = (u32)array_get_length(required_extension_names);
+
     VkInstanceCreateInfo instance_create_info = {};
     instance_create_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
     instance_create_info.pNext = (VkDebugUtilsMessengerCreateInfoEXT *)&debug_messenger_create_info;
@@ -148,6 +155,10 @@ b8 initialize_vulkan(vulkan_context *context, const char *application_name)
     VK_CHECK(create_debug_utils_messenger(context->instance, &debug_messenger_create_info, 0, &context->debug_messenger));
     INFO("Debug messenger created");
 
+    if (!platform_create_vulkan_surface(plat_state, context))
+    {
+    }
+
     // INFO: create logical device
     if (!vulkan_create_logical_device(context))
     {
@@ -155,7 +166,7 @@ b8 initialize_vulkan(vulkan_context *context, const char *application_name)
         return false;
     }
 
-    return true;
+    return false;
 }
 
 VkBool32 debug_messenger_callback(VkDebugUtilsMessageSeverityFlagBitsEXT message_severity, VkDebugUtilsMessageTypeFlagsEXT message_types,
@@ -201,7 +212,8 @@ void debug_messenger_destroy(vulkan_context *context)
 
 b8 shutdown_vulkan(vulkan_context *context)
 {
-
+    INFO("Destroying vulkan device...");
+    vkDestroyDevice(context->device.logical, 0);
     INFO("Destroying debug messenger...");
     debug_messenger_destroy(context);
     INFO("Destroying vulkan instance...");

@@ -25,10 +25,10 @@ void array_destroy(void *block)
     free(array);
 }
 
-void array_set_length(void *block, u64 length)
+void array_set_length(void *array, u64 length)
 {
-    u64 *array = block - ARRAY_HEADER_SIZE;
-    array[ARRAY_LENGTH] = length;
+    u64 *array_start = array - ARRAY_HEADER_SIZE;
+    array_start[ARRAY_LENGTH] = length;
 }
 
 void array_set_capacity(void *block, u64 capacity)

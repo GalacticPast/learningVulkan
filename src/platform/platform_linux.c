@@ -1,7 +1,8 @@
+#include "containers/array.h"
+
 #include "core/events.h"
 #include "core/input.h"
 #include "core/strings.h"
-#include "platform.h"
 
 #ifdef PLATFORM_LINUX
 #include <stdio.h>
@@ -22,6 +23,9 @@
 #include <X11/Xlib.h>
 #include <X11/keysym.h>
 #include <xcb/xcb.h>
+
+#define VK_USE_PLATFORM_XCB_KHR
+#include <vulkan/vulkan.h>
 
 typedef struct internal_state
 {
@@ -137,6 +141,13 @@ void platform_shutdown(platform_state *plat_state)
     xcb_destroy_window(state->connection, state->window);
 }
 
+void *platform_get_required_surface_extensions(char **required_extension_names)
+{
+    char *surface_name = VK_KHR_XCB_SURFACE_EXTENSION_NAME;
+    required_extension_names = array_push_value(required_extension_names, &surface_name);
+    return (void *)required_extension_names;
+}
+
 #endif
 
 #if PLATFORM_LINUX_WAYLAND
@@ -152,7 +163,13 @@ void platform_shutdown(platform_state *plat_state)
 #include <sys/mman.h>
 #include <unistd.h>
 //
-// VULKAN
+
+#include "platform.h"
+
+#define VK_USE_PLATFORM_WAYLAND_KHR
+#include <vulkan/vulkan.h>
+
+#include "vulkan/vulkan_types.h"
 
 /* Wayland code */
 typedef struct internal_state
@@ -510,6 +527,29 @@ void platform_shutdown(platform_state *plat_state)
     xdg_surface_destroy(state->xdg_surface);
     wl_surface_destroy(state->wl_surface);
     wl_display_disconnect(state->wl_display);
+}
+
+void *platform_get_required_surface_extensions(char **required_extension_names)
+{
+    char *surface_name = VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME;
+    required_extension_names = array_push_value(required_extension_names, &surface_name);
+    return (void *)required_extension_names;
+}
+
+b8 platform_create_vulkan_surface(platform_state *plat_state, vulkan_context *context)
+{
+    internal_state *state = (internal_state *)plat_state->internal_state;
+
+    VkWaylandSurfaceCreateInfoKHR create_surface_info = {};
+    create_surface_info.sType = VK_STRUCTURE_TYPE_WAYLAND_SURFACE_CREATE_INFO_KHR;
+    create_surface_info.pNext = 0;
+    create_surface_info.flags = 0;
+    create_surface_info.display = state->wl_display;
+    create_surface_info.surface = state->wl_surface;
+
+    VK_CHECK(vkCreateWaylandSurfaceKHR(context->instance, &create_surface_info, 0, &context->surface));
+
+    return false;
 }
 
 u32 translate_keycode(u32 wl_keycode)

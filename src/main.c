@@ -58,7 +58,7 @@ s32 main(s32 argc, char **argv)
         return -1;
     }
 
-    if (!initialize_vulkan(&vk_context, application_name))
+    if (!initialize_vulkan(&plat_state, &vk_context, application_name))
     {
         FATAL("Vulkan Initialization failed");
         return -1;

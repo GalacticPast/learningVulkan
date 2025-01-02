@@ -1,5 +1,6 @@
 #pragma once
 #include "core/asserts.h"
+#include "defines.h"
 #include <vulkan/vulkan.h>
 
 #define VK_CHECK(expr)                                                                                                                               \
@@ -9,7 +10,15 @@
 
 typedef struct vulkan_device
 {
-    VkPhysicalDevice physical;
+    VkPhysicalDevice           physical;
+    VkPhysicalDeviceProperties physical_device_properties;
+    VkPhysicalDeviceFeatures   physical_device_features;
+
+    VkDevice logical;
+
+    u32     graphics_queue_index;
+    VkQueue graphics_queue;
+
 } vulkan_device;
 
 typedef struct vulkan_context
@@ -18,5 +27,7 @@ typedef struct vulkan_context
     VkDebugUtilsMessengerEXT debug_messenger;
 
     vulkan_device device;
+
+    VkSurfaceKHR surface;
 
 } vulkan_context;

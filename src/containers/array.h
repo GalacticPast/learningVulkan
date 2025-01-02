@@ -22,6 +22,8 @@ u64 array_get_length(void *array);
 u64 array_get_capacity(void *array);
 u64 array_get_stride(void *array);
 
+void array_set_length(void *array, u64 length);
+
 void *array_insert_at(void *array, s32 index, void *data);
 void *array_pop_at(void *array, s32 index);
 void *array_push_value(void *array, const void *value_ptr);
