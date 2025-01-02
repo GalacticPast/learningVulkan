@@ -15,6 +15,9 @@ typedef struct event_context
 {
     // 128 bits
     union data {
+        u8 u8[16];
+        s8 s8[16];
+
         s16 s16[8];
         u16 u16[8];
 

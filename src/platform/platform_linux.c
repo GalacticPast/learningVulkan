@@ -2,7 +2,10 @@
 
 #include "core/events.h"
 #include "core/input.h"
+#include "core/logger.h"
 #include "core/strings.h"
+
+#include "platform/platform.h"
 
 #ifdef PLATFORM_LINUX
 #include <stdio.h>
@@ -16,7 +19,7 @@
 #include <unistd.h> // usleep
 #endif
 
-#if PLATFORM_LINUX_X11
+#ifdef PLATFORM_LINUX_X11
 
 #include <X11/XKBlib.h>   // sudo apt-get install libx11-dev
 #include <X11/Xlib-xcb.h> // sudo apt-get install libxkbcommon-x11-dev
@@ -27,6 +30,8 @@
 #define VK_USE_PLATFORM_XCB_KHR
 #include <vulkan/vulkan.h>
 
+#include "vulkan/vulkan_types.h"
+
 typedef struct internal_state
 {
     Display          *display;
@@ -36,6 +41,10 @@ typedef struct internal_state
     xcb_atom_t        wm_protocols;
     xcb_atom_t        wm_delete_win;
 } internal_state;
+
+// INFO: x11/xcb reference https://www.x.org/releases/X12R7.6/doc/libxcb/tutorial/index.html
+
+keys xcb_translate_keycode(xcb_keycode_t code);
 
 b8 platform_startup(platform_state *plat_state, const char *application_name, s32 x, s32 y, s32 width, s32 height)
 {
@@ -54,7 +63,7 @@ b8 platform_startup(platform_state *plat_state, const char *application_name, s3
 
     if (xcb_connection_has_error(state->connection))
     {
-        DFATAL("Failed to connect to X server via XCB.");
+        FATAL("Failed to connect to X server via XCB.");
         return false;
     }
 
@@ -88,22 +97,22 @@ b8 platform_startup(platform_state *plat_state, const char *application_name, s3
     u32 value_list[] = {state->screen->black_pixel, event_values};
 
     // Create the window
-    xcb_void_cookie_t cookie = xcb_create_window(state->connection,
-                                                 XCB_COPY_FROM_PARENT, // depth
-                                                 state->window,
-                                                 state->screen->root,           // parent
-                                                 x,                             // x
-                                                 y,                             // y
-                                                 width,                         // width
-                                                 height,                        // height
-                                                 0,                             // No border
-                                                 XCB_WINDOW_CLASS_INPUT_OUTPUT, // class
-                                                 state->screen->root_visual, event_mask, value_list);
+    UNUSED xcb_void_cookie_t cookie = xcb_create_window(state->connection,
+                                                        XCB_COPY_FROM_PARENT, // depth
+                                                        state->window,
+                                                        state->screen->root,           // parent
+                                                        (u16)x,                        // x
+                                                        (u16)y,                        // y
+                                                        (u16)width,                    // width
+                                                        (u16)height,                   // height
+                                                        0,                             // No border
+                                                        XCB_WINDOW_CLASS_INPUT_OUTPUT, // class
+                                                        state->screen->root_visual, event_mask, value_list);
 
     // Change the title
     xcb_change_property(state->connection, XCB_PROP_MODE_REPLACE, state->window, XCB_ATOM_WM_NAME, XCB_ATOM_STRING,
                         8, // data should be viewed 8 bits at a time
-                        strlen(application_name), application_name);
+                        (u32)strlen(application_name), application_name);
 
     // Tell the server to notify when the window manager
     // attempts to destroy the window.
@@ -123,10 +132,43 @@ b8 platform_startup(platform_state *plat_state, const char *application_name, s3
     s32 stream_result = xcb_flush(state->connection);
     if (stream_result <= 0)
     {
-        DFATAL("An error occurred when flusing the stream: %d", stream_result);
+        FATAL("An error occurred when flusing the stream: %d", stream_result);
         return false;
     }
 
+    return true;
+}
+
+b8 platform_pump_messages(platform_state *plat_state)
+{
+    internal_state *state = (internal_state *)plat_state->internal_state;
+
+    xcb_generic_event_t *event = xcb_wait_for_event(state->connection);
+
+    switch (event->response_type & ~0x80)
+    {
+        case XCB_EXPOSE: {
+        }
+        break;
+        case XCB_KEY_PRESS:
+        case XCB_KEY_RELEASE: {
+
+            b8 state = (event->response_type & ~0x80) == XCB_KEY_PRESS ? 1 : 0;
+
+            xcb_key_press_event_t *key_event = (xcb_key_press_event_t *)event;
+
+            keys key = xcb_translate_keycode(key_event->detail);
+
+            if (key == KEY_ESCAPE)
+            {
+                event_context context = {};
+                event_fire(ON_APPLICATION_QUIT, context);
+            }
+            input_process_key(key, state);
+        }
+        break;
+    }
+    free(event);
     return true;
 }
 
@@ -141,11 +183,118 @@ void platform_shutdown(platform_state *plat_state)
     xcb_destroy_window(state->connection, state->window);
 }
 
+b8 platform_create_vulkan_surface(platform_state *plat_state, struct vulkan_context *context)
+{
+
+    internal_state *state = (internal_state *)plat_state->internal_state;
+
+    VkXcbSurfaceCreateInfoKHR xcb_surface_create_info = {};
+
+    xcb_surface_create_info.sType = VK_STRUCTURE_TYPE_XCB_SURFACE_CREATE_INFO_KHR;
+    xcb_surface_create_info.pNext = 0;
+    xcb_surface_create_info.flags = 0;
+    xcb_surface_create_info.connection = state->connection;
+    xcb_surface_create_info.window = state->window;
+
+    VK_CHECK(vkCreateXcbSurfaceKHR(context->instance, &xcb_surface_create_info, 0, &context->surface));
+
+    return true;
+}
+
 void *platform_get_required_surface_extensions(char **required_extension_names)
 {
     char *surface_name = VK_KHR_XCB_SURFACE_EXTENSION_NAME;
     required_extension_names = array_push_value(required_extension_names, &surface_name);
     return (void *)required_extension_names;
+}
+
+keys xcb_translate_keycode(xcb_keycode_t code)
+{
+    switch (code)
+    {
+        case 9: {
+            return KEY_ESCAPE;
+        }
+        case 24: {
+            return KEY_Q;
+        }
+        case 25: {
+            return KEY_W;
+        }
+        case 26: {
+            return KEY_E;
+        }
+        case 27: {
+            return KEY_R;
+        }
+        case 28: {
+            return KEY_T;
+        }
+        case 29: {
+            return KEY_Y;
+        }
+        case 30: {
+            return KEY_U;
+        }
+        case 31: {
+            return KEY_I;
+        }
+        case 32: {
+            return KEY_O;
+        }
+        case 33: {
+            return KEY_P;
+        }
+        case 38: {
+            return KEY_A;
+        }
+        case 39: {
+            return KEY_S;
+        }
+        case 40: {
+            return KEY_D;
+        }
+        case 41: {
+            return KEY_F;
+        }
+        case 42: {
+            return KEY_G;
+        }
+        case 43: {
+            return KEY_H;
+        }
+        case 44: {
+            return KEY_J;
+        }
+        case 45: {
+            return KEY_K;
+        }
+        case 46: {
+            return KEY_L;
+        }
+        case 52: {
+            return KEY_Z;
+        }
+        case 53: {
+            return KEY_X;
+        }
+        case 54: {
+            return KEY_C;
+        }
+        case 55: {
+            return KEY_V;
+        }
+        case 56: {
+            return KEY_B;
+        }
+        case 57: {
+            return KEY_N;
+        }
+        case 58: {
+            return KEY_M;
+        }
+    }
+    return UINT32_MAX;
 }
 
 #endif

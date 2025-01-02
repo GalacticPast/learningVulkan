@@ -30,3 +30,5 @@ typedef int8_t b8;
 #ifdef __linux__
 #define PLATFORM_LINUX
 #endif
+
+#define UNUSED __attribute__((unused))

@@ -11,10 +11,13 @@ defines="-D_DEBUG"
 
 platform=$(echo "$XDG_SESSION_TYPE")
 
-if [[ $platform == "X11" ]]; then
-    #includes="$includes -lwayland-client -lrt"
+echo "Building for linux-$platform..."
+
+if [[ $platform == "x11" ]]; then
+    includes="$includes -lX11 -lxcb -lX11-xcb -L/usr/X11R6/lib"
     defines="$defines -DPLATFORM_LINUX_X11"
 fi
+
 if [[ $platform == "wayland" ]]; then
     mkdir -p src/platform/wayland
     cd src/platform/wayland

@@ -48,4 +48,5 @@ typedef enum keys
     MAX_KEYS,
 } keys;
 
+// 1 pressed 0 for not pressed
 void input_process_key(keys key, b8 state);
