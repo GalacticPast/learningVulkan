@@ -54,4 +54,7 @@ typedef struct vulkan_context
 
     vulkan_swapchain swapchain;
 
+    // TODO: idk where to put this so it stays here
+    VkImageView *image_views;
+
 } vulkan_context;

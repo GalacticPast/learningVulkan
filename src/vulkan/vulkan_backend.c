@@ -5,9 +5,10 @@
 
 #include "platform/platform.h"
 
-#include "vulkan/vulkan_device.h"
-#include "vulkan/vulkan_swapchain.h"
 #include "vulkan_backend.h"
+#include "vulkan_device.h"
+#include "vulkan_image.h"
+#include "vulkan_swapchain.h"
 
 VkBool32 debug_messenger_callback(VkDebugUtilsMessageSeverityFlagBitsEXT message_severity, VkDebugUtilsMessageTypeFlagsEXT message_types,
                                   const VkDebugUtilsMessengerCallbackDataEXT *callback_data, void *user_data);
@@ -174,6 +175,12 @@ b8 initialize_vulkan(struct platform_state *plat_state, vulkan_context *context,
         return false;
     }
 
+    if (!vulkan_create_image_views(context))
+    {
+        ERROR("Vulkan image views creation failed");
+        return false;
+    }
+
     return true;
 }
 
@@ -220,6 +227,12 @@ void debug_messenger_destroy(vulkan_context *context)
 
 b8 shutdown_vulkan(vulkan_context *context)
 {
+    INFO("Destroying image views...");
+    u32 image_view_count = (u32)array_get_length(context->image_views);
+    for (u32 i = 0; i < image_view_count; i++)
+    {
+        vkDestroyImageView(context->device.logical, context->image_views[i], 0);
+    }
     INFO("Destroying vulkan swapchain...");
     vkDestroySwapchainKHR(context->device.logical, context->swapchain.handle, 0);
     INFO("Destroying vulkan device...");
