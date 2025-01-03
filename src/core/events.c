@@ -12,7 +12,7 @@ void event_system_initialize()
         ERROR("event_system already initialized");
     }
 
-    state.events = array_create(event);
+    state.events   = array_create(event);
     is_initialized = true;
 
     INFO("Event system initialized");
@@ -68,10 +68,10 @@ void event_register(event_type type, fp_on_event fp_on_event)
 
     if (!found_event)
     {
-        event event = {};
-        event.type = type;
+        event event     = {};
+        event.type      = type;
         event.listeners = array_create(event_listener);
-        found_event = &event;
+        found_event     = &event;
     }
 
     event_listener listener = {fp_on_event};

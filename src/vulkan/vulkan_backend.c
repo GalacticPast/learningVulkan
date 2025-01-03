@@ -6,6 +6,7 @@
 #include "platform/platform.h"
 
 #include "vulkan/vulkan_device.h"
+#include "vulkan/vulkan_swapchain.h"
 #include "vulkan_backend.h"
 
 VkBool32 debug_messenger_callback(VkDebugUtilsMessageSeverityFlagBitsEXT message_severity, VkDebugUtilsMessageTypeFlagsEXT message_types,
@@ -17,21 +18,21 @@ b8 initialize_vulkan(struct platform_state *plat_state, vulkan_context *context,
 
     INFO("Initializing Vulkan...");
 
-    VkApplicationInfo app_info = {};
-    app_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
-    app_info.pNext = 0;
-    app_info.pApplicationName = application_name;
+    VkApplicationInfo app_info  = {};
+    app_info.sType              = VK_STRUCTURE_TYPE_APPLICATION_INFO;
+    app_info.pNext              = 0;
+    app_info.pApplicationName   = application_name;
     app_info.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
-    app_info.pEngineName = "No engine";
-    app_info.engineVersion = VK_MAKE_VERSION(0, 0, 0);
-    app_info.apiVersion = VK_API_VERSION_1_2;
+    app_info.pEngineName        = "No engine";
+    app_info.engineVersion      = VK_MAKE_VERSION(0, 0, 0);
+    app_info.apiVersion         = VK_API_VERSION_1_2;
 
     // INFO: vulkan layers
     INFO("Checking required vulkan layers...");
     char **required_layer_names = array_create(const char *);
 
     char *validation_layer_name = "VK_LAYER_KHRONOS_validation";
-    required_layer_names = array_push_value(required_layer_names, &validation_layer_name);
+    required_layer_names        = array_push_value(required_layer_names, &validation_layer_name);
 
     u32 layer_count = 0;
     VK_CHECK(vkEnumerateInstanceLayerProperties(&layer_count, 0));
@@ -71,8 +72,8 @@ b8 initialize_vulkan(struct platform_state *plat_state, vulkan_context *context,
     INFO("Checking required vulkan extensions...");
 
     char **required_extensions_name = array_create(const char *);
-    char  *debug_utils = VK_EXT_DEBUG_UTILS_EXTENSION_NAME;
-    char  *surface_name = VK_KHR_SURFACE_EXTENSION_NAME;
+    char  *debug_utils              = VK_EXT_DEBUG_UTILS_EXTENSION_NAME;
+    char  *surface_name             = VK_KHR_SURFACE_EXTENSION_NAME;
 
     required_extensions_name = array_push_value(required_extensions_name, &debug_utils);
     required_extensions_name = array_push_value(required_extensions_name, &surface_name);          // generic surface extension
@@ -111,24 +112,24 @@ b8 initialize_vulkan(struct platform_state *plat_state, vulkan_context *context,
 
     // INFO: create debug messenger
     VkDebugUtilsMessengerCreateInfoEXT debug_messenger_create_info = {};
-    debug_messenger_create_info.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
-    debug_messenger_create_info.pNext = 0;
-    debug_messenger_create_info.flags = 0;
+    debug_messenger_create_info.sType                              = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
+    debug_messenger_create_info.pNext                              = 0;
+    debug_messenger_create_info.flags                              = 0;
     debug_messenger_create_info.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT |
                                                   VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
     debug_messenger_create_info.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT |
                                               VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
     debug_messenger_create_info.pfnUserCallback = debug_messenger_callback;
-    debug_messenger_create_info.pUserData = 0;
+    debug_messenger_create_info.pUserData       = 0;
 
-    VkInstanceCreateInfo instance_create_info = {};
-    instance_create_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
-    instance_create_info.pNext = (VkDebugUtilsMessengerCreateInfoEXT *)&debug_messenger_create_info;
-    instance_create_info.flags = 0;
-    instance_create_info.pApplicationInfo = &app_info;
-    instance_create_info.enabledLayerCount = (u32)required_layer_count;
-    instance_create_info.ppEnabledLayerNames = (const char *const *)required_layer_names;
-    instance_create_info.enabledExtensionCount = (u32)required_extensions_count;
+    VkInstanceCreateInfo instance_create_info    = {};
+    instance_create_info.sType                   = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
+    instance_create_info.pNext                   = (VkDebugUtilsMessengerCreateInfoEXT *)&debug_messenger_create_info;
+    instance_create_info.flags                   = 0;
+    instance_create_info.pApplicationInfo        = &app_info;
+    instance_create_info.enabledLayerCount       = (u32)required_layer_count;
+    instance_create_info.ppEnabledLayerNames     = (const char *const *)required_layer_names;
+    instance_create_info.enabledExtensionCount   = (u32)required_extensions_count;
     instance_create_info.ppEnabledExtensionNames = (const char *const *)required_extensions_name;
 
     VK_CHECK(vkCreateInstance(&instance_create_info, 0, &context->instance));
@@ -157,11 +158,19 @@ b8 initialize_vulkan(struct platform_state *plat_state, vulkan_context *context,
 
     if (!platform_create_vulkan_surface(plat_state, context))
     {
+        ERROR("Vulkan platform surface creation failed");
+        return false;
     }
 
     if (!vulkan_create_logical_device(context))
     {
         ERROR("Vulkan Logical device creation failed");
+        return false;
+    }
+
+    if (!vulkan_create_swapchain(context))
+    {
+        ERROR("Vulkan swapchain creation failed");
         return false;
     }
 

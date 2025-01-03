@@ -17,12 +17,25 @@ typedef struct queue_family_indicies
     u32 present_queue_index;
 } queue_family_indicies;
 
-b8 select_physical_device(vulkan_context *context);
+b8 select_physical_device(vulkan_context *context, physical_device_requirements requirements, const char **required_device_extensions);
 
 b8 vulkan_create_logical_device(vulkan_context *context)
 {
     INFO("Creating vulkan logical device...");
-    if (!select_physical_device(context))
+
+    const char **required_device_extensions = array_create(const char *);
+    const char  *swapchain_extension        = VK_KHR_SWAPCHAIN_EXTENSION_NAME;
+
+    required_device_extensions = array_push_value(required_device_extensions, &swapchain_extension);
+
+    physical_device_requirements device_requirements = {};
+
+    device_requirements.is_discrete          = true;
+    device_requirements.geometry_shader      = true;
+    device_requirements.present_queue_family = true;
+    device_requirements.swapchain_support    = true;
+
+    if (!select_physical_device(context, device_requirements, required_device_extensions))
     {
         ERROR("Couldnt select a physcial device aka GPU");
         return false;
@@ -37,7 +50,7 @@ b8 vulkan_create_logical_device(vulkan_context *context)
     }
 
     u32 queue_indicies[queue_indicies_count] = {};
-    queue_indicies[0] = context->device.graphics_queue_index;
+    queue_indicies[0]                        = context->device.graphics_queue_index;
 
     if (context->device.graphics_queue_index != context->device.present_queue_index)
     {
@@ -49,30 +62,30 @@ b8 vulkan_create_logical_device(vulkan_context *context)
     for (u32 i = 0; i < queue_indicies_count; i++)
     {
         VkDeviceQueueCreateInfo queue_create_info = {};
-        queue_create_info.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-        queue_create_info.pNext = 0;
-        queue_create_info.flags = 0;
-        queue_create_info.queueFamilyIndex = queue_indicies[i];
-        queue_create_info.queueCount = 1;
-        f32 queue_priority = 1.0f;
-        queue_create_info.pQueuePriorities = &queue_priority;
+        queue_create_info.sType                   = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+        queue_create_info.pNext                   = 0;
+        queue_create_info.flags                   = 0;
+        queue_create_info.queueFamilyIndex        = queue_indicies[i];
+        queue_create_info.queueCount              = 1;
+        f32 queue_priority                        = 1.0f;
+        queue_create_info.pQueuePriorities        = &queue_priority;
 
         queue_create_infos = array_push_value(queue_create_infos, &queue_create_info);
     }
 
     VkDeviceCreateInfo device_create_info = {};
-    device_create_info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
-    device_create_info.pNext = 0;
-    device_create_info.flags = 0;
+    device_create_info.sType              = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+    device_create_info.pNext              = 0;
+    device_create_info.flags              = 0;
 
     u32 queue_create_infos_count = (u32)array_get_length(queue_create_infos);
     DEBUG("Queue create infos count: %d", queue_create_infos_count);
 
-    device_create_info.queueCreateInfoCount = queue_create_infos_count;
-    device_create_info.pQueueCreateInfos = queue_create_infos;
-    device_create_info.enabledExtensionCount = 0;
-    device_create_info.ppEnabledExtensionNames = 0;
-    device_create_info.pEnabledFeatures = 0;
+    device_create_info.queueCreateInfoCount    = queue_create_infos_count;
+    device_create_info.pQueueCreateInfos       = queue_create_infos;
+    device_create_info.enabledExtensionCount   = (u32)array_get_length(required_device_extensions);
+    device_create_info.ppEnabledExtensionNames = required_device_extensions;
+    device_create_info.pEnabledFeatures        = 0;
 
     VK_CHECK(vkCreateDevice(context->device.physical, &device_create_info, 0, &context->device.logical));
     INFO("Vulkan Logical device created");
@@ -84,14 +97,17 @@ b8 vulkan_create_logical_device(vulkan_context *context)
 
     INFO("Queues obtained");
     array_destroy(queue_create_infos);
+    array_destroy(required_device_extensions);
 
     return true;
 }
 
-b8 select_physical_device(vulkan_context *context)
+b8 select_physical_device(vulkan_context *context, physical_device_requirements device_requirements, const char **required_device_extensions)
 {
     // INFO: enumerate physical devices aka GPU'S
     INFO("Selecting physical device (aka gpu)...");
+
+    u32 required_device_extensions_count = (u32)array_get_length(required_device_extensions);
 
     u32 gpu_count = 0;
     VK_CHECK(vkEnumeratePhysicalDevices(context->instance, &gpu_count, 0));
@@ -105,19 +121,6 @@ b8 select_physical_device(vulkan_context *context)
 
     VkPhysicalDevice *physical_devices = array_create_with_capacity(VkPhysicalDevice, gpu_count);
     VK_CHECK(vkEnumeratePhysicalDevices(context->instance, &gpu_count, physical_devices));
-
-    char **required_device_extensions = array_create(const char *);
-
-    const char *swapchain_extension = VK_KHR_SWAPCHAIN_EXTENSION_NAME;
-    required_device_extensions = array_push_value(required_device_extensions, &swapchain_extension);
-    u32 required_device_extensions_count = (u32)array_get_length(required_device_extensions);
-
-    physical_device_requirements device_requirements = {};
-
-    device_requirements.is_discrete = true;
-    device_requirements.geometry_shader = true;
-    device_requirements.present_queue_family = true;
-    device_requirements.swapchain_support = true;
 
     for (u32 i = 0; i < gpu_count; i++)
     {
@@ -176,20 +179,20 @@ b8 select_physical_device(vulkan_context *context)
             DEBUG("No of queue families %d", queue_family_count);
 
             b8 graphics_queue_family_found = false;
-            b8 present_queue_family_found = false;
+            b8 present_queue_family_found  = false;
 
             for (u32 j = 0; j < queue_family_count; j++)
             {
                 if (queue_family_properties[j].queueFlags & VK_QUEUE_GRAPHICS_BIT)
                 {
-                    graphics_queue_family_found = true;
+                    graphics_queue_family_found   = true;
                     indicies.graphics_queue_index = j;
                 }
                 VkBool32 present_queue = false;
                 vkGetPhysicalDeviceSurfaceSupportKHR(physical_devices[i], j, context->surface, &present_queue);
                 if (present_queue)
                 {
-                    present_queue_family_found = true;
+                    present_queue_family_found   = true;
                     indicies.present_queue_index = j;
                 }
             }
@@ -208,11 +211,11 @@ b8 select_physical_device(vulkan_context *context)
             DEBUG("Graphics queue family index: %d", indicies.graphics_queue_index);
             DEBUG("Present queue family index: %d", indicies.present_queue_index);
 
-            context->device.physical = physical_devices[i];
+            context->device.physical                   = physical_devices[i];
             context->device.physical_device_properties = physical_properties;
-            context->device.physical_device_features = physical_features;
-            context->device.graphics_queue_index = indicies.graphics_queue_index;
-            context->device.present_queue_index = indicies.present_queue_index;
+            context->device.physical_device_features   = physical_features;
+            context->device.graphics_queue_index       = indicies.graphics_queue_index;
+            context->device.present_queue_index        = indicies.present_queue_index;
 
             // destroy the arrays
             array_destroy(queue_family_properties);
@@ -222,7 +225,6 @@ b8 select_physical_device(vulkan_context *context)
         INFO("Found Queue families support");
     }
     array_destroy(physical_devices);
-    array_destroy(required_device_extensions);
     INFO("Physical device selected");
     return true;
 }

@@ -52,7 +52,7 @@ b8 platform_startup(platform_state *plat_state, const char *application_name, s3
 
     // Create the internal state.
     plat_state->internal_state = malloc(sizeof(internal_state));
-    internal_state *state = (internal_state *)plat_state->internal_state;
+    internal_state *state      = (internal_state *)plat_state->internal_state;
 
     // Connect to X
     state->display = XOpenDisplay(NULL);
@@ -73,7 +73,7 @@ b8 platform_startup(platform_state *plat_state, const char *application_name, s3
     const struct xcb_setup_t *setup = xcb_get_setup(state->connection);
 
     // Loop through screens using iterator
-    xcb_screen_iterator_t it = xcb_setup_roots_iterator(setup);
+    xcb_screen_iterator_t it       = xcb_setup_roots_iterator(setup);
     s32                   screen_p = 0;
     for (s32 s = screen_p; s > 0; s--)
     {
@@ -118,12 +118,12 @@ b8 platform_startup(platform_state *plat_state, const char *application_name, s3
 
     // Tell the server to notify when the window manager
     // attempts to destroy the window.
-    xcb_intern_atom_cookie_t wm_delete_cookie = xcb_intern_atom(state->connection, 0, strlen("WM_DELETE_WINDOW"), "WM_DELETE_WINDOW");
+    xcb_intern_atom_cookie_t wm_delete_cookie    = xcb_intern_atom(state->connection, 0, strlen("WM_DELETE_WINDOW"), "WM_DELETE_WINDOW");
     xcb_intern_atom_cookie_t wm_protocols_cookie = xcb_intern_atom(state->connection, 0, strlen("WM_PROTOCOLS"), "WM_PROTOCOLS");
-    xcb_intern_atom_reply_t *wm_delete_reply = xcb_intern_atom_reply(state->connection, wm_delete_cookie, NULL);
-    xcb_intern_atom_reply_t *wm_protocols_reply = xcb_intern_atom_reply(state->connection, wm_protocols_cookie, NULL);
-    state->wm_delete_win = wm_delete_reply->atom;
-    state->wm_protocols = wm_protocols_reply->atom;
+    xcb_intern_atom_reply_t *wm_delete_reply     = xcb_intern_atom_reply(state->connection, wm_delete_cookie, NULL);
+    xcb_intern_atom_reply_t *wm_protocols_reply  = xcb_intern_atom_reply(state->connection, wm_protocols_cookie, NULL);
+    state->wm_delete_win                         = wm_delete_reply->atom;
+    state->wm_protocols                          = wm_protocols_reply->atom;
 
     xcb_change_property(state->connection, XCB_PROP_MODE_REPLACE, state->window, wm_protocols_reply->atom, 4, 32, 1, &wm_delete_reply->atom);
 
@@ -194,11 +194,11 @@ b8 platform_create_vulkan_surface(platform_state *plat_state, struct vulkan_cont
 
     VkXcbSurfaceCreateInfoKHR xcb_surface_create_info = {};
 
-    xcb_surface_create_info.sType = VK_STRUCTURE_TYPE_XCB_SURFACE_CREATE_INFO_KHR;
-    xcb_surface_create_info.pNext = 0;
-    xcb_surface_create_info.flags = 0;
+    xcb_surface_create_info.sType      = VK_STRUCTURE_TYPE_XCB_SURFACE_CREATE_INFO_KHR;
+    xcb_surface_create_info.pNext      = 0;
+    xcb_surface_create_info.flags      = 0;
     xcb_surface_create_info.connection = state->connection;
-    xcb_surface_create_info.window = state->window;
+    xcb_surface_create_info.window     = state->window;
 
     VK_CHECK(vkCreateXcbSurfaceKHR(context->instance, &xcb_surface_create_info, 0, &context->surface));
 
@@ -207,7 +207,7 @@ b8 platform_create_vulkan_surface(platform_state *plat_state, struct vulkan_cont
 
 void *platform_get_required_surface_extensions(char **required_extension_names)
 {
-    char *surface_name = VK_KHR_XCB_SURFACE_EXTENSION_NAME;
+    char *surface_name       = VK_KHR_XCB_SURFACE_EXTENSION_NAME;
     required_extension_names = array_push_value(required_extension_names, &surface_name);
     return (void *)required_extension_names;
 }
@@ -411,11 +411,11 @@ static const struct wl_buffer_listener wl_buffer_listener = {
 
 static struct wl_buffer *draw_frame(struct internal_state *state)
 {
-    const int width = state->width;
+    const int width  = state->width;
     const int height = state->height;
 
     int stride = width * 4;
-    int size = stride * height;
+    int size   = stride * height;
 
     int fd = allocate_shm_file(size);
     if (fd == -1)
@@ -430,7 +430,7 @@ static struct wl_buffer *draw_frame(struct internal_state *state)
         return NULL;
     }
 
-    struct wl_shm_pool *pool = wl_shm_create_pool(state->wl_shm, fd, size);
+    struct wl_shm_pool *pool   = wl_shm_create_pool(state->wl_shm, fd, size);
     struct wl_buffer   *buffer = wl_shm_pool_create_buffer(pool, 0, width, height, stride, WL_SHM_FORMAT_ARGB8888);
 
     for (int y = 0; y < height; ++y)
@@ -438,9 +438,9 @@ static struct wl_buffer *draw_frame(struct internal_state *state)
         for (int x = 0; x < width; ++x)
         {
             u8 alpha = 0xFF;
-            u8 red = 0xFF;
+            u8 red   = 0xFF;
             u8 green = 0xFF;
-            u8 blue = 0x00;
+            u8 blue  = 0x00;
 
             u32 color = ((u32)alpha << 24 | (u32)red << 16 | (u32)green << 8 | (u32)blue << 0);
 
@@ -475,7 +475,7 @@ static void wl_keyboard_key(void *data, struct wl_keyboard *wl_keyboard, u32 ser
     if (code == KEY_ESCAPE)
     {
         event_context context = {};
-        context.data.u32[0] = code;
+        context.data.u32[0]   = code;
         event_fire(ON_APPLICATION_QUIT, context);
     }
 }
@@ -495,11 +495,11 @@ static void wl_keyboard_repeat_info(void *data, struct wl_keyboard *wl_keyboard,
 }
 
 static const struct wl_keyboard_listener wl_keyboard_listener = {
-    .keymap = wl_keyboard_keymap,
-    .enter = wl_keyboard_enter,
-    .leave = wl_keyboard_leave,
-    .key = wl_keyboard_key,
-    .modifiers = wl_keyboard_modifiers,
+    .keymap      = wl_keyboard_keymap,
+    .enter       = wl_keyboard_enter,
+    .leave       = wl_keyboard_leave,
+    .key         = wl_keyboard_key,
+    .modifiers   = wl_keyboard_modifiers,
     .repeat_info = wl_keyboard_repeat_info,
 };
 //
@@ -537,7 +537,7 @@ static void xdg_toplevel_configure(void *data, struct xdg_toplevel *xdg_toplevel
 
     if (state->width != width || state->height != height)
     {
-        state->width = width;
+        state->width  = width;
         state->height = height;
     }
 }
@@ -603,7 +603,7 @@ static void registry_global_remove(void *data, struct wl_registry *wl_registry, 
 }
 
 static const struct wl_registry_listener wl_registry_listener = {
-    .global = registry_global,
+    .global        = registry_global,
     .global_remove = registry_global_remove,
 };
 
@@ -611,9 +611,9 @@ b8 platform_startup(platform_state *plat_state, const char *application_name, s3
 {
     INFO("Initializing linux-Wayland platform...");
     plat_state->internal_state = malloc(sizeof(internal_state));
-    internal_state *state = (internal_state *)plat_state->internal_state;
+    internal_state *state      = (internal_state *)plat_state->internal_state;
 
-    state->width = width;
+    state->width  = width;
     state->height = height;
 
     state->wl_display = wl_display_connect(NULL);
@@ -684,7 +684,7 @@ void platform_shutdown(platform_state *plat_state)
 
 void *platform_get_required_surface_extensions(char **required_extension_names)
 {
-    char *surface_name = VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME;
+    char *surface_name       = VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME;
     required_extension_names = array_push_value(required_extension_names, &surface_name);
     return (void *)required_extension_names;
 }
@@ -694,15 +694,15 @@ b8 platform_create_vulkan_surface(platform_state *plat_state, vulkan_context *co
     internal_state *state = (internal_state *)plat_state->internal_state;
 
     VkWaylandSurfaceCreateInfoKHR create_surface_info = {};
-    create_surface_info.sType = VK_STRUCTURE_TYPE_WAYLAND_SURFACE_CREATE_INFO_KHR;
-    create_surface_info.pNext = 0;
-    create_surface_info.flags = 0;
-    create_surface_info.display = state->wl_display;
-    create_surface_info.surface = state->wl_surface;
+    create_surface_info.sType                         = VK_STRUCTURE_TYPE_WAYLAND_SURFACE_CREATE_INFO_KHR;
+    create_surface_info.pNext                         = 0;
+    create_surface_info.flags                         = 0;
+    create_surface_info.display                       = state->wl_display;
+    create_surface_info.surface                       = state->wl_surface;
 
     VK_CHECK(vkCreateWaylandSurfaceKHR(context->instance, &create_surface_info, 0, &context->surface));
 
-    return false;
+    return true;
 }
 
 u32 translate_keycode(u32 wl_keycode)

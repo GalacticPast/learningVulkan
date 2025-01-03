@@ -32,12 +32,12 @@ b8 appilcaion_quit(event_type type, event_context data)
 
 s32 main(s32 argc, char **argv)
 {
-    is_running = true;
+    is_running                   = true;
     const char *application_name = "learningVulkan";
-    u32         x = 0;
-    u32         y = 0;
-    u32         width = 1280;
-    u32         height = 720;
+    u32         x                = 0;
+    u32         y                = 0;
+    u32         width            = 1280;
+    u32         height           = 720;
 
     platform_state plat_state = {};
     vulkan_context vk_context = {};
