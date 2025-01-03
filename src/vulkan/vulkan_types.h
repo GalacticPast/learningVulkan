@@ -13,6 +13,8 @@ typedef struct vulkan_swapchain
     VkSwapchainKHR     handle;
     VkSurfaceFormatKHR format;
     VkPresentModeKHR   present_mode;
+    VkExtent2D         extent2D;
+    VkImage           *images;
 } vulkan_swapchain;
 
 typedef struct vulkan_swapchain_support_details
@@ -51,4 +53,5 @@ typedef struct vulkan_context
     VkSurfaceKHR surface;
 
     vulkan_swapchain swapchain;
+
 } vulkan_context;

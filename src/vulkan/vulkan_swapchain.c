@@ -1,9 +1,12 @@
 #include "vulkan_swapchain.h"
+#include "containers/array.h"
 #include "platform/platform.h"
 
 b8 vulkan_create_swapchain(platform_state *plat_state, vulkan_context *context)
 {
+    //
     // TODO: this a hack
+
     VkSurfaceCapabilitiesKHR capabilities = context->device.swapchain_support_details.capabilities;
 
     VkExtent2D swap_extent = {};
@@ -81,5 +84,16 @@ b8 vulkan_create_swapchain(platform_state *plat_state, vulkan_context *context)
     swapchain_create_info.oldSwapchain   = VK_NULL_HANDLE;
 
     VK_CHECK(vkCreateSwapchainKHR(context->device.logical, &swapchain_create_info, 0, &context->swapchain.handle));
+
+    context->swapchain.format       = surface_format;
+    context->swapchain.present_mode = present_mode;
+    context->swapchain.extent2D     = swap_extent;
+
+    image_count = 0;
+    VK_CHECK(vkGetSwapchainImagesKHR(context->device.logical, context->swapchain.handle, &image_count, 0));
+    context->swapchain.images = array_create_with_capacity(VkImage, image_count);
+    VK_CHECK(vkGetSwapchainImagesKHR(context->device.logical, context->swapchain.handle, &image_count, context->swapchain.images));
+    array_set_length(context->swapchain.images, image_count);
+
     return true;
 }
