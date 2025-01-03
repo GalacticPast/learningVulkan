@@ -7,7 +7,7 @@
 void log_message(log_levels level, const char *msg, ...)
 {
 
-    const char *log_level_strings[6] = {"[FATAL]: ", "[ERROR]: ", "[DEBUG]:  ", "[WARN]:  ", "[INFO]: ", "[TRACE]: "};
+    const char *log_level_strings[6] = {"[FATAL]: ", "[ERROR]: ", "[DEBUG]: ", "[WARN]:  ", "[INFO]:  ", "[TRACE]: "};
 
     const u32 max_chars = 4096;
     char      buffer[max_chars];

@@ -77,7 +77,7 @@ void event_register(event_type type, fp_on_event fp_on_event)
     event_listener listener = {fp_on_event};
     array_push_value(found_event->listeners, &listener);
     state.events = array_push_value(state.events, found_event);
-    INFO("Successfully registered for event");
+    DEBUG("Successfully registered for event");
 }
 
 void event_unregister(event_type type, fp_on_event fp_on_event)

@@ -48,6 +48,8 @@ keys xcb_translate_keycode(xcb_keycode_t code);
 
 b8 platform_startup(platform_state *plat_state, const char *application_name, s32 x, s32 y, s32 width, s32 height)
 {
+    INFO("Initializing linux-x11 platform...");
+
     // Create the internal state.
     plat_state->internal_state = malloc(sizeof(internal_state));
     internal_state *state = (internal_state *)plat_state->internal_state;
@@ -135,6 +137,8 @@ b8 platform_startup(platform_state *plat_state, const char *application_name, s3
         FATAL("An error occurred when flusing the stream: %d", stream_result);
         return false;
     }
+
+    INFO("Initialized linux-x11 platform.");
 
     return true;
 }
@@ -605,7 +609,7 @@ static const struct wl_registry_listener wl_registry_listener = {
 
 b8 platform_startup(platform_state *plat_state, const char *application_name, s32 x, s32 y, s32 width, s32 height)
 {
-    INFO("Initializing Linux-Walyand platform...");
+    INFO("Initializing linux-Wayland platform...");
     plat_state->internal_state = malloc(sizeof(internal_state));
     internal_state *state = (internal_state *)plat_state->internal_state;
 
@@ -654,7 +658,7 @@ b8 platform_startup(platform_state *plat_state, const char *application_name, s3
 
     wl_surface_commit(state->wl_surface);
 
-    DEBUG("Linux-Walyand platform initialized");
+    INFO("Linux-Wayland platform initialized");
 
     return true;
 }

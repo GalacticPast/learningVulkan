@@ -19,6 +19,9 @@ typedef struct vulkan_device
     u32     graphics_queue_index;
     VkQueue graphics_queue;
 
+    u32     present_queue_index;
+    VkQueue present_queue;
+
 } vulkan_device;
 
 typedef struct vulkan_context

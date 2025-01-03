@@ -39,11 +39,12 @@ b8 initialize_vulkan(struct platform_state *plat_state, vulkan_context *context,
     VK_CHECK(vkEnumerateInstanceLayerProperties(&layer_count, layer_properties));
 
     DEBUG("Avaliable layers: %d", layer_count);
+    /*
     for (u32 i = 0; i < layer_count; i++)
     {
         DEBUG("Layer Name:%s | Spec Version:%d | implementation version:%d | description:%s", layer_properties[i].layerName,
               layer_properties[i].specVersion, layer_properties[i].implementationVersion, layer_properties[i].description);
-    }
+    }*/
 
     // INFO: to check if we have the required layer present
     u32 required_layer_count = (u32)array_get_length(required_layer_names);
@@ -83,6 +84,11 @@ b8 initialize_vulkan(struct platform_state *plat_state, vulkan_context *context,
     VK_CHECK(vkEnumerateInstanceExtensionProperties(0, &all_extension_count, 0));
     VkExtensionProperties *all_extension_properties = array_create_with_capacity(VkExtensionProperties, all_extension_count);
     VK_CHECK(vkEnumerateInstanceExtensionProperties(0, &all_extension_count, all_extension_properties));
+
+    /*    for (u32 j = 0; j < all_extension_count; j++)
+        {
+            DEBUG("Available Extensions: %s", all_extension_properties[j].extensionName);
+        }*/
 
     for (u32 i = 0; i < required_extensions_count; i++)
     {
@@ -153,7 +159,6 @@ b8 initialize_vulkan(struct platform_state *plat_state, vulkan_context *context,
     {
     }
 
-    // INFO: create logical device
     if (!vulkan_create_logical_device(context))
     {
         ERROR("Vulkan Logical device creation failed");
@@ -209,7 +214,7 @@ b8 shutdown_vulkan(vulkan_context *context)
     INFO("Destroying vulkan device...");
     vkDestroyDevice(context->device.logical, 0);
     INFO("Destroying vulkan surface...");
-    vkDestroySurfaceKHR(context->instance, context->surface,0);
+    vkDestroySurfaceKHR(context->instance, context->surface, 0);
     INFO("Destroying debug messenger...");
     debug_messenger_destroy(context);
     INFO("Destroying vulkan instance...");
