@@ -168,7 +168,7 @@ b8 initialize_vulkan(struct platform_state *plat_state, vulkan_context *context,
         return false;
     }
 
-    if (!vulkan_create_swapchain(context))
+    if (!vulkan_create_swapchain(plat_state, context))
     {
         ERROR("Vulkan swapchain creation failed");
         return false;
@@ -220,6 +220,8 @@ void debug_messenger_destroy(vulkan_context *context)
 
 b8 shutdown_vulkan(vulkan_context *context)
 {
+    INFO("Destroying vulkan swapchain...");
+    vkDestroySwapchainKHR(context->device.logical, context->swapchain.handle, 0);
     INFO("Destroying vulkan device...");
     vkDestroyDevice(context->device.logical, 0);
     INFO("Destroying vulkan surface...");

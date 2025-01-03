@@ -8,6 +8,22 @@
         ASSERT(expr == VK_SUCCESS);                                                                                                                  \
     }
 
+typedef struct vulkan_swapchain
+{
+    VkSwapchainKHR     handle;
+    VkSurfaceFormatKHR format;
+    VkPresentModeKHR   present_mode;
+} vulkan_swapchain;
+
+typedef struct vulkan_swapchain_support_details
+{
+    VkSurfaceCapabilitiesKHR capabilities;
+    u32                      format_count;
+    VkSurfaceFormatKHR      *formats;
+    u32                      present_mode_count;
+    VkPresentModeKHR        *present_modes;
+} vulkan_swapchain_support_details;
+
 typedef struct vulkan_device
 {
     VkPhysicalDevice           physical;
@@ -22,6 +38,7 @@ typedef struct vulkan_device
     u32     present_queue_index;
     VkQueue present_queue;
 
+    vulkan_swapchain_support_details swapchain_support_details;
 } vulkan_device;
 
 typedef struct vulkan_context
@@ -33,4 +50,5 @@ typedef struct vulkan_context
 
     VkSurfaceKHR surface;
 
+    vulkan_swapchain swapchain;
 } vulkan_context;

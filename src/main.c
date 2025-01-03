@@ -49,6 +49,13 @@ s32 main(s32 argc, char **argv)
     INFO("Test %f", 3.14159);
     TRACE("Test %f", 3.14159);
 
+    s32 value = 10;
+    s32 max   = 8;
+    s32 min   = 4;
+
+    value = CLAMP(value, min, max);
+    TRACE("Clamped value %d", value);
+
     event_system_initialize();
     event_register(ON_APPLICATION_QUIT, appilcaion_quit);
 

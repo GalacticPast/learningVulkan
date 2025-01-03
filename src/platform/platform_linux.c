@@ -705,6 +705,14 @@ b8 platform_create_vulkan_surface(platform_state *plat_state, vulkan_context *co
     return true;
 }
 
+void platform_get_framebuffer_size(platform_state *plat_state, u32 *width, u32 *height)
+{
+    internal_state *state = (internal_state *)plat_state->internal_state;
+
+    *width  = state->width;
+    *height = state->height;
+}
+
 u32 translate_keycode(u32 wl_keycode)
 {
     switch (wl_keycode)

@@ -19,6 +19,12 @@ typedef struct queue_family_indicies
 
 b8 select_physical_device(vulkan_context *context, physical_device_requirements requirements, const char **required_device_extensions);
 
+b8 device_meets_requirements(vulkan_context *context, VkSurfaceKHR surface, VkPhysicalDevice device, VkPhysicalDeviceProperties *physical_properties,
+                             VkPhysicalDeviceFeatures *physical_features, physical_device_requirements *device_requirements,
+                             const char **required_device_extensions, vulkan_swapchain_support_details *swapchain_support_details);
+void query_swapchain_support_details(VkPhysicalDevice physical_device, VkSurfaceKHR surface,
+                                     vulkan_swapchain_support_details *swapchain_support_details);
+
 b8 vulkan_create_logical_device(vulkan_context *context)
 {
     INFO("Creating vulkan logical device...");
@@ -107,8 +113,6 @@ b8 select_physical_device(vulkan_context *context, physical_device_requirements 
     // INFO: enumerate physical devices aka GPU'S
     INFO("Selecting physical device (aka gpu)...");
 
-    u32 required_device_extensions_count = (u32)array_get_length(required_device_extensions);
-
     u32 gpu_count = 0;
     VK_CHECK(vkEnumeratePhysicalDevices(context->instance, &gpu_count, 0));
     DEBUG("No of GPU's: %d", gpu_count);
@@ -131,100 +135,159 @@ b8 select_physical_device(vulkan_context *context, physical_device_requirements 
         VkPhysicalDeviceFeatures physical_features = {};
         vkGetPhysicalDeviceFeatures(physical_devices[i], &physical_features);
 
-        DEBUG("Physical Device Name: %s", physical_properties.deviceName);
+        VkPhysicalDeviceMemoryProperties physical_memory = {};
+        vkGetPhysicalDeviceMemoryProperties(physical_devices[i], &physical_memory);
 
-        // INFO: check for device extensions support
-        INFO("Checking device extensions support...");
-        b8 swapchain_support = false;
-
-        u32 device_extensions_count = 0;
-        vkEnumerateDeviceExtensionProperties(physical_devices[i], 0, &device_extensions_count, 0);
-        VkExtensionProperties *device_extension_properties = array_create_with_capacity(VkExtensionProperties, device_extensions_count);
-        vkEnumerateDeviceExtensionProperties(physical_devices[i], 0, &device_extensions_count, device_extension_properties);
-
-        for (u32 j = 0; j < required_device_extensions_count; j++)
+        b8 result = device_meets_requirements(context, context->surface, physical_devices[i], &physical_properties, &physical_features,
+                                              &device_requirements, required_device_extensions, &context->device.swapchain_support_details);
+        if (!result)
         {
-            for (u32 k = 0; k < device_extensions_count; k++)
-            {
-                // DEBUG("Available device extensions: %s", extension_properties[k].extensionName);
-                if (string_compare(required_device_extensions[j], device_extension_properties[k].extensionName))
-                {
-                    swapchain_support = true;
-                    break;
-                }
-            }
-        }
-        if (!swapchain_support)
-        {
-            ERROR("Swapchain support requested but not found. Skipping...");
+            array_destroy(context->device.swapchain_support_details.formats);
+            array_destroy(context->device.swapchain_support_details.present_modes);
+            context->device.swapchain_support_details.format_count       = 0;
+            context->device.swapchain_support_details.present_mode_count = 0;
             continue;
         }
-        INFO("All required device extensions found.");
 
-        INFO("Checking for queue families support...");
-        if ((device_requirements.is_discrete && physical_properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU) &&
-            (device_requirements.geometry_shader && physical_features.geometryShader))
+        DEBUG("Physical Device Name: %s", physical_properties.deviceName);
+        for (u32 i = 0; i < physical_memory.memoryHeapCount; i++)
         {
-            // get the queue famiy indicies
-            queue_family_indicies indicies = {};
-
-            u32 queue_family_count = 0;
-
-            vkGetPhysicalDeviceQueueFamilyProperties(physical_devices[i], &queue_family_count, 0);
-            VkQueueFamilyProperties *queue_family_properties = array_create_with_capacity(VkQueueFamilyProperties, queue_family_count);
-
-            vkGetPhysicalDeviceQueueFamilyProperties(physical_devices[i], &queue_family_count, queue_family_properties);
-            array_set_length(queue_family_properties, queue_family_count);
-
-            DEBUG("No of queue families %d", queue_family_count);
-
-            b8 graphics_queue_family_found = false;
-            b8 present_queue_family_found  = false;
-
-            for (u32 j = 0; j < queue_family_count; j++)
-            {
-                if (queue_family_properties[j].queueFlags & VK_QUEUE_GRAPHICS_BIT)
-                {
-                    graphics_queue_family_found   = true;
-                    indicies.graphics_queue_index = j;
-                }
-                VkBool32 present_queue = false;
-                vkGetPhysicalDeviceSurfaceSupportKHR(physical_devices[i], j, context->surface, &present_queue);
-                if (present_queue)
-                {
-                    present_queue_family_found   = true;
-                    indicies.present_queue_index = j;
-                }
-            }
-
-            if (!graphics_queue_family_found)
-            {
-                ERROR("Graphics queue family required but not found. Skipping...");
-                continue;
-            }
-            if (!present_queue_family_found)
-            {
-                ERROR("Present queue family required but not found. Skipping...");
-                continue;
-            }
-
-            DEBUG("Graphics queue family index: %d", indicies.graphics_queue_index);
-            DEBUG("Present queue family index: %d", indicies.present_queue_index);
-
-            context->device.physical                   = physical_devices[i];
-            context->device.physical_device_properties = physical_properties;
-            context->device.physical_device_features   = physical_features;
-            context->device.graphics_queue_index       = indicies.graphics_queue_index;
-            context->device.present_queue_index        = indicies.present_queue_index;
-
-            // destroy the arrays
-            array_destroy(queue_family_properties);
-            break;
+            DEBUG("Memory size: %.2f GB", ((f64)physical_memory.memoryHeaps[i].size / (1024 * 1024 * 1024)));
         }
-        array_destroy(device_extension_properties);
-        INFO("Found Queue families support");
+        context->device.physical = physical_devices[i];
+        break;
     }
+
     array_destroy(physical_devices);
+
     INFO("Physical device selected");
     return true;
+}
+
+b8 device_meets_requirements(vulkan_context *context, VkSurfaceKHR surface, VkPhysicalDevice device, VkPhysicalDeviceProperties *physical_properties,
+                             VkPhysicalDeviceFeatures *physical_features, physical_device_requirements *device_requirements,
+                             const char **required_device_extensions, vulkan_swapchain_support_details *swapchain_support_details)
+{
+    INFO("Checking device extensions support...");
+
+    DEBUG("Checking Swapchain support...");
+    b8 swapchain_support = false;
+
+    u32 device_extensions_count          = 0;
+    u32 required_device_extensions_count = (u32)array_get_length(required_device_extensions);
+
+    vkEnumerateDeviceExtensionProperties(device, 0, &device_extensions_count, 0);
+    VkExtensionProperties *device_extension_properties = array_create_with_capacity(VkExtensionProperties, device_extensions_count);
+    vkEnumerateDeviceExtensionProperties(device, 0, &device_extensions_count, device_extension_properties);
+
+    DEBUG("Device Extensions count %d", device_extensions_count);
+
+    // INFO: check for swapchain support
+    for (u32 j = 0; j < required_device_extensions_count; j++)
+    {
+        for (u32 k = 0; k < device_extensions_count; k++)
+        {
+            // DEBUG("Available device extensions: %s", extension_properties[k].extensionName);
+            if (string_compare(required_device_extensions[j], device_extension_properties[k].extensionName))
+            {
+                swapchain_support = true;
+                break;
+            }
+        }
+    }
+    if (!swapchain_support)
+    {
+        ERROR("Swapchain support requested but not found. Skipping...");
+        return false;
+    }
+    // INFO: check for swapchain support details
+
+    query_swapchain_support_details(device, surface, swapchain_support_details);
+
+    if (swapchain_support_details->format_count == 0 || swapchain_support_details->present_mode_count == 0)
+    {
+        ERROR("Swapchain deosnt support minimum format and present modes");
+        return false;
+    }
+
+    //
+
+    INFO("All required device extensions found.");
+
+    INFO("Checking for queue families support...");
+    if ((device_requirements->is_discrete && physical_properties->deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU) &&
+        (device_requirements->geometry_shader && physical_features->geometryShader))
+    {
+        // get the queue famiy indicies
+        queue_family_indicies indicies = {};
+
+        u32 queue_family_count = 0;
+
+        vkGetPhysicalDeviceQueueFamilyProperties(device, &queue_family_count, 0);
+        VkQueueFamilyProperties *queue_family_properties = array_create_with_capacity(VkQueueFamilyProperties, queue_family_count);
+
+        vkGetPhysicalDeviceQueueFamilyProperties(device, &queue_family_count, queue_family_properties);
+        array_set_length(queue_family_properties, queue_family_count);
+
+        DEBUG("No of queue families %d", queue_family_count);
+
+        b8 graphics_queue_family_found = false;
+        b8 present_queue_family_found  = false;
+
+        for (u32 j = 0; j < queue_family_count; j++)
+        {
+            if (queue_family_properties[j].queueFlags & VK_QUEUE_GRAPHICS_BIT)
+            {
+                graphics_queue_family_found   = true;
+                indicies.graphics_queue_index = j;
+            }
+            VkBool32 present_queue = false;
+            VK_CHECK(vkGetPhysicalDeviceSurfaceSupportKHR(device, j, surface, &present_queue));
+            if (present_queue)
+            {
+                present_queue_family_found   = true;
+                indicies.present_queue_index = j;
+            }
+        }
+
+        if (!graphics_queue_family_found)
+        {
+            ERROR("Graphics queue family required but not found. Skipping...");
+            return false;
+        }
+        if (!present_queue_family_found)
+        {
+            ERROR("Present queue family required but not found. Skipping...");
+            return false;
+        }
+
+        context->device.graphics_queue_index = indicies.graphics_queue_index;
+        context->device.present_queue_index  = indicies.present_queue_index;
+
+        // destroy the arrays
+        array_destroy(queue_family_properties);
+    }
+    return true;
+}
+
+void query_swapchain_support_details(VkPhysicalDevice physical_device, VkSurfaceKHR surface,
+                                     vulkan_swapchain_support_details *swapchain_support_details)
+{
+    VK_CHECK(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(physical_device, surface, &swapchain_support_details->capabilities));
+
+    u32 format_count = 0;
+    VK_CHECK(vkGetPhysicalDeviceSurfaceFormatsKHR(physical_device, surface, &format_count, 0));
+
+    swapchain_support_details->formats = array_create_with_capacity(VkSurfaceFormatKHR, format_count);
+    VK_CHECK(vkGetPhysicalDeviceSurfaceFormatsKHR(physical_device, surface, &format_count, swapchain_support_details->formats));
+    array_set_length(swapchain_support_details->formats, format_count);
+    swapchain_support_details->format_count = format_count;
+
+    u32 present_mode_count = 0;
+    VK_CHECK(vkGetPhysicalDeviceSurfacePresentModesKHR(physical_device, surface, &present_mode_count, 0));
+
+    swapchain_support_details->present_modes = array_create_with_capacity(VkPresentModeKHR, present_mode_count);
+    VK_CHECK(vkGetPhysicalDeviceSurfacePresentModesKHR(physical_device, surface, &present_mode_count, swapchain_support_details->present_modes));
+    array_set_length(swapchain_support_details->present_modes, present_mode_count);
+    swapchain_support_details->present_mode_count = present_mode_count;
 }
