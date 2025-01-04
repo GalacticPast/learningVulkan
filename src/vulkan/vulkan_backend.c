@@ -7,6 +7,7 @@
 
 #include "vulkan_backend.h"
 #include "vulkan_device.h"
+#include "vulkan_frame_buffers.h"
 #include "vulkan_graphics_pipeline.h"
 #include "vulkan_image.h"
 #include "vulkan_renderpass.h"
@@ -188,6 +189,11 @@ b8 initialize_vulkan(struct platform_state *plat_state, vulkan_context *context,
         ERROR("Vulkan graphics pipeline creation failed");
         return false;
     }
+    if (!vulkan_create_frame_buffers(context))
+    {
+        ERROR("Vulkan frame buffers creation failed");
+        return false;
+    }
 
     return true;
 }
@@ -234,6 +240,12 @@ void debug_messenger_destroy(vulkan_context *context)
 
 b8 shutdown_vulkan(vulkan_context *context)
 {
+    INFO("Destroying frame buffers...");
+    u32 frame_buffers_count = (u32)array_get_length(context->frame_buffers);
+    for (u32 i = 0; i < frame_buffers_count; i++)
+    {
+        vkDestroyFramebuffer(context->device.logical, context->frame_buffers[i], 0);
+    }
     INFO("Destroying graphics pipeline...");
     vkDestroyPipeline(context->device.logical, context->graphics_pipeline.handle, 0);
     INFO("Destroying graphics pipeline layout...");

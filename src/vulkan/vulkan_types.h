@@ -63,8 +63,11 @@ typedef struct vulkan_context
     // TODO: idk where to put this so it stays here
     VkImageView *image_views;
 
-    VkRenderPass renderpass;
-
+    VkRenderPass             renderpass;
     vulkan_graphics_pipeline graphics_pipeline;
+
+    // TODO: idk where to put this so it stays here
+
+    VkFramebuffer *frame_buffers;
 
 } vulkan_context;
