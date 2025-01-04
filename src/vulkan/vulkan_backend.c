@@ -7,12 +7,13 @@
 
 #include "vulkan_backend.h"
 #include "vulkan_device.h"
+#include "vulkan_graphics_pipeline.h"
 #include "vulkan_image.h"
 #include "vulkan_renderpass.h"
 #include "vulkan_swapchain.h"
 
-VkBool32 debug_messenger_callback(VkDebugUtilsMessageSeverityFlagBitsEXT message_severity, VkDebugUtilsMessageTypeFlagsEXT message_types,
-                                  const VkDebugUtilsMessengerCallbackDataEXT *callback_data, void *user_data);
+VkBool32 debug_messenger_callback(VkDebugUtilsMessageSeverityFlagBitsEXT message_severity, VkDebugUtilsMessageTypeFlagsEXT message_types, const VkDebugUtilsMessengerCallbackDataEXT *callback_data,
+                                  void *user_data);
 void     debug_messenger_destroy(vulkan_context *context);
 
 b8 initialize_vulkan(struct platform_state *plat_state, vulkan_context *context, const char *application_name)
@@ -117,10 +118,8 @@ b8 initialize_vulkan(struct platform_state *plat_state, vulkan_context *context,
     debug_messenger_create_info.sType                              = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
     debug_messenger_create_info.pNext                              = 0;
     debug_messenger_create_info.flags                              = 0;
-    debug_messenger_create_info.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT |
-                                                  VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
-    debug_messenger_create_info.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT |
-                                              VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
+    debug_messenger_create_info.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
+    debug_messenger_create_info.messageType     = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
     debug_messenger_create_info.pfnUserCallback = debug_messenger_callback;
     debug_messenger_create_info.pUserData       = 0;
 
@@ -147,8 +146,7 @@ b8 initialize_vulkan(struct platform_state *plat_state, vulkan_context *context,
     INFO("Creating Debug messenger...");
 
     // INFO: get the fucntion address because its a extension function and since vulkan doesnt load it by default
-    PFN_vkCreateDebugUtilsMessengerEXT create_debug_utils_messenger =
-        (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(context->instance, "vkCreateDebugUtilsMessengerEXT");
+    PFN_vkCreateDebugUtilsMessengerEXT create_debug_utils_messenger = (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(context->instance, "vkCreateDebugUtilsMessengerEXT");
 
     if (!create_debug_utils_messenger)
     {
@@ -163,7 +161,6 @@ b8 initialize_vulkan(struct platform_state *plat_state, vulkan_context *context,
         ERROR("Vulkan platform surface creation failed");
         return false;
     }
-
     if (!vulkan_create_logical_device(context))
     {
         ERROR("Vulkan Logical device creation failed");
@@ -186,12 +183,17 @@ b8 initialize_vulkan(struct platform_state *plat_state, vulkan_context *context,
         ERROR("Vulkan renderpass creation failed");
         return false;
     }
+    if (!vulkan_create_graphics_pipeline(plat_state, context))
+    {
+        ERROR("Vulkan graphics pipeline creation failed");
+        return false;
+    }
 
     return true;
 }
 
-VkBool32 debug_messenger_callback(VkDebugUtilsMessageSeverityFlagBitsEXT message_severity, VkDebugUtilsMessageTypeFlagsEXT message_types,
-                                  const VkDebugUtilsMessengerCallbackDataEXT *callback_data, void *user_data)
+VkBool32 debug_messenger_callback(VkDebugUtilsMessageSeverityFlagBitsEXT message_severity, VkDebugUtilsMessageTypeFlagsEXT message_types, const VkDebugUtilsMessengerCallbackDataEXT *callback_data,
+                                  void *user_data)
 {
     const char *msg = callback_data->pMessage;
     switch (message_severity)
@@ -221,8 +223,7 @@ VkBool32 debug_messenger_callback(VkDebugUtilsMessageSeverityFlagBitsEXT message
 
 void debug_messenger_destroy(vulkan_context *context)
 {
-    PFN_vkDestroyDebugUtilsMessengerEXT destroy_debug_utils_messenger =
-        (PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(context->instance, "vkDestroyDebugUtilsMessengerEXT");
+    PFN_vkDestroyDebugUtilsMessengerEXT destroy_debug_utils_messenger = (PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(context->instance, "vkDestroyDebugUtilsMessengerEXT");
     if (!destroy_debug_utils_messenger)
     {
         ERROR("Unable to get the function pointer to PFN_vkDestroyDebugUtilsMessengerEXT");
@@ -233,7 +234,10 @@ void debug_messenger_destroy(vulkan_context *context)
 
 b8 shutdown_vulkan(vulkan_context *context)
 {
-
+    INFO("Destroying graphics pipeline...");
+    vkDestroyPipeline(context->device.logical, context->graphics_pipeline.handle, 0);
+    INFO("Destroying graphics pipeline layout...");
+    vkDestroyPipelineLayout(context->device.logical, context->graphics_pipeline.layout, 0);
     INFO("Destroying rendper pass...");
     vkDestroyRenderPass(context->device.logical, context->renderpass, 0);
     INFO("Destroying image views...");

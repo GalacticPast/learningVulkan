@@ -3,10 +3,16 @@
 #include "defines.h"
 #include <vulkan/vulkan.h>
 
-#define VK_CHECK(expr)                                                                                                                               \
-    {                                                                                                                                                \
-        ASSERT(expr == VK_SUCCESS);                                                                                                                  \
+#define VK_CHECK(expr)                                                                                                                                                                                 \
+    {                                                                                                                                                                                                  \
+        ASSERT(expr == VK_SUCCESS);                                                                                                                                                                    \
     }
+
+typedef struct vulkan_graphics_pipeline
+{
+    VkPipeline       handle;
+    VkPipelineLayout layout;
+} vulkan_graphics_pipeline;
 
 typedef struct vulkan_swapchain
 {
@@ -58,5 +64,7 @@ typedef struct vulkan_context
     VkImageView *image_views;
 
     VkRenderPass renderpass;
+
+    vulkan_graphics_pipeline graphics_pipeline;
 
 } vulkan_context;
