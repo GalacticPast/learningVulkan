@@ -57,4 +57,6 @@ typedef struct vulkan_context
     // TODO: idk where to put this so it stays here
     VkImageView *image_views;
 
+    VkRenderPass renderpass;
+
 } vulkan_context;

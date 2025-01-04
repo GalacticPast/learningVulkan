@@ -8,6 +8,7 @@
 #include "vulkan_backend.h"
 #include "vulkan_device.h"
 #include "vulkan_image.h"
+#include "vulkan_renderpass.h"
 #include "vulkan_swapchain.h"
 
 VkBool32 debug_messenger_callback(VkDebugUtilsMessageSeverityFlagBitsEXT message_severity, VkDebugUtilsMessageTypeFlagsEXT message_types,
@@ -180,6 +181,11 @@ b8 initialize_vulkan(struct platform_state *plat_state, vulkan_context *context,
         ERROR("Vulkan image views creation failed");
         return false;
     }
+    if (!vulkan_create_renderpass(context))
+    {
+        ERROR("Vulkan renderpass creation failed");
+        return false;
+    }
 
     return true;
 }
@@ -227,6 +233,9 @@ void debug_messenger_destroy(vulkan_context *context)
 
 b8 shutdown_vulkan(vulkan_context *context)
 {
+
+    INFO("Destroying rendper pass...");
+    vkDestroyRenderPass(context->device.logical, context->renderpass, 0);
     INFO("Destroying image views...");
     u32 image_view_count = (u32)array_get_length(context->image_views);
     for (u32 i = 0; i < image_view_count; i++)

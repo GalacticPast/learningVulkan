@@ -1,5 +1,5 @@
 #pragma once
-
+#include "logger.h"
 #if _DEBUG
 #ifdef PLATFORM_LINUX
 #define debugbreak() __builtin_trap()
