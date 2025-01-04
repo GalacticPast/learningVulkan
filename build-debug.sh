@@ -42,7 +42,29 @@ if [[ $platform == "wayland" ]]; then
     defines="$defines -DPLATFORM_LINUX_WAYLAND"
 fi
 
+echo "compiling shaders"
+    
+for file in src/shaders/*.vert; do
+    echo glslc ${file} -o bin/$(basename "$file" .vert).spv
+    glslc "$file" -o bin/$(basename "$file" .vert).spv
+done 
 
+error=$?
+if [ $error -ne 0 ]; then
+    echo "error compiling shaders"
+    exit 1
+fi
+
+for file in src/shaders/*.frag; do
+    echo glslc ${file} -o bin/$(basename "$file" .frag).spv
+    glslc "$file" -o bin/$(basename "$file" .frag).spv
+done 
+
+error=$?
+if [ $error -ne 0 ]; then
+    echo "error compiling shaders"
+    exit 1
+fi
 
 
 c_file_names=$(find . -type f -name '*.c')
