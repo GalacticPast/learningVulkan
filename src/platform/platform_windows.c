@@ -20,6 +20,9 @@ typedef struct internal_state
 {
     HINSTANCE h_instance;
     HWND      hwnd;
+
+    s32 width;
+    s32 height;
 } internal_state;
 
 // Clock
@@ -33,6 +36,8 @@ b8 platform_startup(platform_state *plat_state, const char *application_name, s3
     internal_state *state      = (internal_state *)plat_state->internal_state;
 
     state->h_instance = GetModuleHandleA(0);
+    state->width      = width;
+    state->width      = height;
 
     // Setup and register window class.
     HICON     icon = LoadIcon(state->h_instance, IDI_APPLICATION);
@@ -84,8 +89,7 @@ b8 platform_startup(platform_state *plat_state, const char *application_name, s3
     window_width += border_rect.right - border_rect.left;
     window_height += border_rect.bottom - border_rect.top;
 
-    HWND handle = CreateWindowExA(window_ex_style, "learning_vulkan_class", application_name, window_style, window_x, window_y, window_width,
-                                  window_height, 0, 0, state->h_instance, 0);
+    HWND handle = CreateWindowExA(window_ex_style, "learning_vulkan_class", application_name, window_style, window_x, window_y, window_width, window_height, 0, 0, state->h_instance, 0);
 
     if (handle == 0)
     {
@@ -231,4 +235,11 @@ void *platform_get_required_surface_extensions(char **required_extension_names)
     return required_extension_names;
 }
 
+void platform_get_framebuffer_size(platform_state *plat_state, u32 *width, u32 *height)
+{
+    internal_state *state = (internal_state *)plat_state->internal_state;
+
+    *width  = state->width;
+    *height = state->height;
+}
 #endif

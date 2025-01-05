@@ -7,8 +7,8 @@
 
 char *read_file(const char *filename, b8 is_binary)
 {
-    char *shader_dir = "/home/galacticpast/Documents/projects/learningVulkan/src/shaders/";
-    char *binary_dir = "/home/galacticpast/Documents/projects/learningVulkan/bin/";
+    char *shader_dir = "../src/shaders";
+    char *binary_dir = "";
 
     char full_path[100] = {};
 
