@@ -1,6 +1,7 @@
 #include "containers/array.h"
 #include "core/events.h"
 #include "core/logger.h"
+#include "core/memory.h"
 #include "defines.h"
 
 // C stuff
@@ -70,6 +71,8 @@ s32 main(s32 argc, char **argv)
         FATAL("Vulkan Initialization failed");
         return -1;
     }
+
+    print_memory_sizes();
 
     while (platform_pump_messages(&plat_state) && is_running)
     {

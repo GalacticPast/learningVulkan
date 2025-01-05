@@ -3,6 +3,7 @@
 #include "core/events.h"
 #include "core/input.h"
 #include "core/logger.h"
+#include "core/memory.h"
 #include "core/strings.h"
 
 #include "platform/platform.h"
@@ -55,7 +56,7 @@ b8 platform_startup(platform_state *plat_state, const char *application_name, s3
     INFO("Initializing linux-x11 platform...");
 
     // Create the internal state.
-    plat_state->internal_state = malloc(sizeof(internal_state));
+    plat_state->internal_state = ALLOCATE_MEMORY_PLATFORM(sizeof(internal_state));
     internal_state *state      = (internal_state *)plat_state->internal_state;
 
     // Connect to X
@@ -324,13 +325,6 @@ keys xcb_translate_keycode(xcb_keycode_t code)
 #include "wayland/xdg-shell-client-protocol.h"
 #include <wayland-client.h>
 #include <xkbcommon/xkbcommon.h>
-
-// TODO: this is temporary migrate the shared memory to use vulkan instead of mannually allocating buffers
-#include <errno.h>
-#include <fcntl.h>
-#include <sys/mman.h>
-#include <unistd.h>
-//
 
 #include "platform.h"
 

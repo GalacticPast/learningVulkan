@@ -1,5 +1,6 @@
 #include "array.h"
 #include "core/logger.h"
+#include "core/memory.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -10,7 +11,7 @@ void *__array_create(u64 capacity, u64 stride)
     u64 array_stride   = stride;
     u64 array_size     = array_capacity * array_stride + ARRAY_HEADER_SIZE;
 
-    u64 *block = calloc(array_size, array_stride);
+    u64 *block = ALLOCATE_MEMORY_ARRAY(array_size);
 
     block[ARRAY_CAPACITY] = array_capacity;
     block[ARRAY_LENGTH]   = 0;
@@ -21,8 +22,8 @@ void *__array_create(u64 capacity, u64 stride)
 
 void array_destroy(void *block)
 {
-    void *array = block - ARRAY_HEADER_SIZE;
-    free(array);
+    u64 *array = block - ARRAY_HEADER_SIZE;
+    FREE_MEMORY_ARRAY(array, array[ARRAY_CAPACITY]);
 }
 
 void array_set_length(void *array, u64 length)
