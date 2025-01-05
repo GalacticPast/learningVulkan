@@ -39,8 +39,8 @@ s32 main(s32 argc, char **argv)
     u32         width            = 1280;
     u32         height           = 720;
 
-    platform_state plat_state = {};
-    vulkan_context vk_context = {};
+    platform_state plat_state     = {};
+    vulkan_context vulkan_context = {};
 
     FATAL("Test %f", 3.14159);
     ERROR("Test %f", 3.14159);
@@ -65,7 +65,7 @@ s32 main(s32 argc, char **argv)
         return -1;
     }
 
-    if (!initialize_vulkan(&plat_state, &vk_context, application_name))
+    if (!initialize_vulkan(&plat_state, &vulkan_context, application_name))
     {
         FATAL("Vulkan Initialization failed");
         return -1;
@@ -73,9 +73,10 @@ s32 main(s32 argc, char **argv)
 
     while (platform_pump_messages(&plat_state) && is_running)
     {
+        vulkan_draw_frame(&vulkan_context);
     }
 
-    shutdown_vulkan(&vk_context);
+    shutdown_vulkan(&vulkan_context);
     platform_shutdown(&plat_state);
     event_system_destroy();
 }

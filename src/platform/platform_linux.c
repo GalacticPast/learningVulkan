@@ -92,8 +92,8 @@ b8 platform_startup(platform_state *plat_state, const char *application_name, s3
     u32 event_mask = XCB_CW_BACK_PIXEL | XCB_CW_EVENT_MASK;
 
     // Listen for keyboard and mouse buttons
-    u32 event_values = XCB_EVENT_MASK_BUTTON_PRESS | XCB_EVENT_MASK_BUTTON_RELEASE | XCB_EVENT_MASK_KEY_PRESS | XCB_EVENT_MASK_KEY_RELEASE |
-                       XCB_EVENT_MASK_EXPOSURE | XCB_EVENT_MASK_POINTER_MOTION | XCB_EVENT_MASK_STRUCTURE_NOTIFY;
+    u32 event_values = XCB_EVENT_MASK_BUTTON_PRESS | XCB_EVENT_MASK_BUTTON_RELEASE | XCB_EVENT_MASK_KEY_PRESS | XCB_EVENT_MASK_KEY_RELEASE | XCB_EVENT_MASK_EXPOSURE | XCB_EVENT_MASK_POINTER_MOTION |
+                       XCB_EVENT_MASK_STRUCTURE_NOTIFY;
 
     // Values to be sent over XCB (bg colour, events)
     u32 value_list[] = {state->screen->black_pixel, event_values};
@@ -351,111 +351,6 @@ typedef struct internal_state
 
 u32 translate_keycode(u32 key);
 
-/* Shared memory support code */
-static void randname(char *buf)
-{
-    struct timespec ts;
-    clock_gettime(CLOCK_REALTIME, &ts);
-    long r = ts.tv_nsec;
-    for (int i = 0; i < 6; ++i)
-    {
-        buf[i] = 'A' + (r & 15) + (r & 16) * 2;
-        r >>= 5;
-    }
-}
-
-static int create_shm_file(void)
-{
-    int retries = 100;
-    do
-    {
-        char name[] = "/wl_shm-XXXXXX";
-        randname(name + sizeof(name) - 7);
-        --retries;
-        int fd = shm_open(name, O_RDWR | O_CREAT | O_EXCL, 0600);
-        if (fd >= 0)
-        {
-            shm_unlink(name);
-            return fd;
-        }
-    } while (retries > 0 && errno == EEXIST);
-    return -1;
-}
-
-static int allocate_shm_file(size_t size)
-{
-    int fd = create_shm_file();
-    if (fd < 0)
-        return -1;
-    int ret;
-    do
-    {
-        ret = ftruncate(fd, size);
-    } while (ret < 0 && errno == EINTR);
-    if (ret < 0)
-    {
-        close(fd);
-        return -1;
-    }
-    return fd;
-}
-static void wl_buffer_release(void *data, struct wl_buffer *wl_buffer)
-{
-    /* Sent by the compositor when it's no longer using this buffer */
-    wl_buffer_destroy(wl_buffer);
-}
-
-static const struct wl_buffer_listener wl_buffer_listener = {
-    .release = wl_buffer_release,
-};
-
-static struct wl_buffer *draw_frame(struct internal_state *state)
-{
-    const int width  = state->width;
-    const int height = state->height;
-
-    int stride = width * 4;
-    int size   = stride * height;
-
-    int fd = allocate_shm_file(size);
-    if (fd == -1)
-    {
-        return NULL;
-    }
-
-    u32 *data = mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
-    if (data == MAP_FAILED)
-    {
-        close(fd);
-        return NULL;
-    }
-
-    struct wl_shm_pool *pool   = wl_shm_create_pool(state->wl_shm, fd, size);
-    struct wl_buffer   *buffer = wl_shm_pool_create_buffer(pool, 0, width, height, stride, WL_SHM_FORMAT_ARGB8888);
-
-    for (int y = 0; y < height; ++y)
-    {
-        for (int x = 0; x < width; ++x)
-        {
-            u8 alpha = 0xFF;
-            u8 red   = 0xFF;
-            u8 green = 0xFF;
-            u8 blue  = 0x00;
-
-            u32 color = ((u32)alpha << 24 | (u32)red << 16 | (u32)green << 8 | (u32)blue << 0);
-
-            data[y * width + x] = color;
-        }
-    }
-
-    wl_shm_pool_destroy(pool);
-    close(fd);
-
-    munmap(data, size);
-    wl_buffer_add_listener(buffer, &wl_buffer_listener, NULL);
-    return buffer;
-}
-
 static void wl_keyboard_keymap(void *data, struct wl_keyboard *wl_keyboard, u32 format, s32 fd, u32 size)
 {
     // struct internal_state *state = data;
@@ -485,8 +380,7 @@ static void wl_keyboard_leave(void *data, struct wl_keyboard *wl_keyboard, u32 s
     DEBUG("Mouse not in scope");
 }
 
-static void wl_keyboard_modifiers(void *data, struct wl_keyboard *wl_keyboard, u32 serial, u32 mods_depressed, u32 mods_latched, u32 mods_locked,
-                                  u32 group)
+static void wl_keyboard_modifiers(void *data, struct wl_keyboard *wl_keyboard, u32 serial, u32 mods_depressed, u32 mods_latched, u32 mods_locked, u32 group)
 {
 }
 
@@ -553,8 +447,6 @@ static void xdg_surface_configure(void *data, struct xdg_surface *xdg_surface, u
     internal_state *state = (internal_state *)data;
 
     xdg_surface_ack_configure(xdg_surface, serial);
-    struct wl_buffer *buffer = draw_frame(state);
-    wl_surface_attach(state->wl_surface, buffer, 0, 0);
     wl_surface_commit(state->wl_surface);
 }
 
@@ -577,11 +469,7 @@ static void registry_global(void *data, struct wl_registry *wl_registry, u32 nam
 {
     internal_state *state = data;
 
-    if (string_compare(interface, wl_shm_interface.name))
-    {
-        state->wl_shm = wl_registry_bind(wl_registry, name, &wl_shm_interface, 1);
-    }
-    else if (string_compare(interface, wl_compositor_interface.name))
+    if (string_compare(interface, wl_compositor_interface.name))
     {
         state->wl_compositor = wl_registry_bind(wl_registry, name, &wl_compositor_interface, 4);
     }

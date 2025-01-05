@@ -67,7 +67,16 @@ typedef struct vulkan_context
     vulkan_graphics_pipeline graphics_pipeline;
 
     // TODO: idk where to put this so it stays here
-
     VkFramebuffer *frame_buffers;
+
+    // TODO: idk where to put this so it stays here
+    VkCommandPool   command_pool;
+    VkCommandBuffer command_buffer;
+
+    // TODO: idk where to put this so it stays here
+    VkSemaphore image_available_semaphore;
+    VkSemaphore render_finished_semaphore;
+
+    VkFence in_flight_fence;
 
 } vulkan_context;

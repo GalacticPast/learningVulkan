@@ -6,12 +6,14 @@
 #include "platform/platform.h"
 
 #include "vulkan_backend.h"
+#include "vulkan_command_buffers.h"
 #include "vulkan_device.h"
 #include "vulkan_frame_buffers.h"
 #include "vulkan_graphics_pipeline.h"
 #include "vulkan_image.h"
 #include "vulkan_renderpass.h"
 #include "vulkan_swapchain.h"
+#include "vulkan_sync_objects.h"
 
 VkBool32 debug_messenger_callback(VkDebugUtilsMessageSeverityFlagBitsEXT message_severity, VkDebugUtilsMessageTypeFlagsEXT message_types, const VkDebugUtilsMessengerCallbackDataEXT *callback_data,
                                   void *user_data);
@@ -194,6 +196,22 @@ b8 initialize_vulkan(struct platform_state *plat_state, vulkan_context *context,
         ERROR("Vulkan frame buffers creation failed");
         return false;
     }
+    if (!vulkan_create_command_pool(context))
+    {
+        ERROR("Vulkan command pool creation failed");
+        return false;
+    }
+    if (!vulkan_create_command_buffers(context))
+    {
+        ERROR("Vulkan command buffers creation failed");
+        return false;
+    }
+
+    if (!vulkan_create_sync_objects(context))
+    {
+        ERROR("Vulkan sync objects creation failed");
+        return false;
+    }
 
     return true;
 }
@@ -240,33 +258,102 @@ void debug_messenger_destroy(vulkan_context *context)
 
 b8 shutdown_vulkan(vulkan_context *context)
 {
+    vkDeviceWaitIdle(context->device.logical);
+
+    INFO("Destroying semaphores and fences...");
+    vkDestroySemaphore(context->device.logical, context->image_available_semaphore, 0);
+    vkDestroySemaphore(context->device.logical, context->render_finished_semaphore, 0);
+    vkDestroyFence(context->device.logical, context->in_flight_fence, 0);
+
+    INFO("Destroying command pool and buffers...");
+    vkDestroyCommandPool(context->device.logical, context->command_pool, 0);
+
     INFO("Destroying frame buffers...");
     u32 frame_buffers_count = (u32)array_get_length(context->frame_buffers);
     for (u32 i = 0; i < frame_buffers_count; i++)
     {
         vkDestroyFramebuffer(context->device.logical, context->frame_buffers[i], 0);
     }
+
     INFO("Destroying graphics pipeline...");
     vkDestroyPipeline(context->device.logical, context->graphics_pipeline.handle, 0);
+
     INFO("Destroying graphics pipeline layout...");
     vkDestroyPipelineLayout(context->device.logical, context->graphics_pipeline.layout, 0);
+
     INFO("Destroying rendper pass...");
     vkDestroyRenderPass(context->device.logical, context->renderpass, 0);
+
     INFO("Destroying image views...");
     u32 image_view_count = (u32)array_get_length(context->image_views);
     for (u32 i = 0; i < image_view_count; i++)
     {
         vkDestroyImageView(context->device.logical, context->image_views[i], 0);
     }
+
     INFO("Destroying vulkan swapchain...");
     vkDestroySwapchainKHR(context->device.logical, context->swapchain.handle, 0);
+
     INFO("Destroying vulkan device...");
     vkDestroyDevice(context->device.logical, 0);
+
     INFO("Destroying vulkan surface...");
     vkDestroySurfaceKHR(context->instance, context->surface, 0);
+
     INFO("Destroying debug messenger...");
     debug_messenger_destroy(context);
+
     INFO("Destroying vulkan instance...");
     vkDestroyInstance(context->instance, 0);
+
     return true;
+}
+
+void vulkan_draw_frame(vulkan_context *context)
+{
+    VK_CHECK(vkWaitForFences(context->device.logical, 1, &context->in_flight_fence, VK_TRUE, UINT64_MAX));
+
+    VK_CHECK(vkResetFences(context->device.logical, 1, &context->in_flight_fence));
+
+    u32 image_index = 0;
+    VK_CHECK(vkAcquireNextImageKHR(context->device.logical, context->swapchain.handle, UINT64_MAX, context->image_available_semaphore, VK_NULL_HANDLE, &image_index));
+
+    VK_CHECK(vkResetCommandBuffer(context->command_buffer, 0));
+
+    b8 result = vulkan_record_command_buffer(context, image_index);
+
+    if (!result)
+    {
+        ERROR("Couldnt record command buffer");
+        return;
+    }
+
+    VkSubmitInfo queue_submit_info = {};
+
+    queue_submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    queue_submit_info.pNext = 0;
+
+    queue_submit_info.waitSemaphoreCount   = 1;
+    VkPipelineStageFlags wait_stages[]     = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
+    queue_submit_info.pWaitSemaphores      = &context->image_available_semaphore;
+    queue_submit_info.pWaitDstStageMask    = wait_stages;
+    queue_submit_info.commandBufferCount   = 1;
+    queue_submit_info.pCommandBuffers      = &context->command_buffer;
+    queue_submit_info.signalSemaphoreCount = 1;
+    queue_submit_info.pSignalSemaphores    = &context->render_finished_semaphore;
+
+    VK_CHECK(vkQueueSubmit(context->device.graphics_queue, 1, &queue_submit_info, context->in_flight_fence));
+
+    VkPresentInfoKHR present_info = {};
+
+    present_info.sType              = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+    present_info.pNext              = 0;
+    present_info.waitSemaphoreCount = 1;
+    present_info.pWaitSemaphores    = &context->render_finished_semaphore;
+    present_info.swapchainCount     = 1;
+    present_info.pSwapchains        = &context->swapchain.handle;
+    present_info.pImageIndices      = &image_index;
+    present_info.pResults           = VK_NULL_HANDLE;
+
+    VK_CHECK(vkQueuePresentKHR(context->device.present_queue, &present_info));
 }
