@@ -30,7 +30,7 @@ b8 vulkan_create_swapchain(platform_state *plat_state, vulkan_context *context)
         }
     }
 
-    VkPresentModeKHR present_mode;
+    VkPresentModeKHR *present_mode = VK_NULL_HANDLE;
 
     u32 present_mode_count = context->device.swapchain_support_details.present_mode_count;
     for (u32 i = 0; i < present_mode_count; i++)
@@ -38,9 +38,13 @@ b8 vulkan_create_swapchain(platform_state *plat_state, vulkan_context *context)
         VkPresentModeKHR available_present_mode = context->device.swapchain_support_details.present_modes[i];
         if (available_present_mode == VK_PRESENT_MODE_MAILBOX_KHR)
         {
-            present_mode = available_present_mode;
+            present_mode = &available_present_mode;
             break;
         }
+    }
+    if (!present_mode)
+    {
+        present_mode = &context->device.swapchain_support_details.present_modes[0];
     }
 
     u32 image_count = capabilities.minImageCount + 1;
@@ -79,14 +83,14 @@ b8 vulkan_create_swapchain(platform_state *plat_state, vulkan_context *context)
 
     swapchain_create_info.preTransform   = capabilities.currentTransform;
     swapchain_create_info.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
-    swapchain_create_info.presentMode    = present_mode;
+    swapchain_create_info.presentMode    = *present_mode;
     swapchain_create_info.clipped        = VK_TRUE;
     swapchain_create_info.oldSwapchain   = VK_NULL_HANDLE;
 
     VK_CHECK(vkCreateSwapchainKHR(context->device.logical, &swapchain_create_info, 0, &context->swapchain.handle));
 
     context->swapchain.format       = surface_format;
-    context->swapchain.present_mode = present_mode;
+    context->swapchain.present_mode = *present_mode;
     context->swapchain.extent2D     = swap_extent;
 
     image_count = 0;

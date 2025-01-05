@@ -40,6 +40,10 @@ typedef struct internal_state
     xcb_screen_t     *screen;
     xcb_atom_t        wm_protocols;
     xcb_atom_t        wm_delete_win;
+
+    s32 width;
+    s32 height;
+
 } internal_state;
 
 // INFO: x11/xcb reference https://www.x.org/releases/X12R7.6/doc/libxcb/tutorial/index.html
@@ -138,6 +142,9 @@ b8 platform_startup(platform_state *plat_state, const char *application_name, s3
         return false;
     }
 
+    state->width  = width;
+    state->height = height;
+
     INFO("Initialized linux-x11 platform.");
 
     return true;
@@ -210,6 +217,14 @@ void *platform_get_required_surface_extensions(char **required_extension_names)
     char *surface_name       = VK_KHR_XCB_SURFACE_EXTENSION_NAME;
     required_extension_names = array_push_value(required_extension_names, &surface_name);
     return (void *)required_extension_names;
+}
+
+void platform_get_framebuffer_size(platform_state *plat_state, u32 *width, u32 *height)
+{
+    internal_state *state = (internal_state *)plat_state->internal_state;
+
+    *width  = state->width;
+    *height = state->height;
 }
 
 keys xcb_translate_keycode(xcb_keycode_t code)
