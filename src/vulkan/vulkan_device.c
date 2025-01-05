@@ -19,11 +19,9 @@ typedef struct queue_family_indicies
 
 b8 select_physical_device(vulkan_context *context, physical_device_requirements requirements, const char **required_device_extensions);
 
-b8 device_meets_requirements(vulkan_context *context, VkSurfaceKHR surface, VkPhysicalDevice device, VkPhysicalDeviceProperties *physical_properties,
-                             VkPhysicalDeviceFeatures *physical_features, physical_device_requirements *device_requirements,
-                             const char **required_device_extensions, vulkan_swapchain_support_details *swapchain_support_details);
-void query_swapchain_support_details(VkPhysicalDevice physical_device, VkSurfaceKHR surface,
-                                     vulkan_swapchain_support_details *swapchain_support_details);
+b8   device_meets_requirements(vulkan_context *context, VkSurfaceKHR surface, VkPhysicalDevice device, VkPhysicalDeviceProperties *physical_properties, VkPhysicalDeviceFeatures *physical_features,
+                               physical_device_requirements *device_requirements, const char **required_device_extensions, vulkan_swapchain_support_details *swapchain_support_details);
+void query_swapchain_support_details(VkPhysicalDevice physical_device, VkSurfaceKHR surface, vulkan_swapchain_support_details *swapchain_support_details);
 
 b8 vulkan_create_logical_device(vulkan_context *context)
 {
@@ -55,8 +53,8 @@ b8 vulkan_create_logical_device(vulkan_context *context)
         queue_indicies_count++;
     }
 
-    u32 queue_indicies[queue_indicies_count] = {};
-    queue_indicies[0]                        = context->device.graphics_queue_index;
+    u32 queue_indicies[queue_indicies_count];
+    queue_indicies[0] = context->device.graphics_queue_index;
 
     if (context->device.graphics_queue_index != context->device.present_queue_index)
     {
@@ -138,8 +136,8 @@ b8 select_physical_device(vulkan_context *context, physical_device_requirements 
         VkPhysicalDeviceMemoryProperties physical_memory = {};
         vkGetPhysicalDeviceMemoryProperties(physical_devices[i], &physical_memory);
 
-        b8 result = device_meets_requirements(context, context->surface, physical_devices[i], &physical_properties, &physical_features,
-                                              &device_requirements, required_device_extensions, &context->device.swapchain_support_details);
+        b8 result = device_meets_requirements(context, context->surface, physical_devices[i], &physical_properties, &physical_features, &device_requirements, required_device_extensions,
+                                              &context->device.swapchain_support_details);
         if (!result)
         {
             array_destroy(context->device.swapchain_support_details.formats);
@@ -164,9 +162,8 @@ b8 select_physical_device(vulkan_context *context, physical_device_requirements 
     return true;
 }
 
-b8 device_meets_requirements(vulkan_context *context, VkSurfaceKHR surface, VkPhysicalDevice device, VkPhysicalDeviceProperties *physical_properties,
-                             VkPhysicalDeviceFeatures *physical_features, physical_device_requirements *device_requirements,
-                             const char **required_device_extensions, vulkan_swapchain_support_details *swapchain_support_details)
+b8 device_meets_requirements(vulkan_context *context, VkSurfaceKHR surface, VkPhysicalDevice device, VkPhysicalDeviceProperties *physical_properties, VkPhysicalDeviceFeatures *physical_features,
+                             physical_device_requirements *device_requirements, const char **required_device_extensions, vulkan_swapchain_support_details *swapchain_support_details)
 {
     INFO("Checking device extensions support...");
 
@@ -215,8 +212,7 @@ b8 device_meets_requirements(vulkan_context *context, VkSurfaceKHR surface, VkPh
     INFO("All required device extensions found.");
 
     INFO("Checking for queue families support...");
-    if ((device_requirements->is_discrete && physical_properties->deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU) &&
-        (device_requirements->geometry_shader && physical_features->geometryShader))
+    if ((device_requirements->is_discrete && physical_properties->deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU) && (device_requirements->geometry_shader && physical_features->geometryShader))
     {
         // get the queue famiy indicies
         queue_family_indicies indicies = {};
@@ -270,8 +266,7 @@ b8 device_meets_requirements(vulkan_context *context, VkSurfaceKHR surface, VkPh
     return true;
 }
 
-void query_swapchain_support_details(VkPhysicalDevice physical_device, VkSurfaceKHR surface,
-                                     vulkan_swapchain_support_details *swapchain_support_details)
+void query_swapchain_support_details(VkPhysicalDevice physical_device, VkSurfaceKHR surface, vulkan_swapchain_support_details *swapchain_support_details)
 {
     VK_CHECK(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(physical_device, surface, &swapchain_support_details->capabilities));
 

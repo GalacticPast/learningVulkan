@@ -1,5 +1,5 @@
 @echo off
 
-del /s bin\*.
+del /s /q bin\*
 
 

@@ -8,11 +8,11 @@ b8 vulkan_create_graphics_pipeline(platform_state *plat_state, vulkan_context *c
 {
     INFO("Creating vulkan graphics pipeline...");
 
-    VkShaderModule vert_shader_module = {};
+    VkShaderModule vert_shader_module = {0};
     char          *vert_shader_code   = read_file("vert_shader.spv", true);
     create_shader_module(context, &vert_shader_module, vert_shader_code);
 
-    VkShaderModule frag_shader_module = {};
+    VkShaderModule frag_shader_module = {0};
     char          *frag_shader_code   = read_file("frag_shader.spv", true);
     create_shader_module(context, &frag_shader_module, frag_shader_code);
 

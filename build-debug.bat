@@ -13,6 +13,7 @@
 ::for /R %%f in (*.c) do (
 ::    set c_file_names=!c_file_names! %%f
 ::)
+::%VULKAN_SDK%/Bin/glslc %%i -o bin/%%~ni.spv
 ::
 ::echo %CC% %c_file_names% -o bin/%assembly% %includes% %compiler_flags%
 ::%CC% %c_file_names% -o bin/%assembly% %includes% %compiler_flags%
@@ -22,10 +23,16 @@
 
 setlocal EnableDelayedExpansion
 
+for /r %%i in (*.frag, *.vert) do (
+    echo %VULKAN_SDK%/Bin/glslc %%i -o bin/%%~ni.spv
+    %VULKAN_SDK%/Bin/glslc %%i -o bin/%%~ni.spv
+)
+
+
 ::Get a list of all the .c files.
 set c_file_names=
 
-FOR /R %%f in (*.c) do (
+for /R %%f in (*.c) do (
     set c_file_names=!c_file_names! %%f
 )
 
