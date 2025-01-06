@@ -353,9 +353,6 @@ typedef struct internal_state
     struct wl_keyboard *wl_keyboard;
     struct wl_mouse    *wl_mouse;
 
-    s32 width;
-    s32 height;
-
 } internal_state;
 
 u32 translate_keycode(u32 key);
@@ -436,13 +433,10 @@ struct wl_seat_listener wl_seat_listener = {.capabilities = wl_seat_capabilites,
 // actual surface
 static void xdg_toplevel_configure(void *data, struct xdg_toplevel *xdg_toplevel, s32 width, s32 height, struct wl_array *states)
 {
-    internal_state *state = (internal_state *)data;
-
-    if (state->width != width || state->height != height)
-    {
-        state->width  = width;
-        state->height = height;
-    }
+    event_context context = {};
+    context.data.u32[0]   = width;
+    context.data.u32[1]   = height;
+    event_fire(ON_APPLICATION_RESIZE, context);
 }
 
 static void xdg_toplevel_close(void *data, struct xdg_toplevel *xdg_toplevel)
@@ -509,9 +503,6 @@ b8 platform_startup(platform_state *plat_state, const char *application_name, s3
     INFO("Initializing linux-Wayland platform...");
     plat_state->internal_state = malloc(sizeof(internal_state));
     internal_state *state      = (internal_state *)plat_state->internal_state;
-
-    state->width  = width;
-    state->height = height;
 
     state->wl_display = wl_display_connect(NULL);
     if (!state->wl_display)
@@ -600,14 +591,6 @@ b8 platform_create_vulkan_surface(platform_state *plat_state, vulkan_context *co
     VK_CHECK(vkCreateWaylandSurfaceKHR(context->instance, &create_surface_info, 0, &context->surface));
 
     return true;
-}
-
-void platform_get_framebuffer_size(platform_state *plat_state, u32 *width, u32 *height)
-{
-    internal_state *state = (internal_state *)plat_state->internal_state;
-
-    *width  = state->width;
-    *height = state->height;
 }
 
 u32 translate_keycode(u32 wl_keycode)

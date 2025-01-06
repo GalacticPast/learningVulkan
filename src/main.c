@@ -24,11 +24,31 @@ void print_array(int *array)
     printf("\n");
 }
 
-b8 appilcaion_quit(event_type type, event_context data)
+b8 appilcaion_quit(event_type type, event_context data, void *user_data)
 {
     INFO("APPLCATION QUIT MESSAGE recived");
     is_running = false;
     return true;
+}
+b8 application_resize(event_type type, event_context data, void *user_data)
+{
+    vulkan_context *context = (vulkan_context *)user_data;
+
+    if (context->frame_buffer_width != data.data.u32[0] && context->frame_buffer_height != data.data.u32[1])
+
+    {
+        context->frame_buffer_last_frame_width  = context->frame_buffer_width;
+        context->frame_buffer_last_frame_height = context->frame_buffer_height;
+        context->frame_buffer_width             = data.data.u32[0];
+        context->frame_buffer_height            = data.data.u32[1];
+
+        DEBUG("New width %d, new height %d.", context->frame_buffer_width, context->frame_buffer_height);
+        context->recreate_swapchain = true;
+
+        return true;
+    }
+
+    return false;
 }
 
 s32 main(s32 argc, char **argv)
@@ -58,8 +78,11 @@ s32 main(s32 argc, char **argv)
     TRACE("Clamped value %d", value);
 
     event_system_initialize();
-    event_register(ON_APPLICATION_QUIT, appilcaion_quit);
+    event_register(ON_APPLICATION_QUIT, appilcaion_quit, (void *)0);
+    event_register(ON_APPLICATION_RESIZE, application_resize, &vulkan_context);
 
+    vulkan_context.frame_buffer_width  = width;
+    vulkan_context.frame_buffer_height = height;
     if (!platform_startup(&plat_state, application_name, x, y, width, height))
     {
         FATAL("Platform Initialization failed");

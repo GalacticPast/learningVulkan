@@ -2,8 +2,46 @@
 #include "containers/array.h"
 #include "core/memory.h"
 #include "platform/platform.h"
+#include "vulkan_frame_buffers.h"
+#include "vulkan_image.h"
 
-b8 vulkan_create_swapchain(platform_state *plat_state, vulkan_context *context)
+b8 create(vulkan_context *context);
+b8 vulkan_cleanup_swapchain(vulkan_context *context);
+
+b8 vulkan_create_swapchain(vulkan_context *context)
+{
+    return create(context);
+}
+
+b8 vulkan_recreate_swapchain(vulkan_context *context)
+{
+    vkDeviceWaitIdle(context->device.logical);
+
+    if (!vulkan_cleanup_swapchain(context))
+    {
+        ERROR("vulkan swapchain cleanup failed");
+        return false;
+    }
+
+    if (!create(context))
+    {
+        ERROR("Vulkan swapchain recreation failed");
+        return false;
+    }
+    if (!vulkan_create_image_views(context))
+    {
+        ERROR("Vulkan image views creation failed");
+        return false;
+    }
+    if (!vulkan_create_frame_buffers(context))
+    {
+        ERROR("Vulkan frame buffers recreation failed");
+        return false;
+    }
+    return true;
+}
+
+b8 create(vulkan_context *context)
 {
     //
     // TODO: this a hack
@@ -11,8 +49,8 @@ b8 vulkan_create_swapchain(platform_state *plat_state, vulkan_context *context)
     VkSurfaceCapabilitiesKHR capabilities = context->device.swapchain_support_details.capabilities;
 
     VkExtent2D swap_extent = {};
-
-    platform_get_framebuffer_size(plat_state, &swap_extent.width, &swap_extent.height);
+    swap_extent.width      = context->frame_buffer_width;
+    swap_extent.height     = context->frame_buffer_height;
 
     // clamp the values;
     swap_extent.width  = CLAMP(swap_extent.width, capabilities.minImageExtent.width, capabilities.maxImageExtent.width);
@@ -99,6 +137,27 @@ b8 vulkan_create_swapchain(platform_state *plat_state, vulkan_context *context)
     context->swapchain.images       = ALLOCATE_MEMORY_RENDERER(sizeof(VkImage) * image_count);
     context->swapchain.images_count = image_count;
     VK_CHECK(vkGetSwapchainImagesKHR(context->device.logical, context->swapchain.handle, &image_count, context->swapchain.images));
+
+    return true;
+}
+
+b8 vulkan_cleanup_swapchain(vulkan_context *context)
+{
+    INFO("Destroying frame buffers...");
+    u32 frame_buffers_count = context->swapchain.image_views_count;
+    for (u32 i = 0; i < frame_buffers_count; i++)
+    {
+        vkDestroyFramebuffer(context->device.logical, context->swapchain.frame_buffers[i], 0);
+    }
+
+    INFO("Destroying image views...");
+    u32 image_view_count = context->swapchain.image_views_count;
+    for (u32 i = 0; i < image_view_count; i++)
+    {
+        vkDestroyImageView(context->device.logical, context->swapchain.image_views[i], 0);
+    }
+    INFO("Destroying vulkan swapchain...");
+    vkDestroySwapchainKHR(context->device.logical, context->swapchain.handle, 0);
 
     return true;
 }

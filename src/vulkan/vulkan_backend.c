@@ -1,5 +1,6 @@
 #include "containers/array.h"
 
+#include "core/events.h"
 #include "core/logger.h"
 #include "core/memory.h"
 #include "core/strings.h"
@@ -171,7 +172,7 @@ b8 initialize_vulkan(struct platform_state *plat_state, vulkan_context *context,
         return false;
     }
 
-    if (!vulkan_create_swapchain(plat_state, context))
+    if (!vulkan_create_swapchain(context))
     {
         ERROR("Vulkan swapchain creation failed");
         return false;
@@ -187,7 +188,7 @@ b8 initialize_vulkan(struct platform_state *plat_state, vulkan_context *context,
         ERROR("Vulkan renderpass creation failed");
         return false;
     }
-    if (!vulkan_create_graphics_pipeline(plat_state, context))
+    if (!vulkan_create_graphics_pipeline(context))
     {
         ERROR("Vulkan graphics pipeline creation failed");
         return false;
@@ -318,6 +319,16 @@ b8 shutdown_vulkan(vulkan_context *context)
 void vulkan_draw_frame(vulkan_context *context)
 {
     u32 current_frame = context->current_frame;
+
+    if (context->recreate_swapchain)
+    {
+        context->recreate_swapchain = false;
+        if (!vulkan_recreate_swapchain(context))
+        {
+            ERROR("Failed to recreate swapchain");
+            return;
+        }
+    }
 
     VK_CHECK(vkWaitForFences(context->device.logical, 1, &context->in_flight_fences[current_frame], VK_TRUE, UINT64_MAX));
 

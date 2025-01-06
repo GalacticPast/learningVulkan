@@ -81,4 +81,12 @@ typedef struct vulkan_context
     u32 max_frames_in_flight;
 
     u32 current_frame;
+
+    u32 frame_buffer_width;
+    u32 frame_buffer_height;
+
+    u32 frame_buffer_last_frame_width;
+    u32 frame_buffer_last_frame_height;
+
+    b8 recreate_swapchain;
 } vulkan_context;

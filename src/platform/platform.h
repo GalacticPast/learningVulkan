@@ -18,5 +18,3 @@ void platform_log_message(const char *buffer, log_levels level, u32 max_chars);
 
 b8    platform_create_vulkan_surface(platform_state *plat_state, struct vulkan_context *context);
 void *platform_get_required_surface_extensions(char **required_extension_names);
-
-void platform_get_framebuffer_size(platform_state *state, u32 *width, u32 *height);

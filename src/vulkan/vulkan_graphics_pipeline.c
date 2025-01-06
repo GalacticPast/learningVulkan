@@ -4,7 +4,7 @@
 
 void create_shader_module(vulkan_context *context, VkShaderModule *shader_module, const char *binary_code);
 
-b8 vulkan_create_graphics_pipeline(platform_state *plat_state, vulkan_context *context)
+b8 vulkan_create_graphics_pipeline(vulkan_context *context)
 {
     INFO("Creating vulkan graphics pipeline...");
 
@@ -68,15 +68,11 @@ b8 vulkan_create_graphics_pipeline(platform_state *plat_state, vulkan_context *c
     input_assembly_state_create_info.topology                               = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
     input_assembly_state_create_info.primitiveRestartEnable                 = VK_FALSE;
 
-    u32 width  = 0;
-    u32 height = 0;
-    platform_get_framebuffer_size(plat_state, &width, &height);
-
     VkViewport view_port_info = {};
     view_port_info.x          = 0;
     view_port_info.y          = 0;
-    view_port_info.width      = (f32)width;
-    view_port_info.height     = (f32)height;
+    view_port_info.width      = (f32)context->frame_buffer_width;
+    view_port_info.height     = (f32)context->frame_buffer_height;
     view_port_info.minDepth   = 0.0f;
     view_port_info.maxDepth   = 1.0f;
 

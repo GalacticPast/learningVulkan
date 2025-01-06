@@ -10,7 +10,6 @@ typedef enum array_header
     ARRAY_CAPACITY,
     ARRAY_LENGTH,
     ARRAY_STRIDE,
-    MAX_ARRAY_HEADER
 } array_header;
 
 #define ARRAY_HEADER_SIZE (u64)sizeof(array_header) * (u64)sizeof(u64)

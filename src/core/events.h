@@ -7,6 +7,7 @@
 typedef enum event_type
 {
     ON_APPLICATION_QUIT,
+    ON_APPLICATION_RESIZE,
     ON_KEY_PRESS,
     EVENT_TYPE_MAX_EVENT
 } event_type;
@@ -31,11 +32,12 @@ typedef struct event_context
     } data;
 } event_context;
 
-typedef b8 (*fp_on_event)(event_type type, event_context data);
+typedef b8 (*fp_on_event)(event_type type, event_context data, void *user_data);
 
 typedef struct event_listener
 {
     fp_on_event callback;
+    void       *user_data;
 } event_listener;
 
 typedef struct event
@@ -53,7 +55,7 @@ void event_system_initialize();
 void event_system_destroy();
 
 // callback must point to the fucntion which you would like to be called when the event is trigerred/fired
-void event_register(event_type type, fp_on_event fp_on_event);
+void event_register(event_type type, fp_on_event fp_on_event, void *data);
 void event_unregister(event_type type, fp_on_event fp_on_event);
 
 void event_fire(event_type type, event_context context);
