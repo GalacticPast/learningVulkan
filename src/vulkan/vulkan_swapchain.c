@@ -1,5 +1,6 @@
 #include "vulkan_swapchain.h"
 #include "containers/array.h"
+#include "core/memory.h"
 #include "platform/platform.h"
 
 b8 vulkan_create_swapchain(platform_state *plat_state, vulkan_context *context)
@@ -95,9 +96,9 @@ b8 vulkan_create_swapchain(platform_state *plat_state, vulkan_context *context)
 
     image_count = 0;
     VK_CHECK(vkGetSwapchainImagesKHR(context->device.logical, context->swapchain.handle, &image_count, 0));
-    context->swapchain.images = array_create_with_capacity(VkImage, image_count);
+    context->swapchain.images       = ALLOCATE_MEMORY_RENDERER(sizeof(VkImage) * image_count);
+    context->swapchain.images_count = image_count;
     VK_CHECK(vkGetSwapchainImagesKHR(context->device.logical, context->swapchain.handle, &image_count, context->swapchain.images));
-    array_set_length(context->swapchain.images, image_count);
 
     return true;
 }

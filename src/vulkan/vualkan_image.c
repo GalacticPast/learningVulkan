@@ -1,13 +1,14 @@
 #include "containers/array.h"
 #include "core/logger.h"
+#include "core/memory.h"
 #include "vulkan_image.h"
 
 b8 vulkan_create_image_views(vulkan_context *context)
 {
     INFO("Creating Image Views...");
-    u32 image_views_size = (u32)array_get_length(context->swapchain.images);
-    context->image_views = array_create_with_capacity(VkImageView, image_views_size);
-    array_set_length(context->image_views, image_views_size);
+    u32 image_views_size                 = context->swapchain.images_count;
+    context->swapchain.image_views       = ALLOCATE_MEMORY_RENDERER(sizeof(VkImageView) * image_views_size);
+    context->swapchain.image_views_count = image_views_size;
 
     for (u32 i = 0; i < image_views_size; i++)
     {
@@ -28,7 +29,7 @@ b8 vulkan_create_image_views(vulkan_context *context)
         image_view_create_info.subresourceRange.baseArrayLayer = 0;
         image_view_create_info.subresourceRange.layerCount     = 1;
 
-        VK_CHECK(vkCreateImageView(context->device.logical, &image_view_create_info, 0, &context->image_views[i]));
+        VK_CHECK(vkCreateImageView(context->device.logical, &image_view_create_info, 0, &context->swapchain.image_views[i]));
     }
 
     INFO("Image Views succesfully created");

@@ -35,7 +35,7 @@ char *read_file(const char *filename, b8 is_binary)
     }
 
     fseek(file_ptr, 0, SEEK_END);
-    u32 file_size = ftell(file_ptr);
+    u64 file_size = (u64)ftell(file_ptr);
     fseek(file_ptr, 0, SEEK_SET);
 
     char *buffer = array_create_with_capacity(char, file_size + 1);

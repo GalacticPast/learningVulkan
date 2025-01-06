@@ -1,16 +1,20 @@
 #include "vulkan_command_buffers.h"
+#include "core/memory.h"
 
 b8 vulkan_create_command_buffers(vulkan_context *context)
 {
+
+    context->command_buffers = ALLOCATE_MEMORY_RENDERER(sizeof(VkCommandBuffer) * context->max_frames_in_flight);
+
     VkCommandBufferAllocateInfo command_buffer_alloc_info = {};
 
     command_buffer_alloc_info.sType              = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
     command_buffer_alloc_info.pNext              = 0;
     command_buffer_alloc_info.commandPool        = context->command_pool;
     command_buffer_alloc_info.level              = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-    command_buffer_alloc_info.commandBufferCount = 1;
+    command_buffer_alloc_info.commandBufferCount = context->max_frames_in_flight;
 
-    VK_CHECK(vkAllocateCommandBuffers(context->device.logical, &command_buffer_alloc_info, &context->command_buffer));
+    VK_CHECK(vkAllocateCommandBuffers(context->device.logical, &command_buffer_alloc_info, context->command_buffers));
 
     return true;
 }
@@ -28,7 +32,7 @@ b8 vulkan_create_command_pool(vulkan_context *context)
     return true;
 }
 
-b8 vulkan_record_command_buffer(vulkan_context *context, u32 image_index)
+b8 vulkan_record_command_buffer(vulkan_context *context, VkCommandBuffer command_buffer, u32 image_index)
 {
     VkCommandBufferBeginInfo command_buffer_begin_info = {};
 
@@ -37,14 +41,14 @@ b8 vulkan_record_command_buffer(vulkan_context *context, u32 image_index)
     command_buffer_begin_info.flags            = 0;
     command_buffer_begin_info.pInheritanceInfo = VK_NULL_HANDLE;
 
-    VK_CHECK(vkBeginCommandBuffer(context->command_buffer, &command_buffer_begin_info));
+    VK_CHECK(vkBeginCommandBuffer(command_buffer, &command_buffer_begin_info));
 
     VkRenderPassBeginInfo render_pass_begin_info = {};
 
     render_pass_begin_info.sType             = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
     render_pass_begin_info.pNext             = 0;
     render_pass_begin_info.renderPass        = context->renderpass;
-    render_pass_begin_info.framebuffer       = context->frame_buffers[image_index];
+    render_pass_begin_info.framebuffer       = context->swapchain.frame_buffers[image_index];
     render_pass_begin_info.renderArea.offset = (VkOffset2D){0, 0};
     render_pass_begin_info.renderArea.extent = context->swapchain.extent2D;
 
@@ -57,32 +61,32 @@ b8 vulkan_record_command_buffer(vulkan_context *context, u32 image_index)
     render_pass_begin_info.clearValueCount = 1;
     render_pass_begin_info.pClearValues    = &clear_color;
 
-    vkCmdBeginRenderPass(context->command_buffer, &render_pass_begin_info, VK_SUBPASS_CONTENTS_INLINE);
+    vkCmdBeginRenderPass(command_buffer, &render_pass_begin_info, VK_SUBPASS_CONTENTS_INLINE);
 
-    vkCmdBindPipeline(context->command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, context->graphics_pipeline.handle);
+    vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, context->graphics_pipeline.handle);
 
     VkViewport dynamic_view_port = {};
 
     dynamic_view_port.x        = 0;
     dynamic_view_port.y        = 0;
-    dynamic_view_port.width    = context->swapchain.extent2D.width;
-    dynamic_view_port.height   = context->swapchain.extent2D.height;
+    dynamic_view_port.width    = (f32)context->swapchain.extent2D.width;
+    dynamic_view_port.height   = (f32)context->swapchain.extent2D.height;
     dynamic_view_port.minDepth = 0.0f;
     dynamic_view_port.maxDepth = 1.0f;
 
-    vkCmdSetViewport(context->command_buffer, 0, 1, &dynamic_view_port);
+    vkCmdSetViewport(command_buffer, 0, 1, &dynamic_view_port);
 
     VkRect2D dynamic_scissor = {};
     dynamic_scissor.offset   = (VkOffset2D){0, 0};
     dynamic_scissor.extent   = context->swapchain.extent2D;
 
-    vkCmdSetScissor(context->command_buffer, 0, 1, &dynamic_scissor);
+    vkCmdSetScissor(command_buffer, 0, 1, &dynamic_scissor);
 
-    vkCmdDraw(context->command_buffer, 3, 1, 0, 0);
+    vkCmdDraw(command_buffer, 3, 1, 0, 0);
 
-    vkCmdEndRenderPass(context->command_buffer);
+    vkCmdEndRenderPass(command_buffer);
 
-    VK_CHECK(vkEndCommandBuffer(context->command_buffer));
+    VK_CHECK(vkEndCommandBuffer(command_buffer));
 
     return true;
 }

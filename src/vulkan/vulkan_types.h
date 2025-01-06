@@ -20,7 +20,12 @@ typedef struct vulkan_swapchain
     VkSurfaceFormatKHR format;
     VkPresentModeKHR   present_mode;
     VkExtent2D         extent2D;
+    u32                images_count;
     VkImage           *images;
+    u32                image_views_count;
+    VkImageView       *image_views;
+
+    VkFramebuffer *frame_buffers;
 } vulkan_swapchain;
 
 typedef struct vulkan_swapchain_support_details
@@ -60,23 +65,20 @@ typedef struct vulkan_context
 
     vulkan_swapchain swapchain;
 
-    // TODO: idk where to put this so it stays here
-    VkImageView *image_views;
-
     VkRenderPass             renderpass;
     vulkan_graphics_pipeline graphics_pipeline;
 
     // TODO: idk where to put this so it stays here
-    VkFramebuffer *frame_buffers;
+    VkCommandPool    command_pool;
+    VkCommandBuffer *command_buffers;
 
     // TODO: idk where to put this so it stays here
-    VkCommandPool   command_pool;
-    VkCommandBuffer command_buffer;
+    VkSemaphore *image_available_semaphores;
+    VkSemaphore *render_finished_semaphores;
 
-    // TODO: idk where to put this so it stays here
-    VkSemaphore image_available_semaphore;
-    VkSemaphore render_finished_semaphore;
+    VkFence *in_flight_fences;
 
-    VkFence in_flight_fence;
+    u32 max_frames_in_flight;
 
+    u32 current_frame;
 } vulkan_context;

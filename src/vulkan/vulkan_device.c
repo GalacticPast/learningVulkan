@@ -1,6 +1,7 @@
 #include "vulkan_device.h"
 #include "containers/array.h"
 #include "core/logger.h"
+#include "core/memory.h"
 #include "core/strings.h"
 
 typedef struct physical_device_requirements
@@ -61,7 +62,7 @@ b8 vulkan_create_logical_device(vulkan_context *context)
         queue_indicies[1] = context->device.present_queue_index;
     }
 
-    VkDeviceQueueCreateInfo *queue_create_infos = array_create_with_capacity(VkDeviceQueueCreateInfo, queue_indicies_count);
+    VkDeviceQueueCreateInfo queue_create_infos[queue_indicies_count];
 
     for (u32 i = 0; i < queue_indicies_count; i++)
     {
@@ -74,7 +75,7 @@ b8 vulkan_create_logical_device(vulkan_context *context)
         f32 queue_priority                        = 1.0f;
         queue_create_info.pQueuePriorities        = &queue_priority;
 
-        queue_create_infos = array_push_value(queue_create_infos, &queue_create_info);
+        queue_create_infos[i] = queue_create_info;
     }
 
     VkDeviceCreateInfo device_create_info = {};
@@ -82,7 +83,7 @@ b8 vulkan_create_logical_device(vulkan_context *context)
     device_create_info.pNext              = 0;
     device_create_info.flags              = 0;
 
-    u32 queue_create_infos_count = (u32)array_get_length(queue_create_infos);
+    u32 queue_create_infos_count = queue_indicies_count;
     DEBUG("Queue create infos count: %d", queue_create_infos_count);
 
     device_create_info.queueCreateInfoCount    = queue_create_infos_count;
@@ -100,7 +101,7 @@ b8 vulkan_create_logical_device(vulkan_context *context)
     vkGetDeviceQueue(context->device.logical, context->device.present_queue_index, 0, &context->device.present_queue);
 
     INFO("Queues obtained");
-    array_destroy(queue_create_infos);
+    // array_destroy(queue_create_infos);
     array_destroy(required_device_extensions);
 
     return true;
@@ -121,7 +122,7 @@ b8 select_physical_device(vulkan_context *context, physical_device_requirements 
         return false;
     }
 
-    VkPhysicalDevice *physical_devices = array_create_with_capacity(VkPhysicalDevice, gpu_count);
+    VkPhysicalDevice physical_devices[gpu_count];
     VK_CHECK(vkEnumeratePhysicalDevices(context->instance, &gpu_count, physical_devices));
 
     for (u32 i = 0; i < gpu_count; i++)
@@ -156,8 +157,6 @@ b8 select_physical_device(vulkan_context *context, physical_device_requirements 
         break;
     }
 
-    array_destroy(physical_devices);
-
     INFO("Physical device selected");
     return true;
 }
@@ -174,7 +173,7 @@ b8 device_meets_requirements(vulkan_context *context, VkSurfaceKHR surface, VkPh
     u32 required_device_extensions_count = (u32)array_get_length(required_device_extensions);
 
     vkEnumerateDeviceExtensionProperties(device, 0, &device_extensions_count, 0);
-    VkExtensionProperties *device_extension_properties = array_create_with_capacity(VkExtensionProperties, device_extensions_count);
+    VkExtensionProperties device_extension_properties[device_extensions_count];
     vkEnumerateDeviceExtensionProperties(device, 0, &device_extensions_count, device_extension_properties);
 
     DEBUG("Device Extensions count %d", device_extensions_count);
@@ -220,10 +219,8 @@ b8 device_meets_requirements(vulkan_context *context, VkSurfaceKHR surface, VkPh
         u32 queue_family_count = 0;
 
         vkGetPhysicalDeviceQueueFamilyProperties(device, &queue_family_count, 0);
-        VkQueueFamilyProperties *queue_family_properties = array_create_with_capacity(VkQueueFamilyProperties, queue_family_count);
-
+        VkQueueFamilyProperties queue_family_properties[queue_family_count];
         vkGetPhysicalDeviceQueueFamilyProperties(device, &queue_family_count, queue_family_properties);
-        array_set_length(queue_family_properties, queue_family_count);
 
         DEBUG("No of queue families %d", queue_family_count);
 
@@ -261,7 +258,6 @@ b8 device_meets_requirements(vulkan_context *context, VkSurfaceKHR surface, VkPh
         context->device.present_queue_index  = indicies.present_queue_index;
 
         // destroy the arrays
-        array_destroy(queue_family_properties);
     }
     return true;
 }
@@ -273,16 +269,14 @@ void query_swapchain_support_details(VkPhysicalDevice physical_device, VkSurface
     u32 format_count = 0;
     VK_CHECK(vkGetPhysicalDeviceSurfaceFormatsKHR(physical_device, surface, &format_count, 0));
 
-    swapchain_support_details->formats = array_create_with_capacity(VkSurfaceFormatKHR, format_count);
+    swapchain_support_details->formats = ALLOCATE_MEMORY_RENDERER(sizeof(VkSurfaceFormatKHR) * format_count);
     VK_CHECK(vkGetPhysicalDeviceSurfaceFormatsKHR(physical_device, surface, &format_count, swapchain_support_details->formats));
-    array_set_length(swapchain_support_details->formats, format_count);
     swapchain_support_details->format_count = format_count;
 
     u32 present_mode_count = 0;
     VK_CHECK(vkGetPhysicalDeviceSurfacePresentModesKHR(physical_device, surface, &present_mode_count, 0));
 
-    swapchain_support_details->present_modes = array_create_with_capacity(VkPresentModeKHR, present_mode_count);
+    swapchain_support_details->present_modes = ALLOCATE_MEMORY_RENDERER(sizeof(VkPresentModeKHR) * present_mode_count);
     VK_CHECK(vkGetPhysicalDeviceSurfacePresentModesKHR(physical_device, surface, &present_mode_count, swapchain_support_details->present_modes));
-    array_set_length(swapchain_support_details->present_modes, present_mode_count);
     swapchain_support_details->present_mode_count = present_mode_count;
 }

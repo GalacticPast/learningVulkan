@@ -75,8 +75,8 @@ b8 vulkan_create_graphics_pipeline(platform_state *plat_state, vulkan_context *c
     VkViewport view_port_info = {};
     view_port_info.x          = 0;
     view_port_info.y          = 0;
-    view_port_info.width      = width;
-    view_port_info.height     = height;
+    view_port_info.width      = (f32)width;
+    view_port_info.height     = (f32)height;
     view_port_info.minDepth   = 0.0f;
     view_port_info.maxDepth   = 1.0f;
 

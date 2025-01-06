@@ -1,6 +1,7 @@
 #include "containers/array.h"
 
 #include "core/logger.h"
+#include "core/memory.h"
 #include "core/strings.h"
 
 #include "platform/platform.h"
@@ -24,6 +25,8 @@ b8 initialize_vulkan(struct platform_state *plat_state, vulkan_context *context,
 
     INFO("Initializing Vulkan...");
 
+    context->max_frames_in_flight = 2;
+
     VkApplicationInfo app_info  = {};
     app_info.sType              = VK_STRUCTURE_TYPE_APPLICATION_INFO;
     app_info.pNext              = 0;
@@ -42,7 +45,7 @@ b8 initialize_vulkan(struct platform_state *plat_state, vulkan_context *context,
 
     u32 layer_count = 0;
     VK_CHECK(vkEnumerateInstanceLayerProperties(&layer_count, 0));
-    VkLayerProperties *layer_properties = array_create_with_capacity(VkLayerProperties, layer_count);
+    VkLayerProperties layer_properties[layer_count];
     VK_CHECK(vkEnumerateInstanceLayerProperties(&layer_count, layer_properties));
 
     DEBUG("Avaliable layers: %d", layer_count);
@@ -71,7 +74,6 @@ b8 initialize_vulkan(struct platform_state *plat_state, vulkan_context *context,
             return false;
         }
     }
-    array_destroy(layer_properties);
     INFO("Required vulkan layers found.");
     //
 
@@ -89,7 +91,7 @@ b8 initialize_vulkan(struct platform_state *plat_state, vulkan_context *context,
 
     u32 all_extension_count = 0;
     VK_CHECK(vkEnumerateInstanceExtensionProperties(0, &all_extension_count, 0));
-    VkExtensionProperties *all_extension_properties = array_create_with_capacity(VkExtensionProperties, all_extension_count);
+    VkExtensionProperties all_extension_properties[all_extension_count];
     VK_CHECK(vkEnumerateInstanceExtensionProperties(0, &all_extension_count, all_extension_properties));
 
     /*    for (u32 j = 0; j < all_extension_count; j++)
@@ -113,7 +115,6 @@ b8 initialize_vulkan(struct platform_state *plat_state, vulkan_context *context,
             ERROR("Required extension: %s required but not found", required_extensions_name[i]);
         }
     }
-    array_destroy(all_extension_properties);
     INFO("Required vulkan layer extensions found.");
 
     // INFO: create debug messenger
@@ -261,18 +262,23 @@ b8 shutdown_vulkan(vulkan_context *context)
     vkDeviceWaitIdle(context->device.logical);
 
     INFO("Destroying semaphores and fences...");
-    vkDestroySemaphore(context->device.logical, context->image_available_semaphore, 0);
-    vkDestroySemaphore(context->device.logical, context->render_finished_semaphore, 0);
-    vkDestroyFence(context->device.logical, context->in_flight_fence, 0);
+
+    u32 sync_objects_size = context->max_frames_in_flight;
+    for (u32 i = 0; i < sync_objects_size; i++)
+    {
+        vkDestroySemaphore(context->device.logical, context->image_available_semaphores[i], 0);
+        vkDestroySemaphore(context->device.logical, context->render_finished_semaphores[i], 0);
+        vkDestroyFence(context->device.logical, context->in_flight_fences[i], 0);
+    }
 
     INFO("Destroying command pool and buffers...");
     vkDestroyCommandPool(context->device.logical, context->command_pool, 0);
 
     INFO("Destroying frame buffers...");
-    u32 frame_buffers_count = (u32)array_get_length(context->frame_buffers);
+    u32 frame_buffers_count = context->swapchain.image_views_count;
     for (u32 i = 0; i < frame_buffers_count; i++)
     {
-        vkDestroyFramebuffer(context->device.logical, context->frame_buffers[i], 0);
+        vkDestroyFramebuffer(context->device.logical, context->swapchain.frame_buffers[i], 0);
     }
 
     INFO("Destroying graphics pipeline...");
@@ -285,10 +291,10 @@ b8 shutdown_vulkan(vulkan_context *context)
     vkDestroyRenderPass(context->device.logical, context->renderpass, 0);
 
     INFO("Destroying image views...");
-    u32 image_view_count = (u32)array_get_length(context->image_views);
+    u32 image_view_count = context->swapchain.image_views_count;
     for (u32 i = 0; i < image_view_count; i++)
     {
-        vkDestroyImageView(context->device.logical, context->image_views[i], 0);
+        vkDestroyImageView(context->device.logical, context->swapchain.image_views[i], 0);
     }
 
     INFO("Destroying vulkan swapchain...");
@@ -311,16 +317,18 @@ b8 shutdown_vulkan(vulkan_context *context)
 
 void vulkan_draw_frame(vulkan_context *context)
 {
-    VK_CHECK(vkWaitForFences(context->device.logical, 1, &context->in_flight_fence, VK_TRUE, UINT64_MAX));
+    u32 current_frame = context->current_frame;
 
-    VK_CHECK(vkResetFences(context->device.logical, 1, &context->in_flight_fence));
+    VK_CHECK(vkWaitForFences(context->device.logical, 1, &context->in_flight_fences[current_frame], VK_TRUE, UINT64_MAX));
+
+    VK_CHECK(vkResetFences(context->device.logical, 1, &context->in_flight_fences[current_frame]));
 
     u32 image_index = 0;
-    VK_CHECK(vkAcquireNextImageKHR(context->device.logical, context->swapchain.handle, UINT64_MAX, context->image_available_semaphore, VK_NULL_HANDLE, &image_index));
+    VK_CHECK(vkAcquireNextImageKHR(context->device.logical, context->swapchain.handle, UINT64_MAX, context->image_available_semaphores[current_frame], VK_NULL_HANDLE, &image_index));
 
-    VK_CHECK(vkResetCommandBuffer(context->command_buffer, 0));
+    VK_CHECK(vkResetCommandBuffer(context->command_buffers[current_frame], 0));
 
-    b8 result = vulkan_record_command_buffer(context, image_index);
+    b8 result = vulkan_record_command_buffer(context, context->command_buffers[current_frame], image_index);
 
     if (!result)
     {
@@ -335,25 +343,27 @@ void vulkan_draw_frame(vulkan_context *context)
 
     queue_submit_info.waitSemaphoreCount   = 1;
     VkPipelineStageFlags wait_stages[]     = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
-    queue_submit_info.pWaitSemaphores      = &context->image_available_semaphore;
+    queue_submit_info.pWaitSemaphores      = &context->image_available_semaphores[current_frame];
     queue_submit_info.pWaitDstStageMask    = wait_stages;
     queue_submit_info.commandBufferCount   = 1;
-    queue_submit_info.pCommandBuffers      = &context->command_buffer;
+    queue_submit_info.pCommandBuffers      = &context->command_buffers[current_frame];
     queue_submit_info.signalSemaphoreCount = 1;
-    queue_submit_info.pSignalSemaphores    = &context->render_finished_semaphore;
+    queue_submit_info.pSignalSemaphores    = &context->render_finished_semaphores[current_frame];
 
-    VK_CHECK(vkQueueSubmit(context->device.graphics_queue, 1, &queue_submit_info, context->in_flight_fence));
+    VK_CHECK(vkQueueSubmit(context->device.graphics_queue, 1, &queue_submit_info, context->in_flight_fences[current_frame]));
 
     VkPresentInfoKHR present_info = {};
 
     present_info.sType              = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
     present_info.pNext              = 0;
     present_info.waitSemaphoreCount = 1;
-    present_info.pWaitSemaphores    = &context->render_finished_semaphore;
+    present_info.pWaitSemaphores    = &context->render_finished_semaphores[current_frame];
     present_info.swapchainCount     = 1;
     present_info.pSwapchains        = &context->swapchain.handle;
     present_info.pImageIndices      = &image_index;
     present_info.pResults           = VK_NULL_HANDLE;
 
     VK_CHECK(vkQueuePresentKHR(context->device.present_queue, &present_info));
+
+    context->current_frame = (current_frame + 1) % context->max_frames_in_flight;
 }
