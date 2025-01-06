@@ -57,7 +57,7 @@ void print_memory_sizes()
         }
         else
         {
-            offset += sprintf(buffer + offset, "%s%.2f \n", tag[i], ((f64)memory.sizes[i] / 1));
+            offset += sprintf(buffer + offset, "%s%.2f B\n", tag[i], ((f64)memory.sizes[i] / 1));
         }
     }
     platform_log_message(buffer, LOG_LEVEL_DEBUG, 4096);

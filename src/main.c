@@ -6,6 +6,7 @@
 
 // C stuff
 #include <stdio.h>
+#include <time.h>
 
 // vulkan stuff
 #include "platform/platform.h"
@@ -99,7 +100,6 @@ s32 main(s32 argc, char **argv)
 
     while (platform_pump_messages(&plat_state) && is_running)
     {
-
         vulkan_draw_frame(&vulkan_context);
     }
 

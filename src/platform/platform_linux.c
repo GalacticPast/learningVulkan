@@ -373,12 +373,7 @@ static void wl_keyboard_key(void *data, struct wl_keyboard *wl_keyboard, u32 ser
 
     keys code = translate_keycode(key);
 
-    if (code == KEY_ESCAPE)
-    {
-        event_context context = {};
-        context.data.u32[0]   = code;
-        event_fire(ON_APPLICATION_QUIT, context);
-    }
+    input_process_key(code, (b8)state);
 }
 
 static void wl_keyboard_leave(void *data, struct wl_keyboard *wl_keyboard, u32 serial, struct wl_surface *surface)
@@ -433,6 +428,10 @@ struct wl_seat_listener wl_seat_listener = {.capabilities = wl_seat_capabilites,
 // actual surface
 static void xdg_toplevel_configure(void *data, struct xdg_toplevel *xdg_toplevel, s32 width, s32 height, struct wl_array *states)
 {
+    if (width == 0 || height == 0)
+    {
+        return;
+    }
     event_context context = {};
     context.data.u32[0]   = width;
     context.data.u32[1]   = height;
