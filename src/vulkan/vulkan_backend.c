@@ -332,10 +332,26 @@ void vulkan_draw_frame(vulkan_context *context)
 
     VK_CHECK(vkWaitForFences(context->device.logical, 1, &context->in_flight_fences[current_frame], VK_TRUE, UINT64_MAX));
 
-    VK_CHECK(vkResetFences(context->device.logical, 1, &context->in_flight_fences[current_frame]));
-
     u32 image_index = 0;
-    VK_CHECK(vkAcquireNextImageKHR(context->device.logical, context->swapchain.handle, UINT64_MAX, context->image_available_semaphores[current_frame], VK_NULL_HANDLE, &image_index));
+
+    VkResult next_image_result =
+        vkAcquireNextImageKHR(context->device.logical, context->swapchain.handle, UINT64_MAX, context->image_available_semaphores[current_frame], VK_NULL_HANDLE, &image_index);
+
+    if (next_image_result == VK_ERROR_OUT_OF_DATE_KHR)
+    {
+        DEBUG("next image result is out of date");
+        if (!vulkan_recreate_swapchain(context))
+        {
+            ERROR("Failed to recreate swapchain");
+            return;
+        }
+    }
+    else if (next_image_result != VK_SUCCESS && next_image_result != VK_SUBOPTIMAL_KHR)
+    {
+        ERROR("Failed to acquire next image");
+        debugbreak();
+    }
+    VK_CHECK(vkResetFences(context->device.logical, 1, &context->in_flight_fences[current_frame]));
 
     VK_CHECK(vkResetCommandBuffer(context->command_buffers[current_frame], 0));
 
@@ -374,7 +390,22 @@ void vulkan_draw_frame(vulkan_context *context)
     present_info.pImageIndices      = &image_index;
     present_info.pResults           = VK_NULL_HANDLE;
 
-    VK_CHECK(vkQueuePresentKHR(context->device.present_queue, &present_info));
+    VkResult queue_present_result = vkQueuePresentKHR(context->device.present_queue, &present_info);
+
+    if (queue_present_result == VK_ERROR_OUT_OF_DATE_KHR || queue_present_result == VK_SUBOPTIMAL_KHR)
+    {
+        DEBUG("queue present result is out of date or suboptimal");
+        if (!vulkan_recreate_swapchain(context))
+        {
+            ERROR("Failed to recreate swapchain");
+            return;
+        }
+    }
+    else if (queue_present_result != VK_SUCCESS)
+    {
+        ERROR("Failed to acquire next image");
+        debugbreak();
+    }
 
     context->current_frame = (current_frame + 1) % context->max_frames_in_flight;
 }

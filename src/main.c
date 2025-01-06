@@ -57,8 +57,8 @@ s32 main(s32 argc, char **argv)
     const char *application_name = "learningVulkan";
     u32         x                = 0;
     u32         y                = 0;
-    u32         width            = 1280;
-    u32         height           = 720;
+    u32         width            = 800;
+    u32         height           = 600;
 
     platform_state plat_state     = {};
     vulkan_context vulkan_context = {};
@@ -99,6 +99,7 @@ s32 main(s32 argc, char **argv)
 
     while (platform_pump_messages(&plat_state) && is_running)
     {
+
         vulkan_draw_frame(&vulkan_context);
     }
 

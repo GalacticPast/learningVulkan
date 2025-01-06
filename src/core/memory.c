@@ -45,19 +45,19 @@ void print_memory_sizes()
     {
         if (memory.sizes[i] >= gb)
         {
-            offset += sprintf(buffer + offset, "%s%lu GB\n", tag[i], (memory.sizes[i] / gb));
+            offset += sprintf(buffer + offset, "%s%.2f GB\n", tag[i], ((f64)memory.sizes[i] / gb));
         }
         else if (memory.sizes[i] >= mb)
         {
-            offset += sprintf(buffer + offset, "%s%lu MB\n", tag[i], (memory.sizes[i] / mb));
+            offset += sprintf(buffer + offset, "%s%.2f MB\n", tag[i], ((f64)memory.sizes[i] / mb));
         }
         else if (memory.sizes[i] >= kb)
         {
-            offset += sprintf(buffer + offset, "%s%lu KB\n", tag[i], (memory.sizes[i] / kb));
+            offset += sprintf(buffer + offset, "%s%.2f KB\n", tag[i], ((f64)memory.sizes[i] / kb));
         }
         else
         {
-            offset += sprintf(buffer + offset, "%s%lu B \n", tag[i], (memory.sizes[i] / 1));
+            offset += sprintf(buffer + offset, "%s%.2f \n", tag[i], ((f64)memory.sizes[i] / 1));
         }
     }
     platform_log_message(buffer, LOG_LEVEL_DEBUG, 4096);

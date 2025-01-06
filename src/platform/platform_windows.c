@@ -20,14 +20,12 @@ typedef struct internal_state
 {
     HINSTANCE h_instance;
     HWND      hwnd;
-
-    s32 width;
-    s32 height;
 } internal_state;
 
 // Clock
 
 LRESULT CALLBACK win32_process_message(HWND hwnd, u32 msg, WPARAM w_param, LPARAM l_param);
+keys             translate_keycode(u32 key);
 
 b8 platform_startup(platform_state *plat_state, const char *application_name, s32 x, s32 y, s32 width, s32 height)
 {
@@ -36,8 +34,6 @@ b8 platform_startup(platform_state *plat_state, const char *application_name, s3
     internal_state *state      = (internal_state *)plat_state->internal_state;
 
     state->h_instance = GetModuleHandleA(0);
-    state->width      = width;
-    state->width      = height;
 
     // Setup and register window class.
     HICON     icon = LoadIcon(state->h_instance, IDI_APPLICATION);
@@ -59,9 +55,12 @@ b8 platform_startup(platform_state *plat_state, const char *application_name, s3
         return false;
     }
 
+    u32 client_screen_width  = GetSystemMetrics(SM_CXFULLSCREEN);
+    u32 client_screen_height = GetSystemMetrics(SM_CYFULLSCREEN);
+
     // Create window
-    u32 client_x      = x == 0 ? 500 : x;
-    u32 client_y      = y == 0 ? 500 : y;
+    u32 client_x      = x == 0 ? (client_screen_width / 2 - width / 2) : x;
+    u32 client_y      = y == 0 ? (client_screen_height / 2 - height / 2) : y;
     u32 client_width  = width;
     u32 client_height = height;
 
@@ -163,7 +162,7 @@ LRESULT CALLBACK win32_process_message(HWND hwnd, u32 msg, WPARAM w_param, LPARA
             // Notify the OS that erasing will be handled by the application to prevent flicker.
             return 1;
         case WM_CLOSE:
-            event_context context = {};
+            event_context context = {0};
             event_fire(ON_APPLICATION_QUIT, context);
             return 0;
         case WM_DESTROY:
@@ -171,12 +170,15 @@ LRESULT CALLBACK win32_process_message(HWND hwnd, u32 msg, WPARAM w_param, LPARA
             return 0;
         case WM_SIZE: {
             // Get the updated size.
-            // RECT r;
-            // GetClientRect(hwnd, &r);
-            // u32 width = r.right - r.left;
-            // u32 height = r.bottom - r.top;
+            RECT r;
+            GetClientRect(hwnd, &r);
+            u32 width  = r.right - r.left;
+            u32 height = r.bottom - r.top;
 
-            // TODO: Fire an event for window resize.
+            event_context context = {0};
+            context.data.u32[0]   = width;
+            context.data.u32[1]   = height;
+            event_fire(ON_APPLICATION_RESIZE, context);
         }
         break;
         case WM_KEYDOWN:
@@ -185,9 +187,9 @@ LRESULT CALLBACK win32_process_message(HWND hwnd, u32 msg, WPARAM w_param, LPARA
         case WM_SYSKEYUP: {
             // Key pressed/released
             b8   pressed = (msg == WM_KEYDOWN || msg == WM_SYSKEYDOWN);
-            keys key     = (u16)w_param;
+            keys key     = translate_keycode((u16)w_param);
+            DEBUG("Key: %d", key);
 
-            // Pass to the input subsystem for processing.
             input_process_key(key, pressed);
         }
         break;
@@ -213,6 +215,18 @@ LRESULT CALLBACK win32_process_message(HWND hwnd, u32 msg, WPARAM w_param, LPARA
     return DefWindowProcA(hwnd, msg, w_param, l_param);
 }
 
+keys translate_keycode(u32 key)
+{
+    switch (key)
+    {
+        case 27: {
+            return KEY_ESCAPE;
+        }
+        break;
+    }
+    return MAX_KEYS;
+}
+
 b8 platform_create_vulkan_surface(platform_state *plat_state, vulkan_context *context)
 {
     internal_state *state = (internal_state *)plat_state->internal_state;
@@ -235,11 +249,4 @@ void *platform_get_required_surface_extensions(char **required_extension_names)
     return required_extension_names;
 }
 
-void platform_get_framebuffer_size(platform_state *plat_state, u32 *width, u32 *height)
-{
-    internal_state *state = (internal_state *)plat_state->internal_state;
-
-    *width  = state->width;
-    *height = state->height;
-}
 #endif

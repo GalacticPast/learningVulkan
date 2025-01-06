@@ -2,6 +2,7 @@
 #include "containers/array.h"
 #include "core/memory.h"
 #include "platform/platform.h"
+#include "vulkan_device.h"
 #include "vulkan_frame_buffers.h"
 #include "vulkan_image.h"
 
@@ -43,8 +44,7 @@ b8 vulkan_recreate_swapchain(vulkan_context *context)
 
 b8 create(vulkan_context *context)
 {
-    //
-    // TODO: this a hack
+    vulkan_query_swapchain_support_details(context->device.physical, context->surface, &context->device.swapchain_support_details);
 
     VkSurfaceCapabilitiesKHR capabilities = context->device.swapchain_support_details.capabilities;
 
