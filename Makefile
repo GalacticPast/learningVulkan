@@ -1,6 +1,6 @@
 obj_dir := obj
-src_dir := src 
-bin_dir := bin 
+src_dir := src
+bin_dir := bin
 cc := clang
 
 is_linux := $(shell uname -s)
@@ -28,25 +28,26 @@ compiler_flags := -Wall -Wextra -g3 -Wconversion -Wdouble-promotion -Wno-unused-
 endif
 
 src_files := $(shell find $(src_dir) -type f -name '*.c')
-dependencies := $(shell find $(src_dir) -type f -name '*.h')
-obj_files := $(patsubst src%.c,obj%.o,$(src_files))
+dependencies := $(shell find $(src_dir) -type d)
+obj_files := $(patsubst %.c, $(obj_dir)/%.o, $(src_files))
 
 endif
 
-all: scaffold 
+all: scaffold  link
 
 scaffold :
 	@echo scaffolding project structure...
 	@mkdir -p $(obj_dir)
-	@mkdir -p $(patsubst src%,obj%,$(dir $(obj_files)))
+	@mkdir -p $(dir $(obj_files))
 	@echo done.
 
-
-%.o: %.c $(dependencies)
-		@echo compiling $<...	
-		$(cc) -c -o $@ $< $(compiler_flags) $(includes) 
-
+# Object file compilation rule
+$(obj_dir)/%.o : %.c 
+	@echo Compiling $<...
+	@$(cc) $(compile_flags) -c $< -o $@ $(includes) $(defines)
 
 link: $(obj_files)
-	@echo linking $^..
-	$(cc) -o my_program $^ $(compiler_flags)
+	@echo Linking 
+	@$(cc) $(compile_flags) $^ -o $(bin_dir)/learningVulkanc $(includes) $(defines) $(linker_flags) 
+	
+
