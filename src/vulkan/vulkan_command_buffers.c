@@ -53,9 +53,9 @@ b8 vulkan_record_command_buffer(vulkan_context *context, VkCommandBuffer command
     render_pass_begin_info.renderArea.extent = context->swapchain.extent2D;
 
     VkClearValue clear_color     = {};
-    clear_color.color.float32[0] = 0.0f;
-    clear_color.color.float32[1] = 0.0f;
-    clear_color.color.float32[2] = 0.0f;
+    clear_color.color.float32[0] = 1.0f;
+    clear_color.color.float32[1] = 1.0f;
+    clear_color.color.float32[2] = 1.0f;
     clear_color.color.float32[3] = 1.0f;
 
     render_pass_begin_info.clearValueCount = 1;

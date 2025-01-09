@@ -23,9 +23,6 @@ typedef int8_t b8;
 // compiler predermined platform detection macros
 // https://stackoverflow.com/questions/430424/are-there-any-macros-to-determine-if-my-code-is-being-compiled-to-windows
 // https://stackoverflow.com/questions/4605842/how-to-identify-platform-compiler-from-preprocessor-macros
-#if defined(_WIN32) || defined(WIN32) || defined(__MINGW32__)
-#define PLATFORM_WINDOWS
-#endif
 
 #ifdef __linux__
 #define PLATFORM_LINUX
