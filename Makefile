@@ -71,4 +71,4 @@ $(obj_dir)/%.o : %.c
 
 link: $(obj_files)
 	@echo Linking 
-	$(cc) $(compile_flags) $^ -o $(bin_dir)/$(assembly)$(extension) $(includes) $(defines) $(linker_flags) 
+	@$(cc) $(compile_flags) $^ -o $(bin_dir)/$(assembly)$(extension) $(includes) $(defines) $(linker_flags) 

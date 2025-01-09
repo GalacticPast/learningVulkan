@@ -6,7 +6,6 @@
 
 // C stuff
 #include <stdio.h>
-#include <time.h>
 
 // vulkan stuff
 #include "platform/platform.h"
