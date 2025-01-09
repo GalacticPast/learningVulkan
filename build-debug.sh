@@ -33,4 +33,9 @@ for file in src/shaders/*.vert; do
     glslc "$file" -o bin/$(basename "$file" .vert).spv
 done 
 
+for file in src/shaders/*.frag; do
+    echo glslc ${file} -o bin/$(basename "$file" .frag).spv
+    glslc "$file" -o bin/$(basename "$file" .frag).spv
+done 
+
 make
