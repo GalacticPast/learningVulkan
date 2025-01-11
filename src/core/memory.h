@@ -21,4 +21,6 @@ typedef enum memory_tags
 void *__allocate_memory(u64 size, memory_tags tag);
 void  __free_memory(void *block, u64 block_size, memory_tags tag);
 
+void zero_memory(void *block, u64 block_size);
+
 void print_memory_sizes();

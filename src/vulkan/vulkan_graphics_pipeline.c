@@ -1,6 +1,7 @@
 #include "vulkan_graphics_pipeline.h"
 #include "containers/array.h"
 #include "core/fileIO.h"
+#include "math/math_types.h"
 
 void create_shader_module(vulkan_context *context, VkShaderModule *shader_module, const char *binary_code);
 
@@ -52,14 +53,29 @@ b8 vulkan_create_graphics_pipeline(vulkan_context *context)
     dynamic_state_create_info.dynamicStateCount = 2;
     dynamic_state_create_info.pDynamicStates    = dynamic_states;
 
+    VkVertexInputBindingDescription vertex_binding_description = {};
+    vertex_binding_description.binding                         = 0;
+    vertex_binding_description.stride                          = sizeof(vertex_3d);
+    vertex_binding_description.inputRate                       = VK_VERTEX_INPUT_RATE_VERTEX;
+
+    VkVertexInputAttributeDescription vertex_attribute_descriptions[2] = {};
+
+    for (u32 i = 0; i < 2; i++)
+    {
+        vertex_attribute_descriptions[i].location = i;
+        vertex_attribute_descriptions[i].binding  = 0;
+        vertex_attribute_descriptions[i].format   = VK_FORMAT_R32G32B32_SFLOAT;
+        vertex_attribute_descriptions[i].offset   = sizeof(vec3);
+    }
+
     VkPipelineVertexInputStateCreateInfo vertex_input_state_create_info = {};
     vertex_input_state_create_info.sType                                = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
     vertex_input_state_create_info.pNext                                = 0;
     vertex_input_state_create_info.flags                                = 0;
-    vertex_input_state_create_info.vertexBindingDescriptionCount        = 0;
-    vertex_input_state_create_info.pVertexBindingDescriptions           = VK_NULL_HANDLE;
-    vertex_input_state_create_info.vertexAttributeDescriptionCount      = 0;
-    vertex_input_state_create_info.pVertexAttributeDescriptions         = VK_NULL_HANDLE;
+    vertex_input_state_create_info.vertexBindingDescriptionCount        = 1;
+    vertex_input_state_create_info.pVertexBindingDescriptions           = &vertex_binding_description;
+    vertex_input_state_create_info.vertexAttributeDescriptionCount      = 2;
+    vertex_input_state_create_info.pVertexAttributeDescriptions         = vertex_attribute_descriptions;
 
     VkPipelineInputAssemblyStateCreateInfo input_assembly_state_create_info = {};
     input_assembly_state_create_info.sType                                  = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
@@ -199,6 +215,8 @@ void create_shader_module(vulkan_context *context, VkShaderModule *shader_module
     shader_module_create_info.codeSize = code_size;
     shader_module_create_info.pCode    = (const u32 *)binary_code;
     DEBUG("Creaating shader module...");
+
     VK_CHECK(vkCreateShaderModule(context->device.logical, &shader_module_create_info, 0, shader_module));
+
     DEBUG("Shader module created.");
 }

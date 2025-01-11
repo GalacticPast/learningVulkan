@@ -10,7 +10,7 @@ ifeq ($(OS),Windows_NT)
 	extension := .exe
 	defines := -D_DEBUG -DPLATFORM_WINDOWS
 	includes := -Isrc -I$(vulkan_sdk)\Include
-	linker_flags := -luser32 -lvulkan-1 -L$(vulkan_sdk)\Lib
+	linker_flags := -luser32 -lvulkan-1 -L$(vulkan_sdk)\Lib -lm
 	compiler_flags := -Wall -Wextra -g3 -Wconversion -Wdouble-promotion -Wno-unused-parameter -Wno-unused-function -Wno-sign-conversion -fsanitize=undefined -fsanitize-trap
 	build_platform := windows
 	
@@ -32,7 +32,7 @@ else
 	extension := 
 	defines := -D_DEBUG -DPLATFORM_LINUX_WAYLAND
 	includes := -Isrc 
-	linker_flags := -lvulkan -lwayland-client 
+	linker_flags := -lvulkan -lwayland-client -lm
 	compiler_flags := -Wall -Wextra -g3 -Wconversion -Wdouble-promotion -Wno-unused-parameter -Wno-unused-function -Wno-sign-conversion -fsanitize=undefined -fsanitize-trap
 
 	else ifeq ($(linux_platform),x11)		
@@ -40,7 +40,7 @@ else
 	extension := 
 	defines := -D_DEBUG -DPLATFORM_LINUX_X11 
 	includes := -Isrc 
-	linker_flags := -lvulkan -lX11 -lxcb -lX11-xcb -L/usr/X11R6/lib
+	linker_flags := -lvulkan -lX11 -lxcb -lX11-xcb -L/usr/X11R6/lib -lm
 	compiler_flags := -Wall -Wextra -g3 -Wconversion -Wdouble-promotion -Wno-unused-parameter -Wno-unused-function -Wno-sign-conversion -fsanitize=undefined -fsanitize-trap
 
 	endif
@@ -67,7 +67,7 @@ endif
 
 $(obj_dir)/%.o : %.c 
 	@echo $<...
-	@$(cc) $< $(compile_flags) -c  -o $@ $(defines) $(includes) 
+	@$(cc) $< $(compiler_flags) -c  -o $@ $(defines) $(includes) 
 
 link: $(obj_files)
 	@echo Linking 

@@ -7,6 +7,7 @@
 
 #include "platform/platform.h"
 
+#include "vulkan/vulkan_buffer.h"
 #include "vulkan_backend.h"
 #include "vulkan_command_buffers.h"
 #include "vulkan_device.h"
@@ -123,7 +124,7 @@ b8 initialize_vulkan(struct platform_state *plat_state, vulkan_context *context,
     debug_messenger_create_info.sType                              = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
     debug_messenger_create_info.pNext                              = 0;
     debug_messenger_create_info.flags                              = 0;
-    debug_messenger_create_info.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
+    debug_messenger_create_info.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT;
     debug_messenger_create_info.messageType     = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
     debug_messenger_create_info.pfnUserCallback = debug_messenger_callback;
     debug_messenger_create_info.pUserData       = 0;
@@ -203,6 +204,11 @@ b8 initialize_vulkan(struct platform_state *plat_state, vulkan_context *context,
         ERROR("Vulkan command pool creation failed");
         return false;
     }
+    if (!vulkan_create_buffers(context))
+    {
+        ERROR("Vulkan vertex/index buffer creation failed");
+        return false;
+    }
     if (!vulkan_create_command_buffers(context))
     {
         ERROR("Vulkan command buffers creation failed");
@@ -261,6 +267,13 @@ void debug_messenger_destroy(vulkan_context *context)
 b8 shutdown_vulkan(vulkan_context *context)
 {
     vkDeviceWaitIdle(context->device.logical);
+
+    INFO("Destroying vertex buffers...");
+    vkDestroyBuffer(context->device.logical, context->vertex_buffer.handle, 0);
+    vkFreeMemory(context->device.logical, context->vertex_buffer.memory, 0);
+
+    context->vertex_buffer.handle = 0;
+    context->vertex_buffer.memory = 0;
 
     INFO("Destroying semaphores and fences...");
 

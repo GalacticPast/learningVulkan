@@ -26,16 +26,4 @@ if [[ $platform == "wayland" ]]; then
     cd ../../../
 fi
 
-echo "compiling shaders"
-    
-for file in src/shaders/*.vert; do
-    echo glslc ${file} -o bin/$(basename "$file" .vert).spv
-    glslc "$file" -o bin/$(basename "$file" .vert).spv
-done 
-
-for file in src/shaders/*.frag; do
-    echo glslc ${file} -o bin/$(basename "$file" .frag).spv
-    glslc "$file" -o bin/$(basename "$file" .frag).spv
-done 
-
 make

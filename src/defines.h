@@ -29,5 +29,6 @@ typedef int8_t b8;
 #endif
 
 #define UNUSED __attribute__((unused))
+#define INLINE __attribute__((always_inline))
 
 #define CLAMP(value, min, max) (value <= min) ? min : ((value >= max) ? max : value);

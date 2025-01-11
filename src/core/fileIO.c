@@ -7,7 +7,7 @@
 
 char *read_file(const char *filename, b8 is_binary)
 {
-    char *shader_dir = "../src/shaders";
+    char *shader_dir = "../assets/shaders";
     char *binary_dir = "";
 
     char full_path[100] = {};

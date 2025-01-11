@@ -82,7 +82,11 @@ b8 vulkan_record_command_buffer(vulkan_context *context, VkCommandBuffer command
 
     vkCmdSetScissor(command_buffer, 0, 1, &dynamic_scissor);
 
-    vkCmdDraw(command_buffer, 3, 1, 0, 0);
+    VkBuffer     vertexBuffers[] = {context->vertex_buffer.handle};
+    VkDeviceSize offsets[]       = {0};
+    vkCmdBindVertexBuffers(command_buffer, 0, 1, vertexBuffers, offsets);
+
+    vkCmdDraw(command_buffer, 6, 1, 0, 0);
 
     vkCmdEndRenderPass(command_buffer);
 

@@ -8,6 +8,13 @@
         ASSERT(expr == VK_SUCCESS);                                                                                                                                                                    \
     }
 
+typedef struct vulkan_buffer
+{
+    VkBuffer       handle;
+    VkDeviceMemory memory;
+    u64            size;
+} vulkan_buffer;
+
 typedef struct vulkan_graphics_pipeline
 {
     VkPipeline       handle;
@@ -89,4 +96,6 @@ typedef struct vulkan_context
     u32 frame_buffer_last_frame_height;
 
     b8 recreate_swapchain;
+
+    vulkan_buffer vertex_buffer;
 } vulkan_context;

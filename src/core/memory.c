@@ -3,6 +3,7 @@
 #include "platform/platform.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 typedef struct allocated_memory_sizes
 {
@@ -26,6 +27,11 @@ void __free_memory(void *block, u64 block_size, memory_tags tag)
 {
     memory.sizes[tag] -= block_size;
     free(block);
+}
+
+void zero_memory(void *block, u64 block_size)
+{
+    memset(block, 0, block_size);
 }
 
 void print_memory_sizes()
