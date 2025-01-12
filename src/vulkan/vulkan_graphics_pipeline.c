@@ -65,7 +65,7 @@ b8 vulkan_create_graphics_pipeline(vulkan_context *context)
         vertex_attribute_descriptions[i].location = i;
         vertex_attribute_descriptions[i].binding  = 0;
         vertex_attribute_descriptions[i].format   = VK_FORMAT_R32G32B32_SFLOAT;
-        vertex_attribute_descriptions[i].offset   = sizeof(vec3);
+        vertex_attribute_descriptions[i].offset   = i == 0 ? 0 : sizeof(vec3);
     }
 
     VkPipelineVertexInputStateCreateInfo vertex_input_state_create_info = {};

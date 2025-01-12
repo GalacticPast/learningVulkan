@@ -50,18 +50,21 @@ b8 vulkan_create_vertex_buffer(vulkan_context *context, vulkan_buffer *out_buffe
 
     vertex_3d vertices[3] = {};
 
-    vertices[0].position = (vec3){0.0f, -0.5f, 0.0f};
-    vertices[0].color    = (vec3){1.0f, 0.0f, 0.0f};
+    vertices[0].position.x = 0.0f;
+    vertices[0].position.y = -0.5f;
+    vertices[0].color      = (vec3){1.0f, 0.0f, 0.0f};
 
-    vertices[1].position = (vec3){0.5f, 0.5f, 0.0f};
-    vertices[1].color    = (vec3){0.0f, 1.0f, 0.0f};
+    vertices[1].position.x = 0.5f;
+    vertices[1].position.y = 0.5f;
+    vertices[1].color      = (vec3){0.0f, 1.0f, 0.0f};
 
-    vertices[2].position = (vec3){-0.5f, 0.5f, 0.0f};
-    vertices[2].color    = (vec3){0.0f, 0.0f, 1.0f};
+    vertices[2].position.x = -0.5f;
+    vertices[2].position.y = 0.5f;
+    vertices[2].color      = (vec3){0.0f, 0.0f, 1.0f};
 
     void *data;
     vkMapMemory(context->device.logical, out_buffer->memory, 0, out_buffer->size, 0, &data);
-    memcpy(data, vertices, sizeof(vec3) * 6);
+    memcpy(data, vertices, sizeof(vertex_3d) * 3);
     vkUnmapMemory(context->device.logical, out_buffer->memory);
 
     return true;
