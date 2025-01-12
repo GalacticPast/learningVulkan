@@ -10,7 +10,7 @@ ifeq ($(OS),Windows_NT)
 	extension := .exe
 	defines := -D_DEBUG -DPLATFORM_WINDOWS
 	includes := -Isrc -I$(vulkan_sdk)\Include
-	linker_flags := -luser32 -lvulkan-1 -L$(vulkan_sdk)\Lib -lm
+	linker_flags := -luser32 -lvulkan-1 -L$(vulkan_sdk)\Lib 
 	compiler_flags := -Wall -Wextra -g3 -Wconversion -Wdouble-promotion -Wno-unused-parameter -Wno-unused-function -Wno-sign-conversion -fsanitize=undefined -fsanitize-trap
 	build_platform := windows
 	
