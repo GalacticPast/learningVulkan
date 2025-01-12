@@ -27,3 +27,5 @@ if [[ $platform == "wayland" ]]; then
 fi
 
 make
+
+./post_build.sh
