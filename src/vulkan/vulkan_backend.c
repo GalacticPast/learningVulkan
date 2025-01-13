@@ -269,11 +269,10 @@ b8 shutdown_vulkan(vulkan_context *context)
     vkDeviceWaitIdle(context->device.logical);
 
     INFO("Destroying vertex buffers...");
-    vkDestroyBuffer(context->device.logical, context->vertex_buffer.handle, 0);
-    vkFreeMemory(context->device.logical, context->vertex_buffer.memory, 0);
+    vulkan_destroy_buffer(context, &context->vertex_buffer);
 
-    context->vertex_buffer.handle = 0;
-    context->vertex_buffer.memory = 0;
+    INFO("Destroying index buffers...");
+    vulkan_destroy_buffer(context, &context->index_buffer);
 
     INFO("Destroying semaphores and fences...");
 

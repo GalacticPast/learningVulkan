@@ -98,4 +98,6 @@ typedef struct vulkan_context
     b8 recreate_swapchain;
 
     vulkan_buffer vertex_buffer;
+    vulkan_buffer index_buffer;
+
 } vulkan_context;

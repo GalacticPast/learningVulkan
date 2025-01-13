@@ -91,6 +91,44 @@ b8 vulkan_copy_buffer(vulkan_context *context, vulkan_buffer *src_buffer, vulkan
     return true;
 }
 
+b8 vulkan_create_index_buffer(vulkan_context *context)
+{
+    vulkan_buffer staging_buffer = {};
+    staging_buffer.size          = sizeof(u32) * 1024 * 1024;
+
+    if (!create_buffer(context, &staging_buffer, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT))
+    {
+        ERROR("Buffer creation failed");
+        return false;
+    }
+
+    u32 vertices[6] = {0, 1, 2, 2, 3, 0};
+
+    void *data;
+    vkMapMemory(context->device.logical, staging_buffer.memory, 0, staging_buffer.size, 0, &data);
+    memcpy(data, vertices, sizeof(u32) * 6);
+    vkUnmapMemory(context->device.logical, staging_buffer.memory);
+
+    context->index_buffer.size = staging_buffer.size;
+    if (!create_buffer(context, &context->index_buffer, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT))
+    {
+        ERROR("Buffer creation failed");
+        return false;
+    }
+
+    if (!vulkan_copy_buffer(context, &staging_buffer, &context->index_buffer))
+    {
+        ERROR("Error copying buffers");
+        return false;
+    }
+
+    vulkan_destroy_buffer(context, &staging_buffer);
+
+    return true;
+
+    return false;
+}
+
 b8 vulkan_create_vertex_buffer(vulkan_context *context)
 {
 
@@ -103,23 +141,27 @@ b8 vulkan_create_vertex_buffer(vulkan_context *context)
         return false;
     }
 
-    vertex_3d vertices[3] = {};
+    vertex_3d vertices[4] = {};
 
-    vertices[0].position.x = 0.0f;
+    vertices[0].position.x = -0.5f;
     vertices[0].position.y = -0.5f;
     vertices[0].color      = (vec3){1.0f, 0.0f, 0.0f};
 
     vertices[1].position.x = 0.5f;
-    vertices[1].position.y = 0.5f;
+    vertices[1].position.y = -0.5f;
     vertices[1].color      = (vec3){0.0f, 1.0f, 0.0f};
 
-    vertices[2].position.x = -0.5f;
+    vertices[2].position.x = 0.5f;
     vertices[2].position.y = 0.5f;
     vertices[2].color      = (vec3){0.0f, 0.0f, 1.0f};
 
+    vertices[3].position.x = -0.5f;
+    vertices[3].position.y = 0.5f;
+    vertices[3].color      = (vec3){1.0f, 1.0f, 1.0f};
+
     void *data;
     vkMapMemory(context->device.logical, staging_buffer.memory, 0, staging_buffer.size, 0, &data);
-    memcpy(data, vertices, sizeof(vertex_3d) * 3);
+    memcpy(data, vertices, sizeof(vertex_3d) * 4);
     vkUnmapMemory(context->device.logical, staging_buffer.memory);
 
     context->vertex_buffer.size = staging_buffer.size;
@@ -159,6 +201,12 @@ b8 vulkan_create_buffers(vulkan_context *context)
 {
     if (!vulkan_create_vertex_buffer(context))
     {
+        ERROR("Failed to create vertex buffer.");
+        return false;
+    }
+    if (!vulkan_create_index_buffer(context))
+    {
+        ERROR("Failed to create index buffer.");
         return false;
     }
     return true;

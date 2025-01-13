@@ -86,7 +86,9 @@ b8 vulkan_record_command_buffer(vulkan_context *context, VkCommandBuffer command
     VkDeviceSize offsets[]       = {0};
     vkCmdBindVertexBuffers(command_buffer, 0, 1, vertexBuffers, offsets);
 
-    vkCmdDraw(command_buffer, 6, 1, 0, 0);
+    vkCmdBindIndexBuffer(command_buffer, context->index_buffer.handle, 0, VK_INDEX_TYPE_UINT32);
+
+    vkCmdDrawIndexed(command_buffer, 6, 1, 0, 0, 0);
 
     vkCmdEndRenderPass(command_buffer);
 
