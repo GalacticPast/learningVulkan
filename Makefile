@@ -1,7 +1,7 @@
 obj_dir := obj
 src_dir := src
 bin_dir := bin
-cc := clang
+cc := clang++
 
 ifeq ($(OS),Windows_NT)
 	vulkan_sdk := $(shell echo %VULKAN_SDK%)
@@ -11,11 +11,11 @@ ifeq ($(OS),Windows_NT)
 	defines := -D_DEBUG -DPLATFORM_WINDOWS
 	includes := -Isrc -I$(vulkan_sdk)\Include
 	linker_flags := -luser32 -lvulkan-1 -L$(vulkan_sdk)\Lib 
-	compiler_flags := -Wall -Wextra -g3 -Wconversion -Wdouble-promotion -Wno-unused-parameter -Wno-unused-function -Wno-sign-conversion -fsanitize=undefined -fsanitize-trap
+	compiler_flags := -Wall -Wextra -g -Wconversion -Wdouble-promotion -Wno-unused-parameter -Wno-unused-function -Wno-sign-conversion -fsanitize=undefined -fsanitize-trap
 	build_platform := windows
 	
 	rwildcard=$(wildcard $1$2) $(foreach d,$(wildcard $1*),$(call rwildcard,$d/,$2))
-	src_files := $(call rwildcard,$(src_dir)/,*.c)
+	src_files := $(call rwildcard,$(src_dir)/,*.cpp)
 	directories := $(shell dir src /b /a:d)
 	obj_files := $(patsubst %.c, $(obj_dir)/%.o, $(src_files))
 
@@ -33,7 +33,7 @@ else
 	defines := -D_DEBUG -DPLATFORM_LINUX_WAYLAND
 	includes := -Isrc 
 	linker_flags := -lvulkan -lwayland-client -lm
-	compiler_flags := -Wall -Wextra -g3 -Wconversion -Wdouble-promotion -Wno-unused-parameter -Wno-unused-function -Wno-sign-conversion -fsanitize=undefined -fsanitize-trap
+	compiler_flags := -Wall -Wextra -g -Wconversion -Wdouble-promotion -Wno-unused-parameter -Wno-unused-function -Wno-sign-conversion -fsanitize=undefined -fsanitize-trap
 
 	else ifeq ($(linux_platform),x11)		
 	assembly := learningVulkan
@@ -41,11 +41,11 @@ else
 	defines := -D_DEBUG -DPLATFORM_LINUX_X11 
 	includes := -Isrc 
 	linker_flags := -lvulkan -lX11 -lxcb -lX11-xcb -L/usr/X11R6/lib -lm
-	compiler_flags := -Wall -Wextra -g3 -Wconversion -Wdouble-promotion -Wno-unused-parameter -Wno-unused-function -Wno-sign-conversion -fsanitize=undefined -fsanitize-trap
+	compiler_flags := -Wall -Wextra -g -Wconversion -Wdouble-promotion -Wno-unused-parameter -Wno-unused-function -Wno-sign-conversion -fsanitize=undefined -fsanitize-trap
 
 	endif
 
-	src_files := $(shell find $(src_dir) -type f -name '*.c')
+	src_files := $(shell find $(src_dir) -type f -name '*.cpp')
 	dependencies := $(shell find $(src_dir) -type d)
 	obj_files := $(patsubst %.c, $(obj_dir)/%.o, $(src_files))
 	endif 
@@ -61,14 +61,15 @@ ifeq ($(build_platform),windows)
 	-@setlocal enableextensions enabledelayedexpansion && mkdir $(addsuffix \$(src_dir),$(obj_dir)) 2>NUL || cd .
 	-@setlocal enableextensions enabledelayedexpansion && mkdir $(addprefix $(obj_dir)\$(src_dir)\,$(directories)) 2>NUL || cd .
 else
+	@echo scaffolding project structure 
 	@mkdir -p $(obj_dir)
 	@mkdir -p $(dir $(obj_files))
 endif
 
-$(obj_dir)/%.o : %.c 
+$(obj_dir)/%.o : %.cpp 
 	@echo $<...
 	@$(cc) $< $(compiler_flags) -c  -o $@ $(defines) $(includes) 
 
 link: $(obj_files)
 	@echo Linking 
-	@$(cc) $(compile_flags) $^ -o $(bin_dir)/$(assembly)$(extension) $(includes) $(defines) $(linker_flags) 
+	@$(cc) $(compiler_flags) $^ -o $(bin_dir)/$(assembly)$(extension) $(includes) $(defines) $(linker_flags) 
