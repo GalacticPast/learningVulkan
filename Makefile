@@ -1,5 +1,5 @@
 obj_dir := obj
-src_dir := src
+src_dir := app
 bin_dir := bin
 cc := clang++
 
@@ -31,7 +31,7 @@ else
 	assembly := learningVulkan
 	extension := 
 	defines := -D_DEBUG -DPLATFORM_LINUX_WAYLAND
-	includes := -Isrc 
+	includes := -I$(src_dir)/src 
 	linker_flags := -lvulkan -lwayland-client -lm
 	compiler_flags := -Wall -Wextra -g -Wconversion -Wdouble-promotion -Wno-unused-parameter -Wno-unused-function -Wno-sign-conversion -fsanitize=undefined -fsanitize-trap
 

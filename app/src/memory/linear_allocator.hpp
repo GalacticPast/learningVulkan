@@ -7,8 +7,8 @@ struct linear_allocator
     u64 total_allocated;
     u64 num_allocations;
 
+    void *mem_ptr;
     void *memory;
-    u64  *mem_ptr;
 };
 
 bool linear_allocator_create(linear_allocator *out_allocator, u64 size);
