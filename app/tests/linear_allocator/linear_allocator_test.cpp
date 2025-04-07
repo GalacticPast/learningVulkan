@@ -14,7 +14,7 @@ bool linear_allocator_allocate_and_destroy_test()
     expect_should_be(0, test_allocator.num_allocations);
     expect_should_be(test_allocator.memory, test_allocator.current_free_mem_ptr);
 
-    linear_allocator_free_all(&test_allocator);
+    linear_allocator_destroy(&test_allocator);
     expect_should_be(0, test_allocator.total_size);
     expect_should_be(0, test_allocator.total_allocated);
     expect_should_be(0, test_allocator.num_allocations);
@@ -24,7 +24,7 @@ bool linear_allocator_allocate_and_destroy_test()
     return true;
 }
 
-bool linear_allocator_allocator_full_test()
+bool linear_allocator_allocate_all_test()
 {
     linear_allocator test_allocator;
 
@@ -49,11 +49,7 @@ bool linear_allocator_allocator_full_test()
     expect_should_be(length, test_allocator.num_allocations);
     expect_should_be((u8 *)test_allocator.memory + size, test_allocator.current_free_mem_ptr);
 
-    linear_allocator_free_all(&test_allocator);
-
-    expect_should_be(0, test_allocator.total_size);
-    expect_should_be(0, test_allocator.total_allocated);
-    expect_should_be(0, test_allocator.num_allocations);
+    linear_allocator_destroy(&test_allocator);
 
     return true;
 }
@@ -61,5 +57,5 @@ bool linear_allocator_allocator_full_test()
 void linear_allocator_register_tests()
 {
     test_manager_register_tests(linear_allocator_allocate_and_destroy_test, "Linear allocator and destroy test.");
-    test_manager_register_tests(linear_allocator_allocator_full_test, "Linear allocator full test.");
+    test_manager_register_tests(linear_allocator_allocate_all_test, "Linear allocator all test.");
 }
