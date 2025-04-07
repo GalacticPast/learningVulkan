@@ -52,7 +52,7 @@ void dfree(void *block, u64 mem_size, memory_tags tag)
     }
     return platform_free(block, false);
 }
-void dset_memory_value(void *block, u64 value, u64 size)
+void dset_memory_value(void *block, s64 value, u64 size)
 {
     platform_set_memory(block, value, size);
 }
@@ -74,22 +74,22 @@ char *get_memory_usg_str()
     u64  offset       = strlen(buffer);
     for (u32 i = 0; i < MEM_TAG_MAX_TAGS; ++i)
     {
-        char  unit[4] = "XiB";
-        float amount  = 1.0f;
+        char unit[4] = "XiB";
+        f32  amount  = 1.0f;
         if (memory_system_ptr->stats.tagged_allocations[i] >= gib)
         {
             unit[0] = 'G';
-            amount  = memory_system_ptr->stats.tagged_allocations[i] / (float)gib;
+            amount  = (f32)memory_system_ptr->stats.tagged_allocations[i] / (f32)gib;
         }
         else if (memory_system_ptr->stats.tagged_allocations[i] >= mib)
         {
             unit[0] = 'M';
-            amount  = memory_system_ptr->stats.tagged_allocations[i] / (float)mib;
+            amount  = (f32)memory_system_ptr->stats.tagged_allocations[i] / (f32)mib;
         }
         else if (memory_system_ptr->stats.tagged_allocations[i] >= kib)
         {
             unit[0] = 'K';
-            amount  = memory_system_ptr->stats.tagged_allocations[i] / (float)kib;
+            amount  = (f32)memory_system_ptr->stats.tagged_allocations[i] / (f32)kib;
         }
         else
         {
@@ -98,7 +98,7 @@ char *get_memory_usg_str()
             amount  = (float)memory_system_ptr->stats.tagged_allocations[i];
         }
 
-        s32 length = snprintf(buffer + offset, 8000, "  %s: %.2f%s\n", memory_tag_strings[i], amount, unit);
+        s32 length = snprintf(buffer + offset, 8000, "  %s: %.2f%s\n", memory_tag_strings[i], (f64)amount, unit);
         offset += length;
     }
     char *out_string = strdup(buffer);

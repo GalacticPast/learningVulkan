@@ -24,6 +24,42 @@ bool linear_allocator_allocate_and_destroy_test()
     return true;
 }
 
+bool linear_allocator_allocate_overallocate_space_test()
+{
+    linear_allocator test_allocator;
+
+    u64 size = 64 * 1024 * 1024; // 64 mbs
+    linear_allocator_create(&test_allocator, size);
+
+    DWARN("Intentionlly casusing the following error.");
+    void *memory = linear_allocator_allocate(&test_allocator, size + size);
+
+    expect_should_not_be(size + size, test_allocator.total_allocated);
+    expect_should_be(memory, nullptr);
+
+    linear_allocator_destroy(&test_allocator);
+
+    return true;
+}
+
+bool linear_allocator_allocate_all_space_in_single_test()
+{
+    linear_allocator test_allocator;
+
+    u64 size = 64 * 1024 * 1024; // 64 mbs
+    linear_allocator_create(&test_allocator, size);
+
+    void *memory = (u8 *)(linear_allocator_allocate(&test_allocator, size));
+
+    expect_should_be(size, test_allocator.total_size);
+    expect_should_be(size, test_allocator.total_allocated);
+    expect_should_be(memory, (u8 *)test_allocator.current_free_mem_ptr - size);
+
+    linear_allocator_destroy(&test_allocator);
+
+    return true;
+}
+
 bool linear_allocator_allocate_all_test()
 {
     linear_allocator test_allocator;
@@ -34,10 +70,10 @@ bool linear_allocator_allocate_all_test()
     u64 chunk_length = 1024;
     u64 length       = size / chunk_length;
 
-    u8 *mem_ptrs[length];
+    u8 *mem_ptrs[1024];
 
     void *expected = test_allocator.memory;
-    for (int i = 0; i < length; i++)
+    for (u64 i = 0; i < length; i++)
     {
         mem_ptrs[i] = (u8 *)(linear_allocator_allocate(&test_allocator, chunk_length));
         expect_should_be(expected, mem_ptrs[i]);
@@ -56,6 +92,8 @@ bool linear_allocator_allocate_all_test()
 
 void linear_allocator_register_tests()
 {
-    test_manager_register_tests(linear_allocator_allocate_and_destroy_test, "Linear allocator and destroy test.");
-    test_manager_register_tests(linear_allocator_allocate_all_test, "Linear allocator all test.");
+    test_manager_register_tests(linear_allocator_allocate_and_destroy_test, "Linear allocator and destroy test");
+    test_manager_register_tests(linear_allocator_allocate_all_test, "Linear allocator all test");
+    test_manager_register_tests(linear_allocator_allocate_all_space_in_single_test, "Linear allocator all space single test");
+    test_manager_register_tests(linear_allocator_allocate_overallocate_space_test, "Linear allocator over allocate space test");
 }

@@ -1,5 +1,8 @@
-#include "application.hpp"
+#include "core/application.hpp"
+#include "core/dasserts.hpp"
+#include "core/logger.hpp"
 #include "defines.hpp"
+#include "platform/platform.hpp"
 
 #include "../tests/linear_allocator/linear_allocator_test.hpp"
 #include "../tests/test_manager.hpp"
@@ -19,7 +22,23 @@ void run_tests()
 
 int main()
 {
-    application_state app_state = {};
+    application_config app_config;
+    app_config.x                = 0;
+    app_config.y                = 0;
+    app_config.height           = 1280;
+    app_config.width            = 720;
+    app_config.application_name = "Learning Vulkan";
 
-    run_tests();
+    application_state app_state;
+    bool              result = application_initialize(&app_state, &app_config);
+    if (!result)
+    {
+        DFATAL("Application initialization failed");
+        return 2;
+    }
+
+    while (true)
+    {
+        platform_pump_messages();
+    }
 }

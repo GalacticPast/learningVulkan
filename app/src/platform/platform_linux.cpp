@@ -539,6 +539,8 @@ keys translate_keycode(u32 xk_keycode)
         DASSERT(expr != 0);                                                                                                                                                                            \
     }
 //
+#include "core/application.hpp"
+
 #include "wayland/xdg-shell-client-protocol.h"
 #include <wayland-client.h>
 #include <xkbcommon/xkbcommon-keysyms.h>
@@ -675,7 +677,7 @@ static void xdg_toplevel_configure(void *data, struct xdg_toplevel *xdg_toplevel
 static void xdg_toplevel_close(void *data, struct xdg_toplevel *xdg_toplevel)
 {
 }
-struct xdg_toplevel_listener xdg_toplevel_listener = {.configure = xdg_toplevel_configure, .close = xdg_toplevel_close};
+struct xdg_toplevel_listener xdg_toplevel_listener = {.configure = xdg_toplevel_configure, .close = xdg_toplevel_close, .configure_bounds = nullptr, .wm_capabilities = nullptr};
 //
 
 static void xdg_surface_configure(void *data, struct xdg_surface *xdg_surface, u32 serial)
@@ -728,7 +730,7 @@ static const struct wl_registry_listener wl_registry_listener = {
     .global_remove = registry_global_remove,
 };
 
-bool platform_system_startup(u64 *platform_mem_requirements, void *plat_state, const char *application_name, s32 x, s32 y, s32 width, s32 height)
+bool platform_system_startup(u64 *platform_mem_requirements, void *plat_state, application_config *app_config)
 {
     *platform_mem_requirements = sizeof(platform_state);
     if (plat_state == 0)
@@ -783,8 +785,8 @@ bool platform_system_startup(u64 *platform_mem_requirements, void *plat_state, c
     }
     xdg_toplevel_add_listener(platform_state_ptr->xdg_toplevel, &xdg_toplevel_listener, platform_state_ptr);
 
-    xdg_toplevel_set_title(platform_state_ptr->xdg_toplevel, application_name);
-    xdg_toplevel_set_app_id(platform_state_ptr->xdg_toplevel, application_name);
+    xdg_toplevel_set_title(platform_state_ptr->xdg_toplevel, app_config->application_name);
+    xdg_toplevel_set_app_id(platform_state_ptr->xdg_toplevel, app_config->application_name);
 
     wl_surface_commit(platform_state_ptr->wl_surface);
 
@@ -834,9 +836,9 @@ void *platform_copy_memory(void *dest, const void *source, u64 size)
 {
     return memcpy(dest, source, size);
 }
-void *platform_set_memory(void *dest, s32 value, u64 size)
+void *platform_set_memory(void *dest, s64 value, u64 size)
 {
-    return memset(dest, value, size);
+    return memset(dest, (s32)value, size);
 }
 
 void platform_console_write(const char *message, u8 color)
@@ -856,7 +858,7 @@ f64 platform_get_absolute_time()
 {
     struct timespec now;
     clock_gettime(CLOCK_MONOTONIC, &now);
-    return now.tv_sec + now.tv_nsec * 0.000000001;
+    return (f64)now.tv_sec + (f64)now.tv_nsec * 0.000000001;
 }
 
 void platform_sleep(u64 ms)

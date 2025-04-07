@@ -15,9 +15,6 @@ bool memory_system_test()
     u64   size  = 64 * 1024 * 1024;
     void *block = dallocate(size, MEM_TAG_UNKNOWN);
 
-    int offset       = sizeof(int);
-    int num_integers = size / offset;
-
     char *buffer = get_memory_usg_str();
     DDEBUG("%s", buffer);
     dfree(block, size, MEM_TAG_UNKNOWN);

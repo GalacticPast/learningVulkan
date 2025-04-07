@@ -11,7 +11,7 @@
     if (actual != expected)                                                                                                                                                                            \
     {                                                                                                                                                                                                  \
         DERROR("--> Expected %lld, but got: %lld. File: %s:%d.", expected, actual, __FILE__, __LINE__);                                                                                                \
-        debugBreak();                                                                                                                                                                                  \
+        return false;                                                                                                                                                                                  \
     }
 
 /**
