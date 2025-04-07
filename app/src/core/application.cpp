@@ -1,4 +1,5 @@
 #include "application.hpp"
+#include "core/dmemory.hpp"
 #include "logger.hpp"
 #include "platform/platform.hpp"
 
@@ -24,13 +25,19 @@ bool application_initialize(application_state *state, application_config *config
     app_state_ptr->is_running         = false;
     app_state_ptr->is_minimized       = false;
 
-    app_state_ptr->application_system_linear_allocator_memory_requirements = 1 * 1024 * 1024; // 1 mega bytes
+    app_state_ptr->application_system_linear_allocator_memory_requirements = 10 * 1024 * 1024; // 1 mega bytes
     linear_allocator_create(&app_state_ptr->application_system_linear_allocator, app_state_ptr->application_system_linear_allocator_memory_requirements);
 
-    u64 platform_mem_requirements = 0;
-    platform_system_startup(&platform_mem_requirements, 0, 0);
-    app_state_ptr->platform_system_state = linear_allocator_allocate(&app_state_ptr->application_system_linear_allocator, platform_mem_requirements);
-    platform_system_startup(&platform_mem_requirements, app_state_ptr->platform_system_state, app_state_ptr->application_config);
+    memory_system_startup(&app_state_ptr->memory_system_memory_requirements, 0);
+    app_state_ptr->memory_system_state = linear_allocator_allocate(&app_state_ptr->application_system_linear_allocator, app_state_ptr->memory_system_memory_requirements);
+    memory_system_startup(&app_state_ptr->memory_system_memory_requirements, app_state_ptr->memory_system_state);
+
+    platform_system_startup(&app_state_ptr->platform_system_memory_requirements, 0, 0);
+    app_state_ptr->platform_system_state = linear_allocator_allocate(&app_state_ptr->application_system_linear_allocator, app_state_ptr->platform_system_memory_requirements);
+    platform_system_startup(&app_state_ptr->platform_system_memory_requirements, app_state_ptr->platform_system_state, app_state_ptr->application_config);
+
+    char *buffer = get_memory_usg_str();
+    DDEBUG("%s", buffer);
 
     return true;
 }

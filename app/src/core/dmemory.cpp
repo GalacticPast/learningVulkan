@@ -8,7 +8,7 @@ static memory_system *memory_system_ptr;
 
 static const char *memory_tag_strings[MEM_TAG_MAX_TAGS] = {"UNKNOWN    ", "LINEAR_ALLC", "APPLICATION", "RENDERER   "};
 
-bool memory_system_initialze(void *state, u64 *memory_system_memory_requirements)
+bool memory_system_startup(u64 *memory_system_memory_requirements, void *state)
 {
     *memory_system_memory_requirements = sizeof(memory_system);
     if (!state)
@@ -21,6 +21,7 @@ bool memory_system_initialze(void *state, u64 *memory_system_memory_requirements
 
     return true;
 }
+
 void memory_system_destroy()
 {
     memory_system_ptr = 0;

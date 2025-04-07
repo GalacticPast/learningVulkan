@@ -23,6 +23,9 @@ struct application_state
 
     u64   platform_system_memory_requirements; // 1 mega bytes
     void *platform_system_state;
+
+    u64   memory_system_memory_requirements; // 1 mega bytes
+    void *memory_system_state;
 };
 
 bool application_initialize(application_state *out_state, application_config *config);

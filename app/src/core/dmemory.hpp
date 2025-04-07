@@ -22,7 +22,7 @@ struct memory_system
     memory_system_stats stats;
 };
 
-bool memory_system_initialze(void *state, u64 *memory_system_memory_requirements);
+bool memory_system_startup(u64 *memory_system_memory_requirements, void *state);
 void memory_system_destroy();
 
 void *dallocate(u64 mem_size, memory_tags tag);

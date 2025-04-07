@@ -30,15 +30,11 @@ int main()
     app_config.application_name = "Learning Vulkan";
 
     application_state app_state;
-    bool              result = application_initialize(&app_state, &app_config);
+
+    bool result = application_initialize(&app_state, &app_config);
     if (!result)
     {
         DFATAL("Application initialization failed");
         return 2;
-    }
-
-    while (true)
-    {
-        platform_pump_messages();
     }
 }

@@ -8,9 +8,9 @@ bool memory_system_test()
 
     u64 memory_system_mem_requirements = 0;
 
-    memory_system_initialze(nullptr, &memory_system_mem_requirements);
+    memory_system_startup(&memory_system_mem_requirements, 0);
     test_inst = malloc(memory_system_mem_requirements);
-    memory_system_initialze(test_inst, &memory_system_mem_requirements);
+    memory_system_startup(&memory_system_mem_requirements, test_inst);
 
     u64   size  = 64 * 1024 * 1024;
     void *block = dallocate(size, MEM_TAG_UNKNOWN);
