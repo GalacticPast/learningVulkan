@@ -1,6 +1,7 @@
 #pragma once
 
-#include <core/logger.hpp>
+#include "core/dasserts.hpp"
+#include "core/logger.hpp"
 #include <math.h>
 
 /**
@@ -10,7 +11,7 @@
     if (actual != expected)                                                                                                                                                                            \
     {                                                                                                                                                                                                  \
         DERROR("--> Expected %lld, but got: %lld. File: %s:%d.", expected, actual, __FILE__, __LINE__);                                                                                                \
-        return false;                                                                                                                                                                                  \
+        debugBreak();                                                                                                                                                                                  \
     }
 
 /**

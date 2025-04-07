@@ -31,7 +31,7 @@ void *linear_allocator_allocate(linear_allocator *allocator, u64 size_in_bytes)
         return nullptr;
     }
 
-    if (allocator->total_allocated + size_in_bytes > allocator->total_allocated)
+    if (allocator->total_allocated + size_in_bytes > allocator->total_size)
     {
         DERROR("The linear allocator provided has not enought size to accomadate allocation. Returning nullptr");
         return nullptr;
@@ -39,6 +39,9 @@ void *linear_allocator_allocate(linear_allocator *allocator, u64 size_in_bytes)
 
     void *block                     = allocator->current_free_mem_ptr;
     allocator->current_free_mem_ptr = (u8 *)allocator->current_free_mem_ptr + size_in_bytes;
+    allocator->total_allocated += size_in_bytes;
+    allocator->num_allocations++;
+
     return block;
 }
 void linear_allocator_free_all(linear_allocator *allocator)
