@@ -4,20 +4,26 @@ bin_dir := bin
 cc := clang++
 
 ifeq ($(OS),Windows_NT)
+
 vulkan_sdk := $(shell echo %VULKAN_SDK%)
+DIR := $(subst /,\,${CURDIR})
 
 assembly := learningVulkan
 extension := .exe
 defines := -DDEBUG -DDPLATFORM_WINDOWS
-includes := -Isrc -I$(vulkan_sdk)\Include
+includes := -I$(src_dir)/src -I$(vulkan_sdk)\Include
 linker_flags := -luser32 -lvulkan-1 -L$(vulkan_sdk)\Lib 
 compiler_flags := -Wall -Wextra -g -Wconversion -Wdouble-promotion -Wno-unused-parameter -Wno-unused-function -Wno-sign-conversion -fsanitize=undefined -fsanitize-trap
 build_platform := windows
 
 rwildcard=$(wildcard $1$2) $(foreach d,$(wildcard $1*),$(call rwildcard,$d/,$2))
-src_files := $(call rwildcard,$(src_dir)/,*.cpp)
-directories := $(shell dir src /b /a:d)
-obj_files := $(patsubst %.c, $(obj_dir)/%.o, $(src_files))
+src_files_c := $(call rwildcard,$(src_dir)/,*.c)
+src_files_cpp := $(call rwildcard,$(src_dir)/,*.cpp)
+
+directories:= $(subst $(DIR),,$(shell dir $(src_dir) /S /AD /B | findstr /i $(src_dir) )) # Get all directories under src.
+
+obj_files_c := $(patsubst %.c, $(obj_dir)/%.c.o, $(src_files_c))
+obj_files_cpp := $(patsubst %.cpp, $(obj_dir)/%.cpp.o, $(src_files_cpp))
 
 else
 
@@ -64,7 +70,7 @@ ifeq ($(OS),Windows_NT)
 	-@setlocal enableextensions enabledelayedexpansion && mkdir $(obj_dir) 2>NUL || cd .
 	-@setlocal enableextensions enabledelayedexpansion && mkdir $(bin_dir) 2>NUL || cd .
 	-@setlocal enableextensions enabledelayedexpansion && mkdir $(addsuffix \$(src_dir),$(obj_dir)) 2>NUL || cd .
-	-@setlocal enableextensions enabledelayedexpansion && mkdir $(addprefix $(obj_dir)\$(src_dir)\,$(subst D:\projects\learningVulkan\src\,,$(directories))) 2>NUL || cd .
+	-@setlocal enableextensions enabledelayedexpansion && mkdir $(addprefix $(obj_dir), $(directories)) 2>NUL || cd .
 else
 	@mkdir -p $(bin_dir)
 	@mkdir -p $(obj_dir)

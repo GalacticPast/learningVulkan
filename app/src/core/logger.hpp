@@ -23,7 +23,7 @@ typedef enum log_level
     LOG_LEVEL_TRACE = 5
 } log_level;
 
-DAPI void log_output(log_level level, const char *message, ...);
+void log_output(log_level level, const char *message, ...);
 
 // Logs a fatal-level message.
 #define DFATAL(message, ...) log_output(LOG_LEVEL_FATAL, message, ##__VA_ARGS__);
