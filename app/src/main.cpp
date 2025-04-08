@@ -4,6 +4,7 @@
 #include "defines.hpp"
 #include "platform/platform.hpp"
 
+#include "../tests/events/event_system_test.hpp"
 #include "../tests/linear_allocator/linear_allocator_test.hpp"
 #include "../tests/test_manager.hpp"
 
@@ -16,6 +17,7 @@ void run_tests()
     test_manager_initialize(&test_manager_mem_requirements, &test_instance);
 
     linear_allocator_register_tests();
+    event_system_register_tests();
 
     test_manager_run_tests();
 }
@@ -28,6 +30,9 @@ int main()
     app_config.x                = 1280 / 2;
     app_config.y                = 720 / 2;
     app_config.application_name = "Learning Vulkan";
+
+    run_tests();
+    return 0;
 
     application_state app_state;
 

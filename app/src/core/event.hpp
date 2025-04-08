@@ -31,7 +31,7 @@ struct event_context
 
         u8 u8[16];
         s8 s8[16];
-    };
+    } data;
 };
 
 typedef bool (*event_listener_callback)(event_context context, void *data);
@@ -56,7 +56,9 @@ struct event_system_state
 bool event_system_startup(u64 *event_system_memory_requirements, void *state);
 void event_system_shutdown();
 
-bool event_system_register(event_code code, event_listener_callback, void *data);
+void event_fire(event_code code, event_context context);
+
+bool event_system_register(event_code code, void *data, bool (*event_listener_callback)(event_context context, void *data));
 
 /*
  * @param: code: event_code of the code that you want to unregister from
