@@ -10,13 +10,15 @@ bool event_system_startup(u64 *event_system_memory_requirements, void *state)
     {
         return true;
     }
+    DINFO("Starting up event system...");
     event_system_state_ptr = (event_system_state *)state;
     return true;
 }
-void event_system_shutdown()
+void event_system_shutdown(void *state)
 {
     if (event_system_state_ptr)
     {
+        DINFO("Shutting down event system...");
         event_system_state_ptr = 0;
     }
     else
@@ -39,7 +41,8 @@ bool event_system_register(event_code code, void *data, bool (*event_listener_ca
     }
     if (data == nullptr)
     {
-        DWARN("Passed on data is nullptr. Cannot pass nullptr as data, you can register for the specific event but the max number of listeners that can register for this event is 1");
+        DWARN("Passed on data is nullptr. Cannot pass nullptr as data because the passed data is used as an identifier for unregistering.");
+        return false;
     }
 
     s32 num_registered = 0;

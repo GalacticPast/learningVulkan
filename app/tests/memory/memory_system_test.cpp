@@ -15,10 +15,10 @@ bool memory_system_test()
     u64   size  = 64 * 1024 * 1024;
     void *block = dallocate(size, MEM_TAG_UNKNOWN);
 
-    char *buffer = get_memory_usg_str();
-    DDEBUG("%s", buffer);
-    dfree(block, size, MEM_TAG_UNKNOWN);
-    free(buffer);
+    u64 buffer_usg_mem_requirements = 0;
+    get_memory_usg_str(&buffer_usg_mem_requirements, (char *)0);
+    char buffer[buffer_usg_mem_requirements];
+    get_memory_usg_str(&buffer_usg_mem_requirements, buffer);
 
     return true;
 }

@@ -23,7 +23,7 @@ struct memory_system
 };
 
 bool memory_system_startup(u64 *memory_system_memory_requirements, void *state);
-void memory_system_destroy();
+void memory_system_shutdown(void *state);
 
 void *dallocate(u64 mem_size, memory_tags tag);
 void  dfree(void *block, u64 size, memory_tags tag);
@@ -33,4 +33,7 @@ void dzero_memory(void *block, u64 size);
 
 void dcopy_memory(void *dest, void *source, u64 size);
 
-char *get_memory_usg_str();
+void get_memory_usg_str(u64 *buffer_usg_mem_requirements, char *out_buffer);
+
+// WARN: this is a hack because we initialize the systems linear allocator before the memory sub system and thats why it doesnt report correctly for the first time.
+void set_memory_stats_for_tag(u64 size_in_bytes, memory_tags tag);

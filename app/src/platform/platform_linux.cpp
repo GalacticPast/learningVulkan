@@ -790,8 +790,6 @@ bool platform_system_startup(u64 *platform_mem_requirements, void *plat_state, a
 
     wl_surface_commit(platform_state_ptr->wl_surface);
 
-    DINFO("Linux-Wayland platform initialized");
-
     return true;
 }
 
@@ -805,6 +803,7 @@ bool platform_pump_messages()
 
 void platform_system_shutdown(void *state)
 {
+    DINFO("Shutting down linux-wayland platform...");
     xdg_toplevel_destroy(platform_state_ptr->xdg_toplevel);
     xdg_surface_destroy(platform_state_ptr->xdg_surface);
     wl_surface_destroy(platform_state_ptr->wl_surface);

@@ -31,8 +31,7 @@ int main()
     app_config.y                = 720 / 2;
     app_config.application_name = "Learning Vulkan";
 
-    run_tests();
-    return 0;
+    // run_tests();
 
     application_state app_state;
 
@@ -42,4 +41,6 @@ int main()
         DFATAL("Application initialization failed");
         return 2;
     }
+
+    application_shutdown();
 }

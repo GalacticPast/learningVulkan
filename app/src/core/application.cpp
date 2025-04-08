@@ -1,5 +1,6 @@
 #include "application.hpp"
 #include "core/dmemory.hpp"
+#include "core/event.hpp"
 #include "logger.hpp"
 #include "platform/platform.hpp"
 
@@ -31,12 +32,20 @@ bool application_initialize(application_state *state, application_config *config
     memory_system_startup(&app_state_ptr->memory_system_memory_requirements, 0);
     app_state_ptr->memory_system_state = linear_allocator_allocate(&app_state_ptr->application_system_linear_allocator, app_state_ptr->memory_system_memory_requirements);
     memory_system_startup(&app_state_ptr->memory_system_memory_requirements, app_state_ptr->memory_system_state);
+    set_memory_stats_for_tag(app_state_ptr->application_system_linear_allocator_memory_requirements, MEM_TAG_LINEAR_ALLOCATOR);
+
+    event_system_startup(&app_state_ptr->event_system_memory_requirements, 0);
+    app_state_ptr->event_system_state = linear_allocator_allocate(&app_state_ptr->application_system_linear_allocator, app_state_ptr->event_system_memory_requirements);
+    event_system_startup(&app_state_ptr->event_system_memory_requirements, app_state_ptr->event_system_state);
 
     platform_system_startup(&app_state_ptr->platform_system_memory_requirements, 0, 0);
     app_state_ptr->platform_system_state = linear_allocator_allocate(&app_state_ptr->application_system_linear_allocator, app_state_ptr->platform_system_memory_requirements);
     platform_system_startup(&app_state_ptr->platform_system_memory_requirements, app_state_ptr->platform_system_state, app_state_ptr->application_config);
 
-    char *buffer = get_memory_usg_str();
+    u64 buffer_usg_mem_requirements = 0;
+    get_memory_usg_str(&buffer_usg_mem_requirements, (char *)0);
+    char buffer[buffer_usg_mem_requirements];
+    get_memory_usg_str(&buffer_usg_mem_requirements, buffer);
     DDEBUG("%s", buffer);
 
     return true;
@@ -44,4 +53,9 @@ bool application_initialize(application_state *state, application_config *config
 
 void application_shutdown()
 {
+    // Destroy in opposite order of creation.
+    platform_system_shutdown(app_state_ptr->platform_system_state);
+    event_system_shutdown(app_state_ptr->event_system_state);
+    memory_system_shutdown(app_state_ptr->memory_system_state);
+    linear_allocator_destroy(&app_state_ptr->application_system_linear_allocator);
 }

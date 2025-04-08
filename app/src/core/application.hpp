@@ -26,6 +26,9 @@ struct application_state
 
     u64   memory_system_memory_requirements; // 1 mega bytes
     void *memory_system_state;
+
+    u64   event_system_memory_requirements; // 1 mega bytes
+    void *event_system_state;
 };
 
 bool application_initialize(application_state *out_state, application_config *config);

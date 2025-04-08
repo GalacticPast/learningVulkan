@@ -70,7 +70,7 @@ bool linear_allocator_allocate_all_test()
     u64 chunk_length = 1024;
     u64 length       = size / chunk_length;
 
-    u8 *mem_ptrs[1024];
+    u8 *mem_ptrs[65536];
 
     void *expected = test_allocator.memory;
     for (u64 i = 0; i < length; i++)

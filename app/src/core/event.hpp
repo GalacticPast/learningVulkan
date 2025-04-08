@@ -54,7 +54,7 @@ struct event_system_state
 };
 
 bool event_system_startup(u64 *event_system_memory_requirements, void *state);
-void event_system_shutdown();
+void event_system_shutdown(void *state);
 
 void event_fire(event_code code, event_context context);
 
