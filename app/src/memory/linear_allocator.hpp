@@ -14,5 +14,5 @@ struct linear_allocator
 bool linear_allocator_create(linear_allocator *out_allocator, u64 size);
 void linear_allocator_destroy(linear_allocator *out_allocator);
 
-void  linear_allocator_free_all(linear_allocator *allocator);
+void linear_allocator_free_all(linear_allocator *allocator);
 void *linear_allocator_allocate(linear_allocator *allocator, u64 size);

@@ -27,11 +27,13 @@ void event_system_shutdown(void *state)
     }
 }
 
-bool event_system_register(event_code code, void *data, bool (*event_listener_callback)(event_context context, void *data))
+bool event_system_register(event_code code, void *data,
+                           bool (*event_listener_callback)(event_context context, void *data))
 {
     if (!event_system_state_ptr)
     {
-        DERROR("Event system is not initialzed yet. Cant register for events when event_system has not been initialized");
+        DERROR(
+            "Event system is not initialzed yet. Cant register for events when event_system has not been initialized");
         return false;
     }
     if (code > MAX_EVENT_CODES)
@@ -59,11 +61,13 @@ bool event_system_register(event_code code, void *data, bool (*event_listener_ca
     return true;
 }
 
-bool event_system_unregister(event_code code, void *data, bool (*event_listener_callback)(event_context context, void *data))
+bool event_system_unregister(event_code code, void *data,
+                             bool (*event_listener_callback)(event_context context, void *data))
 {
     if (!event_system_state_ptr)
     {
-        DERROR("Event system is not initialzed yet. Cant register for events when event_system has not been initialized");
+        DERROR(
+            "Event system is not initialzed yet. Cant register for events when event_system has not been initialized");
         return false;
     }
     if (code > MAX_EVENT_CODES)
@@ -74,7 +78,8 @@ bool event_system_unregister(event_code code, void *data, bool (*event_listener_
 
     for (s32 i = 0; i < MAX_REGISTERED_LISTENERS_FOR_SINGLE_EVENT; i++)
     {
-        if (event_system_state_ptr->events[code].listener_infos[i].func_ptr == event_listener_callback && event_system_state_ptr->events[code].listener_infos[i].listener_data == data)
+        if (event_system_state_ptr->events[code].listener_infos[i].func_ptr == event_listener_callback &&
+            event_system_state_ptr->events[code].listener_infos[i].listener_data == data)
         {
             event_system_state_ptr->events[code].listener_infos[i].func_ptr      = nullptr;
             event_system_state_ptr->events[code].listener_infos[i].listener_data = nullptr;
@@ -105,7 +110,8 @@ void event_fire(event_code code, event_context context)
         {
             break;
         }
-        result = event_system_state_ptr->events[code].listener_infos[i].func_ptr(context, event_system_state_ptr->events[code].listener_infos[i].listener_data);
+        result = event_system_state_ptr->events[code].listener_infos[i].func_ptr(
+            context, event_system_state_ptr->events[code].listener_infos[i].listener_data);
         if (!result)
         {
             DERROR("The %dth event_listener at %dth events failed unexpecdetly", i, code);

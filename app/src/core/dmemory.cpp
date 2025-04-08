@@ -80,14 +80,14 @@ void get_memory_usg_str(u64 *buffer_usg_mem_requirements, char *out_buffer)
     const u64 kib = 1024;
 
     const char *header = "System memory use (tagged):\n";
-    u64         offset = strlen(header);
+    u64 offset         = strlen(header);
 
     dcopy_memory(out_buffer, (void *)header, offset);
 
     for (u32 i = 0; i < MEM_TAG_MAX_TAGS; ++i)
     {
         char unit[4] = "XiB";
-        f32  amount  = 1.0f;
+        f32 amount   = 1.0f;
         if (memory_system_ptr->stats.tagged_allocations[i] >= gib)
         {
             unit[0] = 'G';

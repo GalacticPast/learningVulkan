@@ -20,7 +20,7 @@ bool event_code_test_A_callback(event_context context, void *data)
 bool event_system_register_and_unregister_test()
 {
     event_system_state *event_state;
-    u64                 event_system_memory_requirements = 0;
+    u64 event_system_memory_requirements = 0;
 
     event_system_startup(&event_system_memory_requirements, 0);
     event_state = (event_system_state *)malloc(event_system_memory_requirements);
@@ -50,5 +50,6 @@ bool event_system_register_and_unregister_test()
 
 void event_system_register_tests()
 {
-    test_manager_register_tests(event_system_register_and_unregister_test, "Event system register and unregister test.");
+    test_manager_register_tests(event_system_register_and_unregister_test,
+                                "Event system register and unregister test.");
 }

@@ -10,7 +10,7 @@ typedef bool (*test_func_ptr)();
 struct test
 {
     test_func_ptr test;
-    const char   *desc;
+    const char *desc;
 };
 
 struct test_manager

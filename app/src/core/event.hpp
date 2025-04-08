@@ -48,7 +48,7 @@ typedef bool (*event_listener_callback)(event_context context, void *data);
 struct listener_info
 {
     event_listener_callback func_ptr;
-    void                   *listener_data;
+    void *listener_data;
 };
 
 #define MAX_REGISTERED_LISTENERS_FOR_SINGLE_EVENT 16
@@ -67,5 +67,7 @@ void event_system_shutdown(void *state);
 
 void event_fire(event_code code, event_context context);
 
-bool event_system_register(event_code code, void *data, bool (*event_listener_callback)(event_context context, void *data));
-bool event_system_unregister(event_code code, void *data, bool (*event_listener_callback)(event_context context, void *data));
+bool event_system_register(event_code code, void *data,
+                           bool (*event_listener_callback)(event_context context, void *data));
+bool event_system_unregister(event_code code, void *data,
+                             bool (*event_listener_callback)(event_context context, void *data));

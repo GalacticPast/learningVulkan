@@ -94,6 +94,8 @@ void linear_allocator_register_tests()
 {
     test_manager_register_tests(linear_allocator_allocate_and_destroy_test, "Linear allocator and destroy test");
     test_manager_register_tests(linear_allocator_allocate_all_test, "Linear allocator all test");
-    test_manager_register_tests(linear_allocator_allocate_all_space_in_single_test, "Linear allocator all space single test");
-    test_manager_register_tests(linear_allocator_allocate_overallocate_space_test, "Linear allocator over allocate space test");
+    test_manager_register_tests(linear_allocator_allocate_all_space_in_single_test,
+                                "Linear allocator all space single test");
+    test_manager_register_tests(linear_allocator_allocate_overallocate_space_test,
+                                "Linear allocator over allocate space test");
 }
