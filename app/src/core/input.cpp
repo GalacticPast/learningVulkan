@@ -63,6 +63,17 @@ void input_process_key(keys key, bool pressed)
     {
         // Update internal input_state_ptr->
         input_state_ptr->keyboard_current.keys[key] = pressed;
+        event_context context;
+        context.data.u16[0] = key;
+
+        if (key == KEY_ESCAPE)
+        {
+            event_fire(EVENT_CODE_APPLICATION_QUIT, context);
+        }
+        if (key == KEY_A)
+        {
+            DINFO("key A %s.", pressed ? "pressed" : "released");
+        }
 
         if (key == KEY_LALT)
         {
@@ -92,8 +103,6 @@ void input_process_key(keys key, bool pressed)
         }
 
         // Fire off an event for immediate processing.
-        event_context context;
-        context.data.u16[0] = key;
         event_fire(pressed ? EVENT_CODE_KEY_PRESSED : EVENT_CODE_KEY_RELEASED, context);
     }
 }

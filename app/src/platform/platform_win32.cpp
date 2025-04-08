@@ -6,9 +6,15 @@
 #include "core/event.hpp"
 #include "core/logger.hpp"
 
+#define WIN32_LEAN_AND_MEAN
 #include <stdlib.h>
 #include <windows.h>
 #include <windowsx.h> // param input extraction
+
+/* VULKAN */
+#include "renderer/vulkan/vulkan_platform.hpp"
+#include <vulkan/vulkan.h>
+#include <vulkan/vulkan_win32.h>
 
 typedef struct platform_state
 {
@@ -89,8 +95,7 @@ bool platform_system_startup(u64 *platform_mem_requirements, void *plat_state, a
     window_height += border_rect.bottom - border_rect.top;
 
     HWND handle =
-        CreateWindowExA(window_ex_style, "kohi_window_class", app_config->application_name, window_style, window_x,
-                        window_y, window_width, window_height, 0, 0, platform_state_ptr->h_instance, 0);
+        CreateWindowExA(window_ex_style, "kohi_window_class", app_config->application_name, window_style, window_x, window_y, window_width, window_height, 0, 0, platform_state_ptr->h_instance, 0);
 
     if (handle == 0)
     {
@@ -260,11 +265,32 @@ LRESULT CALLBACK win32_process_message(HWND hwnd, u32 msg, WPARAM w_param, LPARA
     case WM_KEYUP:
     case WM_SYSKEYUP: {
         // Key pressed/released
+        keys key = (keys)w_param;
+
+        // wtf windows why not just send lalt ralt messages seperatly??
+        WORD key_flags     = HIWORD(l_param);
+        WORD scan_code     = LOBYTE(key_flags);
+        BOOL isExtendedKey = (key_flags & KF_EXTENDED) == KF_EXTENDED; // extended-key flag, 1 if scancode has 0xE0 prefix
+
+        if (isExtendedKey)
+        {
+            scan_code = MAKEWORD(scan_code, 0xE0);
+        }
 
         bool pressed = (msg == WM_KEYDOWN || msg == WM_SYSKEYDOWN);
-        keys key     = (keys)w_param;
+
+        switch (w_param)
+        {
+        case VK_SHIFT:   // converts to VK_LSHIFT or VK_RSHIFT
+        case VK_CONTROL: // converts to VK_LCONTROL or VK_RCONTROL
+        case VK_MENU: {
+            key = (keys)MapVirtualKeyW(scan_code, MAPVK_VSC_TO_VK_EX);
+        }
+        break;
+        };
 
         // Pass to the input subsystem for processing.
+
         input_process_key(key, pressed);
     }
     break;
@@ -321,6 +347,17 @@ LRESULT CALLBACK win32_process_message(HWND hwnd, u32 msg, WPARAM w_param, LPARA
     }
 
     return DefWindowProcA(hwnd, msg, w_param, l_param);
+}
+
+bool platform_get_required_vulkan_extensions(u32 *platform_required_extensions_count, const char **extensions_array)
+{
+    *platform_required_extensions_count = 1;
+    if (!extensions_array)
+    {
+        return true;
+    }
+    extensions_array[0] = VK_KHR_WIN32_SURFACE_EXTENSION_NAME;
+    return true;
 }
 
 #endif // DPLATFORM_WINDOWS

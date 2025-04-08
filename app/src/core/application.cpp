@@ -4,6 +4,7 @@
 #include "core/input.hpp"
 #include "logger.hpp"
 #include "platform/platform.hpp"
+#include "renderer/renderer.hpp"
 
 static application_state *app_state_ptr;
 
@@ -32,35 +33,32 @@ bool application_initialize(application_state *state, application_config *config
     app_state_ptr->is_minimized       = false;
 
     app_state_ptr->application_system_linear_allocator_memory_requirements = 10 * 1024 * 1024; // 1 mega bytes
-    linear_allocator_create(&app_state_ptr->application_system_linear_allocator,
-                            app_state_ptr->application_system_linear_allocator_memory_requirements);
+    linear_allocator_create(&app_state_ptr->application_system_linear_allocator, app_state_ptr->application_system_linear_allocator_memory_requirements);
 
     memory_system_startup(&app_state_ptr->memory_system_memory_requirements, 0);
-    app_state_ptr->memory_system_state = linear_allocator_allocate(&app_state_ptr->application_system_linear_allocator,
-                                                                   app_state_ptr->memory_system_memory_requirements);
+    app_state_ptr->memory_system_state = linear_allocator_allocate(&app_state_ptr->application_system_linear_allocator, app_state_ptr->memory_system_memory_requirements);
     memory_system_startup(&app_state_ptr->memory_system_memory_requirements, app_state_ptr->memory_system_state);
-    set_memory_stats_for_tag(app_state_ptr->application_system_linear_allocator_memory_requirements,
-                             MEM_TAG_LINEAR_ALLOCATOR);
+    set_memory_stats_for_tag(app_state_ptr->application_system_linear_allocator_memory_requirements, MEM_TAG_LINEAR_ALLOCATOR);
 
     event_system_startup(&app_state_ptr->event_system_memory_requirements, 0);
-    app_state_ptr->event_system_state = linear_allocator_allocate(&app_state_ptr->application_system_linear_allocator,
-                                                                  app_state_ptr->event_system_memory_requirements);
+    app_state_ptr->event_system_state = linear_allocator_allocate(&app_state_ptr->application_system_linear_allocator, app_state_ptr->event_system_memory_requirements);
     event_system_startup(&app_state_ptr->event_system_memory_requirements, app_state_ptr->event_system_state);
-
-    input_system_startup(&app_state_ptr->input_system_memory_requirements, 0);
-    app_state_ptr->input_system_state = linear_allocator_allocate(&app_state_ptr->application_system_linear_allocator,
-                                                                  app_state_ptr->input_system_memory_requirements);
-    input_system_startup(&app_state_ptr->input_system_memory_requirements, app_state_ptr->input_system_state);
-
-    platform_system_startup(&app_state_ptr->platform_system_memory_requirements, 0, 0);
-    app_state_ptr->platform_system_state = linear_allocator_allocate(
-        &app_state_ptr->application_system_linear_allocator, app_state_ptr->platform_system_memory_requirements);
-    platform_system_startup(&app_state_ptr->platform_system_memory_requirements, app_state_ptr->platform_system_state,
-                            app_state_ptr->application_config);
 
     event_system_register(EVENT_CODE_APPLICATION_QUIT, 0, event_callback_quit);
     event_system_register(EVENT_CODE_APPLICATION_RESIZED, 0, event_callback_resize);
-    event_system_register(EVENT_CODE_KEY_RELEASED, 0, event_callback_key_released);
+
+    input_system_startup(&app_state_ptr->input_system_memory_requirements, 0);
+    app_state_ptr->input_system_state = linear_allocator_allocate(&app_state_ptr->application_system_linear_allocator, app_state_ptr->input_system_memory_requirements);
+    input_system_startup(&app_state_ptr->input_system_memory_requirements, app_state_ptr->input_system_state);
+
+    platform_system_startup(&app_state_ptr->platform_system_memory_requirements, 0, 0);
+    app_state_ptr->platform_system_state = linear_allocator_allocate(&app_state_ptr->application_system_linear_allocator, app_state_ptr->platform_system_memory_requirements);
+    platform_system_startup(&app_state_ptr->platform_system_memory_requirements, app_state_ptr->platform_system_state, app_state_ptr->application_config);
+
+    renderer_system_startup(&app_state_ptr->renderer_system_memory_requirements, 0, 0, 0);
+    app_state_ptr->renderer_system_state = linear_allocator_allocate(&app_state_ptr->application_system_linear_allocator, app_state_ptr->renderer_system_memory_requirements);
+    renderer_system_startup(&app_state_ptr->renderer_system_memory_requirements, app_state_ptr->application_config, &app_state_ptr->application_system_linear_allocator,
+                            app_state_ptr->renderer_system_state);
 
     u64 buffer_usg_mem_requirements = 0;
     get_memory_usg_str(&buffer_usg_mem_requirements, (char *)0);
@@ -74,9 +72,11 @@ bool application_initialize(application_state *state, application_config *config
 void application_shutdown()
 {
     // Destroy in opposite order of creation.
+
     event_system_unregister(EVENT_CODE_APPLICATION_QUIT, 0, event_callback_quit);
     event_system_unregister(EVENT_CODE_APPLICATION_RESIZED, 0, event_callback_resize);
 
+    renderer_system_shutdown();
     platform_system_shutdown(app_state_ptr->platform_system_state);
     input_system_shutdown(app_state_ptr->input_system_state);
     event_system_shutdown(app_state_ptr->event_system_state);
@@ -87,20 +87,6 @@ void application_shutdown()
 void application_run()
 {
     platform_pump_messages();
-}
-
-bool event_callback_key_released(event_context context, void *data)
-{
-    keys key = (keys)context.data.u16[0];
-
-    if (key == KEY_ESCAPE)
-    {
-        DDEBUG("Application quit msg recieved");
-        event_context context = {};
-        event_fire(EVENT_CODE_APPLICATION_QUIT, context);
-    }
-
-    return false;
 }
 
 bool event_callback_quit(event_context context, void *data)
