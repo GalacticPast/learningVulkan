@@ -4,14 +4,14 @@
 
 enum event_code
 {
-    // EVENT_CODE_TEST_A = 0,
-    // EVENT_CODE_TEST_B = 1,
-    // EVENT_CODE_TEST_C = 2,
 
     EVENT_CODE_APPLICATION_QUIT   = 0x00,
     EVENT_CODE_APPLICATION_RESIZE = 0x01,
 
-    MAX_EVENT_CODES = 256
+    EVENT_CODE_TEST_A = 0xFD,
+    EVENT_CODE_TEST_B = 0xFE,
+    EVENT_CODE_TEST_C = 0xFF,
+    MAX_EVENT_CODES   = 256
 };
 /*
  * @param: event_listener_callback the function that you cant the event system to call when the event gets triggerd.

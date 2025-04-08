@@ -47,6 +47,7 @@ bool application_initialize(application_state *state, application_config *config
 
     int data = 5;
     event_system_register(EVENT_CODE_APPLICATION_QUIT, &data, event_callback_quit);
+    event_system_register(EVENT_CODE_APPLICATION_RESIZE, &data, event_callback_quit);
 
     u64 buffer_usg_mem_requirements = 0;
     get_memory_usg_str(&buffer_usg_mem_requirements, (char *)0);
@@ -69,4 +70,31 @@ void application_shutdown()
 void application_run()
 {
     platform_pump_messages();
+}
+
+bool event_callback_quit(event_context context, void *data)
+{
+    if (app_state_ptr)
+    {
+        app_state_ptr->is_running = false;
+        return true;
+    }
+    return false;
+}
+
+bool event_callback_resize(event_context context, void *data)
+{
+    if (app_state_ptr)
+    {
+
+        application_config *config = app_state_ptr->application_config;
+
+        config->width  = context.data.u32[0];
+        config->height = context.data.u32[1];
+
+        DDEBUG("Resized event, new width: %d new height: %d", config->width, config->height);
+
+        return true;
+    }
+    return false;
 }
