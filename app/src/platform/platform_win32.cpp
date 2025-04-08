@@ -117,7 +117,7 @@ bool platform_system_startup(u64 *platform_mem_requirements, void *plat_state, a
     return true;
 }
 
-void platform_system_shutdown()
+void platform_system_shutdown(void *state)
 {
     // Simply cold-cast to the known type.
 

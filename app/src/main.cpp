@@ -42,5 +42,10 @@ int main()
         return 2;
     }
 
+    while (app_state.is_running)
+    {
+        application_run();
+    }
+
     application_shutdown();
 }

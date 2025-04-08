@@ -6,6 +6,9 @@
 
 static application_state *app_state_ptr;
 
+bool event_callback_resize(event_context context, void *data);
+bool event_callback_quit(event_context context, void *data);
+
 bool application_initialize(application_state *state, application_config *config)
 {
     DINFO("Initializing application...");
@@ -23,7 +26,7 @@ bool application_initialize(application_state *state, application_config *config
 
     app_state_ptr                     = state;
     app_state_ptr->application_config = config;
-    app_state_ptr->is_running         = false;
+    app_state_ptr->is_running         = true;
     app_state_ptr->is_minimized       = false;
 
     app_state_ptr->application_system_linear_allocator_memory_requirements = 10 * 1024 * 1024; // 1 mega bytes
@@ -42,6 +45,9 @@ bool application_initialize(application_state *state, application_config *config
     app_state_ptr->platform_system_state = linear_allocator_allocate(&app_state_ptr->application_system_linear_allocator, app_state_ptr->platform_system_memory_requirements);
     platform_system_startup(&app_state_ptr->platform_system_memory_requirements, app_state_ptr->platform_system_state, app_state_ptr->application_config);
 
+    int data = 5;
+    event_system_register(EVENT_CODE_APPLICATION_QUIT, &data, event_callback_quit);
+
     u64 buffer_usg_mem_requirements = 0;
     get_memory_usg_str(&buffer_usg_mem_requirements, (char *)0);
     char buffer[buffer_usg_mem_requirements];
@@ -58,4 +64,9 @@ void application_shutdown()
     event_system_shutdown(app_state_ptr->event_system_state);
     memory_system_shutdown(app_state_ptr->memory_system_state);
     linear_allocator_destroy(&app_state_ptr->application_system_linear_allocator);
+}
+
+void application_run()
+{
+    platform_pump_messages();
 }

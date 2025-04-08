@@ -4,9 +4,12 @@
 
 enum event_code
 {
-    EVENT_CODE_TEST_A = 0,
-    EVENT_CODE_TEST_B = 1,
-    EVENT_CODE_TEST_C = 2,
+    // EVENT_CODE_TEST_A = 0,
+    // EVENT_CODE_TEST_B = 1,
+    // EVENT_CODE_TEST_C = 2,
+
+    EVENT_CODE_APPLICATION_QUIT   = 0x00,
+    EVENT_CODE_APPLICATION_RESIZE = 0x01,
 
     MAX_EVENT_CODES = 256
 };
