@@ -25,10 +25,11 @@ void run_tests()
 int main()
 {
     application_config app_config;
-    app_config.width            = 1280;
-    app_config.height           = 720;
-    app_config.x                = 1280 / 2;
-    app_config.y                = 720 / 2;
+    app_config.width  = 1280;
+    app_config.height = 720;
+    app_config.x      = 1280 / 4;
+    app_config.y      = 720 / 4;
+
     app_config.application_name = "Learning Vulkan";
 
     // run_tests();

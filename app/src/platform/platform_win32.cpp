@@ -1,7 +1,9 @@
+#include "core/input.hpp"
 #ifdef DPLATFORM_WINDOWS
 #include "core/application.hpp"
 #include "platform/platform.hpp"
 
+#include "core/event.hpp"
 #include "core/logger.hpp"
 
 #include <stdlib.h>
@@ -222,9 +224,9 @@ LRESULT CALLBACK win32_process_message(HWND hwnd, u32 msg, WPARAM w_param, LPARA
             // Notify the OS that erasing will be handled by the application to prevent flicker.
             return 1;
         case WM_CLOSE: {
-            // event_context context = {};
-            // event_fire(EVENT_CODE_APPLICATION_QUIT, 0, context);
-            // return 0;
+            event_context context = {};
+            event_fire(EVENT_CODE_APPLICATION_QUIT, context);
+            return 0;
         }
         break;
         case WM_DESTROY: {
@@ -234,20 +236,22 @@ LRESULT CALLBACK win32_process_message(HWND hwnd, u32 msg, WPARAM w_param, LPARA
         break;
         case WM_SIZE: {
             // Get the updated size.
-            // RECT          r;
-            // event_context context = {};
 
-            // GetClientRect(hwnd, &r);
-            // u32 width  = r.right - r.left;
-            // u32 height = r.bottom - r.top;
+            RECT r;
 
-            // context.data.u32[0] = width;
-            // context.data.u32[1] = height;
+            event_context context = {};
 
-            // platform_state_ptr->width  = width;
-            // platform_state_ptr->height = height;
+            GetClientRect(hwnd, &r);
+            u32 width  = r.right - r.left;
+            u32 height = r.bottom - r.top;
 
-            // event_fire(EVENT_CODE_RESIZED, 0, context);
+            context.data.u32[0] = width;
+            context.data.u32[1] = height;
+
+            platform_state_ptr->width  = width;
+            platform_state_ptr->height = height;
+
+            event_fire(EVENT_CODE_APPLICATION_RESIZED, context);
         }
         break;
         case WM_KEYDOWN:
@@ -255,20 +259,21 @@ LRESULT CALLBACK win32_process_message(HWND hwnd, u32 msg, WPARAM w_param, LPARA
         case WM_KEYUP:
         case WM_SYSKEYUP: {
             // Key pressed/released
-            // bool pressed = (msg == WM_KEYDOWN || msg == WM_SYSKEYDOWN);
-            // keys key     = (u16)w_param;
 
-            //// Pass to the input subsystem for processing.
-            // input_process_key(key, pressed);
+            bool pressed = (msg == WM_KEYDOWN || msg == WM_SYSKEYDOWN);
+            keys key     = (keys)w_param;
+
+            // Pass to the input subsystem for processing.
+            input_process_key(key, pressed);
         }
         break;
         case WM_MOUSEMOVE: {
             // Mouse move
-            // s32 x_position = GET_X_LPARAM(l_param);
-            // s32 y_position = GET_Y_LPARAM(l_param);
+            s32 x_position = GET_X_LPARAM(l_param);
+            s32 y_position = GET_Y_LPARAM(l_param);
 
             //// Pass over to the input subsystem.
-            // input_process_mouse_move(x_position, y_position);
+            input_process_mouse_move(x_position, y_position);
         }
         break;
         case WM_MOUSEWHEEL: {
@@ -276,8 +281,8 @@ LRESULT CALLBACK win32_process_message(HWND hwnd, u32 msg, WPARAM w_param, LPARA
             if (z_delta != 0)
             {
                 // Flatten the input to an OS-independent (-1, 1)
-                // z_delta = (z_delta < 0) ? -1 : 1;
-                // input_process_mouse_wheel(z_delta);
+                z_delta = (z_delta < 0) ? -1 : 1;
+                input_process_mouse_wheel(z_delta);
             }
         }
         break;
@@ -287,29 +292,29 @@ LRESULT CALLBACK win32_process_message(HWND hwnd, u32 msg, WPARAM w_param, LPARA
         case WM_LBUTTONUP:
         case WM_MBUTTONUP:
         case WM_RBUTTONUP: {
-            // bool    pressed      = msg == WM_LBUTTONDOWN || msg == WM_RBUTTONDOWN || msg == WM_MBUTTONDOWN;
-            // buttons mouse_button = BUTTON_MAX_BUTTONS;
-            // switch (msg)
-            //{
-            //     case WM_LBUTTONDOWN:
-            //     case WM_LBUTTONUP:
-            //         mouse_button = BUTTON_LEFT;
-            //         break;
-            //     case WM_MBUTTONDOWN:
-            //     case WM_MBUTTONUP:
-            //         mouse_button = BUTTON_MIDDLE;
-            //         break;
-            //     case WM_RBUTTONDOWN:
-            //     case WM_RBUTTONUP:
-            //         mouse_button = BUTTON_RIGHT;
-            //         break;
-            // }
+            bool    pressed      = msg == WM_LBUTTONDOWN || msg == WM_RBUTTONDOWN || msg == WM_MBUTTONDOWN;
+            buttons mouse_button = BUTTON_MAX_BUTTONS;
+            switch (msg)
+            {
+                case WM_LBUTTONDOWN:
+                case WM_LBUTTONUP:
+                    mouse_button = BUTTON_LEFT;
+                    break;
+                case WM_MBUTTONDOWN:
+                case WM_MBUTTONUP:
+                    mouse_button = BUTTON_MIDDLE;
+                    break;
+                case WM_RBUTTONDOWN:
+                case WM_RBUTTONUP:
+                    mouse_button = BUTTON_RIGHT;
+                    break;
+            }
 
-            //// Pass over to the input subsystem.
-            // if (mouse_button != BUTTON_MAX_BUTTONS)
-            //{
-            //     input_process_button(mouse_button, pressed);
-            // }
+            // Pass over to the input subsystem.
+            if (mouse_button != BUTTON_MAX_BUTTONS)
+            {
+                input_process_button(mouse_button, pressed);
+            }
         }
         break;
     }

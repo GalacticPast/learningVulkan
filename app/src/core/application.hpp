@@ -1,4 +1,5 @@
 #pragma once
+
 #include "defines.hpp"
 #include "memory/linear_allocator.hpp"
 #include <string>
@@ -29,6 +30,9 @@ struct application_state
 
     u64   event_system_memory_requirements; // 1 mega bytes
     void *event_system_state;
+
+    u64   input_system_memory_requirements; // 1 mega bytes
+    void *input_system_state;
 };
 
 bool application_initialize(application_state *out_state, application_config *config);

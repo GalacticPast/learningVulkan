@@ -5,8 +5,14 @@
 enum event_code
 {
 
-    EVENT_CODE_APPLICATION_QUIT   = 0x00,
-    EVENT_CODE_APPLICATION_RESIZE = 0x01,
+    EVENT_CODE_APPLICATION_QUIT    = 0x00,
+    EVENT_CODE_APPLICATION_RESIZED = 0x01,
+    EVENT_CODE_KEY_PRESSED         = 0x02,
+    EVENT_CODE_KEY_RELEASED        = 0x03,
+    EVENT_CODE_BUTTON_PRESSED      = 0x04,
+    EVENT_CODE_BUTTON_RELEASED     = 0x05,
+    EVENT_CODE_MOUSE_MOVED         = 0x06,
+    EVENT_CODE_MOUSE_WHEEL         = 0x07,
 
     EVENT_CODE_TEST_A = 0xFD,
     EVENT_CODE_TEST_B = 0xFE,
@@ -62,10 +68,4 @@ void event_system_shutdown(void *state);
 void event_fire(event_code code, event_context context);
 
 bool event_system_register(event_code code, void *data, bool (*event_listener_callback)(event_context context, void *data));
-
-/*
- * @param: code: event_code of the code that you want to unregister from
- * @param: data: data that you passed in first when you first registered for the event. Make sure the data you pass in be the same as the data that you passed in during event register
- *
- */
-bool event_system_unregister(event_code code, void *data);
+bool event_system_unregister(event_code code, void *data, bool (*event_listener_callback)(event_context context, void *data));

@@ -27,9 +27,7 @@ bool event_system_register_and_unregister_test()
     memset((void *)event_state, 0, event_system_memory_requirements);
     event_system_startup(&event_system_memory_requirements, event_state);
 
-    int data = 5;
-
-    event_system_register(EVENT_CODE_TEST_A, &data, event_code_test_A_callback);
+    event_system_register(EVENT_CODE_TEST_A, 0, event_code_test_A_callback);
 
     event_context context = {0};
     context.data.u32[0]   = 0;
@@ -40,7 +38,7 @@ bool event_system_register_and_unregister_test()
     event_code code = EVENT_CODE_TEST_A;
     event_fire(code, context);
 
-    event_system_unregister(EVENT_CODE_TEST_A, &data);
+    event_system_unregister(EVENT_CODE_TEST_A, 0, event_code_test_A_callback);
 
     for (s32 i = 0; i < MAX_REGISTERED_LISTENERS_FOR_SINGLE_EVENT; i++)
     {
