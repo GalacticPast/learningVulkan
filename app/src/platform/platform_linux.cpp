@@ -833,12 +833,13 @@ void platform_get_window_dimensions(u32 *width, u32 *height)
 
 bool platform_get_required_vulkan_extensions(u32 *platform_required_extensions_count, const char **extensions_array)
 {
-    *platform_required_extensions_count = 1;
+    *platform_required_extensions_count = 2;
     if (!extensions_array)
     {
         return true;
     }
-    extensions_array[0] = VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME;
+    extensions_array[0] = VK_KHR_SURFACE_EXTENSION_NAME;
+    extensions_array[1] = VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME;
     return true;
 }
 

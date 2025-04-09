@@ -22,7 +22,7 @@ bool vulkan_backend_initialize(u64 *vulkan_backend_memory_requirements, applicat
     }
     DDEBUG("Initializing Vulkan backend...");
     vulkan_context_ptr               = (vulkan_context *)state;
-    vulkan_context_ptr->vk_allocator = 0;
+    vulkan_context_ptr->vk_allocator = nullptr;
 
     bool enable_validation_layers = false;
 #ifdef DEBUG
@@ -68,10 +68,10 @@ bool vulkan_backend_initialize(u64 *vulkan_backend_memory_requirements, applicat
     std::vector<VkExtensionProperties> extensions(extension_count);
     vkEnumerateInstanceExtensionProperties(nullptr, &extension_count, extensions.data());
 
-    for (u32 i = 0; i < extension_count; i++)
-    {
-        // DDEBUG("Extension Name: %s,Extension Version :%u", extensions[i].extensionName, extensions[i].specVersion);
-    }
+    // for (u32 i = 0; i < extension_count; i++)
+    //{
+    //     DDEBUG("Extension Name: %s,Extension Version :%u", extensions[i].extensionName, extensions[i].specVersion);
+    // }
 
 #endif
     bool validation_layer_support = vulkan_check_validation_layer_support();
@@ -97,7 +97,7 @@ bool vulkan_backend_initialize(u64 *vulkan_backend_memory_requirements, applicat
     platform_get_required_vulkan_extensions(&vulkan_extensions_count, 0);
     platform_get_required_vulkan_extensions(&vulkan_extensions_count, vulkan_extensions);
 
-    vulkan_extensions[++vulkan_extensions_count] = VK_EXT_DEBUG_UTILS_EXTENSION_NAME;
+    vulkan_extensions[vulkan_extensions_count++] = VK_EXT_DEBUG_UTILS_EXTENSION_NAME;
 
     VkInstanceCreateInfo inst_create_info{};
     inst_create_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
@@ -111,7 +111,7 @@ bool vulkan_backend_initialize(u64 *vulkan_backend_memory_requirements, applicat
     // TODO: end
     inst_create_info.pApplicationInfo = &app_info;
 
-    VK_CHECK(vkCreateInstance(&inst_create_info, vulkan_context_ptr->vk_allocator, &vulkan_context_ptr->vk_instance));
+    VK_CHECK(vkCreateInstance(&inst_create_info, 0, &vulkan_context_ptr->vk_instance));
 
     return true;
 }
@@ -143,7 +143,7 @@ bool vulkan_check_validation_layer_support()
             validation_layer_found = true;
             break;
         }
-        // DDEBUG("Layer Name: %s | Desc: %s", inst_layer_properties[i].layerName, inst_layer_properties[i].description);
+        DDEBUG("Layer Name: %s | Desc: %s", inst_layer_properties[i].layerName, inst_layer_properties[i].description);
     }
     return validation_layer_found;
 }
