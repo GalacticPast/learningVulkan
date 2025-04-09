@@ -26,16 +26,17 @@ typedef struct input_state
 // Internal input state pointer
 static input_state *input_state_ptr;
 
-void input_system_startup(u64 *memory_requirement, void *state)
+bool input_system_startup(u64 *memory_requirement, void *state)
 {
     *memory_requirement = sizeof(input_state);
     if (state == 0)
     {
-        return;
+        return true;
     }
     DINFO("Initializing input system.");
     dzero_memory(state, sizeof(input_state));
     input_state_ptr = (input_state *)state;
+    return true;
 }
 
 void input_system_shutdown(void *state)

@@ -56,7 +56,7 @@ bool platform_system_startup(u64 *platform_mem_requirements, void *plat_state, a
     wc.hIcon         = icon;
     wc.hCursor       = LoadCursor(NULL, IDC_ARROW); // NULL; // Manage the cursor manually
     wc.hbrBackground = NULL;                        // Transparent
-    wc.lpszClassName = "kohi_window_class";
+    wc.lpszClassName = "window_class";
 
     if (!RegisterClassA(&wc))
     {
@@ -64,11 +64,30 @@ bool platform_system_startup(u64 *platform_mem_requirements, void *plat_state, a
         return false;
     }
 
+    HINSTANCE dummy_h_instance = GetModuleHandleA(0);
+    HWND dummy_handle          = CreateWindowExA(WS_EX_APPWINDOW, "window_class", app_config->application_name, WS_OVERLAPPED | WS_SYSMENU | WS_CAPTION, 100, 100, 100, 100, 0, 0, dummy_h_instance, 0);
+
+    if (dummy_handle == 0)
+    {
+        MessageBoxA(NULL, "Dummy Window creation failed!", "Error!", MB_ICONEXCLAMATION | MB_OK);
+        DDEBUG("%lld", GetLastError());
+        DFATAL("Dummy Window creation failed!");
+        return false;
+    }
+
+    HDC dummy_device_context = GetDC(dummy_handle);
+
+    u32 device_display_width  = GetDeviceCaps(dummy_device_context, HORZRES);
+    u32 device_display_height = GetDeviceCaps(dummy_device_context, VERTRES);
+
+    // destroy dummy window
+    DestroyWindow(dummy_handle);
+
     // Create window
-    u32 client_x      = app_config->x;
-    u32 client_y      = app_config->y;
-    u32 client_width  = app_config->width;
-    u32 client_height = app_config->height;
+    u32 client_width  = app_config->width == INVALID_ID ? device_display_width : app_config->width;
+    u32 client_height = app_config->height == INVALID_ID ? device_display_height : app_config->height;
+    u32 client_x      = app_config->x == INVALID_ID ? 0 : app_config->x;
+    u32 client_y      = app_config->y == INVALID_ID ? 0 : app_config->y;
 
     u32 window_x      = client_x;
     u32 window_y      = client_y;
@@ -95,12 +114,11 @@ bool platform_system_startup(u64 *platform_mem_requirements, void *plat_state, a
     window_height += border_rect.bottom - border_rect.top;
 
     HWND handle =
-        CreateWindowExA(window_ex_style, "kohi_window_class", app_config->application_name, window_style, window_x, window_y, window_width, window_height, 0, 0, platform_state_ptr->h_instance, 0);
+        CreateWindowExA(window_ex_style, "window_class", app_config->application_name, window_style, window_x, window_y, window_width, window_height, 0, 0, platform_state_ptr->h_instance, 0);
 
     if (handle == 0)
     {
         MessageBoxA(NULL, "Window creation failed!", "Error!", MB_ICONEXCLAMATION | MB_OK);
-
         DFATAL("Window creation failed!");
         return false;
     }
@@ -177,9 +195,12 @@ void *platform_set_memory(void *dest, s32 value, u64 size)
     return memset(dest, value, size);
 }
 
+// NOTE: colors -> https://learn.microsoft.com/en-us/windows/console/console-screen-buffers
+
 void platform_console_write(const char *message, u8 colour)
 {
     HANDLE console_handle = GetStdHandle(STD_OUTPUT_HANDLE);
+    u8 white              = FOREGROUND_BLUE | FOREGROUND_GREEN | FOREGROUND_RED;
     // FATAL,ERROR,WARN,INFO,DEBUG,TRACE
     static u8 levels[6] = {64, 4, 6, 2, 1, 8};
     SetConsoleTextAttribute(console_handle, levels[colour]);
@@ -187,11 +208,13 @@ void platform_console_write(const char *message, u8 colour)
     u64 length             = strlen(message);
     LPDWORD number_written = 0;
     WriteConsoleA(GetStdHandle(STD_OUTPUT_HANDLE), message, (DWORD)length, number_written, 0);
+    SetConsoleTextAttribute(console_handle, white);
 }
 
 void platform_console_write_error(const char *message, u8 colour)
 {
     HANDLE console_handle = GetStdHandle(STD_ERROR_HANDLE);
+    u8 white              = FOREGROUND_BLUE | FOREGROUND_GREEN | FOREGROUND_RED;
     // FATAL,ERROR,WARN,INFO,DEBUG,TRACE
     static u8 levels[6] = {64, 4, 6, 2, 1, 8};
     SetConsoleTextAttribute(console_handle, levels[colour]);
@@ -199,6 +222,7 @@ void platform_console_write_error(const char *message, u8 colour)
     u64 length             = strlen(message);
     LPDWORD number_written = 0;
     WriteConsoleA(GetStdHandle(STD_ERROR_HANDLE), message, (DWORD)length, number_written, 0);
+    SetConsoleTextAttribute(console_handle, white);
 }
 
 f64 platform_get_absolute_time()

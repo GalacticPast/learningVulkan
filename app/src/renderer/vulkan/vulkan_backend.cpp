@@ -1,10 +1,14 @@
-#include "vulkan_backend.hpp"
+#include "core/dmemory.hpp"
 #include "core/dstring.hpp"
 #include "core/logger.hpp"
 #include "defines.hpp"
+
+#include <vector>
+
+#include "vulkan_backend.hpp"
+#include "vulkan_device.hpp"
 #include "vulkan_platform.hpp"
 #include "vulkan_types.hpp"
-#include <vector>
 
 static vulkan_context *vulkan_context_ptr;
 
@@ -100,6 +104,12 @@ bool vulkan_backend_initialize(u64 *vulkan_backend_memory_requirements, applicat
             return false;
         }
     }
+
+    if (!vulkan_create_logical_device(vulkan_context_ptr))
+    {
+        DERROR("Vulkan logical device creation failed.");
+    }
+
     return true;
 }
 
@@ -141,6 +151,16 @@ bool vulkan_create_debug_messenger(VkDebugUtilsMessengerCreateInfoEXT *dbg_messe
 void vulkan_backend_shutdown()
 {
     DDEBUG("Shutting down vulkan...");
+
+    // destroy logical device
+    if (vulkan_context_ptr->device.physical_properties)
+    {
+        dfree(vulkan_context_ptr->device.physical_properties, sizeof(VkPhysicalDeviceProperties), MEM_TAG_RENDERER);
+    }
+    if (vulkan_context_ptr->device.physical_features)
+    {
+        dfree(vulkan_context_ptr->device.physical_features, sizeof(VkPhysicalDeviceFeatures), MEM_TAG_RENDERER);
+    }
 
 #if DEBUG
     PFN_vkDestroyDebugUtilsMessengerEXT func_destroy_dbg_utils_messenger_ext =
@@ -185,6 +205,28 @@ bool vulkan_check_validation_layer_support()
 VkBool32 vulkan_dbg_msg_rprt_callback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageTypes, const VkDebugUtilsMessengerCallbackDataEXT *pCallbackData,
                                       void *pUserData)
 {
-    DDEBUG("Vulkan validation layer: %s", pCallbackData->pMessage);
+    switch (messageSeverity)
+    {
+    case VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT: {
+        DTRACE("%s", pCallbackData->pMessage);
+    }
+    break;
+    case VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT: {
+        DINFO("%s", pCallbackData->pMessage);
+    }
+    break;
+    case VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT: {
+        DWARN("%s", pCallbackData->pMessage);
+    }
+    break;
+    case VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT: {
+        DERROR("%s", pCallbackData->pMessage);
+    }
+    break;
+    case VK_DEBUG_UTILS_MESSAGE_SEVERITY_FLAG_BITS_MAX_ENUM_EXT: {
+    }
+    break;
+    }
+
     return VK_TRUE;
 }

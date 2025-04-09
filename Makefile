@@ -12,7 +12,7 @@ assembly := learningVulkan
 extension := .exe
 defines := -DDEBUG -DDPLATFORM_WINDOWS
 includes := -I$(src_dir)/src -I$(vulkan_sdk)\Include
-linker_flags := -luser32 -lvulkan-1 -L$(vulkan_sdk)\Lib 
+linker_flags := -lgdi32 -luser32 -lvulkan-1 -L$(vulkan_sdk)\Lib 
 compiler_flags := -Wall -Wextra -g -Wconversion -Wdouble-promotion -Wno-unused-parameter -Wno-unused-function -Wno-sign-conversion -fsanitize=undefined -fsanitize-trap
 build_platform := windows
 
