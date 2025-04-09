@@ -9,6 +9,9 @@
 
 struct vulkan_context
 {
+
+    VkDebugUtilsMessengerEXT vk_dbg_messenger;
+
     VkAllocationCallbacks *vk_allocator;
     VkInstance vk_instance;
 };

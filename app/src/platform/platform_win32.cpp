@@ -351,12 +351,13 @@ LRESULT CALLBACK win32_process_message(HWND hwnd, u32 msg, WPARAM w_param, LPARA
 
 bool platform_get_required_vulkan_extensions(u32 *platform_required_extensions_count, const char **extensions_array)
 {
-    *platform_required_extensions_count = 1;
+    *platform_required_extensions_count = 2;
     if (!extensions_array)
     {
         return true;
     }
-    extensions_array[0] = VK_KHR_WIN32_SURFACE_EXTENSION_NAME;
+    extensions_array[0] = VK_KHR_SURFACE_EXTENSION_NAME;
+    extensions_array[1] = VK_KHR_WIN32_SURFACE_EXTENSION_NAME;
     return true;
 }
 

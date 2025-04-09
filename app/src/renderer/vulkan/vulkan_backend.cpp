@@ -8,10 +8,11 @@
 
 static vulkan_context *vulkan_context_ptr;
 
-// VkBool32 vulkan_backend_debug_report_callback(VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT objectType, uint64_t object, size_t location, int32_t messageCode, const char *pLayerPrefix,
-//                                              const char *pMessage, void *pUserData);
+VkBool32 vulkan_dbg_msg_rprt_callback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageTypes, const VkDebugUtilsMessengerCallbackDataEXT *pCallbackData,
+                                      void *pUserData);
 
 bool vulkan_check_validation_layer_support();
+bool vulkan_create_debug_messenger(VkDebugUtilsMessengerCreateInfoEXT *dbg_messenger_create_info);
 
 bool vulkan_backend_initialize(u64 *vulkan_backend_memory_requirements, application_config *app_config, void *state)
 {
@@ -23,11 +24,6 @@ bool vulkan_backend_initialize(u64 *vulkan_backend_memory_requirements, applicat
     DDEBUG("Initializing Vulkan backend...");
     vulkan_context_ptr               = (vulkan_context *)state;
     vulkan_context_ptr->vk_allocator = nullptr;
-
-    bool enable_validation_layers = false;
-#ifdef DEBUG
-    enable_validation_layers = true;
-#endif
 
     DDEBUG("Creating vulkan instance...");
 
@@ -41,50 +37,27 @@ bool vulkan_backend_initialize(u64 *vulkan_backend_memory_requirements, applicat
     app_info.engineVersion      = 0;
     app_info.apiVersion         = 0;
 
-    // INFO: callback info structure for vulkan.
-    VkDebugReportCallbackCreateInfoEXT app_dbg_rprt_cb_create_info{};
-    app_dbg_rprt_cb_create_info.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_EXT;
-    app_dbg_rprt_cb_create_info.pNext = 0;
-    app_dbg_rprt_cb_create_info.flags =
-        VK_DEBUG_REPORT_INFORMATION_BIT_EXT | VK_DEBUG_REPORT_WARNING_BIT_EXT | VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT | VK_DEBUG_REPORT_ERROR_BIT_EXT | VK_DEBUG_REPORT_DEBUG_BIT_EXT;
-    // app_dbg_rprt_cb_create_info.pfnCallback = vulkan_backend_debug_report_callback;
-    app_dbg_rprt_cb_create_info.pUserData = nullptr;
-
-    VkDebugUtilsMessengerCreateInfoEXT dbg_messenger_create_info{};
-    dbg_messenger_create_info.sType           = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
-    dbg_messenger_create_info.pNext           = 0;
-    dbg_messenger_create_info.flags           = 0;
-    dbg_messenger_create_info.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT |
-                                                VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
-    dbg_messenger_create_info.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT |
-                                            VK_DEBUG_UTILS_MESSAGE_TYPE_DEVICE_ADDRESS_BINDING_BIT_EXT;
-    dbg_messenger_create_info.pfnUserCallback = 0;
-    dbg_messenger_create_info.pUserData       = 0;
+    bool enable_validation_layers = false;
+    bool validation_layer_support = false;
 
 #ifdef DEBUG
 
-    u32 extension_count = 0;
-    vkEnumerateInstanceExtensionProperties(nullptr, &extension_count, nullptr);
-    std::vector<VkExtensionProperties> extensions(extension_count);
-    vkEnumerateInstanceExtensionProperties(nullptr, &extension_count, extensions.data());
+    enable_validation_layers = true;
 
-    // for (u32 i = 0; i < extension_count; i++)
-    //{
-    //     DDEBUG("Extension Name: %s,Extension Version :%u", extensions[i].extensionName, extensions[i].specVersion);
-    // }
-
-#endif
-    bool validation_layer_support = vulkan_check_validation_layer_support();
+    // vulkan debug messenger
+    validation_layer_support = vulkan_check_validation_layer_support();
     if (!validation_layer_support && enable_validation_layers)
     {
         DERROR("Validation layer support requsted, but not available.");
         return false;
     }
+#endif
+
     u32 enabled_layer_count = 0;
     const char *enabled_layer_names[4];
 
     u32 index = 0;
-    if (validation_layer_support)
+    if (enable_validation_layers && validation_layer_support)
     {
         enabled_layer_count++;
         enabled_layer_names[index++] = "VK_LAYER_KHRONOS_validation";
@@ -97,32 +70,93 @@ bool vulkan_backend_initialize(u64 *vulkan_backend_memory_requirements, applicat
     platform_get_required_vulkan_extensions(&vulkan_extensions_count, 0);
     platform_get_required_vulkan_extensions(&vulkan_extensions_count, vulkan_extensions);
 
+#if DEBUG
     vulkan_extensions[vulkan_extensions_count++] = VK_EXT_DEBUG_UTILS_EXTENSION_NAME;
+#endif
+
+    // Instance info
+    VkDebugUtilsMessengerCreateInfoEXT dbg_messenger_create_info{};
 
     VkInstanceCreateInfo inst_create_info{};
-    inst_create_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
-    // TODO: debug msg
+
+    inst_create_info.sType                   = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
     inst_create_info.pNext                   = 0;
     inst_create_info.flags                   = 0;
     inst_create_info.enabledLayerCount       = enabled_layer_count;
     inst_create_info.ppEnabledLayerNames     = enabled_layer_names;
     inst_create_info.enabledExtensionCount   = vulkan_extensions_count;
     inst_create_info.ppEnabledExtensionNames = vulkan_extensions;
-    // TODO: end
-    inst_create_info.pApplicationInfo = &app_info;
+    inst_create_info.pApplicationInfo        = &app_info;
 
-    VK_CHECK(vkCreateInstance(&inst_create_info, 0, &vulkan_context_ptr->vk_instance));
+    VkResult result = vkCreateInstance(&inst_create_info, vulkan_context_ptr->vk_allocator, &vulkan_context_ptr->vk_instance);
+    VK_CHECK(result);
+
+    if (enable_validation_layers && validation_layer_support)
+    {
+        bool result = vulkan_create_debug_messenger(&dbg_messenger_create_info);
+        if (!result)
+        {
+            DERROR("Couldn't setup Vulkan Create debug messenger.");
+            return false;
+        }
+    }
+    return true;
+}
+
+bool vulkan_create_debug_messenger(VkDebugUtilsMessengerCreateInfoEXT *dbg_messenger_create_info)
+{
+
+    dbg_messenger_create_info->sType           = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
+    dbg_messenger_create_info->pNext           = 0;
+    dbg_messenger_create_info->flags           = 0;
+    dbg_messenger_create_info->messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT |
+                                                 VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
+    dbg_messenger_create_info->messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT |
+                                             VK_DEBUG_UTILS_MESSAGE_TYPE_DEVICE_ADDRESS_BINDING_BIT_EXT;
+    dbg_messenger_create_info->pfnUserCallback = vulkan_dbg_msg_rprt_callback;
+    dbg_messenger_create_info->pUserData       = nullptr;
+
+    if (!vulkan_context_ptr->vk_instance)
+    {
+        DDEBUG("Populating vulkan_debug_utils_messenger struct");
+        return true;
+    }
+
+    PFN_vkCreateDebugUtilsMessengerEXT func_create_dbg_utils_messenger_ext =
+        (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(vulkan_context_ptr->vk_instance, "vkCreateDebugUtilsMessengerEXT");
+
+    if (func_create_dbg_utils_messenger_ext == nullptr)
+    {
+        DERROR("Vulkan Create debug messenger ext called but fucn ptr to vkCreateDebugUtilsMessengerEXT is nullptr");
+        return false;
+    }
+    if (vulkan_context_ptr->vk_instance)
+    {
+        VK_CHECK(func_create_dbg_utils_messenger_ext(vulkan_context_ptr->vk_instance, dbg_messenger_create_info, vulkan_context_ptr->vk_allocator, &vulkan_context_ptr->vk_dbg_messenger));
+    }
 
     return true;
 }
+
 void vulkan_backend_shutdown()
 {
     DDEBUG("Shutting down vulkan...");
+
+#if DEBUG
+    PFN_vkDestroyDebugUtilsMessengerEXT func_destroy_dbg_utils_messenger_ext =
+        (PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(vulkan_context_ptr->vk_instance, "vkDestroyDebugUtilsMessengerEXT");
+
+    if (func_destroy_dbg_utils_messenger_ext == nullptr)
+    {
+        DERROR("Vulkan destroy debug messenger ext called but fucn ptr to vkDestroyDebugUtilsMessengerEXT is nullptr");
+    }
+    else
+    {
+        func_destroy_dbg_utils_messenger_ext(vulkan_context_ptr->vk_instance, vulkan_context_ptr->vk_dbg_messenger, vulkan_context_ptr->vk_allocator);
+    }
+#endif
     vkDestroyInstance(vulkan_context_ptr->vk_instance, vulkan_context_ptr->vk_allocator);
 }
-
-// VkBool32 vulkan_backend_debug_report_callback(VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT objectType, uint64_t object, size_t location, int32_t messageCode, const char *pLayerPrefix,
-//                                             const char *pMessage, void *pUserData);
 
 bool vulkan_check_validation_layer_support()
 {
@@ -143,7 +177,14 @@ bool vulkan_check_validation_layer_support()
             validation_layer_found = true;
             break;
         }
-        DDEBUG("Layer Name: %s | Desc: %s", inst_layer_properties[i].layerName, inst_layer_properties[i].description);
+        // DDEBUG("Layer Name: %s | Desc: %s", inst_layer_properties[i].layerName, inst_layer_properties[i].description);
     }
     return validation_layer_found;
+}
+
+VkBool32 vulkan_dbg_msg_rprt_callback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageTypes, const VkDebugUtilsMessengerCallbackDataEXT *pCallbackData,
+                                      void *pUserData)
+{
+    DDEBUG("Vulkan validation layer: %s", pCallbackData->pMessage);
+    return VK_TRUE;
 }
