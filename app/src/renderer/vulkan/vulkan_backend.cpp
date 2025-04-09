@@ -1,4 +1,5 @@
 #include "vulkan_backend.hpp"
+#include "core/dstring.hpp"
 #include "core/logger.hpp"
 #include "defines.hpp"
 #include "vulkan_platform.hpp"
@@ -10,6 +11,8 @@ static vulkan_context *vulkan_context_ptr;
 // VkBool32 vulkan_backend_debug_report_callback(VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT objectType, uint64_t object, size_t location, int32_t messageCode, const char *pLayerPrefix,
 //                                              const char *pMessage, void *pUserData);
 
+bool vulkan_check_validation_layer_support();
+
 bool vulkan_backend_initialize(u64 *vulkan_backend_memory_requirements, application_config *app_config, void *state)
 {
     *vulkan_backend_memory_requirements = sizeof(vulkan_context);
@@ -18,9 +21,13 @@ bool vulkan_backend_initialize(u64 *vulkan_backend_memory_requirements, applicat
         return true;
     }
     DDEBUG("Initializing Vulkan backend...");
-    vulkan_context_ptr = (vulkan_context *)state;
-
+    vulkan_context_ptr               = (vulkan_context *)state;
     vulkan_context_ptr->vk_allocator = 0;
+
+    bool enable_validation_layers = false;
+#ifdef DEBUG
+    enable_validation_layers = true;
+#endif
 
     DDEBUG("Creating vulkan instance...");
 
@@ -63,25 +70,44 @@ bool vulkan_backend_initialize(u64 *vulkan_backend_memory_requirements, applicat
 
     for (u32 i = 0; i < extension_count; i++)
     {
-        DDEBUG("Extension Name: %s,Extension Version :%u", extensions[i].extensionName, extensions[i].specVersion);
+        // DDEBUG("Extension Name: %s,Extension Version :%u", extensions[i].extensionName, extensions[i].specVersion);
     }
 
 #endif
+    bool validation_layer_support = vulkan_check_validation_layer_support();
+    if (!validation_layer_support && enable_validation_layers)
+    {
+        DERROR("Validation layer support requsted, but not available.");
+        return false;
+    }
+    u32 enabled_layer_count = 0;
+    const char *enabled_layer_names[4];
+
+    u32 index = 0;
+    if (validation_layer_support)
+    {
+        enabled_layer_count++;
+        enabled_layer_names[index++] = "VK_LAYER_KHRONOS_validation";
+    }
+
     // INFO: get platform specifig extensions and extensions count
-    u32 platform_extension_count = 0;
-    platform_get_required_vulkan_extensions(&platform_extension_count, 0);
-    const char *platform_extensions[32];
-    platform_get_required_vulkan_extensions(&platform_extension_count, platform_extensions);
+    u32 vulkan_extensions_count = 0;
+    const char *vulkan_extensions[32];
+
+    platform_get_required_vulkan_extensions(&vulkan_extensions_count, 0);
+    platform_get_required_vulkan_extensions(&vulkan_extensions_count, vulkan_extensions);
+
+    vulkan_extensions[++vulkan_extensions_count] = VK_EXT_DEBUG_UTILS_EXTENSION_NAME;
 
     VkInstanceCreateInfo inst_create_info{};
     inst_create_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
     // TODO: debug msg
     inst_create_info.pNext                   = 0;
     inst_create_info.flags                   = 0;
-    inst_create_info.enabledLayerCount       = 0;
-    inst_create_info.ppEnabledLayerNames     = 0;
-    inst_create_info.enabledExtensionCount   = platform_extension_count;
-    inst_create_info.ppEnabledExtensionNames = platform_extensions;
+    inst_create_info.enabledLayerCount       = enabled_layer_count;
+    inst_create_info.ppEnabledLayerNames     = enabled_layer_names;
+    inst_create_info.enabledExtensionCount   = vulkan_extensions_count;
+    inst_create_info.ppEnabledExtensionNames = vulkan_extensions;
     // TODO: end
     inst_create_info.pApplicationInfo = &app_info;
 
@@ -97,3 +123,27 @@ void vulkan_backend_shutdown()
 
 // VkBool32 vulkan_backend_debug_report_callback(VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT objectType, uint64_t object, size_t location, int32_t messageCode, const char *pLayerPrefix,
 //                                             const char *pMessage, void *pUserData);
+
+bool vulkan_check_validation_layer_support()
+{
+    u32 inst_layer_properties_count = 0;
+    vkEnumerateInstanceLayerProperties(&inst_layer_properties_count, 0);
+
+    std::vector<VkLayerProperties> inst_layer_properties(inst_layer_properties_count);
+    vkEnumerateInstanceLayerProperties(&inst_layer_properties_count, inst_layer_properties.data());
+
+    const char *validation_layer_name = "VK_LAYER_KHRONOS_validation";
+
+    bool validation_layer_found = false;
+
+    for (u32 i = 0; i < inst_layer_properties_count; i++)
+    {
+        if (string_compare(inst_layer_properties[i].layerName, validation_layer_name))
+        {
+            validation_layer_found = true;
+            break;
+        }
+        // DDEBUG("Layer Name: %s | Desc: %s", inst_layer_properties[i].layerName, inst_layer_properties[i].description);
+    }
+    return validation_layer_found;
+}
