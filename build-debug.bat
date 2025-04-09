@@ -3,4 +3,4 @@
 
 setlocal EnableDelayedExpansion
 
-make
+make all

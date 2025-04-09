@@ -26,6 +26,6 @@ platform=$(echo "$XDG_SESSION_TYPE")
 #    cd ../../../
 #fi
 
-make
+make all
 
 #./post_build.sh

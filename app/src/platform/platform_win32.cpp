@@ -80,14 +80,15 @@ bool platform_system_startup(u64 *platform_mem_requirements, void *plat_state, a
     u32 device_display_width  = GetDeviceCaps(dummy_device_context, HORZRES);
     u32 device_display_height = GetDeviceCaps(dummy_device_context, VERTRES);
 
+    DDEBUG("Device display dimensions: Width_p: %d   Height_p: %d", device_display_width, device_display_height);
     // destroy dummy window
     DestroyWindow(dummy_handle);
 
     // Create window
-    u32 client_width  = app_config->width == INVALID_ID ? device_display_width : app_config->width;
-    u32 client_height = app_config->height == INVALID_ID ? device_display_height : app_config->height;
-    u32 client_x      = app_config->x == INVALID_ID ? 0 : app_config->x;
-    u32 client_y      = app_config->y == INVALID_ID ? 0 : app_config->y;
+    u32 client_width  = app_config->width == INVALID_ID ? 800 : app_config->width;
+    u32 client_height = app_config->height == INVALID_ID ? 600 : app_config->height;
+    u32 client_x      = app_config->x == INVALID_ID ? device_display_width / 4 : app_config->x;
+    u32 client_y      = app_config->y == INVALID_ID ? device_display_height / 4 : app_config->y;
 
     u32 window_x      = client_x;
     u32 window_y      = client_y;
