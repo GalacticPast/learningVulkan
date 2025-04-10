@@ -76,9 +76,13 @@ bool platform_system_startup(u64 *platform_mem_requirements, void *plat_state, a
     }
 
     HDC dummy_device_context = GetDC(dummy_handle);
+    // HDC dummy_device_context = 0 /*GetDC(dummy_handle) */;
 
-    u32 device_display_width  = GetDeviceCaps(dummy_device_context, HORZRES);
-    u32 device_display_height = GetDeviceCaps(dummy_device_context, VERTRES);
+    u32 device_display_width  = 0;
+    u32 device_display_height = 0;
+
+    // u32 device_display_width  = GetDeviceCaps(dummy_device_context, HORZRES);
+    // u32 device_display_height = GetDeviceCaps(dummy_device_context, VERTRES);
 
     DDEBUG("Device display dimensions: Width_p: %d   Height_p: %d", device_display_width, device_display_height);
     // destroy dummy window
