@@ -50,14 +50,19 @@ bool vulkan_create_logical_device(vulkan_context *vk_context)
     u32 vulkan_queue_family_index[4] = {vk_context->device.graphics_family_index,
                                         vk_context->device.present_family_index, 0, 0};
 
-    if (physical_device_requirements.has_graphics_queue_family)
+    if (physical_device_requirements.has_graphics_queue_family &&
+        vk_context->device.graphics_family_index != INVALID_ID)
     {
         queue_family_count++;
     }
-    if (physical_device_requirements.has_present_queue_family)
+    // if we have 2 different queue family index for each
+    if (physical_device_requirements.has_present_queue_family &&
+        (vk_context->device.present_family_index != INVALID_ID) &&
+        vk_context->device.present_family_index != vk_context->device.graphics_family_index)
     {
         queue_family_count++;
     }
+    vk_context->device.enabled_queue_family_count = queue_family_count;
 
     VkDeviceQueueCreateInfo device_queue_create_infos[4];
 
@@ -80,8 +85,8 @@ bool vulkan_create_logical_device(vulkan_context *vk_context)
     logical_device_create_info.flags                   = 0;
     logical_device_create_info.queueCreateInfoCount    = queue_family_count;
     logical_device_create_info.pQueueCreateInfos       = device_queue_create_infos;
-    logical_device_create_info.enabledExtensionCount   = 0;
-    logical_device_create_info.ppEnabledExtensionNames = 0;
+    logical_device_create_info.enabledExtensionCount   = required_device_extensions_count;
+    logical_device_create_info.ppEnabledExtensionNames = required_device_extensions;
     logical_device_create_info.pEnabledFeatures        = vk_context->device.physical_features;
 
     VkResult res = vkCreateDevice(vk_context->device.physical, &logical_device_create_info, vk_context->vk_allocator,
@@ -321,6 +326,9 @@ bool vulkan_is_physical_device_suitable(vulkan_context *vk_context, VkPhysicalDe
 void vulkan_device_query_swapchain_support(vulkan_context *vk_context, VkPhysicalDevice physical_device,
                                            vulkan_swapchain *out_swapchain)
 {
+
+    vkGetPhysicalDeviceSurfaceCapabilitiesKHR(physical_device, vk_context->vk_surface,
+                                              &out_swapchain->surface_capabilities);
 
     vkGetPhysicalDeviceSurfaceFormatsKHR(physical_device, vk_context->vk_surface, &out_swapchain->surface_formats_count,
                                          0);

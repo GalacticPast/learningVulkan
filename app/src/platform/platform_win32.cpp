@@ -19,14 +19,14 @@
 typedef struct platform_state
 {
     HINSTANCE h_instance;
-    HWND hwnd;
+    HWND      hwnd;
 
     u32 width;
     u32 height;
 } platform_state;
 
 // Clock
-static f64 clock_frequency;
+static f64           clock_frequency;
 static LARGE_INTEGER start_time;
 
 static platform_state *platform_state_ptr;
@@ -40,12 +40,12 @@ bool platform_system_startup(u64 *platform_mem_requirements, void *plat_state, a
     {
         return true;
     }
-    platform_state_ptr = (platform_state *)plat_state;
+    platform_state_ptr             = (platform_state *)plat_state;
 
     platform_state_ptr->h_instance = GetModuleHandleA(0);
 
     // Setup and register window class.
-    HICON icon = LoadIcon(platform_state_ptr->h_instance, IDI_APPLICATION);
+    HICON     icon                 = LoadIcon(platform_state_ptr->h_instance, IDI_APPLICATION);
     WNDCLASSA wc;
     memset(&wc, 0, sizeof(wc));
     wc.style         = CS_DBLCLKS; // Get double-clicks
@@ -65,7 +65,9 @@ bool platform_system_startup(u64 *platform_mem_requirements, void *plat_state, a
     }
 
     HINSTANCE dummy_h_instance = GetModuleHandleA(0);
-    HWND dummy_handle          = CreateWindowExA(WS_EX_APPWINDOW, "window_class", app_config->application_name, WS_OVERLAPPED | WS_SYSMENU | WS_CAPTION, 100, 100, 100, 100, 0, 0, dummy_h_instance, 0);
+    HWND      dummy_handle =
+        CreateWindowExA(WS_EX_APPWINDOW, "window_class", app_config->application_name,
+                        WS_OVERLAPPED | WS_SYSMENU | WS_CAPTION, 100, 100, 100, 100, 0, 0, dummy_h_instance, 0);
 
     if (dummy_handle == 0)
     {
@@ -75,7 +77,7 @@ bool platform_system_startup(u64 *platform_mem_requirements, void *plat_state, a
         return false;
     }
 
-    HDC dummy_device_context = GetDC(dummy_handle);
+    HDC dummy_device_context  = GetDC(dummy_handle);
     // HDC dummy_device_context = 0 /*GetDC(dummy_handle) */;
 
     // u32 device_display_width  = 0;
@@ -114,27 +116,27 @@ bool platform_system_startup(u64 *platform_mem_requirements, void *plat_state, a
     u32 window_width  = client_width;
     u32 window_height = client_height;
 
-    u32 window_style    = WS_OVERLAPPED | WS_SYSMENU | WS_CAPTION;
-    u32 window_ex_style = WS_EX_APPWINDOW;
+    u32 window_style  = WS_OVERLAPPED | WS_SYSMENU | WS_CAPTION;
+    u32 window_ex_style  = WS_EX_APPWINDOW;
 
-    window_style |= WS_MAXIMIZEBOX;
-    window_style |= WS_MINIMIZEBOX;
-    window_style |= WS_THICKFRAME;
+    window_style        |= WS_MAXIMIZEBOX;
+    window_style        |= WS_MINIMIZEBOX;
+    window_style        |= WS_THICKFRAME;
 
     // Obtain the size of the border.
-    RECT border_rect = {0, 0, 0, 0};
+    RECT border_rect     = {0, 0, 0, 0};
     AdjustWindowRectEx(&border_rect, window_style, 0, window_ex_style);
 
     // In this case, the border rectangle is negative.
-    window_x += border_rect.left;
-    window_y += border_rect.top;
+    window_x      += border_rect.left;
+    window_y      += border_rect.top;
 
     // Grow by the size of the OS border.
-    window_width += border_rect.right - border_rect.left;
+    window_width  += border_rect.right - border_rect.left;
     window_height += border_rect.bottom - border_rect.top;
 
-    HWND handle =
-        CreateWindowExA(window_ex_style, "window_class", app_config->application_name, window_style, window_x, window_y, window_width, window_height, 0, 0, platform_state_ptr->h_instance, 0);
+    HWND handle = CreateWindowExA(window_ex_style, "window_class", app_config->application_name, window_style, window_x,
+                                  window_y, window_width, window_height, 0, 0, platform_state_ptr->h_instance, 0);
 
     if (handle == 0)
     {
@@ -148,8 +150,8 @@ bool platform_system_startup(u64 *platform_mem_requirements, void *plat_state, a
     }
 
     // Show the window
-    bool should_activate          = 1; // TODO: if the window should not accept input, this should be false.
-    s32 show_window_command_flags = should_activate ? SW_SHOW : SW_SHOWNOACTIVATE;
+    bool should_activate           = 1; // TODO: if the window should not accept input, this should be false.
+    s32  show_window_command_flags = should_activate ? SW_SHOW : SW_SHOWNOACTIVATE;
     // If initially minimized, use SW_MINIMIZE : SW_SHOWMINNOACTIVE;
     // If initially maximized, use SW_SHOWMAXIMIZED : SW_MAXIMIZE
     ShowWindow(platform_state_ptr->hwnd, show_window_command_flags);
@@ -220,12 +222,12 @@ void *platform_set_memory(void *dest, s32 value, u64 size)
 void platform_console_write(const char *message, u8 colour)
 {
     HANDLE console_handle = GetStdHandle(STD_OUTPUT_HANDLE);
-    u8 white              = FOREGROUND_BLUE | FOREGROUND_GREEN | FOREGROUND_RED;
+    u8     white          = FOREGROUND_BLUE | FOREGROUND_GREEN | FOREGROUND_RED;
     // FATAL,ERROR,WARN,INFO,DEBUG,TRACE
-    static u8 levels[6] = {64, 4, 6, 2, 1, 8};
+    static u8 levels[6]   = {64, 4, 6, 2, 1, 8};
     SetConsoleTextAttribute(console_handle, levels[colour]);
     OutputDebugStringA(message);
-    u64 length             = strlen(message);
+    u64     length         = strlen(message);
     LPDWORD number_written = 0;
     WriteConsoleA(GetStdHandle(STD_OUTPUT_HANDLE), message, (DWORD)length, number_written, 0);
     SetConsoleTextAttribute(console_handle, white);
@@ -234,12 +236,12 @@ void platform_console_write(const char *message, u8 colour)
 void platform_console_write_error(const char *message, u8 colour)
 {
     HANDLE console_handle = GetStdHandle(STD_ERROR_HANDLE);
-    u8 white              = FOREGROUND_BLUE | FOREGROUND_GREEN | FOREGROUND_RED;
+    u8     white          = FOREGROUND_BLUE | FOREGROUND_GREEN | FOREGROUND_RED;
     // FATAL,ERROR,WARN,INFO,DEBUG,TRACE
-    static u8 levels[6] = {64, 4, 6, 2, 1, 8};
+    static u8 levels[6]   = {64, 4, 6, 2, 1, 8};
     SetConsoleTextAttribute(console_handle, levels[colour]);
     OutputDebugStringA(message);
-    u64 length             = strlen(message);
+    u64     length         = strlen(message);
     LPDWORD number_written = 0;
     WriteConsoleA(GetStdHandle(STD_ERROR_HANDLE), message, (DWORD)length, number_written, 0);
     SetConsoleTextAttribute(console_handle, white);
@@ -292,11 +294,11 @@ LRESULT CALLBACK win32_process_message(HWND hwnd, u32 msg, WPARAM w_param, LPARA
         event_context context = {};
 
         GetClientRect(hwnd, &r);
-        u32 width  = r.right - r.left;
-        u32 height = r.bottom - r.top;
+        u32 width                  = r.right - r.left;
+        u32 height                 = r.bottom - r.top;
 
-        context.data.u32[0] = width;
-        context.data.u32[1] = height;
+        context.data.u32[0]        = width;
+        context.data.u32[1]        = height;
 
         platform_state_ptr->width  = width;
         platform_state_ptr->height = height;
@@ -309,12 +311,13 @@ LRESULT CALLBACK win32_process_message(HWND hwnd, u32 msg, WPARAM w_param, LPARA
     case WM_KEYUP:
     case WM_SYSKEYUP: {
         // Key pressed/released
-        keys key = (keys)w_param;
+        keys key       = (keys)w_param;
 
         // wtf windows why not just send lalt ralt messages seperatly??
-        WORD key_flags     = HIWORD(l_param);
-        WORD scan_code     = LOBYTE(key_flags);
-        BOOL isExtendedKey = (key_flags & KF_EXTENDED) == KF_EXTENDED; // extended-key flag, 1 if scancode has 0xE0 prefix
+        WORD key_flags = HIWORD(l_param);
+        WORD scan_code = LOBYTE(key_flags);
+        BOOL isExtendedKey =
+            (key_flags & KF_EXTENDED) == KF_EXTENDED; // extended-key flag, 1 if scancode has 0xE0 prefix
 
         if (isExtendedKey)
         {
@@ -363,7 +366,7 @@ LRESULT CALLBACK win32_process_message(HWND hwnd, u32 msg, WPARAM w_param, LPARA
     case WM_LBUTTONUP:
     case WM_MBUTTONUP:
     case WM_RBUTTONUP: {
-        bool pressed         = msg == WM_LBUTTONDOWN || msg == WM_RBUTTONDOWN || msg == WM_MBUTTONDOWN;
+        bool    pressed      = msg == WM_LBUTTONDOWN || msg == WM_RBUTTONDOWN || msg == WM_MBUTTONDOWN;
         buttons mouse_button = BUTTON_MAX_BUTTONS;
         switch (msg)
         {
@@ -393,15 +396,9 @@ LRESULT CALLBACK win32_process_message(HWND hwnd, u32 msg, WPARAM w_param, LPARA
     return DefWindowProcA(hwnd, msg, w_param, l_param);
 }
 
-bool vulkan_platform_get_required_vulkan_extensions(u32 *platform_required_extensions_count, const char **extensions_array)
+bool vulkan_platform_get_required_vulkan_extensions(std::vector<const char *> &extensions_array)
 {
-    *platform_required_extensions_count = 2;
-    if (!extensions_array)
-    {
-        return true;
-    }
-    extensions_array[0] = VK_KHR_SURFACE_EXTENSION_NAME;
-    extensions_array[1] = VK_KHR_WIN32_SURFACE_EXTENSION_NAME;
+    extensions_array.push_back(VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
     return true;
 }
 bool vulkan_platform_create_surface(vulkan_context *vk_context)
@@ -415,7 +412,8 @@ bool vulkan_platform_create_surface(vulkan_context *vk_context)
     surface_create_info.hwnd      = platform_state_ptr->hwnd;
     surface_create_info.hinstance = GetModuleHandle(nullptr);
 
-    VkResult result = vkCreateWin32SurfaceKHR(vk_context->vk_instance, &surface_create_info, vk_context->vk_allocator, &vk_context->vk_surface);
+    VkResult result = vkCreateWin32SurfaceKHR(vk_context->vk_instance, &surface_create_info, vk_context->vk_allocator,
+                                              &vk_context->vk_surface);
     VK_CHECK(result);
 
     return true;
