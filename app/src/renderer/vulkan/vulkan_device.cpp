@@ -14,9 +14,9 @@ struct vulkan_physical_device_requirements
 };
 
 bool vulkan_is_physical_device_suitable(vulkan_context *vk_context, VkPhysicalDevice physical_device, vulkan_physical_device_requirements *physical_device_requirements,
-                                        u32 required_device_extensions_count, const char *required_device_extensions);
+                                        u32 required_device_extensions_count, const char **required_device_extensions);
 bool vulkan_choose_physical_device(vulkan_context *vk_context, vulkan_physical_device_requirements *physical_device_requirements, u32 required_device_extensions_count,
-                                   const char *required_device_extensions);
+                                   const char **required_device_extensions);
 
 bool vulkan_create_logical_device(vulkan_context *vk_context)
 {
@@ -34,7 +34,7 @@ bool vulkan_create_logical_device(vulkan_context *vk_context)
     const char *required_device_extensions[8] = {};
     required_device_extensions[0]             = VK_KHR_SWAPCHAIN_EXTENSION_NAME;
 
-    bool result = vulkan_choose_physical_device(vk_context, &physical_device_requirements, required_device_extensions_count, (const char *)required_device_extensions);
+    bool result = vulkan_choose_physical_device(vk_context, &physical_device_requirements, required_device_extensions_count, required_device_extensions);
 
     if (!result)
     {
@@ -90,7 +90,7 @@ bool vulkan_create_logical_device(vulkan_context *vk_context)
 }
 
 bool vulkan_choose_physical_device(vulkan_context *vk_context, vulkan_physical_device_requirements *physical_device_requirements, u32 required_device_extensions_count,
-                                   const char *required_device_extensions)
+                                   const char **required_device_extensions)
 {
     u32 physical_device_count = INVALID_ID;
     vkEnumeratePhysicalDevices(vk_context->vk_instance, &physical_device_count, 0);
@@ -137,7 +137,7 @@ bool vulkan_choose_physical_device(vulkan_context *vk_context, vulkan_physical_d
 }
 
 bool vulkan_is_physical_device_suitable(vulkan_context *vk_context, VkPhysicalDevice physical_device, vulkan_physical_device_requirements *physical_device_requirements,
-                                        u32 required_device_extensions_count, const char *required_device_extensions)
+                                        u32 required_device_extensions_count, const char **required_device_extensions)
 {
     VkPhysicalDeviceProperties physical_properties;
     vkGetPhysicalDeviceProperties(physical_device, &physical_properties);
@@ -151,7 +151,7 @@ bool vulkan_is_physical_device_suitable(vulkan_context *vk_context, VkPhysicalDe
     u32 graphics_family_index = INVALID_ID;
     u32 present_family_index  = INVALID_ID;
 
-    if ((physical_properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU && physical_device_requirements->is_discrete_gpu) ||
+    if ((physical_properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU && physical_device_requirements->is_discrete_gpu) &&
         (physical_features.geometryShader && physical_device_requirements->has_geometry_shader))
     {
         if (physical_device_requirements->has_graphics_queue_family && physical_device_requirements->has_present_queue_family)
@@ -238,15 +238,16 @@ bool vulkan_is_physical_device_suitable(vulkan_context *vk_context, VkPhysicalDe
         if (physical_device_requirements->has_swapchain_support)
         {
             u32 device_extension_properties_count = 0;
-            VkExtensionProperties device_extension_properties[32];
+            VkExtensionProperties *device_extension_properties;
 
             vkEnumerateDeviceExtensionProperties(physical_device, 0, &device_extension_properties_count, 0);
+            device_extension_properties = (VkExtensionProperties *)dallocate(sizeof(VkExtensionProperties) * device_extension_properties_count, MEM_TAG_RENDERER);
             vkEnumerateDeviceExtensionProperties(physical_device, 0, &device_extension_properties_count, device_extension_properties);
 #ifdef DEBUG
             DDEBUG("Device Extension Properties Count %d", device_extension_properties_count);
             for (u32 i = 0; i < device_extension_properties_count; i++)
             {
-                DDEBUG("Device Extension Name: %d", device_extension_properties[i].extensionName);
+                DDEBUG("Device Extension Name: %s", device_extension_properties[i].extensionName);
             }
 #endif
             for (u32 i = 0; i < required_device_extensions_count; i++)
@@ -254,7 +255,7 @@ bool vulkan_is_physical_device_suitable(vulkan_context *vk_context, VkPhysicalDe
                 bool found_extension = false;
                 for (u32 j = 0; j < device_extension_properties_count; j++)
                 {
-                    if (string_compare(&required_device_extensions[i], device_extension_properties[j].extensionName))
+                    if (string_compare(required_device_extensions[i], device_extension_properties[j].extensionName))
                     {
                         found_extension = true;
                     }
@@ -265,6 +266,7 @@ bool vulkan_is_physical_device_suitable(vulkan_context *vk_context, VkPhysicalDe
                     return false;
                 }
             }
+            dfree(device_extension_properties, sizeof(VkExtensionProperties) * device_extension_properties_count, MEM_TAG_RENDERER);
         }
 
         vk_context->device.physical_properties = (VkPhysicalDeviceProperties *)dallocate(sizeof(VkPhysicalDeviceProperties), MEM_TAG_RENDERER);
