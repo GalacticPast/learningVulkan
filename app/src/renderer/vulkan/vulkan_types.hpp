@@ -53,15 +53,21 @@ struct vulkan_swapchain
     VkPresentModeKHR *present_modes;
 };
 
+struct vulkan_pipeline
+{
+    VkPipeline       handle;
+    VkPipelineLayout layout;
+};
+
 struct vulkan_context
 {
     vulkan_device device;
 
     vulkan_swapchain vk_swapchain;
 
-    VkPipelineLayout graphics_pipeline_layout;
-
     VkRenderPass vk_renderpass;
+
+    vulkan_pipeline graphics_pipeline;
 
     // INFO: maybe should be inside vulkan_device?
     VkQueue graphics_queue;

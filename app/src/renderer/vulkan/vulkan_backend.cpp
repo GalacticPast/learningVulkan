@@ -217,10 +217,13 @@ bool vulkan_create_debug_messenger(VkDebugUtilsMessengerCreateInfoEXT *dbg_messe
 void vulkan_backend_shutdown()
 {
     DDEBUG("Shutting down vulkan...");
+    vkDestroyPipeline(vulkan_context_ptr->device.logical, vulkan_context_ptr->graphics_pipeline.handle,
+                      vulkan_context_ptr->vk_allocator);
+
     vkDestroyRenderPass(vulkan_context_ptr->device.logical, vulkan_context_ptr->vk_renderpass,
                         vulkan_context_ptr->vk_allocator);
 
-    vkDestroyPipelineLayout(vulkan_context_ptr->device.logical, vulkan_context_ptr->graphics_pipeline_layout,
+    vkDestroyPipelineLayout(vulkan_context_ptr->device.logical, vulkan_context_ptr->graphics_pipeline.layout,
                             vulkan_context_ptr->vk_allocator);
 
     for (u32 i = 0; i < vulkan_context_ptr->vk_swapchain.images_count; i++)

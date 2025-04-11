@@ -1,11 +1,14 @@
 #include "vulkan_graphics_pipeline.hpp"
 #include "core/dfile_system.hpp"
 #include "core/dmemory.hpp"
+#include "core/logger.hpp"
 
 VkShaderModule create_shader_module(vulkan_context *vk_context, const char *shader_code, u64 shader_code_size);
 
 bool vulkan_create_graphics_pipeline(vulkan_context *vk_context)
 {
+    DDEBUG("Creating vulkan graphics pipeline");
+
     // INFO: shader stage
     char       *vert_shader_code;
     u64         vert_shader_code_buffer_size_requirements = INVALID_ID_64;
@@ -29,14 +32,14 @@ bool vulkan_create_graphics_pipeline(vulkan_context *vk_context)
         create_shader_module(vk_context, frag_shader_code, frag_shader_code_buffer_size_requirements);
 
     // create the pipeline shader stage
-    u32                   stage_flag_bits_count = 2;
-    VkShaderStageFlagBits stage_flag_bits[2]    = {VK_SHADER_STAGE_VERTEX_BIT, VK_SHADER_STAGE_FRAGMENT_BIT};
+    u32                   shader_stage_count = 2;
+    VkShaderStageFlagBits stage_flag_bits[2] = {VK_SHADER_STAGE_VERTEX_BIT, VK_SHADER_STAGE_FRAGMENT_BIT};
 
-    VkShaderModule shader_modules[2]            = {vert_shader_module, frag_shader_module};
+    VkShaderModule shader_modules[2]         = {vert_shader_module, frag_shader_module};
 
     VkPipelineShaderStageCreateInfo shader_stage_create_infos[2]{};
 
-    for (u32 i = 0; i < stage_flag_bits_count; i++)
+    for (u32 i = 0; i < shader_stage_count; i++)
     {
         VkPipelineShaderStageCreateInfo shader_stage_create_info{};
         shader_stage_create_info.sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
@@ -74,12 +77,12 @@ bool vulkan_create_graphics_pipeline(vulkan_context *vk_context)
     vertex_input_state_create_info.vertexAttributeDescriptionCount = 0;
     vertex_input_state_create_info.pVertexAttributeDescriptions    = nullptr;
 
-    VkPipelineInputAssemblyStateCreateInfo assembly_state_create_info{};
-    assembly_state_create_info.sType                  = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
-    assembly_state_create_info.pNext                  = 0;
-    assembly_state_create_info.flags                  = 0;
-    assembly_state_create_info.topology               = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
-    assembly_state_create_info.primitiveRestartEnable = VK_FALSE;
+    VkPipelineInputAssemblyStateCreateInfo input_assembly_state_create_info{};
+    input_assembly_state_create_info.sType    = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
+    input_assembly_state_create_info.pNext    = 0;
+    input_assembly_state_create_info.flags    = 0;
+    input_assembly_state_create_info.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+    input_assembly_state_create_info.primitiveRestartEnable = VK_FALSE;
 
     VkViewport view_port{};
     view_port.x        = 0.0f;
@@ -102,20 +105,20 @@ bool vulkan_create_graphics_pipeline(vulkan_context *vk_context)
     viewport_state_create_info.scissorCount  = 1;
     viewport_state_create_info.pScissors     = &scissor;
 
-    VkPipelineRasterizationStateCreateInfo rasterization_create_info{};
-    rasterization_create_info.sType                   = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
-    rasterization_create_info.pNext                   = 0;
-    rasterization_create_info.flags                   = 0;
-    rasterization_create_info.depthClampEnable        = VK_FALSE;
-    rasterization_create_info.rasterizerDiscardEnable = VK_FALSE;
-    rasterization_create_info.polygonMode             = VK_POLYGON_MODE_FILL;
-    rasterization_create_info.cullMode                = VK_CULL_MODE_BACK_BIT;
-    rasterization_create_info.frontFace               = VK_FRONT_FACE_CLOCKWISE;
-    rasterization_create_info.depthBiasEnable         = VK_FALSE;
-    rasterization_create_info.depthBiasConstantFactor = 0.0f;
-    rasterization_create_info.depthBiasClamp          = 0.0f;
-    rasterization_create_info.depthBiasSlopeFactor    = 0.0f;
-    rasterization_create_info.lineWidth               = 1.0f;
+    VkPipelineRasterizationStateCreateInfo rasterization_state_create_info{};
+    rasterization_state_create_info.sType            = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
+    rasterization_state_create_info.pNext            = 0;
+    rasterization_state_create_info.flags            = 0;
+    rasterization_state_create_info.depthClampEnable = VK_FALSE;
+    rasterization_state_create_info.rasterizerDiscardEnable = VK_FALSE;
+    rasterization_state_create_info.polygonMode             = VK_POLYGON_MODE_FILL;
+    rasterization_state_create_info.cullMode                = VK_CULL_MODE_BACK_BIT;
+    rasterization_state_create_info.frontFace               = VK_FRONT_FACE_CLOCKWISE;
+    rasterization_state_create_info.depthBiasEnable         = VK_FALSE;
+    rasterization_state_create_info.depthBiasConstantFactor = 0.0f;
+    rasterization_state_create_info.depthBiasClamp          = 0.0f;
+    rasterization_state_create_info.depthBiasSlopeFactor    = 0.0f;
+    rasterization_state_create_info.lineWidth               = 1.0f;
 
     VkPipelineMultisampleStateCreateInfo multisampling_state_create_info{};
     multisampling_state_create_info.sType                 = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
@@ -163,7 +166,7 @@ bool vulkan_create_graphics_pipeline(vulkan_context *vk_context)
     pipeline_layout_create_info.pPushConstantRanges    = nullptr;
 
     VkResult result = vkCreatePipelineLayout(vk_context->device.logical, &pipeline_layout_create_info,
-                                             vk_context->vk_allocator, &vk_context->graphics_pipeline_layout);
+                                             vk_context->vk_allocator, &vk_context->graphics_pipeline.layout);
     VK_CHECK(result);
 
     // create render pass
@@ -208,6 +211,31 @@ bool vulkan_create_graphics_pipeline(vulkan_context *vk_context)
     result = vkCreateRenderPass(vk_context->device.logical, &render_pass_create_info, vk_context->vk_allocator,
                                 &vk_context->vk_renderpass);
 
+    VK_CHECK(result);
+
+    VkGraphicsPipelineCreateInfo graphics_pipeline_create_info{};
+    graphics_pipeline_create_info.sType               = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+    graphics_pipeline_create_info.pNext               = 0;
+    graphics_pipeline_create_info.flags               = 0;
+    graphics_pipeline_create_info.stageCount          = shader_stage_count;
+    graphics_pipeline_create_info.pStages             = shader_stage_create_infos;
+    graphics_pipeline_create_info.pVertexInputState   = &vertex_input_state_create_info;
+    graphics_pipeline_create_info.pInputAssemblyState = &input_assembly_state_create_info;
+    graphics_pipeline_create_info.pTessellationState  = nullptr;
+    graphics_pipeline_create_info.pViewportState      = &viewport_state_create_info;
+    graphics_pipeline_create_info.pRasterizationState = &rasterization_state_create_info;
+    graphics_pipeline_create_info.pMultisampleState   = &multisampling_state_create_info;
+    graphics_pipeline_create_info.pDepthStencilState  = nullptr;
+    graphics_pipeline_create_info.pColorBlendState    = &color_blend_state_create_info;
+    graphics_pipeline_create_info.pDynamicState       = &dynamic_state_create_info;
+    graphics_pipeline_create_info.layout              = vk_context->graphics_pipeline.layout;
+    graphics_pipeline_create_info.renderPass          = vk_context->vk_renderpass;
+    graphics_pipeline_create_info.subpass             = 0;
+    graphics_pipeline_create_info.basePipelineHandle  = VK_NULL_HANDLE;
+    graphics_pipeline_create_info.basePipelineIndex   = -1;
+
+    result = vkCreateGraphicsPipelines(vk_context->device.logical, VK_NULL_HANDLE, 1, &graphics_pipeline_create_info,
+                                       vk_context->vk_allocator, &vk_context->graphics_pipeline.handle);
     VK_CHECK(result);
 
     vkDestroyShaderModule(vk_context->device.logical, vert_shader_module, vk_context->vk_allocator);
