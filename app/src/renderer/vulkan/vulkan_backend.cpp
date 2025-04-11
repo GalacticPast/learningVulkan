@@ -5,6 +5,7 @@
 
 #include <vector>
 
+#include "renderer/vulkan/vulkan_graphics_pipeline.hpp"
 #include "renderer/vulkan/vulkan_swapchain.hpp"
 #include "vulkan_backend.hpp"
 #include "vulkan_device.hpp"
@@ -164,6 +165,12 @@ bool vulkan_backend_initialize(u64 *vulkan_backend_memory_requirements, applicat
         return false;
     }
 
+    if (!vulkan_create_graphics_pipeline(vulkan_context_ptr))
+    {
+        DERROR("Vulkan graphics pipline creation failed.");
+        return false;
+    }
+
     return true;
 }
 
@@ -210,6 +217,11 @@ bool vulkan_create_debug_messenger(VkDebugUtilsMessengerCreateInfoEXT *dbg_messe
 void vulkan_backend_shutdown()
 {
     DDEBUG("Shutting down vulkan...");
+    vkDestroyRenderPass(vulkan_context_ptr->device.logical, vulkan_context_ptr->vk_renderpass,
+                        vulkan_context_ptr->vk_allocator);
+
+    vkDestroyPipelineLayout(vulkan_context_ptr->device.logical, vulkan_context_ptr->graphics_pipeline_layout,
+                            vulkan_context_ptr->vk_allocator);
 
     for (u32 i = 0; i < vulkan_context_ptr->vk_swapchain.images_count; i++)
     {

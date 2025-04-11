@@ -59,6 +59,10 @@ struct vulkan_context
 
     vulkan_swapchain vk_swapchain;
 
+    VkPipelineLayout graphics_pipeline_layout;
+
+    VkRenderPass vk_renderpass;
+
     // INFO: maybe should be inside vulkan_device?
     VkQueue graphics_queue;
     VkQueue present_queue;

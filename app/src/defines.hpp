@@ -2,19 +2,19 @@
 #include <cstdint>
 
 // Unsigned int types.
-typedef uint8_t u8;
+typedef uint8_t  u8;
 typedef uint16_t u16;
 typedef uint32_t u32;
 typedef uint64_t u64;
 
 // Signed int types.
-typedef int8_t s8;
+typedef int8_t  s8;
 typedef int16_t s16;
 typedef int32_t s32;
 typedef int64_t s64;
 
 // Floating point types
-typedef float f32;
+typedef float  f32;
 typedef double f64;
 
 // Properly define static assertions.
@@ -29,6 +29,7 @@ typedef double f64;
  * and not actually pointing to a real object.
  */
 #define INVALID_ID 4294967295U
+#define INVALID_ID_64 18446744073709551615LLU
 
 // Platform detection
 #if defined(WIN32) || defined(_WIN32) || defined(__WIN32__)
