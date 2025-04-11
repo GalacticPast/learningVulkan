@@ -78,21 +78,36 @@ bool platform_system_startup(u64 *platform_mem_requirements, void *plat_state, a
     HDC dummy_device_context = GetDC(dummy_handle);
     // HDC dummy_device_context = 0 /*GetDC(dummy_handle) */;
 
-    u32 device_display_width  = 0;
-    u32 device_display_height = 0;
+    // u32 device_display_width  = 0;
+    // u32 device_display_height = 0;
 
-    // u32 device_display_width  = GetDeviceCaps(dummy_device_context, HORZRES);
-    // u32 device_display_height = GetDeviceCaps(dummy_device_context, VERTRES);
+    u32 device_display_width  = GetDeviceCaps(dummy_device_context, HORZRES);
+    u32 device_display_height = GetDeviceCaps(dummy_device_context, VERTRES);
 
     DDEBUG("Device display dimensions: Width_p: %d   Height_p: %d", device_display_width, device_display_height);
     // destroy dummy window
     DestroyWindow(dummy_handle);
 
+    u32 default_window_width  = 0;
+    u32 default_window_height = 0;
+
+    // TODO: make this configurable.
+    if (device_display_width == 2560 && device_display_height == 1440)
+    {
+        default_window_width  = 1280;
+        default_window_height = 720;
+    }
+    else
+    {
+        default_window_width  = 800;
+        default_window_height = 600;
+    }
+
     // Create window
-    u32 client_width  = app_config->width == INVALID_ID ? 800 : app_config->width;
-    u32 client_height = app_config->height == INVALID_ID ? 600 : app_config->height;
-    u32 client_x      = app_config->x == INVALID_ID ? device_display_width / 4 : app_config->x;
-    u32 client_y      = app_config->y == INVALID_ID ? device_display_height / 4 : app_config->y;
+    u32 client_width  = app_config->width == INVALID_ID ? default_window_width : app_config->width;
+    u32 client_height = app_config->height == INVALID_ID ? default_window_height : app_config->height;
+    u32 client_x      = app_config->x == INVALID_ID ? (device_display_width / 2) - (client_width / 2) : app_config->x;
+    u32 client_y      = app_config->y == INVALID_ID ? (device_display_height / 2) - (client_height / 2) : app_config->y;
 
     u32 window_x      = client_x;
     u32 window_y      = client_y;
@@ -378,7 +393,7 @@ LRESULT CALLBACK win32_process_message(HWND hwnd, u32 msg, WPARAM w_param, LPARA
     return DefWindowProcA(hwnd, msg, w_param, l_param);
 }
 
-bool platform_get_required_vulkan_extensions(u32 *platform_required_extensions_count, const char **extensions_array)
+bool vulkan_platform_get_required_vulkan_extensions(u32 *platform_required_extensions_count, const char **extensions_array)
 {
     *platform_required_extensions_count = 2;
     if (!extensions_array)
@@ -387,6 +402,22 @@ bool platform_get_required_vulkan_extensions(u32 *platform_required_extensions_c
     }
     extensions_array[0] = VK_KHR_SURFACE_EXTENSION_NAME;
     extensions_array[1] = VK_KHR_WIN32_SURFACE_EXTENSION_NAME;
+    return true;
+}
+bool vulkan_platform_create_surface(vulkan_context *vk_context)
+{
+    DDEBUG("Creating vulkan win32 surface...");
+    VkWin32SurfaceCreateInfoKHR surface_create_info{};
+
+    surface_create_info.sType     = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
+    surface_create_info.pNext     = nullptr;
+    surface_create_info.flags     = 0;
+    surface_create_info.hwnd      = platform_state_ptr->hwnd;
+    surface_create_info.hinstance = GetModuleHandle(nullptr);
+
+    VkResult result = vkCreateWin32SurfaceKHR(vk_context->vk_instance, &surface_create_info, vk_context->vk_allocator, &vk_context->vk_surface);
+    VK_CHECK(result);
+
     return true;
 }
 

@@ -36,10 +36,10 @@ bool vulkan_backend_initialize(u64 *vulkan_backend_memory_requirements, applicat
     app_info.sType              = VK_STRUCTURE_TYPE_APPLICATION_INFO;
     app_info.pNext              = nullptr;
     app_info.pApplicationName   = app_config->application_name;
-    app_info.applicationVersion = 0;
-    app_info.pEngineName        = 0;
-    app_info.engineVersion      = 0;
-    app_info.apiVersion         = 0;
+    app_info.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
+    app_info.pEngineName        = app_config->application_name;
+    app_info.engineVersion      = VK_MAKE_VERSION(1, 0, 0);
+    app_info.apiVersion         = VK_API_VERSION_1_3;
 
     bool enable_validation_layers = false;
     bool validation_layer_support = false;
@@ -57,37 +57,56 @@ bool vulkan_backend_initialize(u64 *vulkan_backend_memory_requirements, applicat
     }
 #endif
 
-    u32 enabled_layer_count = 0;
-    const char *enabled_layer_names[4];
+    vulkan_context_ptr->enabled_layer_count = 0;
 
     u32 index = 0;
     if (enable_validation_layers && validation_layer_support)
     {
-        enabled_layer_count++;
-        enabled_layer_names[index++] = "VK_LAYER_KHRONOS_validation";
+        vulkan_context_ptr->enabled_layer_count++;
+        vulkan_context_ptr->enabled_layer_names[index++] = "VK_LAYER_KHRONOS_validation";
     }
 
     // INFO: get platform specifig extensions and extensions count
     u32 vulkan_extensions_count = 0;
     const char *vulkan_extensions[32];
 
-    platform_get_required_vulkan_extensions(&vulkan_extensions_count, 0);
-    platform_get_required_vulkan_extensions(&vulkan_extensions_count, vulkan_extensions);
+#ifdef DEBUG
+    {
+        u32 dbg_vulkan_extensions_count = 0;
+        VkExtensionProperties dbg_extension_properties[256];
+
+        vkEnumerateInstanceExtensionProperties(0, &dbg_vulkan_extensions_count, 0);
+        vkEnumerateInstanceExtensionProperties(0, &dbg_vulkan_extensions_count, dbg_extension_properties);
+
+        for (u32 i = 0; i < dbg_vulkan_extensions_count; i++)
+        {
+            DDEBUG("Extension Name: %s", dbg_extension_properties[i].extensionName);
+        }
+    }
+#endif
+
+    vulkan_platform_get_required_vulkan_extensions(&vulkan_extensions_count, 0);
+    vulkan_platform_get_required_vulkan_extensions(&vulkan_extensions_count, vulkan_extensions);
 
 #if DEBUG
     vulkan_extensions[vulkan_extensions_count++] = VK_EXT_DEBUG_UTILS_EXTENSION_NAME;
+    vulkan_extensions[vulkan_extensions_count++] = VK_EXT_DEBUG_REPORT_EXTENSION_NAME;
 #endif
 
     // Instance info
     VkDebugUtilsMessengerCreateInfoEXT dbg_messenger_create_info{};
+
+#ifdef DEBUG
+    vulkan_create_debug_messenger(&dbg_messenger_create_info);
+#endif
 
     VkInstanceCreateInfo inst_create_info{};
 
     inst_create_info.sType                   = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
     inst_create_info.pNext                   = 0;
     inst_create_info.flags                   = 0;
-    inst_create_info.enabledLayerCount       = enabled_layer_count;
-    inst_create_info.ppEnabledLayerNames     = enabled_layer_names;
+    inst_create_info.enabledLayerCount       = vulkan_context_ptr->enabled_layer_count;
+    inst_create_info.ppEnabledLayerNames     = vulkan_context_ptr->enabled_layer_names;
     inst_create_info.enabledExtensionCount   = vulkan_extensions_count;
     inst_create_info.ppEnabledExtensionNames = vulkan_extensions;
     inst_create_info.pApplicationInfo        = &app_info;
@@ -105,9 +124,16 @@ bool vulkan_backend_initialize(u64 *vulkan_backend_memory_requirements, applicat
         }
     }
 
+    if (!vulkan_platform_create_surface(vulkan_context_ptr))
+    {
+        DERROR("Vulkan surface creation failed.");
+        return false;
+    }
+
     if (!vulkan_create_logical_device(vulkan_context_ptr))
     {
         DERROR("Vulkan logical device creation failed.");
+        return false;
     }
 
     return true;
@@ -121,8 +147,7 @@ bool vulkan_create_debug_messenger(VkDebugUtilsMessengerCreateInfoEXT *dbg_messe
     dbg_messenger_create_info->flags           = 0;
     dbg_messenger_create_info->messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT |
                                                  VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
-    dbg_messenger_create_info->messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT |
-                                             VK_DEBUG_UTILS_MESSAGE_TYPE_DEVICE_ADDRESS_BINDING_BIT_EXT;
+    dbg_messenger_create_info->messageType     = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
     dbg_messenger_create_info->pfnUserCallback = vulkan_dbg_msg_rprt_callback;
     dbg_messenger_create_info->pUserData       = nullptr;
 
@@ -152,6 +177,8 @@ void vulkan_backend_shutdown()
 {
     DDEBUG("Shutting down vulkan...");
 
+    vkDestroySurfaceKHR(vulkan_context_ptr->vk_instance, vulkan_context_ptr->vk_surface, vulkan_context_ptr->vk_allocator);
+
     // destroy logical device
     if (vulkan_context_ptr->device.physical_properties)
     {
@@ -161,6 +188,7 @@ void vulkan_backend_shutdown()
     {
         dfree(vulkan_context_ptr->device.physical_features, sizeof(VkPhysicalDeviceFeatures), MEM_TAG_RENDERER);
     }
+    vkDestroyDevice(vulkan_context_ptr->device.logical, vulkan_context_ptr->vk_allocator);
 
 #if DEBUG
     PFN_vkDestroyDebugUtilsMessengerEXT func_destroy_dbg_utils_messenger_ext =
@@ -190,6 +218,13 @@ bool vulkan_check_validation_layer_support()
 
     bool validation_layer_found = false;
 
+#ifdef DEBUG
+    for (u32 i = 0; i < inst_layer_properties_count; i++)
+    {
+        DDEBUG("Layer Name: %s | Desc: %s", inst_layer_properties[i].layerName, inst_layer_properties[i].description);
+    }
+#endif
+
     for (u32 i = 0; i < inst_layer_properties_count; i++)
     {
         if (string_compare(inst_layer_properties[i].layerName, validation_layer_name))
@@ -197,7 +232,6 @@ bool vulkan_check_validation_layer_support()
             validation_layer_found = true;
             break;
         }
-        // DDEBUG("Layer Name: %s | Desc: %s", inst_layer_properties[i].layerName, inst_layer_properties[i].description);
     }
     return validation_layer_found;
 }
