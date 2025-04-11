@@ -1,11 +1,13 @@
 BasedOnStyle: Microsoft
 AlignConsecutiveAssignments:
   Enabled: true
-ColumnLimit: 200
-AllowAllParametersOfDeclarationOnNextLine: false
-AllowShortCaseExpressionOnASingleLine: false
-AllowShortCompoundRequirementOnASingleLine: false
-AllowShortLambdasOnASingleLine: None
+  AcrossEmptyLines: true
+  AcrossComments: true
+  AlignCompound: true
+  AlignFunctionPointers: true
+AlignConsecutiveDeclarations:
+  Enabled: true
+  AlignCompound: true
 BraceWrapping:
   AfterCaseLabel: false
   AfterClass: true
@@ -25,4 +27,4 @@ BraceWrapping:
   SplitEmptyFunction: true
   SplitEmptyRecord: true
   SplitEmptyNamespace: true
-BreakTemplateDeclarations: No
+
