@@ -377,11 +377,11 @@ extern "C"
         /**
          * given wl_surface has another role
          */
-        XDG_WM_BASE_ERROR_ROLE = 0,
+        XDG_WM_BASE_ERROR_ROLE                  = 0,
         /**
          * xdg_wm_base was destroyed before children
          */
-        XDG_WM_BASE_ERROR_DEFUNCT_SURFACES = 1,
+        XDG_WM_BASE_ERROR_DEFUNCT_SURFACES      = 1,
         /**
          * the client tried to map or destroy a non-topmost popup
          */
@@ -389,7 +389,7 @@ extern "C"
         /**
          * the client specified an invalid popup parent surface
          */
-        XDG_WM_BASE_ERROR_INVALID_POPUP_PARENT = 3,
+        XDG_WM_BASE_ERROR_INVALID_POPUP_PARENT  = 3,
         /**
          * the client provided an invalid surface state
          */
@@ -397,11 +397,11 @@ extern "C"
         /**
          * the client provided an invalid positioner
          */
-        XDG_WM_BASE_ERROR_INVALID_POSITIONER = 5,
+        XDG_WM_BASE_ERROR_INVALID_POSITIONER    = 5,
         /**
          * the client didn’t respond to a ping event in time
          */
-        XDG_WM_BASE_ERROR_UNRESPONSIVE = 6,
+        XDG_WM_BASE_ERROR_UNRESPONSIVE          = 6,
     };
 #endif /* XDG_WM_BASE_ERROR_ENUM */
 
@@ -436,7 +436,7 @@ extern "C"
     /**
      * @ingroup iface_xdg_wm_base
      */
-    static inline int xdg_wm_base_add_listener(struct xdg_wm_base *xdg_wm_base,
+    static inline int xdg_wm_base_add_listener(struct xdg_wm_base                *xdg_wm_base,
                                                const struct xdg_wm_base_listener *listener, void *data)
     {
         return wl_proxy_add_listener((struct wl_proxy *)xdg_wm_base, (void (**)(void))listener, data);
@@ -537,7 +537,7 @@ extern "C"
      * xdg_surface is and how it is used.
      */
     static inline struct xdg_surface *xdg_wm_base_get_xdg_surface(struct xdg_wm_base *xdg_wm_base,
-                                                                  struct wl_surface *surface)
+                                                                  struct wl_surface  *surface)
     {
         struct wl_proxy *id;
 
@@ -629,7 +629,7 @@ extern "C"
          * Don't alter the surface position even if it is constrained on
          * some axis, for example partially outside the edge of an output.
          */
-        XDG_POSITIONER_CONSTRAINT_ADJUSTMENT_NONE = 0,
+        XDG_POSITIONER_CONSTRAINT_ADJUSTMENT_NONE     = 0,
         /**
          * move along the x axis until unconstrained
          *
@@ -646,7 +646,7 @@ extern "C"
          * gravity is unconstrained or the edge in the opposite direction
          * of the gravity is constrained.
          */
-        XDG_POSITIONER_CONSTRAINT_ADJUSTMENT_SLIDE_X = 1,
+        XDG_POSITIONER_CONSTRAINT_ADJUSTMENT_SLIDE_X  = 1,
         /**
          * move along the y axis until unconstrained
          *
@@ -663,7 +663,7 @@ extern "C"
          * gravity is unconstrained or the edge in the opposite direction
          * of the gravity is constrained.
          */
-        XDG_POSITIONER_CONSTRAINT_ADJUSTMENT_SLIDE_Y = 2,
+        XDG_POSITIONER_CONSTRAINT_ADJUSTMENT_SLIDE_Y  = 2,
         /**
          * invert the anchor and gravity on the x axis
          *
@@ -676,7 +676,7 @@ extern "C"
          * resulting position of the flip_x adjustment will be the one
          * before the adjustment.
          */
-        XDG_POSITIONER_CONSTRAINT_ADJUSTMENT_FLIP_X = 4,
+        XDG_POSITIONER_CONSTRAINT_ADJUSTMENT_FLIP_X   = 4,
         /**
          * invert the anchor and gravity on the y axis
          *
@@ -694,7 +694,7 @@ extern "C"
          * resulting position of the flip_y adjustment will be the one
          * before the adjustment.
          */
-        XDG_POSITIONER_CONSTRAINT_ADJUSTMENT_FLIP_Y = 8,
+        XDG_POSITIONER_CONSTRAINT_ADJUSTMENT_FLIP_Y   = 8,
         /**
          * horizontally resize the surface
          *
@@ -879,7 +879,7 @@ extern "C"
      * The default adjustment is none.
      */
     static inline void xdg_positioner_set_constraint_adjustment(struct xdg_positioner *xdg_positioner,
-                                                                uint32_t constraint_adjustment)
+                                                                uint32_t               constraint_adjustment)
     {
         wl_proxy_marshal_flags((struct wl_proxy *)xdg_positioner, XDG_POSITIONER_SET_CONSTRAINT_ADJUSTMENT, NULL,
                                wl_proxy_get_version((struct wl_proxy *)xdg_positioner), 0, constraint_adjustment);
@@ -961,7 +961,7 @@ extern "C"
         /**
          * Surface was not fully constructed
          */
-        XDG_SURFACE_ERROR_NOT_CONSTRUCTED = 1,
+        XDG_SURFACE_ERROR_NOT_CONSTRUCTED     = 1,
         /**
          * Surface was already constructed
          */
@@ -973,11 +973,11 @@ extern "C"
         /**
          * Invalid serial number when acking a configure event
          */
-        XDG_SURFACE_ERROR_INVALID_SERIAL = 4,
+        XDG_SURFACE_ERROR_INVALID_SERIAL      = 4,
         /**
          * Width or height was zero or negative
          */
-        XDG_SURFACE_ERROR_INVALID_SIZE = 5,
+        XDG_SURFACE_ERROR_INVALID_SIZE        = 5,
         /**
          * Surface was destroyed before its role object
          */
@@ -1021,7 +1021,7 @@ extern "C"
     /**
      * @ingroup iface_xdg_surface
      */
-    static inline int xdg_surface_add_listener(struct xdg_surface *xdg_surface,
+    static inline int xdg_surface_add_listener(struct xdg_surface                *xdg_surface,
                                                const struct xdg_surface_listener *listener, void *data)
     {
         return wl_proxy_add_listener((struct wl_proxy *)xdg_surface, (void (**)(void))listener, data);
@@ -1232,11 +1232,11 @@ extern "C"
         /**
          * invalid parent toplevel
          */
-        XDG_TOPLEVEL_ERROR_INVALID_PARENT = 1,
+        XDG_TOPLEVEL_ERROR_INVALID_PARENT      = 1,
         /**
          * client provided an invalid min or max size
          */
-        XDG_TOPLEVEL_ERROR_INVALID_SIZE = 2,
+        XDG_TOPLEVEL_ERROR_INVALID_SIZE        = 2,
     };
 #endif /* XDG_TOPLEVEL_ERROR_ENUM */
 
@@ -1289,7 +1289,7 @@ extern "C"
          * The client should draw without shadow or other decoration
          * outside of the window geometry.
          */
-        XDG_TOPLEVEL_STATE_MAXIMIZED = 1,
+        XDG_TOPLEVEL_STATE_MAXIMIZED    = 1,
         /**
          * the surface is fullscreen
          * the surface is fullscreen
@@ -1300,7 +1300,7 @@ extern "C"
          * the geometry dimensions must be obeyed by the client. For more
          * details, see xdg_toplevel.set_fullscreen.
          */
-        XDG_TOPLEVEL_STATE_FULLSCREEN = 2,
+        XDG_TOPLEVEL_STATE_FULLSCREEN   = 2,
         /**
          * the surface is being resized
          * the surface is being resized
@@ -1310,7 +1310,7 @@ extern "C"
          * beyond it. Clients that have aspect ratio or cell sizing
          * configuration can use a smaller size, however.
          */
-        XDG_TOPLEVEL_STATE_RESIZING = 3,
+        XDG_TOPLEVEL_STATE_RESIZING     = 3,
         /**
          * the surface is now activated
          * the surface is now activated
@@ -1319,7 +1319,7 @@ extern "C"
          * is active. Do not assume this means that the window actually has
          * keyboard or pointer focus.
          */
-        XDG_TOPLEVEL_STATE_ACTIVATED = 4,
+        XDG_TOPLEVEL_STATE_ACTIVATED    = 4,
         /**
          * the surface’s left edge is tiled
          *
@@ -1330,7 +1330,7 @@ extern "C"
          * outside of the window geometry on the left edge.
          * @since 2
          */
-        XDG_TOPLEVEL_STATE_TILED_LEFT = 5,
+        XDG_TOPLEVEL_STATE_TILED_LEFT   = 5,
         /**
          * the surface’s right edge is tiled
          *
@@ -1341,7 +1341,7 @@ extern "C"
          * outside of the window geometry on the right edge.
          * @since 2
          */
-        XDG_TOPLEVEL_STATE_TILED_RIGHT = 6,
+        XDG_TOPLEVEL_STATE_TILED_RIGHT  = 6,
         /**
          * the surface’s top edge is tiled
          *
@@ -1352,7 +1352,7 @@ extern "C"
          * outside of the window geometry on the top edge.
          * @since 2
          */
-        XDG_TOPLEVEL_STATE_TILED_TOP = 7,
+        XDG_TOPLEVEL_STATE_TILED_TOP    = 7,
         /**
          * the surface’s bottom edge is tiled
          *
@@ -1372,7 +1372,7 @@ extern "C"
          * its outputs are switched off due to screen locking.
          * @since 6
          */
-        XDG_TOPLEVEL_STATE_SUSPENDED = 9,
+        XDG_TOPLEVEL_STATE_SUSPENDED    = 9,
     };
 /**
  * @ingroup iface_xdg_toplevel
@@ -1407,15 +1407,15 @@ extern "C"
         /**
          * set_maximized and unset_maximized are available
          */
-        XDG_TOPLEVEL_WM_CAPABILITIES_MAXIMIZE = 2,
+        XDG_TOPLEVEL_WM_CAPABILITIES_MAXIMIZE    = 2,
         /**
          * set_fullscreen and unset_fullscreen are available
          */
-        XDG_TOPLEVEL_WM_CAPABILITIES_FULLSCREEN = 3,
+        XDG_TOPLEVEL_WM_CAPABILITIES_FULLSCREEN  = 3,
         /**
          * set_minimized is available
          */
-        XDG_TOPLEVEL_WM_CAPABILITIES_MINIMIZE = 4,
+        XDG_TOPLEVEL_WM_CAPABILITIES_MINIMIZE    = 4,
     };
 #endif /* XDG_TOPLEVEL_WM_CAPABILITIES_ENUM */
 
@@ -1520,7 +1520,7 @@ extern "C"
     /**
      * @ingroup iface_xdg_toplevel
      */
-    static inline int xdg_toplevel_add_listener(struct xdg_toplevel *xdg_toplevel,
+    static inline int xdg_toplevel_add_listener(struct xdg_toplevel                *xdg_toplevel,
                                                 const struct xdg_toplevel_listener *listener, void *data)
     {
         return wl_proxy_add_listener((struct wl_proxy *)xdg_toplevel, (void (**)(void))listener, data);

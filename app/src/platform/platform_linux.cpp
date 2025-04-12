@@ -548,6 +548,8 @@ keys translate_keycode(u32 xk_keycode)
     }
 //
 #include "core/application.hpp"
+#include "core/event.hpp"
+#include "core/input.hpp"
 
 #include "wayland/xdg-shell-client-protocol.h"
 #include <wayland-client.h>
@@ -593,7 +595,7 @@ typedef struct platform_state
 
 static struct platform_state *platform_state_ptr;
 
-u32 translate_keycode(xkb_keysym_t xkb_sym);
+keys translate_keycode(xkb_keysym_t xkb_sym);
 
 // keyboard
 
@@ -625,13 +627,13 @@ static void wl_keyboard_enter(void *data, struct wl_keyboard *wl_keyboard, u32 s
 static void wl_keyboard_key(void *data, struct wl_keyboard *wl_keyboard, u32 serial, u32 time, u32 key, u32 state)
 {
 
-    // uint32_t keycode = key + 8;
+    uint32_t keycode = key + 8;
 
-    // xkb_keysym_t sym = xkb_state_key_get_one_sym(platform_state_ptr->xkb_state, keycode);
+    xkb_keysym_t sym = xkb_state_key_get_one_sym(platform_state_ptr->xkb_state, keycode);
 
-    // keys code = translate_keycode(sym);
+    keys code        = translate_keycode(sym);
 
-    // input_process_key(code, (bool)state);
+    input_process_key(code, (bool)state);
 }
 
 static void wl_keyboard_leave(void *data, struct wl_keyboard *wl_keyboard, u32 serial, struct wl_surface *surface)
@@ -663,7 +665,6 @@ static void wl_seat_capabilites(void *data, struct wl_seat *wl_seat, u32 capabil
 
     // TODO: mouse events
     //
-
     bool have_keyboard = capabilities & WL_SEAT_CAPABILITY_KEYBOARD;
 
     if (have_keyboard && platform_state_ptr->wl_keyboard == NULL)
@@ -687,10 +688,23 @@ struct wl_seat_listener wl_seat_listener = {.capabilities = wl_seat_capabilites,
 static void xdg_toplevel_configure(void *data, struct xdg_toplevel *xdg_toplevel, s32 width, s32 height,
                                    struct wl_array *states)
 {
+    if (width != 0 && height != 0)
+    {
+        platform_state_ptr->width  = width;
+        platform_state_ptr->height = height;
+
+        event_context context{};
+        context.data.u32[0] = width;
+        context.data.u32[1] = height;
+
+        event_fire(EVENT_CODE_APPLICATION_RESIZED, context);
+    }
 }
 
 static void xdg_toplevel_close(void *data, struct xdg_toplevel *xdg_toplevel)
 {
+    event_context context{};
+    event_fire(EVENT_CODE_APPLICATION_QUIT, context);
 }
 
 static void xdg_toplevel_configure_bounds(void *data, struct xdg_toplevel *xdg_toplevel, int32_t width, int32_t height)
@@ -869,6 +883,10 @@ bool vulkan_platform_create_surface(vulkan_context *vk_context)
     VK_CHECK(result);
 
     return true;
+}
+
+keys translate_keycode(xkb_keysym_t xkb_sym)
+{
 }
 
 #endif
