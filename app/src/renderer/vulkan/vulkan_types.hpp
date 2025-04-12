@@ -33,11 +33,17 @@ struct vulkan_image
     VkFormat     format;
 };
 
+struct vulkan_framebuffer
+{
+    VkFramebuffer handle;
+};
+
 struct vulkan_swapchain
 {
 
-    VkSwapchainKHR handle;
-    VkExtent2D     surface_extent;
+    VkSwapchainKHR      handle;
+    VkExtent2D          surface_extent;
+    vulkan_framebuffer *buffers;
 
     u32 curr_img_index;
 
@@ -69,7 +75,7 @@ struct vulkan_context
 
     vulkan_pipeline graphics_pipeline;
 
-    // INFO: maybe should be inside vulkan_device?
+    // INFO: maybe should be inside vulkan_device??
     VkQueue graphics_queue;
     VkQueue present_queue;
 
