@@ -26,7 +26,11 @@ bool file_open_and_read(const char *file_name, u64 *buffer_size_requirements, ch
         io_stream_flags |= std::ios::binary;
     }
 
+#ifdef DPLATFORM_WINODWS
     std::ifstream file(full_file_path, io_stream_flags);
+#elif DPLATFORM_LINUX
+    std::ifstream file(full_file_path);
+#endif
 
     if (!file.is_open())
     {

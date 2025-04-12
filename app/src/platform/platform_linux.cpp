@@ -31,12 +31,12 @@
 
 typedef struct platform_state
 {
-    Display *display;
+    Display          *display;
     xcb_connection_t *connection;
-    xcb_window_t window;
-    xcb_screen_t *screen;
-    xcb_atom_t wm_protocols;
-    xcb_atom_t wm_delete_win;
+    xcb_window_t      window;
+    xcb_screen_t     *screen;
+    xcb_atom_t        wm_protocols;
+    xcb_atom_t        wm_delete_win;
 
     u32 width;
     u32 height;
@@ -47,14 +47,15 @@ static platform_state *platform_state_ptr;
 // Key translation
 keys translate_keycode(u32 wl_keycode);
 
-bool platform_startup(u64 *platform_mem_requirements, void *plat_state, const char *application_name, s32 x, s32 y, s32 width, s32 height)
+bool platform_startup(u64 *platform_mem_requirements, void *plat_state, const char *application_name, s32 x, s32 y,
+                      s32 width, s32 height)
 {
     *platform_mem_requirements = sizeof(platform_state);
     if (plat_state == 0)
     {
         return true;
     }
-    platform_state_ptr = plat_state;
+    platform_state_ptr          = plat_state;
 
     // Connect to X
     platform_state_ptr->display = XOpenDisplay(NULL);
@@ -75,8 +76,8 @@ bool platform_startup(u64 *platform_mem_requirements, void *plat_state, const ch
     const struct xcb_setup_t *setup = xcb_get_setup(platform_state_ptr->connection);
 
     // Loop through screens using iterator
-    xcb_screen_iterator_t it = xcb_setup_roots_iterator(setup);
-    s32 screen_p             = 0;
+    xcb_screen_iterator_t it        = xcb_setup_roots_iterator(setup);
+    s32                   screen_p  = 0;
     for (s32 s = screen_p; s > 0; s--)
     {
         xcb_screen_next(&it);
@@ -91,14 +92,15 @@ bool platform_startup(u64 *platform_mem_requirements, void *plat_state, const ch
     // Register event types.
     // XCB_CW_BACK_PIXEL = filling then window bg with a single color
     // XCB_CW_EVENT_MASK is required.
-    u32 event_mask = XCB_CW_BACK_PIXEL | XCB_CW_EVENT_MASK;
+    u32 event_mask             = XCB_CW_BACK_PIXEL | XCB_CW_EVENT_MASK;
 
     // Listen for keyboard and mouse buttons
-    u32 event_values = XCB_EVENT_MASK_BUTTON_PRESS | XCB_EVENT_MASK_BUTTON_RELEASE | XCB_EVENT_MASK_KEY_PRESS | XCB_EVENT_MASK_KEY_RELEASE | XCB_EVENT_MASK_EXPOSURE | XCB_EVENT_MASK_POINTER_MOTION |
+    u32 event_values = XCB_EVENT_MASK_BUTTON_PRESS | XCB_EVENT_MASK_BUTTON_RELEASE | XCB_EVENT_MASK_KEY_PRESS |
+                       XCB_EVENT_MASK_KEY_RELEASE | XCB_EVENT_MASK_EXPOSURE | XCB_EVENT_MASK_POINTER_MOTION |
                        XCB_EVENT_MASK_STRUCTURE_NOTIFY;
 
     // Values to be sent over XCB (bg color, events)
-    u32 value_list[] = {platform_state_ptr->screen->black_pixel, event_values};
+    u32 value_list[]         = {platform_state_ptr->screen->black_pixel, event_values};
 
     // Create the window
     xcb_void_cookie_t cookie = xcb_create_window(platform_state_ptr->connection,
@@ -114,20 +116,26 @@ bool platform_startup(u64 *platform_mem_requirements, void *plat_state, const ch
                                                  platform_state_ptr->screen->root_visual, event_mask, value_list);
 
     // Change the title
-    xcb_change_property(platform_state_ptr->connection, XCB_PROP_MODE_REPLACE, platform_state_ptr->window, XCB_ATOM_WM_NAME, XCB_ATOM_STRING,
+    xcb_change_property(platform_state_ptr->connection, XCB_PROP_MODE_REPLACE, platform_state_ptr->window,
+                        XCB_ATOM_WM_NAME, XCB_ATOM_STRING,
                         8, // data should be viewed 8 bits at a time
                         strlen(application_name), application_name);
 
     // Tell the server to notify when the window manager
     // attempts to destroy the window.
-    xcb_intern_atom_cookie_t wm_delete_cookie    = xcb_intern_atom(platform_state_ptr->connection, 0, strlen("WM_DELETE_WINDOW"), "WM_DELETE_WINDOW");
-    xcb_intern_atom_cookie_t wm_protocols_cookie = xcb_intern_atom(platform_state_ptr->connection, 0, strlen("WM_PROTOCOLS"), "WM_PROTOCOLS");
-    xcb_intern_atom_reply_t *wm_delete_reply     = xcb_intern_atom_reply(platform_state_ptr->connection, wm_delete_cookie, NULL);
-    xcb_intern_atom_reply_t *wm_protocols_reply  = xcb_intern_atom_reply(platform_state_ptr->connection, wm_protocols_cookie, NULL);
-    platform_state_ptr->wm_delete_win            = wm_delete_reply->atom;
-    platform_state_ptr->wm_protocols             = wm_protocols_reply->atom;
+    xcb_intern_atom_cookie_t wm_delete_cookie =
+        xcb_intern_atom(platform_state_ptr->connection, 0, strlen("WM_DELETE_WINDOW"), "WM_DELETE_WINDOW");
+    xcb_intern_atom_cookie_t wm_protocols_cookie =
+        xcb_intern_atom(platform_state_ptr->connection, 0, strlen("WM_PROTOCOLS"), "WM_PROTOCOLS");
+    xcb_intern_atom_reply_t *wm_delete_reply =
+        xcb_intern_atom_reply(platform_state_ptr->connection, wm_delete_cookie, NULL);
+    xcb_intern_atom_reply_t *wm_protocols_reply =
+        xcb_intern_atom_reply(platform_state_ptr->connection, wm_protocols_cookie, NULL);
+    platform_state_ptr->wm_delete_win = wm_delete_reply->atom;
+    platform_state_ptr->wm_protocols  = wm_protocols_reply->atom;
 
-    xcb_change_property(platform_state_ptr->connection, XCB_PROP_MODE_REPLACE, platform_state_ptr->window, wm_protocols_reply->atom, 4, 32, 1, &wm_delete_reply->atom);
+    xcb_change_property(platform_state_ptr->connection, XCB_PROP_MODE_REPLACE, platform_state_ptr->window,
+                        wm_protocols_reply->atom, 4, 32, 1, &wm_delete_reply->atom);
 
     // Map the window to the screen
     xcb_map_window(platform_state_ptr->connection, platform_state_ptr->window);
@@ -155,7 +163,7 @@ void platform_shutdown()
 bool platform_pump_messages()
 {
 
-    xcb_generic_event_t *event;
+    xcb_generic_event_t        *event;
     xcb_client_message_event_t *cm;
 
     bool quit_flagged = false;
@@ -176,13 +184,13 @@ bool platform_pump_messages()
         case XCB_KEY_RELEASE: {
             // Key press event - xcb_key_press_event_t and xcb_key_release_event_t are the same
             xcb_key_press_event_t *kb_event = (xcb_key_press_event_t *)event;
-            bool pressed                    = event->response_type == XCB_KEY_PRESS;
-            xcb_keycode_t code              = kb_event->detail;
-            KeySym key_sym                  = XkbKeycodeToKeysym(platform_state_ptr->display,
+            bool                   pressed  = event->response_type == XCB_KEY_PRESS;
+            xcb_keycode_t          code     = kb_event->detail;
+            KeySym                 key_sym  = XkbKeycodeToKeysym(platform_state_ptr->display,
                                                                  (KeyCode)code, // event.xkey.keycode,
                                                                  0, code & ShiftMask ? 1 : 0);
 
-            keys key = translate_keycode(key_sym);
+            keys key                        = translate_keycode(key_sym);
 
             // Pass to the input subsystem for processing.
             input_process_key(key, pressed);
@@ -190,9 +198,9 @@ bool platform_pump_messages()
         break;
         case XCB_BUTTON_PRESS:
         case XCB_BUTTON_RELEASE: {
-            xcb_button_press_event_t *mouse_event = (xcb_button_press_event_t *)event;
-            bool pressed                          = event->response_type == XCB_BUTTON_PRESS;
-            buttons mouse_button                  = BUTTON_MAX_BUTTONS;
+            xcb_button_press_event_t *mouse_event  = (xcb_button_press_event_t *)event;
+            bool                      pressed      = event->response_type == XCB_BUTTON_PRESS;
+            buttons                   mouse_button = BUTTON_MAX_BUTTONS;
             switch (mouse_event->detail)
             {
             case XCB_BUTTON_INDEX_1:
@@ -534,9 +542,9 @@ keys translate_keycode(u32 xk_keycode)
 
 #ifdef DPLATFORM_LINUX_WAYLAND
 
-#define CHECK_WL_RESULT(expr)                                                                                                                                                                          \
-    {                                                                                                                                                                                                  \
-        DASSERT(expr != 0);                                                                                                                                                                            \
+#define CHECK_WL_RESULT(expr)                                                                                          \
+    {                                                                                                                  \
+        DASSERT(expr != 0);                                                                                            \
     }
 //
 #include "core/application.hpp"
@@ -559,24 +567,24 @@ keys translate_keycode(u32 xk_keycode)
 typedef struct platform_state
 {
     /* Globals */
-    struct wl_display *wl_display;
-    struct wl_registry *wl_registry;
-    struct wl_shm *wl_shm;
-    struct wl_seat *wl_seat;
+    struct wl_display    *wl_display;
+    struct wl_registry   *wl_registry;
+    struct wl_shm        *wl_shm;
+    struct wl_seat       *wl_seat;
     struct wl_compositor *wl_compositor;
-    struct xdg_wm_base *xdg_wm_base;
+    struct xdg_wm_base   *xdg_wm_base;
 
     /* Objects */
-    struct wl_surface *wl_surface;
-    struct xdg_surface *xdg_surface;
+    struct wl_surface   *wl_surface;
+    struct xdg_surface  *xdg_surface;
     struct xdg_toplevel *xdg_toplevel;
 
     /* input */
     struct wl_keyboard *wl_keyboard;
-    struct wl_mouse *wl_mouse;
-    struct xkb_state *xkb_state;
+    struct wl_mouse    *wl_mouse;
+    struct xkb_state   *xkb_state;
     struct xkb_context *xkb_context;
-    struct xkb_keymap *xkb_keymap;
+    struct xkb_keymap  *xkb_keymap;
 
     /* dimensions */
     u32 width;
@@ -596,7 +604,8 @@ static void wl_keyboard_keymap(void *data, struct wl_keyboard *wl_keyboard, u32 
     char *map_shm = (char *)mmap(NULL, size, PROT_READ, MAP_SHARED, fd, 0);
     DASSERT(map_shm != MAP_FAILED);
 
-    struct xkb_keymap *xkb_keymap = xkb_keymap_new_from_string(platform_state_ptr->xkb_context, map_shm, XKB_KEYMAP_FORMAT_TEXT_V1, XKB_KEYMAP_COMPILE_NO_FLAGS);
+    struct xkb_keymap *xkb_keymap = xkb_keymap_new_from_string(platform_state_ptr->xkb_context, map_shm,
+                                                               XKB_KEYMAP_FORMAT_TEXT_V1, XKB_KEYMAP_COMPILE_NO_FLAGS);
     munmap(map_shm, size);
     close(fd);
 
@@ -607,7 +616,8 @@ static void wl_keyboard_keymap(void *data, struct wl_keyboard *wl_keyboard, u32 
     platform_state_ptr->xkb_state  = xkb_state;
 }
 
-static void wl_keyboard_enter(void *data, struct wl_keyboard *wl_keyboard, u32 serial, struct wl_surface *surface, struct wl_array *keys)
+static void wl_keyboard_enter(void *data, struct wl_keyboard *wl_keyboard, u32 serial, struct wl_surface *surface,
+                              struct wl_array *keys)
 {
     DDEBUG("Keyboard in scope");
 }
@@ -629,7 +639,8 @@ static void wl_keyboard_leave(void *data, struct wl_keyboard *wl_keyboard, u32 s
     DDEBUG("Mouse not in scope");
 }
 
-static void wl_keyboard_modifiers(void *data, struct wl_keyboard *wl_keyboard, u32 serial, u32 mods_depressed, u32 mods_latched, u32 mods_locked, u32 group)
+static void wl_keyboard_modifiers(void *data, struct wl_keyboard *wl_keyboard, u32 serial, u32 mods_depressed,
+                                  u32 mods_latched, u32 mods_locked, u32 group)
 {
 }
 
@@ -673,7 +684,8 @@ static void wl_seat_name(void *data, struct wl_seat *wl_seat, const char *name)
 struct wl_seat_listener wl_seat_listener = {.capabilities = wl_seat_capabilites, .name = wl_seat_name};
 
 // actual surface
-static void xdg_toplevel_configure(void *data, struct xdg_toplevel *xdg_toplevel, s32 width, s32 height, struct wl_array *states)
+static void xdg_toplevel_configure(void *data, struct xdg_toplevel *xdg_toplevel, s32 width, s32 height,
+                                   struct wl_array *states)
 {
 }
 
@@ -720,11 +732,13 @@ static void registry_global(void *data, struct wl_registry *wl_registry, u32 nam
     // DDEBUG("Print to see the version code for specific interfaces: Interface:%s Version:%d", interface, version);
     if (strcmp(interface, wl_compositor_interface.name) == 0)
     {
-        platform_state_ptr->wl_compositor = (wl_compositor *)wl_registry_bind(wl_registry, name, &wl_compositor_interface, version);
+        platform_state_ptr->wl_compositor =
+            (wl_compositor *)wl_registry_bind(wl_registry, name, &wl_compositor_interface, version);
     }
     else if (strcmp(interface, xdg_wm_base_interface.name) == 0)
     {
-        platform_state_ptr->xdg_wm_base = (xdg_wm_base *)wl_registry_bind(wl_registry, name, &xdg_wm_base_interface, version);
+        platform_state_ptr->xdg_wm_base =
+            (xdg_wm_base *)wl_registry_bind(wl_registry, name, &xdg_wm_base_interface, version);
         xdg_wm_base_add_listener(platform_state_ptr->xdg_wm_base, &xdg_wm_base_listener, platform_state_ptr);
     }
     else if (strcmp(interface, wl_seat_interface.name) == 0)
@@ -753,7 +767,7 @@ bool platform_system_startup(u64 *platform_mem_requirements, void *plat_state, a
     }
     DINFO("Initializing linux-Wayland platform...");
 
-    platform_state_ptr = (platform_state *)plat_state;
+    platform_state_ptr             = (platform_state *)plat_state;
 
     platform_state_ptr->wl_display = wl_display_connect(NULL);
     if (!platform_state_ptr->wl_display)
@@ -783,7 +797,8 @@ bool platform_system_startup(u64 *platform_mem_requirements, void *plat_state, a
         return false;
     }
 
-    platform_state_ptr->xdg_surface = xdg_wm_base_get_xdg_surface(platform_state_ptr->xdg_wm_base, platform_state_ptr->wl_surface);
+    platform_state_ptr->xdg_surface =
+        xdg_wm_base_get_xdg_surface(platform_state_ptr->xdg_wm_base, platform_state_ptr->wl_surface);
     if (!platform_state_ptr->xdg_surface)
     {
         return false;
@@ -831,15 +846,28 @@ void platform_get_window_dimensions(u32 *width, u32 *height)
     *height = platform_state_ptr->height == 0 ? 800 : platform_state_ptr->height;
 }
 
-bool platform_get_required_vulkan_extensions(u32 *platform_required_extensions_count, const char **extensions_array)
+bool vulkan_platform_get_required_vulkan_extensions(std::vector<const char *> &extensions_array)
 {
-    *platform_required_extensions_count = 2;
-    if (!extensions_array)
-    {
-        return true;
-    }
-    extensions_array[0] = VK_KHR_SURFACE_EXTENSION_NAME;
-    extensions_array[1] = VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME;
+    extensions_array.push_back(VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME);
+    return true;
+}
+
+bool vulkan_platform_create_surface(vulkan_context *vk_context)
+{
+    DDEBUG("Creating vulkan wayland surface...");
+
+    VkWaylandSurfaceCreateInfoKHR vulkan_wayland_surface_create_info{};
+
+    vulkan_wayland_surface_create_info.sType   = VK_STRUCTURE_TYPE_WAYLAND_SURFACE_CREATE_INFO_KHR;
+    vulkan_wayland_surface_create_info.pNext   = nullptr;
+    vulkan_wayland_surface_create_info.flags   = 0;
+    vulkan_wayland_surface_create_info.display = platform_state_ptr->wl_display;
+    vulkan_wayland_surface_create_info.surface = platform_state_ptr->wl_surface;
+
+    VkResult result = vkCreateWaylandSurfaceKHR(vk_context->vk_instance, &vulkan_wayland_surface_create_info,
+                                                vk_context->vk_allocator, &vk_context->vk_surface);
+    VK_CHECK(result);
+
     return true;
 }
 

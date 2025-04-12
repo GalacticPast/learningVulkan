@@ -86,11 +86,11 @@ bool vulkan_create_swapchain(vulkan_context *vk_context)
 
     if (enabled_queue_family_count == 1)
     {
-        best_image_sharing_mode = VK_SHARING_MODE_CONCURRENT;
+        best_image_sharing_mode = VK_SHARING_MODE_EXCLUSIVE;
     }
     else
     {
-        best_image_sharing_mode = VK_SHARING_MODE_EXCLUSIVE;
+        best_image_sharing_mode = VK_SHARING_MODE_CONCURRENT;
     }
 
     VkSwapchainCreateInfoKHR swapchain_create_info{};
