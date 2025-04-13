@@ -28,7 +28,7 @@ bool vulkan_create_framebuffers(vulkan_context *vk_context)
         framebuffer_create_info.height          = vk_context->vk_swapchain.surface_extent.height;
         framebuffer_create_info.layers          = 1;
 
-        VkResult result = vkCreateFramebuffer(vk_context->device.logical, &framebuffer_create_info,
+        VkResult result = vkCreateFramebuffer(vk_context->vk_device.logical, &framebuffer_create_info,
                                               vk_context->vk_allocator, &buffers[i].handle);
         VK_CHECK(result);
     }

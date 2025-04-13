@@ -15,6 +15,11 @@ bool vulkan_create_graphics_pipeline(vulkan_context *vk_context)
     const char *vert_shader_file_name                     = "default_shader.vert.spv";
 
     file_open_and_read(vert_shader_file_name, &vert_shader_code_buffer_size_requirements, 0, 1);
+    if (vert_shader_code_buffer_size_requirements == INVALID_ID_64)
+    {
+        DFATAL("File size error");
+        return false;
+    }
     vert_shader_code = (char *)dallocate(vert_shader_code_buffer_size_requirements, MEM_TAG_RENDERER);
     file_open_and_read(vert_shader_file_name, &vert_shader_code_buffer_size_requirements, vert_shader_code, 1);
 
@@ -165,52 +170,8 @@ bool vulkan_create_graphics_pipeline(vulkan_context *vk_context)
     pipeline_layout_create_info.pushConstantRangeCount = 0;
     pipeline_layout_create_info.pPushConstantRanges    = nullptr;
 
-    VkResult result = vkCreatePipelineLayout(vk_context->device.logical, &pipeline_layout_create_info,
-                                             vk_context->vk_allocator, &vk_context->graphics_pipeline.layout);
-    VK_CHECK(result);
-
-    // create render pass
-    VkAttachmentDescription color_attachment{};
-    color_attachment.flags          = 0;
-    color_attachment.format         = vk_context->vk_swapchain.vk_images.format;
-    color_attachment.samples        = VK_SAMPLE_COUNT_1_BIT;
-    color_attachment.loadOp         = VK_ATTACHMENT_LOAD_OP_CLEAR;
-    color_attachment.storeOp        = VK_ATTACHMENT_STORE_OP_STORE;
-    color_attachment.stencilLoadOp  = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-    color_attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-    color_attachment.initialLayout  = VK_IMAGE_LAYOUT_UNDEFINED;
-    color_attachment.finalLayout    = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-
-    VkAttachmentReference color_attachment_reference{};
-    color_attachment_reference.attachment = 0;
-    color_attachment_reference.layout     = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-
-    VkSubpassDescription subpass_desc{};
-    subpass_desc.flags                   = 0;
-    subpass_desc.pipelineBindPoint       = VK_PIPELINE_BIND_POINT_GRAPHICS;
-    subpass_desc.inputAttachmentCount    = 0;
-    subpass_desc.pInputAttachments       = nullptr;
-    subpass_desc.colorAttachmentCount    = 1;
-    subpass_desc.pColorAttachments       = &color_attachment_reference;
-    subpass_desc.pResolveAttachments     = nullptr;
-    subpass_desc.pDepthStencilAttachment = nullptr;
-    subpass_desc.preserveAttachmentCount = 0;
-    subpass_desc.pPreserveAttachments    = nullptr;
-
-    VkRenderPassCreateInfo render_pass_create_info{};
-    render_pass_create_info.sType           = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-    render_pass_create_info.pNext           = 0;
-    render_pass_create_info.flags           = 0;
-    render_pass_create_info.attachmentCount = 1;
-    render_pass_create_info.pAttachments    = &color_attachment;
-    render_pass_create_info.subpassCount    = 1;
-    render_pass_create_info.pSubpasses      = &subpass_desc;
-    render_pass_create_info.dependencyCount = 0;
-    render_pass_create_info.pDependencies   = nullptr;
-
-    result = vkCreateRenderPass(vk_context->device.logical, &render_pass_create_info, vk_context->vk_allocator,
-                                &vk_context->vk_renderpass);
-
+    VkResult result = vkCreatePipelineLayout(vk_context->vk_device.logical, &pipeline_layout_create_info,
+                                             vk_context->vk_allocator, &vk_context->vk_graphics_pipeline.layout);
     VK_CHECK(result);
 
     VkGraphicsPipelineCreateInfo graphics_pipeline_create_info{};
@@ -228,18 +189,18 @@ bool vulkan_create_graphics_pipeline(vulkan_context *vk_context)
     graphics_pipeline_create_info.pDepthStencilState  = nullptr;
     graphics_pipeline_create_info.pColorBlendState    = &color_blend_state_create_info;
     graphics_pipeline_create_info.pDynamicState       = &dynamic_state_create_info;
-    graphics_pipeline_create_info.layout              = vk_context->graphics_pipeline.layout;
+    graphics_pipeline_create_info.layout              = vk_context->vk_graphics_pipeline.layout;
     graphics_pipeline_create_info.renderPass          = vk_context->vk_renderpass;
     graphics_pipeline_create_info.subpass             = 0;
     graphics_pipeline_create_info.basePipelineHandle  = VK_NULL_HANDLE;
     graphics_pipeline_create_info.basePipelineIndex   = -1;
 
-    result = vkCreateGraphicsPipelines(vk_context->device.logical, VK_NULL_HANDLE, 1, &graphics_pipeline_create_info,
-                                       vk_context->vk_allocator, &vk_context->graphics_pipeline.handle);
+    result = vkCreateGraphicsPipelines(vk_context->vk_device.logical, VK_NULL_HANDLE, 1, &graphics_pipeline_create_info,
+                                       vk_context->vk_allocator, &vk_context->vk_graphics_pipeline.handle);
     VK_CHECK(result);
 
-    vkDestroyShaderModule(vk_context->device.logical, vert_shader_module, vk_context->vk_allocator);
-    vkDestroyShaderModule(vk_context->device.logical, frag_shader_module, vk_context->vk_allocator);
+    vkDestroyShaderModule(vk_context->vk_device.logical, vert_shader_module, vk_context->vk_allocator);
+    vkDestroyShaderModule(vk_context->vk_device.logical, frag_shader_module, vk_context->vk_allocator);
 
     return true;
 }
@@ -256,7 +217,7 @@ VkShaderModule create_shader_module(vulkan_context *vk_context, const char *shad
 
     VkShaderModule shader_module{};
 
-    VkResult result = vkCreateShaderModule(vk_context->device.logical, &shader_module_create_info,
+    VkResult result = vkCreateShaderModule(vk_context->vk_device.logical, &shader_module_create_info,
                                            vk_context->vk_allocator, &shader_module);
     VK_CHECK(result);
 

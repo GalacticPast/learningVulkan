@@ -5,12 +5,15 @@
 
 #include <vector>
 
-#include "renderer/vulkan/vulkan_framebuffer.hpp"
-#include "renderer/vulkan/vulkan_graphics_pipeline.hpp"
-#include "renderer/vulkan/vulkan_swapchain.hpp"
+#include "renderer/vulkan/vulkan_renderpass.hpp"
 #include "vulkan_backend.hpp"
+#include "vulkan_command_buffers.hpp"
 #include "vulkan_device.hpp"
+#include "vulkan_framebuffer.hpp"
+#include "vulkan_graphics_pipeline.hpp"
 #include "vulkan_platform.hpp"
+#include "vulkan_swapchain.hpp"
+#include "vulkan_sync_objects.hpp"
 #include "vulkan_types.hpp"
 
 static vulkan_context *vulkan_context_ptr;
@@ -88,13 +91,13 @@ bool vulkan_backend_initialize(u64 *vulkan_backend_memory_requirements, applicat
 
     // check for extensions support
 #ifdef DEBUG
-    {
+    //{
 
-        for (u32 i = 0; i < dbg_vulkan_instance_extensions_count; i++)
-        {
-            DDEBUG("Extension Name: %s", dbg_instance_extension_properties[i].extensionName);
-        }
-    }
+    //    for (u32 i = 0; i < dbg_vulkan_instance_extensions_count; i++)
+    //    {
+    //        DDEBUG("Extension Name: %s", dbg_instance_extension_properties[i].extensionName);
+    //    }
+    //}
 #endif
 
     for (u32 i = 0; i < vulkan_instance_extensions.size(); i++)
@@ -166,6 +169,12 @@ bool vulkan_backend_initialize(u64 *vulkan_backend_memory_requirements, applicat
         return false;
     }
 
+    if (!vulkan_create_renderpass(vulkan_context_ptr))
+    {
+        DERROR("Vulkan renderpass creation failed.");
+        return false;
+    }
+
     if (!vulkan_create_graphics_pipeline(vulkan_context_ptr))
     {
         DERROR("Vulkan graphics pipline creation failed.");
@@ -175,6 +184,24 @@ bool vulkan_backend_initialize(u64 *vulkan_backend_memory_requirements, applicat
     if (!vulkan_create_framebuffers(vulkan_context_ptr))
     {
         DERROR("Vulkan framebuffer creation failed.");
+        return false;
+    }
+
+    if (!vulkan_create_command_pool(vulkan_context_ptr))
+    {
+        DERROR("Vulkan command pool creation failed.");
+        return false;
+    }
+
+    if (!vulkan_create_command_buffer(vulkan_context_ptr, &vulkan_context_ptr->graphics_command_pool))
+    {
+        DERROR("Vulkan command buffer creation failed.");
+        return false;
+    }
+
+    if (!vulkan_create_sync_objects(vulkan_context_ptr))
+    {
+        DERROR("Vulkan sync objects creation failed.");
         return false;
     }
 
@@ -224,46 +251,58 @@ bool vulkan_create_debug_messenger(VkDebugUtilsMessengerCreateInfoEXT *dbg_messe
 void vulkan_backend_shutdown()
 {
     DDEBUG("Shutting down vulkan...");
+    vkDeviceWaitIdle(vulkan_context_ptr->vk_device.logical);
+
+    vkDestroyFence(vulkan_context_ptr->vk_device.logical, vulkan_context_ptr->in_flight_fence,
+                   vulkan_context_ptr->vk_allocator);
+    vkDestroySemaphore(vulkan_context_ptr->vk_device.logical, vulkan_context_ptr->render_finished_semaphore,
+                       vulkan_context_ptr->vk_allocator);
+    vkDestroySemaphore(vulkan_context_ptr->vk_device.logical, vulkan_context_ptr->image_available_semaphore,
+                       vulkan_context_ptr->vk_allocator);
+
+    vkDestroyCommandPool(vulkan_context_ptr->vk_device.logical, vulkan_context_ptr->graphics_command_pool,
+                         vulkan_context_ptr->vk_allocator);
+
     for (u32 i = 0; i < vulkan_context_ptr->vk_swapchain.images_count; i++)
     {
-        vkDestroyFramebuffer(vulkan_context_ptr->device.logical, vulkan_context_ptr->vk_swapchain.buffers[i].handle,
+        vkDestroyFramebuffer(vulkan_context_ptr->vk_device.logical, vulkan_context_ptr->vk_swapchain.buffers[i].handle,
                              vulkan_context_ptr->vk_allocator);
     }
 
-    vkDestroyPipeline(vulkan_context_ptr->device.logical, vulkan_context_ptr->graphics_pipeline.handle,
+    vkDestroyPipeline(vulkan_context_ptr->vk_device.logical, vulkan_context_ptr->vk_graphics_pipeline.handle,
                       vulkan_context_ptr->vk_allocator);
 
-    vkDestroyRenderPass(vulkan_context_ptr->device.logical, vulkan_context_ptr->vk_renderpass,
+    vkDestroyRenderPass(vulkan_context_ptr->vk_device.logical, vulkan_context_ptr->vk_renderpass,
                         vulkan_context_ptr->vk_allocator);
 
-    vkDestroyPipelineLayout(vulkan_context_ptr->device.logical, vulkan_context_ptr->graphics_pipeline.layout,
+    vkDestroyPipelineLayout(vulkan_context_ptr->vk_device.logical, vulkan_context_ptr->vk_graphics_pipeline.layout,
                             vulkan_context_ptr->vk_allocator);
 
     for (u32 i = 0; i < vulkan_context_ptr->vk_swapchain.images_count; i++)
     {
-        vkDestroyImageView(vulkan_context_ptr->device.logical, vulkan_context_ptr->vk_swapchain.vk_images.views[i],
+        vkDestroyImageView(vulkan_context_ptr->vk_device.logical, vulkan_context_ptr->vk_swapchain.vk_images.views[i],
                            vulkan_context_ptr->vk_allocator);
     }
 
     dfree(vulkan_context_ptr->vk_swapchain.vk_images.handles,
           sizeof(VkImage) * vulkan_context_ptr->vk_swapchain.images_count, MEM_TAG_RENDERER);
 
-    vkDestroySwapchainKHR(vulkan_context_ptr->device.logical, vulkan_context_ptr->vk_swapchain.handle,
+    vkDestroySwapchainKHR(vulkan_context_ptr->vk_device.logical, vulkan_context_ptr->vk_swapchain.handle,
                           vulkan_context_ptr->vk_allocator);
 
     vkDestroySurfaceKHR(vulkan_context_ptr->vk_instance, vulkan_context_ptr->vk_surface,
                         vulkan_context_ptr->vk_allocator);
 
     // destroy logical device
-    if (vulkan_context_ptr->device.physical_properties)
+    if (vulkan_context_ptr->vk_device.physical_properties)
     {
-        dfree(vulkan_context_ptr->device.physical_properties, sizeof(VkPhysicalDeviceProperties), MEM_TAG_RENDERER);
+        dfree(vulkan_context_ptr->vk_device.physical_properties, sizeof(VkPhysicalDeviceProperties), MEM_TAG_RENDERER);
     }
-    if (vulkan_context_ptr->device.physical_features)
+    if (vulkan_context_ptr->vk_device.physical_features)
     {
-        dfree(vulkan_context_ptr->device.physical_features, sizeof(VkPhysicalDeviceFeatures), MEM_TAG_RENDERER);
+        dfree(vulkan_context_ptr->vk_device.physical_features, sizeof(VkPhysicalDeviceFeatures), MEM_TAG_RENDERER);
     }
-    vkDestroyDevice(vulkan_context_ptr->device.logical, vulkan_context_ptr->vk_allocator);
+    vkDestroyDevice(vulkan_context_ptr->vk_device.logical, vulkan_context_ptr->vk_allocator);
 
 #if DEBUG
     PFN_vkDestroyDebugUtilsMessengerEXT func_destroy_dbg_utils_messenger_ext =
@@ -296,10 +335,11 @@ bool vulkan_check_validation_layer_support()
     bool validation_layer_found       = false;
 
 #ifdef DEBUG
-    for (u32 i = 0; i < inst_layer_properties_count; i++)
-    {
-        DDEBUG("Layer Name: %s | Desc: %s", inst_layer_properties[i].layerName, inst_layer_properties[i].description);
-    }
+    // for (u32 i = 0; i < inst_layer_properties_count; i++)
+    //{
+    //     DDEBUG("Layer Name: %s | Desc: %s", inst_layer_properties[i].layerName,
+    //     inst_layer_properties[i].description);
+    // }
 #endif
 
     for (u32 i = 0; i < inst_layer_properties_count; i++)
@@ -341,4 +381,53 @@ VkBool32 vulkan_dbg_msg_rprt_callback(VkDebugUtilsMessageSeverityFlagBitsEXT    
     }
 
     return VK_TRUE;
+}
+
+bool vulkan_draw_frame()
+{
+    vkWaitForFences(vulkan_context_ptr->vk_device.logical, 1, &vulkan_context_ptr->in_flight_fence, VK_TRUE,
+                    INVALID_ID_64);
+    vkResetFences(vulkan_context_ptr->vk_device.logical, 1, &vulkan_context_ptr->in_flight_fence);
+
+    u32      image_index = INVALID_ID;
+    VkResult result      = vkAcquireNextImageKHR(
+        vulkan_context_ptr->vk_device.logical, vulkan_context_ptr->vk_swapchain.handle, INVALID_ID_64,
+        vulkan_context_ptr->image_available_semaphore, VK_NULL_HANDLE, &image_index);
+    VK_CHECK(result);
+
+    vkResetCommandBuffer(vulkan_context_ptr->command_buffer, 0);
+
+    vulkan_record_command_buffer_and_use(vulkan_context_ptr, vulkan_context_ptr->command_buffer, image_index);
+
+    VkSemaphore          wait_semaphores[]   = {vulkan_context_ptr->image_available_semaphore};
+    VkSemaphore          signal_semaphores[] = {vulkan_context_ptr->render_finished_semaphore};
+    VkPipelineStageFlags wait_stages[]       = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
+
+    VkSubmitInfo submit_info{};
+    submit_info.sType                = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    submit_info.waitSemaphoreCount   = 1;
+    submit_info.pWaitSemaphores      = wait_semaphores;
+    submit_info.pWaitDstStageMask    = wait_stages;
+    submit_info.commandBufferCount   = 1;
+    submit_info.pCommandBuffers      = &vulkan_context_ptr->command_buffer;
+    submit_info.signalSemaphoreCount = 1;
+    submit_info.pSignalSemaphores    = signal_semaphores;
+
+    result = vkQueueSubmit(vulkan_context_ptr->vk_graphics_queue, 1, &submit_info, vulkan_context_ptr->in_flight_fence);
+    VK_CHECK(result);
+
+    VkSwapchainKHR swapchains[] = {vulkan_context_ptr->vk_swapchain.handle};
+
+    VkPresentInfoKHR present_info{};
+    present_info.sType              = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+    present_info.waitSemaphoreCount = 1;
+    present_info.pWaitSemaphores    = signal_semaphores;
+    present_info.swapchainCount     = 1;
+    present_info.pSwapchains        = &vulkan_context_ptr->vk_swapchain.handle;
+    present_info.pImageIndices      = &image_index;
+
+    result                          = vkQueuePresentKHR(vulkan_context_ptr->vk_present_queue, &present_info);
+    VK_CHECK(result);
+
+    return true;
 }

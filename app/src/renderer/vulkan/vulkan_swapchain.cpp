@@ -8,7 +8,7 @@
 bool vulkan_create_swapchain(vulkan_context *vk_context)
 {
     // INFO: query swapchain support
-    vulkan_device_query_swapchain_support(vk_context, vk_context->device.physical, &vk_context->vk_swapchain);
+    vulkan_device_query_swapchain_support(vk_context, vk_context->vk_device.physical, &vk_context->vk_swapchain);
 
     vulkan_swapchain *vk_swapchain       = &vk_context->vk_swapchain;
 
@@ -79,10 +79,11 @@ bool vulkan_create_swapchain(vulkan_context *vk_context)
         image_count = vk_swapchain->surface_capabilities.minImageCount + 1;
         DWARN("Triple buffring requested but found %d buffering", image_count);
     }
+
     u32 best_image_sharing_mode    = INVALID_ID;
-    u32 enabled_queue_family_count = vk_context->device.enabled_queue_family_count;
-    u32 queue_family_indicies[4]   = {vk_context->device.graphics_family_index, vk_context->device.present_family_index,
-                                      0, 0};
+    u32 enabled_queue_family_count = vk_context->vk_device.enabled_queue_family_count;
+    u32 queue_family_indicies[4]   = {vk_context->vk_device.graphics_family_index,
+                                      vk_context->vk_device.present_family_index, 0, 0};
 
     if (enabled_queue_family_count == 1)
     {
@@ -113,15 +114,16 @@ bool vulkan_create_swapchain(vulkan_context *vk_context)
     swapchain_create_info.clipped               = VK_TRUE;
     swapchain_create_info.oldSwapchain          = VK_NULL_HANDLE;
 
-    VkResult result = vkCreateSwapchainKHR(vk_context->device.logical, &swapchain_create_info, vk_context->vk_allocator,
-                                           &vk_swapchain->handle);
+    VkResult result = vkCreateSwapchainKHR(vk_context->vk_device.logical, &swapchain_create_info,
+                                           vk_context->vk_allocator, &vk_swapchain->handle);
     VK_CHECK(result);
 
     u32 swapchain_images_count = INVALID_ID;
 
-    vkGetSwapchainImagesKHR(vk_context->device.logical, vk_swapchain->handle, &swapchain_images_count, 0);
+    result = vkGetSwapchainImagesKHR(vk_context->vk_device.logical, vk_swapchain->handle, &swapchain_images_count, 0);
+    VK_CHECK(result);
     vk_swapchain->vk_images.handles = (VkImage *)dallocate(sizeof(VkImage) * swapchain_images_count, MEM_TAG_RENDERER);
-    vkGetSwapchainImagesKHR(vk_context->device.logical, vk_swapchain->handle, &swapchain_images_count,
+    vkGetSwapchainImagesKHR(vk_context->vk_device.logical, vk_swapchain->handle, &swapchain_images_count,
                             vk_swapchain->vk_images.handles);
 
     vk_swapchain->images_count     = swapchain_images_count;
@@ -154,7 +156,7 @@ bool vulkan_create_swapchain(vulkan_context *vk_context)
         image_view_create_info.subresourceRange.baseArrayLayer = 0;
         image_view_create_info.subresourceRange.layerCount     = 1;
 
-        result = vkCreateImageView(vk_context->device.logical, &image_view_create_info, vk_context->vk_allocator,
+        result = vkCreateImageView(vk_context->vk_device.logical, &image_view_create_info, vk_context->vk_allocator,
                                    &vk_swapchain->vk_images.views[i]);
         VK_CHECK(result);
     }

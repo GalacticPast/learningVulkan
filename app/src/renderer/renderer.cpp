@@ -1,5 +1,6 @@
 #include "renderer.hpp"
 #include "core/logger.hpp"
+#include "platform/platform.hpp"
 #include "vulkan/vulkan_backend.hpp"
 
 struct renderer_system_state
@@ -8,13 +9,14 @@ struct renderer_system_state
 
     linear_allocator *linear_systems_allocator;
 
-    u64 vulkan_backend_memory_requirements;
+    u64   vulkan_backend_memory_requirements;
     void *vulkan_backend_state;
 };
 
 static renderer_system_state *renderer_system_state_ptr;
 
-bool renderer_system_startup(u64 *renderer_system_memory_requirements, struct application_config *app_config, linear_allocator *linear_systems_allocator, void *state)
+bool renderer_system_startup(u64 *renderer_system_memory_requirements, struct application_config *app_config,
+                             linear_allocator *linear_systems_allocator, void *state)
 {
     *renderer_system_memory_requirements = sizeof(renderer_system_state);
     if (!state)
@@ -25,8 +27,10 @@ bool renderer_system_startup(u64 *renderer_system_memory_requirements, struct ap
     renderer_system_state_ptr = (renderer_system_state *)state;
 
     vulkan_backend_initialize(&renderer_system_state_ptr->vulkan_backend_memory_requirements, 0, 0);
-    renderer_system_state_ptr->vulkan_backend_state = linear_allocator_allocate(linear_systems_allocator, renderer_system_state_ptr->vulkan_backend_memory_requirements);
-    bool result = vulkan_backend_initialize(&renderer_system_state_ptr->vulkan_backend_memory_requirements, app_config, renderer_system_state_ptr->vulkan_backend_state);
+    renderer_system_state_ptr->vulkan_backend_state = linear_allocator_allocate(
+        linear_systems_allocator, renderer_system_state_ptr->vulkan_backend_memory_requirements);
+    bool result = vulkan_backend_initialize(&renderer_system_state_ptr->vulkan_backend_memory_requirements, app_config,
+                                            renderer_system_state_ptr->vulkan_backend_state);
 
     if (!result)
     {
@@ -45,5 +49,21 @@ void renderer_system_shutdown()
         DINFO("Shutting down renderer...");
         vulkan_backend_shutdown();
         renderer_system_state_ptr = 0;
+    }
+}
+
+void renderer_draw_frame()
+{
+    bool result = vulkan_draw_frame();
+    if (!result)
+    {
+        DERROR("Smth wrong with drawing frame");
+        return;
+    }
+    result = platform_pump_messages();
+    if (!result)
+    {
+        DERROR("Smth wrong with platform pumping messages");
+        return;
     }
 }

@@ -22,7 +22,7 @@ bool vulkan_choose_physical_device(vulkan_context                      *vk_conte
 
 bool vulkan_create_logical_device(vulkan_context *vk_context)
 {
-    DINFO("Creating Vulkan logical device...");
+    DDEBUG("Creating Vulkan logical device...");
 
     vulkan_physical_device_requirements physical_device_requirements{};
     physical_device_requirements.is_discrete_gpu           = true;
@@ -47,22 +47,22 @@ bool vulkan_create_logical_device(vulkan_context *vk_context)
     }
 
     u32 queue_family_count           = 0;
-    u32 vulkan_queue_family_index[4] = {vk_context->device.graphics_family_index,
-                                        vk_context->device.present_family_index, 0, 0};
+    u32 vulkan_queue_family_index[4] = {vk_context->vk_device.graphics_family_index,
+                                        vk_context->vk_device.present_family_index, 0, 0};
 
     if (physical_device_requirements.has_graphics_queue_family &&
-        vk_context->device.graphics_family_index != INVALID_ID)
+        vk_context->vk_device.graphics_family_index != INVALID_ID)
     {
         queue_family_count++;
     }
     // if we have 2 different queue family index for each
     if (physical_device_requirements.has_present_queue_family &&
-        (vk_context->device.present_family_index != INVALID_ID) &&
-        vk_context->device.present_family_index != vk_context->device.graphics_family_index)
+        (vk_context->vk_device.present_family_index != INVALID_ID) &&
+        vk_context->vk_device.present_family_index != vk_context->vk_device.graphics_family_index)
     {
         queue_family_count++;
     }
-    vk_context->device.enabled_queue_family_count = queue_family_count;
+    vk_context->vk_device.enabled_queue_family_count = queue_family_count;
 
     VkDeviceQueueCreateInfo device_queue_create_infos[4];
 
@@ -87,17 +87,17 @@ bool vulkan_create_logical_device(vulkan_context *vk_context)
     logical_device_create_info.pQueueCreateInfos       = device_queue_create_infos;
     logical_device_create_info.enabledExtensionCount   = required_device_extensions_count;
     logical_device_create_info.ppEnabledExtensionNames = required_device_extensions;
-    logical_device_create_info.pEnabledFeatures        = vk_context->device.physical_features;
+    logical_device_create_info.pEnabledFeatures        = vk_context->vk_device.physical_features;
 
-    VkResult res = vkCreateDevice(vk_context->device.physical, &logical_device_create_info, vk_context->vk_allocator,
-                                  &vk_context->device.logical);
+    VkResult res = vkCreateDevice(vk_context->vk_device.physical, &logical_device_create_info, vk_context->vk_allocator,
+                                  &vk_context->vk_device.logical);
     VK_CHECK(res);
 
     // get the queue handles
-    vkGetDeviceQueue(vk_context->device.logical, vk_context->device.graphics_family_index, 0,
-                     &vk_context->graphics_queue);
-    vkGetDeviceQueue(vk_context->device.logical, vk_context->device.present_family_index, 0,
-                     &vk_context->present_queue);
+    vkGetDeviceQueue(vk_context->vk_device.logical, vk_context->vk_device.graphics_family_index, 0,
+                     &vk_context->vk_graphics_queue);
+    vkGetDeviceQueue(vk_context->vk_device.logical, vk_context->vk_device.present_family_index, 0,
+                     &vk_context->vk_present_queue);
 
     return true;
 }
@@ -125,28 +125,28 @@ bool vulkan_choose_physical_device(vulkan_context                      *vk_conte
         if (vulkan_is_physical_device_suitable(vk_context, physical_devices[i], physical_device_requirements,
                                                required_device_extensions_count, required_device_extensions))
         {
-            vk_context->device.physical = physical_devices[i];
+            vk_context->vk_device.physical = physical_devices[i];
             break;
         }
     }
 
-    if (vk_context->device.physical == VK_NULL_HANDLE)
+    if (vk_context->vk_device.physical == VK_NULL_HANDLE)
     {
         DERROR("Failed to find suitable gpu.");
-        if (vk_context->device.physical_properties)
+        if (vk_context->vk_device.physical_properties)
         {
-            dfree(vk_context->device.physical_properties, sizeof(VkPhysicalDeviceProperties), MEM_TAG_RENDERER);
+            dfree(vk_context->vk_device.physical_properties, sizeof(VkPhysicalDeviceProperties), MEM_TAG_RENDERER);
         }
-        if (vk_context->device.physical_features)
+        if (vk_context->vk_device.physical_features)
         {
-            dfree(vk_context->device.physical_features, sizeof(VkPhysicalDeviceFeatures), MEM_TAG_RENDERER);
+            dfree(vk_context->vk_device.physical_features, sizeof(VkPhysicalDeviceFeatures), MEM_TAG_RENDERER);
         }
         return false;
     }
 
-    DINFO("Vulkan: Found suitable gpu. GPU name: %s", vk_context->device.physical_properties->deviceName);
-    DINFO("Vulkan: Found Graphics Queue Family. Queue family Index: %d", vk_context->device.graphics_family_index);
-    DINFO("Vulkan: Found Present Queue Family. Queue family Index: %d", vk_context->device.present_family_index);
+    DINFO("Vulkan: Found suitable gpu. GPU name: %s", vk_context->vk_device.physical_properties->deviceName);
+    DINFO("Vulkan: Found Graphics Queue Family. Queue family Index: %d", vk_context->vk_device.graphics_family_index);
+    DINFO("Vulkan: Found Present Queue Family. Queue family Index: %d", vk_context->vk_device.present_family_index);
 
     return true;
 }
@@ -231,7 +231,7 @@ bool vulkan_is_physical_device_suitable(vulkan_context *vk_context, VkPhysicalDe
         {
             if (graphics_family_index != INVALID_ID)
             {
-                vk_context->device.graphics_family_index = graphics_family_index;
+                vk_context->vk_device.graphics_family_index = graphics_family_index;
             }
             else
             {
@@ -243,7 +243,7 @@ bool vulkan_is_physical_device_suitable(vulkan_context *vk_context, VkPhysicalDe
         {
             if (present_family_index != INVALID_ID)
             {
-                vk_context->device.present_family_index = present_family_index;
+                vk_context->vk_device.present_family_index = present_family_index;
             }
             else
             {
@@ -264,11 +264,11 @@ bool vulkan_is_physical_device_suitable(vulkan_context *vk_context, VkPhysicalDe
             vkEnumerateDeviceExtensionProperties(physical_device, 0, &device_extension_properties_count,
                                                  device_extension_properties);
 #ifdef DEBUG
-            DDEBUG("Device Extension Properties Count %d", device_extension_properties_count);
-            for (u32 i = 0; i < device_extension_properties_count; i++)
-            {
-                DDEBUG("Device Extension Name: %s", device_extension_properties[i].extensionName);
-            }
+            // DDEBUG("Device Extension Properties Count %d", device_extension_properties_count);
+            // for (u32 i = 0; i < device_extension_properties_count; i++)
+            //{
+            //     DDEBUG("Device Extension Name: %s", device_extension_properties[i].extensionName);
+            // }
 #endif
             for (u32 i = 0; i < required_device_extensions_count; i++)
             {
@@ -310,13 +310,14 @@ bool vulkan_is_physical_device_suitable(vulkan_context *vk_context, VkPhysicalDe
         //
 
         // if all above is true, then copy the device physical properties and physical features.
-        vk_context->device.physical_properties =
+        vk_context->vk_device.physical_properties =
             (VkPhysicalDeviceProperties *)dallocate(sizeof(VkPhysicalDeviceProperties), MEM_TAG_RENDERER);
-        dcopy_memory(vk_context->device.physical_properties, &physical_properties, sizeof(VkPhysicalDeviceProperties));
+        dcopy_memory(vk_context->vk_device.physical_properties, &physical_properties,
+                     sizeof(VkPhysicalDeviceProperties));
 
-        vk_context->device.physical_features =
+        vk_context->vk_device.physical_features =
             (VkPhysicalDeviceFeatures *)dallocate(sizeof(VkPhysicalDeviceFeatures), MEM_TAG_RENDERER);
-        dcopy_memory(vk_context->device.physical_features, &physical_features, sizeof(VkPhysicalDeviceFeatures));
+        dcopy_memory(vk_context->vk_device.physical_features, &physical_features, sizeof(VkPhysicalDeviceFeatures));
 
         return true;
     }

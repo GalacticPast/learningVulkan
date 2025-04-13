@@ -28,44 +28,54 @@ bool application_initialize(application_state *state, application_config *config
         return false;
     }
 
-    app_state_ptr                     = state;
-    app_state_ptr->application_config = config;
-    app_state_ptr->is_running         = true;
-    app_state_ptr->is_minimized       = false;
+    app_state_ptr                                                          = state;
+    app_state_ptr->application_config                                      = config;
+    app_state_ptr->is_running                                              = true;
+    app_state_ptr->is_minimized                                            = false;
 
     bool result                                                            = false;
     app_state_ptr->application_system_linear_allocator_memory_requirements = 10 * 1024 * 1024; // 1 mega bytes
-    result = linear_allocator_create(&app_state_ptr->application_system_linear_allocator, app_state_ptr->application_system_linear_allocator_memory_requirements);
+    result = linear_allocator_create(&app_state_ptr->application_system_linear_allocator,
+                                     app_state_ptr->application_system_linear_allocator_memory_requirements);
     DASSERT(result == true);
 
     memory_system_startup(&app_state_ptr->memory_system_memory_requirements, 0);
-    app_state_ptr->memory_system_state = linear_allocator_allocate(&app_state_ptr->application_system_linear_allocator, app_state_ptr->memory_system_memory_requirements);
-    result                             = memory_system_startup(&app_state_ptr->memory_system_memory_requirements, app_state_ptr->memory_system_state);
+    app_state_ptr->memory_system_state = linear_allocator_allocate(&app_state_ptr->application_system_linear_allocator,
+                                                                   app_state_ptr->memory_system_memory_requirements);
+    result =
+        memory_system_startup(&app_state_ptr->memory_system_memory_requirements, app_state_ptr->memory_system_state);
     DASSERT(result == true);
-    set_memory_stats_for_tag(app_state_ptr->application_system_linear_allocator_memory_requirements, MEM_TAG_LINEAR_ALLOCATOR);
+    set_memory_stats_for_tag(app_state_ptr->application_system_linear_allocator_memory_requirements,
+                             MEM_TAG_LINEAR_ALLOCATOR);
 
     event_system_startup(&app_state_ptr->event_system_memory_requirements, 0);
-    app_state_ptr->event_system_state = linear_allocator_allocate(&app_state_ptr->application_system_linear_allocator, app_state_ptr->event_system_memory_requirements);
-    result                            = event_system_startup(&app_state_ptr->event_system_memory_requirements, app_state_ptr->event_system_state);
+    app_state_ptr->event_system_state = linear_allocator_allocate(&app_state_ptr->application_system_linear_allocator,
+                                                                  app_state_ptr->event_system_memory_requirements);
+    result = event_system_startup(&app_state_ptr->event_system_memory_requirements, app_state_ptr->event_system_state);
     DASSERT(result == true);
 
     event_system_register(EVENT_CODE_APPLICATION_QUIT, 0, event_callback_quit);
     event_system_register(EVENT_CODE_APPLICATION_RESIZED, 0, event_callback_resize);
 
     input_system_startup(&app_state_ptr->input_system_memory_requirements, 0);
-    app_state_ptr->input_system_state = linear_allocator_allocate(&app_state_ptr->application_system_linear_allocator, app_state_ptr->input_system_memory_requirements);
-    result                            = input_system_startup(&app_state_ptr->input_system_memory_requirements, app_state_ptr->input_system_state);
+    app_state_ptr->input_system_state = linear_allocator_allocate(&app_state_ptr->application_system_linear_allocator,
+                                                                  app_state_ptr->input_system_memory_requirements);
+    result = input_system_startup(&app_state_ptr->input_system_memory_requirements, app_state_ptr->input_system_state);
     DASSERT(result == true);
 
     platform_system_startup(&app_state_ptr->platform_system_memory_requirements, 0, 0);
-    app_state_ptr->platform_system_state = linear_allocator_allocate(&app_state_ptr->application_system_linear_allocator, app_state_ptr->platform_system_memory_requirements);
-    result                               = platform_system_startup(&app_state_ptr->platform_system_memory_requirements, app_state_ptr->platform_system_state, app_state_ptr->application_config);
+    app_state_ptr->platform_system_state = linear_allocator_allocate(
+        &app_state_ptr->application_system_linear_allocator, app_state_ptr->platform_system_memory_requirements);
+    result = platform_system_startup(&app_state_ptr->platform_system_memory_requirements,
+                                     app_state_ptr->platform_system_state, app_state_ptr->application_config);
     DASSERT(result == true);
 
     renderer_system_startup(&app_state_ptr->renderer_system_memory_requirements, 0, 0, 0);
-    app_state_ptr->renderer_system_state = linear_allocator_allocate(&app_state_ptr->application_system_linear_allocator, app_state_ptr->renderer_system_memory_requirements);
-    result = renderer_system_startup(&app_state_ptr->renderer_system_memory_requirements, app_state_ptr->application_config, &app_state_ptr->application_system_linear_allocator,
-                                     app_state_ptr->renderer_system_state);
+    app_state_ptr->renderer_system_state = linear_allocator_allocate(
+        &app_state_ptr->application_system_linear_allocator, app_state_ptr->renderer_system_memory_requirements);
+    result = renderer_system_startup(
+        &app_state_ptr->renderer_system_memory_requirements, app_state_ptr->application_config,
+        &app_state_ptr->application_system_linear_allocator, app_state_ptr->renderer_system_state);
     DASSERT(result == true);
 
     u64 buffer_usg_mem_requirements = 0;
@@ -94,7 +104,7 @@ void application_shutdown()
 
 void application_run()
 {
-    platform_pump_messages();
+    renderer_draw_frame();
 }
 
 bool event_callback_quit(event_context context, void *data)
@@ -114,8 +124,8 @@ bool event_callback_resize(event_context context, void *data)
 
         application_config *config = app_state_ptr->application_config;
 
-        config->width  = context.data.u32[0];
-        config->height = context.data.u32[1];
+        config->width              = context.data.u32[0];
+        config->height             = context.data.u32[1];
 
         DDEBUG("Resized event, new width: %d new height: %d", config->width, config->height);
 

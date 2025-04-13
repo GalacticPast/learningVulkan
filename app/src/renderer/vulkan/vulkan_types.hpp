@@ -67,17 +67,24 @@ struct vulkan_pipeline
 
 struct vulkan_context
 {
-    vulkan_device device;
+    vulkan_device vk_device;
 
     vulkan_swapchain vk_swapchain;
 
     VkRenderPass vk_renderpass;
 
-    vulkan_pipeline graphics_pipeline;
+    vulkan_pipeline vk_graphics_pipeline;
+
+    VkCommandBuffer command_buffer;
+
+    VkCommandPool graphics_command_pool;
+    VkSemaphore   image_available_semaphore;
+    VkSemaphore   render_finished_semaphore;
+    VkFence       in_flight_fence;
 
     // INFO: maybe should be inside vulkan_device??
-    VkQueue graphics_queue;
-    VkQueue present_queue;
+    VkQueue vk_graphics_queue;
+    VkQueue vk_present_queue;
 
     VkSurfaceKHR vk_surface;
 
