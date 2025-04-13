@@ -551,6 +551,7 @@ keys translate_keycode(u32 xk_keycode)
 #include "core/event.hpp"
 #include "core/input.hpp"
 
+#include "wayland/xdg-decoration-unstable-v1.h"
 #include "wayland/xdg-shell-client-protocol.h"
 #include <wayland-client.h>
 #include <xkbcommon/xkbcommon-keysyms.h>
@@ -587,6 +588,10 @@ typedef struct platform_state
     struct xkb_state   *xkb_state;
     struct xkb_context *xkb_context;
     struct xkb_keymap  *xkb_keymap;
+
+    /*experimental*/
+    zxdg_decoration_manager_v1  *zxdg_decoration_manager_v1;
+    zxdg_toplevel_decoration_v1 *zxdg_toplevel_decoration;
 
     /* dimensions */
     u32 width;
@@ -833,6 +838,9 @@ bool platform_system_startup(u64 *platform_mem_requirements, void *plat_state, a
 
     wl_surface_commit(platform_state_ptr->wl_surface);
 
+    // platform_state_ptr->zxdg_toplevel_decoration = zxdg_decoration_manager_v1_get_toplevel_decoration(
+    //    platform_state_ptr->zxdg_decoration_manager_v1, platform_state_ptr->xdg_toplevel);
+
     return true;
 }
 
@@ -887,6 +895,160 @@ bool vulkan_platform_create_surface(vulkan_context *vk_context)
 
 keys translate_keycode(xkb_keysym_t xkb_sym)
 {
+    switch (xkb_sym)
+    {
+    case XKB_KEY_Escape: {
+        return KEY_ESCAPE;
+    }
+    case XKB_KEY_a: {
+        return KEY_A;
+    }
+    case XKB_KEY_b: {
+        return KEY_B;
+    }
+    case XKB_KEY_c: {
+        return KEY_C;
+    }
+    case XKB_KEY_d: {
+        return KEY_D;
+    }
+    case XKB_KEY_e: {
+        return KEY_E;
+    }
+    case XKB_KEY_f: {
+        return KEY_F;
+    }
+    case XKB_KEY_g: {
+        return KEY_G;
+    }
+    case XKB_KEY_h: {
+        return KEY_H;
+    }
+    case XKB_KEY_i: {
+        return KEY_I;
+    }
+    case XKB_KEY_j: {
+        return KEY_J;
+    }
+    case XKB_KEY_k: {
+        return KEY_K;
+    }
+    case XKB_KEY_l: {
+        return KEY_L;
+    }
+    case XKB_KEY_m: {
+        return KEY_M;
+    }
+    case XKB_KEY_n: {
+        return KEY_N;
+    }
+    case XKB_KEY_o: {
+        return KEY_O;
+    }
+    case XKB_KEY_p: {
+        return KEY_P;
+    }
+    case XKB_KEY_q: {
+        return KEY_Q;
+    }
+    case XKB_KEY_r: {
+        return KEY_R;
+    }
+    case XKB_KEY_s: {
+        return KEY_S;
+    }
+    case XKB_KEY_t: {
+        return KEY_T;
+    }
+    case XKB_KEY_u: {
+        return KEY_U;
+    }
+    case XKB_KEY_v: {
+        return KEY_V;
+    }
+    case XKB_KEY_w: {
+        return KEY_W;
+    }
+    case XKB_KEY_x: {
+        return KEY_X;
+    }
+    case XKB_KEY_y: {
+        return KEY_Y;
+    }
+    case XKB_KEY_z: {
+        return KEY_Z;
+    }
+    case XKB_KEY_Left: {
+        return KEY_LEFT;
+    }
+    case XKB_KEY_Up: {
+        return KEY_UP;
+    }
+    case XKB_KEY_Right: {
+        return KEY_RIGHT;
+    }
+    case XKB_KEY_Down: {
+        return KEY_DOWN;
+    }
+    case XKB_KEY_space: {
+        return KEY_SPACE;
+    }
+    case XKB_KEY_KP_0: {
+        return KEY_NUMPAD0;
+    }
+    case XKB_KEY_KP_1: {
+        return KEY_NUMPAD1;
+    }
+    case XKB_KEY_KP_2: {
+        return KEY_NUMPAD2;
+    }
+    case XKB_KEY_KP_3: {
+        return KEY_NUMPAD3;
+    }
+    case XKB_KEY_KP_4: {
+        return KEY_NUMPAD4;
+    }
+    case XKB_KEY_KP_5: {
+        return KEY_NUMPAD5;
+    }
+    case XKB_KEY_KP_6: {
+        return KEY_NUMPAD6;
+    }
+    case XKB_KEY_KP_7: {
+        return KEY_NUMPAD7;
+    }
+    case XKB_KEY_KP_8: {
+        return KEY_NUMPAD8;
+    }
+    case XKB_KEY_KP_9: {
+        return KEY_NUMPAD9;
+    }
+    case XKB_KEY_Shift_L: {
+        return KEY_LSHIFT;
+    }
+    case XKB_KEY_Shift_R: {
+        return KEY_RSHIFT;
+    }
+    case XKB_KEY_Control_L: {
+        return KEY_LCONTROL;
+    }
+    case XKB_KEY_Control_R: {
+        return KEY_RCONTROL;
+    }
+    case XKB_KEY_Caps_Lock: {
+        return KEY_CAPITAL;
+    }
+    case XKB_KEY_Alt_L: {
+        return KEY_LALT;
+    }
+    case XKB_KEY_Alt_R: {
+        return KEY_RALT;
+    }
+
+    defualt:
+        return KEYS_MAX_KEYS;
+    }
+    return KEYS_MAX_KEYS;
 }
 
 #endif
