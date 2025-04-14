@@ -949,9 +949,10 @@ void platform_get_window_dimensions(u32 *width, u32 *height)
     *height = platform_state_ptr->height == 0 ? 800 : platform_state_ptr->height;
 }
 
-bool vulkan_platform_get_required_vulkan_extensions(std::vector<const char *> &extensions_array)
+bool vulkan_platform_get_required_vulkan_extensions(darray<const char *> &extensions_array)
 {
-    extensions_array.push_back(VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME);
+    const char *vk_wayland_surface = VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME;
+    extensions_array.push_back(vk_wayland_surface);
     return true;
 }
 

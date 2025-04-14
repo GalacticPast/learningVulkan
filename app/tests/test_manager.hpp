@@ -1,8 +1,8 @@
 #pragma once
+#include "containers/darray.hpp"
 #include <defines.hpp>
 
 #include <string>
-#include <vector>
 
 // function pointer for tests.
 typedef bool (*test_func_ptr)();
@@ -18,7 +18,7 @@ struct test_manager
     u64 passed;
     u64 failed;
 
-    std::vector<test> *tests;
+    darray<test> *tests;
 };
 
 bool test_manager_initialize(u64 *test_manager_memory_requirements, void *state);

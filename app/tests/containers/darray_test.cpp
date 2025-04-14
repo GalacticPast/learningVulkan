@@ -1,7 +1,6 @@
 #include "darray_test.hpp"
 #include "../expect.hpp"
 #include "../src/containers/darray.hpp"
-#include <vector>
 
 bool darray_create_and_destroy()
 {
@@ -52,6 +51,16 @@ bool darray_pop_back_test()
     return true;
 }
 
+void print_array(darray<s32> &array)
+{
+    u32 length = array.size();
+
+    for (u32 i = 0; i < length; i++)
+    {
+        DDEBUG("%d", array[i]);
+    }
+}
+
 bool darray_pop_at_test()
 {
     darray<s32> array(10);
@@ -61,19 +70,35 @@ bool darray_pop_at_test()
         array[i] = i;
     }
 
-    array.pop_at(0);
-    array.pop_at(5);
-    array.pop_at(8);
-    array.pop_at(7);
-    array.pop_at(3);
+    s32 i = array.pop_at(5);
+    expect_should_be(5, i);
 
-    s32 array_size = array.size();
+    i = array.pop_at(8);
+    expect_should_be(9, i);
 
-    for (s32 i = 0; i < array_size; i++)
-    {
-        s32 num = array[i];
-        DDEBUG("%d", num);
-    }
+    i = array.pop_at(7);
+    expect_should_be(8, i);
+
+    i = array.pop_at(3);
+    expect_should_be(3, i);
+
+    i = array.pop_at(3);
+    expect_should_be(4, i);
+
+    i = array.pop_at(3);
+    expect_should_be(6, i);
+
+    i = array.pop_at(3);
+    expect_should_be(7, i);
+
+    i = array.pop_at(1);
+    expect_should_be(1, i);
+
+    i = array.pop_at(0);
+    expect_should_be(0, i);
+
+    i = array.pop_at(0);
+    expect_should_be(2, i);
 
     return true;
 }

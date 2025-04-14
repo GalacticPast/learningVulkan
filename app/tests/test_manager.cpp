@@ -29,12 +29,14 @@ void test_manager_register_tests(bool (*test_func_ptr)(), const char *func_descr
 
 void test_manager_run_tests()
 {
-    u64 test_func_length  = instance_ptr->tests->size();
+    u64 test_func_length     = instance_ptr->tests->size();
 
-    const char *status[2] = {"FAILED", "PASSED"};
+    const char   *status[2]  = {"FAILED", "PASSED"};
+    darray<test> *test_array = instance_ptr->tests;
+
     for (u64 i = 0; i < test_func_length; i++)
     {
-        test        t      = instance_ptr->tests->at(i);
+        test        t      = (*test_array)[i];
         bool        result = t.test();
         const char *desc   = t.desc;
         DDEBUG("Desc: %s, result: %s", desc, status[result]);

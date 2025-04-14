@@ -14,9 +14,9 @@ template <typename Type> class darray
     u64 element_size;
     u64 length;
 
+  public:
     void *array;
 
-  public:
     darray();
     darray(u64 size);
     ~darray();
@@ -104,8 +104,7 @@ template <typename T> T darray<T>::pop_back()
 {
     if (length == 0)
     {
-        DWARN("No element in array to pop back. Returning...");
-        return NULL;
+        DASSERT_MSG(length != 0, "No elements in darray to pop back.");
     }
 
     T *return_element = (T *)((u8 *)array + ((length - 1) * element_size));
@@ -115,22 +114,33 @@ template <typename T> T darray<T>::pop_back()
 
 template <typename T> T darray<T>::pop_at(u32 index)
 {
-    if (index > length || index > capacity)
+    if (index >= length || index >= capacity)
     {
         DASSERT_MSG(index > length, "Index is out of bounds....");
     }
-    if (index == length)
+    void *return_element      = ((u8 *)array + ((index)*element_size));
+    T     return_element_copy = *(T *)return_element;
+    if (index == length - 1)
     {
-        T *return_element = (T *)((u8 *)array + ((length - 1) * element_size));
         length--;
-        return *return_element;
+        return return_element_copy;
     }
-    T return_element_copy = *((T *)((u8 *)array + (index * element_size)));
+    if (index == 0)
+    {
+        dcopy_memory(array, (u8 *)return_element + element_size, (length - 1) * element_size);
+        length--;
+        return return_element_copy;
+    }
 
-    T *return_element_ptr = ((T *)((u8 *)array + (index * element_size)));
-    T *next_element       = (T *)((u8 *)array + ((index + 1) * element_size));
+    T *next_element = (T *)((u8 *)array + ((index + 1) * element_size));
 
-    dcopy_memory(return_element_ptr, next_element, (index + 1) * element_size);
+    void *new_array = dallocate(capacity, MEM_TAG_DARRAY);
+    dcopy_memory(new_array, array, index * element_size);
+    dcopy_memory(((u8 *)new_array + (index * element_size)), next_element, (length - index) * element_size);
+
+    dfree(array, capacity, MEM_TAG_RENDERER);
+    array = new_array;
+
     length--;
 
     return return_element_copy;

@@ -3,8 +3,6 @@
 #include "core/logger.hpp"
 #include "defines.hpp"
 
-#include <vector>
-
 #include "renderer/vulkan/vulkan_renderpass.hpp"
 #include "vulkan_backend.hpp"
 #include "vulkan_command_buffers.hpp"
@@ -74,13 +72,18 @@ bool vulkan_backend_initialize(u64 *vulkan_backend_memory_requirements, applicat
     }
 
     // INFO: get platform specifig extensions and extensions count
-    std::vector<const char *> vulkan_instance_extensions;
-    vulkan_instance_extensions.push_back(VK_KHR_SURFACE_EXTENSION_NAME);
+    darray<const char *> vulkan_instance_extensions;
+    const char          *vk_generic_surface_ext = VK_KHR_SURFACE_EXTENSION_NAME;
+
+    vulkan_instance_extensions.push_back(vk_generic_surface_ext);
     vulkan_platform_get_required_vulkan_extensions(vulkan_instance_extensions);
 
 #if DEBUG
-    vulkan_instance_extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
-    vulkan_instance_extensions.push_back(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
+    const char *vk_debug_uitls  = VK_EXT_DEBUG_UTILS_EXTENSION_NAME;
+    const char *vk_debug_report = VK_EXT_DEBUG_REPORT_EXTENSION_NAME;
+
+    vulkan_instance_extensions.push_back(vk_debug_uitls);
+    vulkan_instance_extensions.push_back(vk_debug_report);
 #endif
 
     u32                   dbg_vulkan_instance_extensions_count = 0;
@@ -102,10 +105,11 @@ bool vulkan_backend_initialize(u64 *vulkan_backend_memory_requirements, applicat
 
     for (u32 i = 0; i < vulkan_instance_extensions.size(); i++)
     {
-        bool found_ext = false;
+        bool        found_ext = false;
+        const char *str0      = vulkan_instance_extensions[i];
+
         for (u32 j = 0; j < dbg_vulkan_instance_extensions_count; j++)
         {
-            const char *str0 = vulkan_instance_extensions[i];
             if (string_compare(str0, dbg_instance_extension_properties[j].extensionName))
             {
                 found_ext = true;
@@ -134,7 +138,7 @@ bool vulkan_backend_initialize(u64 *vulkan_backend_memory_requirements, applicat
     inst_create_info.enabledLayerCount       = vulkan_context_ptr->enabled_layer_count;
     inst_create_info.ppEnabledLayerNames     = vulkan_context_ptr->enabled_layer_names;
     inst_create_info.enabledExtensionCount   = (u32)vulkan_instance_extensions.size();
-    inst_create_info.ppEnabledExtensionNames = vulkan_instance_extensions.data();
+    inst_create_info.ppEnabledExtensionNames = (const char **)vulkan_instance_extensions.array;
     inst_create_info.pApplicationInfo        = &app_info;
 
     VkResult result =
@@ -327,8 +331,8 @@ bool vulkan_check_validation_layer_support()
     u32 inst_layer_properties_count = 0;
     vkEnumerateInstanceLayerProperties(&inst_layer_properties_count, 0);
 
-    std::vector<VkLayerProperties> inst_layer_properties(inst_layer_properties_count);
-    vkEnumerateInstanceLayerProperties(&inst_layer_properties_count, inst_layer_properties.data());
+    darray<VkLayerProperties> inst_layer_properties(inst_layer_properties_count);
+    vkEnumerateInstanceLayerProperties(&inst_layer_properties_count, (VkLayerProperties *)inst_layer_properties.array);
 
     const char *validation_layer_name = "VK_LAYER_KHRONOS_validation";
 
