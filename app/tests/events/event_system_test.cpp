@@ -20,7 +20,7 @@ bool event_code_test_A_callback(event_context context, void *data)
 bool event_system_register_and_unregister_test()
 {
     event_system_state *event_state;
-    u64 event_system_memory_requirements = 0;
+    u64                 event_system_memory_requirements = 0;
 
     event_system_startup(&event_system_memory_requirements, 0);
     event_state = (event_system_state *)malloc(event_system_memory_requirements);
@@ -35,7 +35,7 @@ bool event_system_register_and_unregister_test()
     context.data.u32[2]   = 2;
     context.data.u32[3]   = 3;
 
-    event_code code = EVENT_CODE_TEST_A;
+    event_code code       = EVENT_CODE_TEST_A;
     event_fire(code, context);
 
     event_system_unregister(EVENT_CODE_TEST_A, 0, event_code_test_A_callback);

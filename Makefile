@@ -11,7 +11,7 @@ DIR := $(subst /,\,${CURDIR})
 assembly := learningVulkan
 extension := .exe
 defines := -DDEBUG -DDPLATFORM_WINDOWS
-includes := -I$(src_dir)/src -I$(vulkan_sdk)/Include
+includes := -Iapp/tests -I$(src_dir)/src -I$(vulkan_sdk)/Include
 linker_flags := -lgdi32 -luser32 -lvulkan-1 -L$(vulkan_sdk)/Lib 
 compiler_flags := -Wall -Wextra -g -Wconversion -Wdouble-promotion -Wno-unused-parameter -Wno-unused-function -Wno-sign-conversion -fsanitize=undefined -fsanitize-trap
 build_platform := windows
@@ -89,4 +89,5 @@ $(obj_dir)/%.c.o : %.c
 
 link: $(obj_files_c) $(obj_files_cpp)
 	@echo Linking 
+	@echo $^
 	@$(cc) $(compiler_flags) $^ -o $(bin_dir)/$(assembly)$(extension) $(includes) $(defines) $(linker_flags) 

@@ -10,7 +10,7 @@ typedef bool (*test_func_ptr)();
 struct test
 {
     test_func_ptr test;
-    const char *desc;
+    const char   *desc;
 };
 
 struct test_manager
@@ -18,7 +18,7 @@ struct test_manager
     u64 passed;
     u64 failed;
 
-    std::vector<test> tests;
+    std::vector<test> *tests;
 };
 
 bool test_manager_initialize(u64 *test_manager_memory_requirements, void *state);

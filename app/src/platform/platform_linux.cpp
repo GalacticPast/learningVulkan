@@ -584,7 +584,7 @@ typedef struct platform_state
 
     /* input */
     struct wl_keyboard *wl_keyboard;
-    struct wl_mouse    *wl_mouse;
+    struct wl_pointer  *wl_pointer;
     struct xkb_state   *xkb_state;
     struct xkb_context *xkb_context;
     struct xkb_keymap  *xkb_keymap;
@@ -601,6 +601,76 @@ typedef struct platform_state
 static struct platform_state *platform_state_ptr;
 
 keys translate_keycode(xkb_keysym_t xkb_sym);
+
+void wl_pointer_enter(void *data, struct wl_pointer *wl_pointer, uint32_t serial, struct wl_surface *surface,
+                      wl_fixed_t surface_x, wl_fixed_t surface_y)
+{
+    DDEBUG("Mouse in scope");
+}
+
+void wl_pointer_leave(void *data, struct wl_pointer *wl_pointer, uint32_t serial, struct wl_surface *surface)
+{
+    DDEBUG("Mouse not in scope");
+}
+
+void wl_pointer_move(void *data, struct wl_pointer *wl_pointer, uint32_t time, wl_fixed_t surface_x,
+                     wl_fixed_t surface_y)
+{
+    u32 mouse_x = wl_fixed_to_int(surface_x);
+    u32 mouse_y = wl_fixed_to_int(surface_y);
+
+    DDEBUG("Moue moved x:%d y:%d", mouse_x, mouse_y);
+
+    input_process_mouse_move((s16)mouse_x, (s16)mouse_y);
+
+    if (mouse_x >= platform_state_ptr->width - 10)
+    {
+        xdg_toplevel_show_window_menu(platform_state_ptr->xdg_toplevel, platform_state_ptr->wl_seat, 0,
+                                      platform_state_ptr->width, mouse_y);
+        wl_surface_commit(platform_state_ptr->wl_surface);
+        wl_display_roundtrip(platform_state_ptr->wl_display);
+    }
+}
+
+void wl_pointer_button_event(void *data, struct wl_pointer *wl_pointer, uint32_t serial, uint32_t time, uint32_t button,
+                             uint32_t state)
+{
+}
+
+void wl_pointer_axis(void *data, struct wl_pointer *wl_pointer, uint32_t time, uint32_t axis, wl_fixed_t value)
+{
+}
+void wl_pointer_frame(void *data, struct wl_pointer *wl_pointer)
+{
+}
+void wl_pointer_axis_source(void *data, struct wl_pointer *wl_pointer, uint32_t axis_source)
+{
+}
+void wl_pointer_axis_stop(void *data, struct wl_pointer *wl_pointer, uint32_t time, uint32_t axis)
+{
+}
+void wl_pointer_axis_discrete(void *data, struct wl_pointer *wl_pointer, uint32_t axis, int32_t discrete)
+{
+}
+void wl_pointer_axis_value120(void *data, struct wl_pointer *wl_pointer, uint32_t axis, int32_t value120)
+{
+}
+void wl_pointer_axis_relative_direction(void *data, struct wl_pointer *wl_pointer, uint32_t axis, uint32_t direction)
+{
+}
+static const struct wl_pointer_listener wl_pointer_listener{
+
+    .enter                   = wl_pointer_enter,
+    .leave                   = wl_pointer_leave,
+    .motion                  = wl_pointer_move,
+    .button                  = wl_pointer_button_event,
+    .axis                    = wl_pointer_axis,
+    .frame                   = wl_pointer_frame,
+    .axis_source             = wl_pointer_axis_source,
+    .axis_stop               = wl_pointer_axis_stop,
+    .axis_discrete           = wl_pointer_axis_discrete,
+    .axis_value120           = wl_pointer_axis_value120,
+    .axis_relative_direction = wl_pointer_axis_relative_direction};
 
 // keyboard
 
@@ -671,6 +741,7 @@ static void wl_seat_capabilites(void *data, struct wl_seat *wl_seat, u32 capabil
     // TODO: mouse events
     //
     bool have_keyboard = capabilities & WL_SEAT_CAPABILITY_KEYBOARD;
+    bool have_mouse    = capabilities & WL_SEAT_CAPABILITY_POINTER || capabilities & WL_SEAT_CAPABILITY_TOUCH;
 
     if (have_keyboard && platform_state_ptr->wl_keyboard == NULL)
     {
@@ -681,6 +752,17 @@ static void wl_seat_capabilites(void *data, struct wl_seat *wl_seat, u32 capabil
     {
         wl_keyboard_release(platform_state_ptr->wl_keyboard);
         platform_state_ptr->wl_keyboard = NULL;
+    }
+
+    if (have_mouse && platform_state_ptr->wl_pointer == NULL)
+    {
+        platform_state_ptr->wl_pointer = wl_seat_get_pointer(platform_state_ptr->wl_seat);
+        wl_pointer_add_listener(platform_state_ptr->wl_pointer, &wl_pointer_listener, platform_state_ptr);
+    }
+    else if (!have_mouse && platform_state_ptr->wl_pointer != NULL)
+    {
+        wl_pointer_release(platform_state_ptr->wl_pointer);
+        platform_state_ptr->wl_pointer = NULL;
     }
 }
 static void wl_seat_name(void *data, struct wl_seat *wl_seat, const char *name)
@@ -727,6 +809,7 @@ struct xdg_toplevel_listener xdg_toplevel_listener = {.configure        = xdg_to
 
 static void xdg_surface_configure(void *data, struct xdg_surface *xdg_surface, u32 serial)
 {
+    DDEBUG("wtf is serial surface configure %d", serial);
     xdg_surface_ack_configure(xdg_surface, serial);
     wl_surface_commit(platform_state_ptr->wl_surface);
 }
@@ -738,6 +821,7 @@ static const struct xdg_surface_listener xdg_surface_listener = {
 // shell
 static void xdg_wm_base_ping(void *data, struct xdg_wm_base *xdg_wm_base, u32 serial)
 {
+    DDEBUG("wtf is serial wm base ping %d", serial);
     xdg_wm_base_pong(xdg_wm_base, serial);
 }
 
@@ -837,9 +921,6 @@ bool platform_system_startup(u64 *platform_mem_requirements, void *plat_state, a
     xdg_toplevel_set_app_id(platform_state_ptr->xdg_toplevel, app_config->application_name);
 
     wl_surface_commit(platform_state_ptr->wl_surface);
-
-    // platform_state_ptr->zxdg_toplevel_decoration = zxdg_decoration_manager_v1_get_toplevel_decoration(
-    //    platform_state_ptr->zxdg_decoration_manager_v1, platform_state_ptr->xdg_toplevel);
 
     return true;
 }

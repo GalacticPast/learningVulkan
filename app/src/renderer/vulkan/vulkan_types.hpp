@@ -7,6 +7,8 @@
         DASSERT(expr == VK_SUCCESS);                                                                                   \
     }
 
+#define MAX_FRAMES_IN_FLIGHT 2
+
 struct vulkan_device
 {
 
@@ -78,9 +80,10 @@ struct vulkan_context
     VkCommandBuffer command_buffer;
 
     VkCommandPool graphics_command_pool;
-    VkSemaphore   image_available_semaphore;
-    VkSemaphore   render_finished_semaphore;
-    VkFence       in_flight_fence;
+
+    VkSemaphore image_available_semaphore;
+    VkSemaphore render_finished_semaphore;
+    VkFence     in_flight_fence;
 
     // INFO: maybe should be inside vulkan_device??
     VkQueue vk_graphics_queue;

@@ -6,6 +6,7 @@ enum memory_tags
 {
     MEM_TAG_UNKNOWN,
     MEM_TAG_LINEAR_ALLOCATOR,
+    MEM_TAG_DARRAY,
     MEM_TAG_APPLICATION,
     MEM_TAG_RENDERER,
     MEM_TAG_MAX_TAGS,
@@ -26,7 +27,7 @@ bool memory_system_startup(u64 *memory_system_memory_requirements, void *state);
 void memory_system_shutdown(void *state);
 
 void *dallocate(u64 mem_size, memory_tags tag);
-void dfree(void *block, u64 size, memory_tags tag);
+void  dfree(void *block, u64 size, memory_tags tag);
 
 void dset_memory_value(void *block, u64 value, u64 size);
 void dzero_memory(void *block, u64 size);
