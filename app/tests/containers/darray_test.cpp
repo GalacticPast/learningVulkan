@@ -66,6 +66,7 @@ bool darray_pop_at_test()
     array.pop_at(8);
     array.pop_at(7);
     array.pop_at(3);
+
     s32 array_size = array.size();
 
     for (s32 i = 0; i < array_size; i++)

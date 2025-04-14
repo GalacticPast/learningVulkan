@@ -24,6 +24,8 @@ void run_tests()
     darray_register_tests();
 
     test_manager_run_tests();
+    test_instance->tests = 0;
+    test_instance        = 0;
 }
 
 int main()
