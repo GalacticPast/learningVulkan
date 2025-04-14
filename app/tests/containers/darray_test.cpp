@@ -1,6 +1,6 @@
 #include "darray_test.hpp"
 #include "../expect.hpp"
-#include "containers/darray.hpp"
+#include "../src/containers/darray.hpp"
 #include <vector>
 
 bool darray_create_and_destroy()
@@ -26,28 +26,29 @@ bool darray_create_and_resize()
     }
 
     int j = 0;
-    for (s32 i = 0; i < size + 1; i++)
+    for (s32 i = 0; i < size; i++)
     {
         j = array[i];
+        expect_should_be(i, j);
     }
-    expect_should_not_be(j, size - 1);
-    expect_should_be(0, j);
+    return true;
+}
 
-    std::vector<const char **> what;
-
-    darray<const char **> strings(10);
-    const char           *abs = "bcd";
-
-    for (s32 i = 0; i < 10; i++)
+bool darray_pop_back_test()
+{
+    darray<s32> array;
+    u32         size = 100000;
+    for (s32 i = 0; i < size; i++)
     {
-        strings[i] = &abs;
-    }
-    for (s32 i = 0; i < 10; i++)
-    {
-        const char **string = strings[i];
-        DDEBUG("%s", *string);
+        array.push_back(i);
     }
 
+    int j = 0;
+    for (s32 i = size; i >= 0; i--)
+    {
+        j = array.pop_back();
+        expect_should_be(i, j);
+    }
     return true;
 }
 
