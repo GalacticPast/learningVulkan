@@ -89,5 +89,4 @@ $(obj_dir)/%.c.o : %.c
 
 link: $(obj_files_c) $(obj_files_cpp)
 	@echo Linking 
-	@echo $^
 	@$(cc) $(compiler_flags) $^ -o $(bin_dir)/$(assembly)$(extension) $(includes) $(defines) $(linker_flags) 

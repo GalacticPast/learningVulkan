@@ -37,7 +37,7 @@ template <typename T> darray<T>::darray(u64 size)
     element_size = sizeof(T);
     capacity     = size * element_size;
     length       = size;
-    array        = dallocate(element_size * capacity, MEM_TAG_DARRAY);
+    array        = dallocate(capacity, MEM_TAG_DARRAY);
 }
 template <typename T> darray<T>::~darray()
 {
@@ -105,12 +105,12 @@ template <typename T> T darray<T>::pop_back()
     if (length == 0)
     {
         DWARN("No element in array to pop back. Returning...");
-        return;
+        return NULL;
     }
 
-    T return_element = (u8 *)array + (length * element_size);
+    T *return_element = (T *)((u8 *)array + ((length - 1) * element_size));
     length--;
-    return return_element;
+    return *return_element;
 }
 
 template <typename T> T darray<T>::pop_at(u32 index)
@@ -119,16 +119,19 @@ template <typename T> T darray<T>::pop_at(u32 index)
     {
         DASSERT_MSG(index > length, "Index is out of bounds....");
     }
-    T  return_element_cpy = (u8 *)array + (index * element_size);
-    T *return_element_ptr = (u8 *)array + (index * element_size);
-    T *next_element       = return_element_ptr + (1 * element_size);
+    if (index == length)
+    {
+        T *return_element = (T *)((u8 *)array + ((length - 1) * element_size));
+        length--;
+        return *return_element;
+    }
+    T return_element_copy = *((T *)((u8 *)array + (index * element_size)));
 
-    void *buffer          = dallocate(element_size * (capacity * DEFAULT_DARRAY_RESIZE_FACTOR), MEM_TAG_DARRAY);
-    dcopy_memory(buffer, array, index * element_size);
-    dcopy_memory((u8 *)buffer + (index + 2) * element_size, next_element, (index + 1) * element_size);
-    dfree(array, capacity * element_size, MEM_TAG_DARRAY);
-    array  = buffer;
-    buffer = 0;
+    T *return_element_ptr = ((T *)((u8 *)array + (index * element_size)));
+    T *next_element       = (T *)((u8 *)array + ((index + 1) * element_size));
 
-    return return_element_cpy;
+    dcopy_memory(return_element_ptr, next_element, (index + 1) * element_size);
+    length--;
+
+    return return_element_copy;
 }
