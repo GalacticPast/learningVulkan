@@ -15,7 +15,7 @@ template <typename Type> class darray
     u64 length;
 
   public:
-    void *array;
+    void *data;
 
     darray();
     darray(u64 size);
@@ -37,15 +37,15 @@ template <typename T> darray<T>::darray(u64 size)
     element_size = sizeof(T);
     capacity     = size * element_size;
     length       = size;
-    array        = dallocate(capacity, MEM_TAG_DARRAY);
+    data         = dallocate(capacity, MEM_TAG_DARRAY);
 }
 template <typename T> darray<T>::~darray()
 {
-    dfree(array, element_size * capacity, MEM_TAG_DARRAY);
+    dfree(data, element_size * capacity, MEM_TAG_DARRAY);
     capacity     = 0;
     element_size = 0;
     length       = 0;
-    array        = 0;
+    data         = 0;
 }
 
 template <typename T> darray<T>::darray()
@@ -53,7 +53,7 @@ template <typename T> darray<T>::darray()
     element_size = sizeof(T);
     capacity     = DEFAULT_DARRAY_SIZE * element_size;
     length       = 0;
-    array        = dallocate(capacity, MEM_TAG_DARRAY);
+    data         = dallocate(capacity, MEM_TAG_DARRAY);
 }
 template <typename T> T darray<T>::operator[](u64 index) const
 {
@@ -61,7 +61,7 @@ template <typename T> T darray<T>::operator[](u64 index) const
     {
         DASSERT_MSG(index >= length, "Index is out of bounds....");
     }
-    T *elem = (T *)((u8 *)array + (index * element_size));
+    T *elem = (T *)((u8 *)data + (index * element_size));
     return *elem;
 }
 
@@ -71,7 +71,7 @@ template <typename T> T &darray<T>::operator[](u64 index)
     {
         DASSERT_MSG(index < length, "Index is out of bounds....");
     }
-    T *elem = ((T *)((u8 *)array + (index * element_size)));
+    T *elem = ((T *)((u8 *)data + (index * element_size)));
     return *elem;
 }
 
@@ -87,15 +87,15 @@ template <typename T> void darray<T>::push_back(T element)
         DWARN("Array size is not large enough to accomadate another element. Resizing....");
         void *buffer = dallocate(DEFAULT_DARRAY_RESIZE_FACTOR * capacity, MEM_TAG_DARRAY);
 
-        dcopy_memory(buffer, array, capacity);
-        dfree(array, capacity, MEM_TAG_DARRAY);
+        dcopy_memory(buffer, data, capacity);
+        dfree(data, capacity, MEM_TAG_DARRAY);
 
         capacity = capacity * DEFAULT_DARRAY_RESIZE_FACTOR;
-        array    = buffer;
+        data     = buffer;
         buffer   = 0;
     }
 
-    void *last_index = (void *)((u8 *)array + (length * element_size));
+    void *last_index = (void *)((u8 *)data + (length * element_size));
     dcopy_memory(last_index, &element, element_size);
     length++;
     last_index = 0;
@@ -107,7 +107,7 @@ template <typename T> T darray<T>::pop_back()
         DASSERT_MSG(length != 0, "No elements in darray to pop back.");
     }
 
-    T *return_element = (T *)((u8 *)array + ((length - 1) * element_size));
+    T *return_element = (T *)((u8 *)data + ((length - 1) * element_size));
     length--;
     return *return_element;
 }
@@ -118,7 +118,7 @@ template <typename T> T darray<T>::pop_at(u32 index)
     {
         DASSERT_MSG(index > length, "Index is out of bounds....");
     }
-    void *return_element      = ((u8 *)array + ((index)*element_size));
+    void *return_element      = ((u8 *)data + ((index)*element_size));
     T     return_element_copy = *(T *)return_element;
     if (index == length - 1)
     {
@@ -127,19 +127,19 @@ template <typename T> T darray<T>::pop_at(u32 index)
     }
     if (index == 0)
     {
-        dcopy_memory(array, (u8 *)return_element + element_size, (length - 1) * element_size);
+        dcopy_memory(data, (u8 *)return_element + element_size, (length - 1) * element_size);
         length--;
         return return_element_copy;
     }
 
-    T *next_element = (T *)((u8 *)array + ((index + 1) * element_size));
+    T *next_element = (T *)((u8 *)data + ((index + 1) * element_size));
 
     void *new_array = dallocate(capacity, MEM_TAG_DARRAY);
-    dcopy_memory(new_array, array, index * element_size);
+    dcopy_memory(new_array, data, index * element_size);
     dcopy_memory(((u8 *)new_array + (index * element_size)), next_element, (length - index) * element_size);
 
-    dfree(array, capacity, MEM_TAG_RENDERER);
-    array = new_array;
+    dfree(data, capacity, MEM_TAG_RENDERER);
+    data = new_array;
 
     length--;
 

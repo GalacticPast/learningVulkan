@@ -1,4 +1,5 @@
 #include "vulkan_command_buffers.hpp"
+#include "core/dmemory.hpp"
 
 bool vulkan_create_command_pool(vulkan_context *vk_context)
 {
@@ -20,14 +21,17 @@ bool vulkan_create_command_buffer(vulkan_context *vk_context, VkCommandPool *com
 {
     VkCommandBufferAllocateInfo command_buffer_alloc_info{};
 
+    vk_context->command_buffers =
+        (VkCommandBuffer *)dallocate(sizeof(VkCommandBuffer) * MAX_FRAMES_IN_FLIGHT, MEM_TAG_RENDERER);
+
     command_buffer_alloc_info.sType              = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
     command_buffer_alloc_info.pNext              = nullptr;
     command_buffer_alloc_info.commandPool        = vk_context->graphics_command_pool;
     command_buffer_alloc_info.level              = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-    command_buffer_alloc_info.commandBufferCount = 1;
+    command_buffer_alloc_info.commandBufferCount = MAX_FRAMES_IN_FLIGHT;
 
     VkResult result = vkAllocateCommandBuffers(vk_context->vk_device.logical, &command_buffer_alloc_info,
-                                               &vk_context->command_buffer);
+                                               vk_context->command_buffers);
     return true;
 }
 

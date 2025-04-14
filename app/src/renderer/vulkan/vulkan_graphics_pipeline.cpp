@@ -1,4 +1,5 @@
 #include "vulkan_graphics_pipeline.hpp"
+#include "containers/darray.hpp"
 #include "core/dfile_system.hpp"
 #include "core/dmemory.hpp"
 #include "core/logger.hpp"
@@ -10,7 +11,6 @@ bool vulkan_create_graphics_pipeline(vulkan_context *vk_context)
     DDEBUG("Creating vulkan graphics pipeline");
 
     // INFO: shader stage
-    char       *vert_shader_code;
     u64         vert_shader_code_buffer_size_requirements = INVALID_ID_64;
     const char *vert_shader_file_name                     = "default_shader.vert.spv";
 
@@ -20,21 +20,23 @@ bool vulkan_create_graphics_pipeline(vulkan_context *vk_context)
         DFATAL("File size error");
         return false;
     }
-    vert_shader_code = (char *)dallocate(vert_shader_code_buffer_size_requirements, MEM_TAG_RENDERER);
-    file_open_and_read(vert_shader_file_name, &vert_shader_code_buffer_size_requirements, vert_shader_code, 1);
+    darray<char *> vert_shader_code(vert_shader_code_buffer_size_requirements);
+    file_open_and_read(vert_shader_file_name, &vert_shader_code_buffer_size_requirements, (char *)vert_shader_code.data,
+                       1);
 
-    char       *frag_shader_code;
     u64         frag_shader_code_buffer_size_requirements = INVALID_ID_64;
     const char *frag_shader_file_name                     = "default_shader.frag.spv";
 
     file_open_and_read(frag_shader_file_name, &frag_shader_code_buffer_size_requirements, 0, 1);
-    frag_shader_code = (char *)dallocate(frag_shader_code_buffer_size_requirements, MEM_TAG_RENDERER);
-    file_open_and_read(frag_shader_file_name, &frag_shader_code_buffer_size_requirements, frag_shader_code, 1);
+    darray<char *> frag_shader_code(frag_shader_code_buffer_size_requirements);
+    file_open_and_read(frag_shader_file_name, &frag_shader_code_buffer_size_requirements, (char *)frag_shader_code.data,
+                       1);
 
-    VkShaderModule vert_shader_module =
-        create_shader_module(vk_context, vert_shader_code, vert_shader_code_buffer_size_requirements);
-    VkShaderModule frag_shader_module =
-        create_shader_module(vk_context, frag_shader_code, frag_shader_code_buffer_size_requirements);
+    VkShaderModule vert_shader_module        = create_shader_module(vk_context, (const char *)vert_shader_code.data,
+                                                                    vert_shader_code_buffer_size_requirements);
+
+    VkShaderModule frag_shader_module        = create_shader_module(vk_context, (const char *)frag_shader_code.data,
+                                                                    frag_shader_code_buffer_size_requirements);
 
     // create the pipeline shader stage
     u32                   shader_stage_count = 2;

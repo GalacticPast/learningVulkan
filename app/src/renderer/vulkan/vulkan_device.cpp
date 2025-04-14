@@ -300,11 +300,11 @@ bool vulkan_is_physical_device_suitable(vulkan_context *vk_context, VkPhysicalDe
         {
             DERROR("Device VkSurfaceFormatKHR is 0. Skipping device.. ");
             DERROR("Device VkPresentModeKHR is 0. Skipping device.. ");
-
             dfree(dummy_swapchain.surface_formats, sizeof(VkSurfaceFormatKHR) * dummy_swapchain.surface_formats_count,
                   MEM_TAG_RENDERER);
             dfree(dummy_swapchain.present_modes, sizeof(VkPresentModeKHR) * dummy_swapchain.present_modes_count,
                   MEM_TAG_RENDERER);
+
             return false;
         }
         //
@@ -318,6 +318,11 @@ bool vulkan_is_physical_device_suitable(vulkan_context *vk_context, VkPhysicalDe
         vk_context->vk_device.physical_features =
             (VkPhysicalDeviceFeatures *)dallocate(sizeof(VkPhysicalDeviceFeatures), MEM_TAG_RENDERER);
         dcopy_memory(vk_context->vk_device.physical_features, &physical_features, sizeof(VkPhysicalDeviceFeatures));
+
+        dfree(dummy_swapchain.surface_formats, sizeof(VkSurfaceFormatKHR) * dummy_swapchain.surface_formats_count,
+              MEM_TAG_RENDERER);
+        dfree(dummy_swapchain.present_modes, sizeof(VkPresentModeKHR) * dummy_swapchain.present_modes_count,
+              MEM_TAG_RENDERER);
 
         return true;
     }

@@ -69,6 +69,8 @@ struct vulkan_pipeline
 
 struct vulkan_context
 {
+    u32 current_frame_index;
+
     vulkan_device vk_device;
 
     vulkan_swapchain vk_swapchain;
@@ -77,13 +79,13 @@ struct vulkan_context
 
     vulkan_pipeline vk_graphics_pipeline;
 
-    VkCommandBuffer command_buffer;
+    VkCommandBuffer *command_buffers;
 
     VkCommandPool graphics_command_pool;
 
-    VkSemaphore image_available_semaphore;
-    VkSemaphore render_finished_semaphore;
-    VkFence     in_flight_fence;
+    VkSemaphore *image_available_semaphores;
+    VkSemaphore *render_finished_semaphores;
+    VkFence     *in_flight_fences;
 
     // INFO: maybe should be inside vulkan_device??
     VkQueue vk_graphics_queue;
