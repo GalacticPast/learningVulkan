@@ -121,13 +121,18 @@ bool event_callback_resize(event_context context, void *data)
 {
     if (app_state_ptr)
     {
-
         application_config *config = app_state_ptr->application_config;
 
         config->width              = context.data.u32[0];
         config->height             = context.data.u32[1];
 
         DDEBUG("Resized event, new width: %d new height: %d", config->width, config->height);
+
+        bool result = renderer_resize();
+        if (!result)
+        {
+            DDEBUG("Renderer resize failed.");
+        }
 
         return true;
     }

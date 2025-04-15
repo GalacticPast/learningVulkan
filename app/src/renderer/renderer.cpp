@@ -67,3 +67,16 @@ void renderer_draw_frame()
         return;
     }
 }
+bool renderer_resize()
+{
+    if (renderer_system_state_ptr && renderer_system_state_ptr->vulkan_backend_state)
+    {
+        vulkan_backend_resize();
+        return true;
+    }
+    else
+    {
+        DERROR("Vulkan Backend doesnt exist to accept resize");
+        return false;
+    }
+}

@@ -5,8 +5,15 @@
 #include <cstring>
 
 static memory_system *memory_system_ptr;
-
-static const char *memory_tag_strings[MEM_TAG_MAX_TAGS] = {"UNKNOWN    ", "LINEAR_ALLC", "APPLICATION", "RENDERER   "};
+// clang-format off
+static const char *memory_tag_strings[MEM_TAG_MAX_TAGS] = {
+    "UNKNOWN    ",
+    "LINEAR_ALLC",
+    "DARRAY     ",
+    "APPLICATION",
+    "RENDERER   "
+};
+// clang-format on 
 
 bool memory_system_startup(u64 *memory_system_memory_requirements, void *state)
 {

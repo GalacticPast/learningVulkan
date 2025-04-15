@@ -3,13 +3,13 @@
 #include "core/logger.hpp"
 #include "defines.hpp"
 
-#include "renderer/vulkan/vulkan_renderpass.hpp"
 #include "vulkan_backend.hpp"
 #include "vulkan_command_buffers.hpp"
 #include "vulkan_device.hpp"
 #include "vulkan_framebuffer.hpp"
 #include "vulkan_graphics_pipeline.hpp"
 #include "vulkan_platform.hpp"
+#include "vulkan_renderpass.hpp"
 #include "vulkan_swapchain.hpp"
 #include "vulkan_sync_objects.hpp"
 #include "vulkan_types.hpp"
@@ -417,6 +417,13 @@ bool vulkan_draw_frame()
     VkResult result      = vkAcquireNextImageKHR(
         vulkan_context_ptr->vk_device.logical, vulkan_context_ptr->vk_swapchain.handle, INVALID_ID_64,
         vulkan_context_ptr->image_available_semaphores[current_frame], VK_NULL_HANDLE, &image_index);
+
+    if (result == VK_ERROR_OUT_OF_DATE_KHR)
+    {
+        vulkan_recreate_swapchain(vulkan_context_ptr);
+        DDEBUG("VK_ERROR_OUT_OF_DATE_KHR");
+        return false;
+    }
     VK_CHECK(result);
 
     vkResetCommandBuffer(vulkan_context_ptr->command_buffers[current_frame], 0);
@@ -453,10 +460,20 @@ bool vulkan_draw_frame()
     present_info.pImageIndices      = &image_index;
 
     result                          = vkQueuePresentKHR(vulkan_context_ptr->vk_present_queue, &present_info);
+    if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR)
+    {
+        DDEBUG("VK_ERROR_OUT_OF_DATE_KHR or VK_SUBOTIMAL_KHR");
+        vulkan_recreate_swapchain(vulkan_context_ptr);
+    }
     VK_CHECK(result);
 
     vulkan_context_ptr->current_frame_index++;
     vulkan_context_ptr->current_frame_index %= MAX_FRAMES_IN_FLIGHT;
 
     return true;
+}
+bool vulkan_backend_resize()
+{
+    bool result = vulkan_recreate_swapchain(vulkan_context_ptr);
+    return result;
 }

@@ -4,8 +4,9 @@
 #include "defines.hpp"
 #include "platform/platform.hpp"
 #include "vulkan_device.hpp"
+#include "vulkan_framebuffer.hpp"
 
-bool vulkan_create_swapchain(vulkan_context *vk_context)
+bool create_swapchain(vulkan_context *vk_context)
 {
     // INFO: query swapchain support
     vulkan_device_query_swapchain_support(vk_context, vk_context->vk_device.physical, &vk_context->vk_swapchain);
@@ -162,4 +163,62 @@ bool vulkan_create_swapchain(vulkan_context *vk_context)
     }
 
     return true;
+}
+
+bool destroy_swapchain(vulkan_context *vk_context)
+{
+    if (vk_context->vk_swapchain.handle)
+    {
+        for (u32 i = 0; i < vk_context->vk_swapchain.images_count; i++)
+        {
+            vkDestroyImageView(vk_context->vk_device.logical, vk_context->vk_swapchain.vk_images.views[i],
+                               vk_context->vk_allocator);
+        }
+        for (u32 i = 0; i < vk_context->vk_swapchain.images_count; i++)
+        {
+            vkDestroyFramebuffer(vk_context->vk_device.logical, vk_context->vk_swapchain.buffers[i].handle,
+                                 vk_context->vk_allocator);
+        }
+
+        vkDestroySwapchainKHR(vk_context->vk_device.logical, vk_context->vk_swapchain.handle, vk_context->vk_allocator);
+
+        dfree(vk_context->vk_swapchain.vk_images.views, sizeof(VkImageView) * vk_context->vk_swapchain.images_count,
+              MEM_TAG_RENDERER);
+
+        dfree(vk_context->vk_swapchain.surface_formats,
+              sizeof(VkSurfaceFormatKHR) * vk_context->vk_swapchain.images_count, MEM_TAG_RENDERER);
+        dfree(vk_context->vk_swapchain.present_modes, sizeof(VkPresentModeKHR) * vk_context->vk_swapchain.images_count,
+              MEM_TAG_RENDERER);
+    }
+    return true;
+}
+
+bool vulkan_create_swapchain(vulkan_context *vk_context)
+{
+    bool result = create_swapchain(vk_context);
+    if (!result)
+    {
+        DDEBUG("Create swapchain failed.");
+        return false;
+    }
+    return result;
+}
+
+bool vulkan_recreate_swapchain(vulkan_context *vk_context)
+{
+    vkDeviceWaitIdle(vk_context->vk_device.logical);
+    bool result = destroy_swapchain(vk_context);
+    if (!result)
+    {
+        DDEBUG("Destroy swapchain failed.");
+        return false;
+    }
+    result = create_swapchain(vk_context);
+    if (!result)
+    {
+        DDEBUG("Create swapchain failed.");
+        return false;
+    }
+    vulkan_create_framebuffers(vk_context);
+    return result;
 }

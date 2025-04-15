@@ -41,7 +41,7 @@ template <typename T> darray<T>::darray(u64 size)
 }
 template <typename T> darray<T>::~darray()
 {
-    dfree(data, element_size * capacity, MEM_TAG_DARRAY);
+    dfree(data, capacity, MEM_TAG_DARRAY);
     capacity     = 0;
     element_size = 0;
     length       = 0;
