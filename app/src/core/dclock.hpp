@@ -7,5 +7,6 @@ struct dclock
     f64 time_elapsed;
 };
 
+void clock_start(dclock *out_clock);
 void clock_update(dclock *out_clock);
 void clock_stop(dclock *out_clock);

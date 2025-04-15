@@ -4,6 +4,7 @@
 #include "core/dclock.hpp"
 #include "core/logger.hpp"
 #include "defines.hpp"
+#include "math/dmath.hpp"
 #include "platform/platform.hpp"
 
 #include "../tests/containers/darray_test.hpp"
@@ -54,25 +55,25 @@ int main()
     f64 curr_frame_time = 0;
     f64 end_time        = 0;
 
-    f64 req_frame_time  = 1.0f / 60;
+    f64 req_frame_time  = 1.0f / 240;
+    clock_start(&clock);
 
     while (app_state.is_running)
     {
 
         clock_update(&clock);
-        start_time = clock.start_time;
+        start_time = clock.time_elapsed;
+
         application_run();
+
         clock_update(&clock);
-        end_time        = clock.start_time;
+        curr_frame_time = clock.time_elapsed - start_time;
 
-        curr_frame_time = end_time - start_time;
-
-        if (curr_frame_time < req_frame_time)
+        if (f32_compare(req_frame_time, curr_frame_time, req_frame_time))
         {
-            f64 sleep_ns = req_frame_time - curr_frame_time - 0.0000000001;
-            platform_sleep(sleep_ns);
+            f64 sleep = req_frame_time - curr_frame_time;
+            platform_sleep(sleep * D_SEC_TO_MS_MULTIPLIER);
         }
     }
-
     application_shutdown();
 }
