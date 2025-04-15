@@ -1,6 +1,7 @@
 #include "containers/darray.hpp"
 #include "core/application.hpp"
 #include "core/dasserts.hpp"
+#include "core/dclock.hpp"
 #include "core/logger.hpp"
 #include "defines.hpp"
 #include "platform/platform.hpp"
@@ -36,8 +37,9 @@ int main()
     app_config.height           = INVALID_ID;
     app_config.x                = INVALID_ID;
     app_config.y                = INVALID_ID;
-
     app_config.application_name = "Learning Vulkan";
+
+    dclock clock{};
 
     application_state app_state;
 
@@ -48,9 +50,28 @@ int main()
         return 2;
     }
 
+    f64 start_time      = 0;
+    f64 curr_frame_time = 0;
+    f64 end_time        = 0;
+
+    f64 req_frame_time  = 1.0f / 60;
+
     while (app_state.is_running)
     {
+
+        clock_update(&clock);
+        start_time = clock.start_time;
         application_run();
+        clock_update(&clock);
+        end_time        = clock.start_time;
+
+        curr_frame_time = end_time - start_time;
+
+        if (curr_frame_time < req_frame_time)
+        {
+            f64 sleep_ns = req_frame_time - curr_frame_time - 0.0000000001;
+            platform_sleep(sleep_ns);
+        }
     }
 
     application_shutdown();
