@@ -16,6 +16,8 @@ struct vulkan_device
 
     VkPhysicalDevice physical;
 
+    VkPhysicalDeviceMemoryProperties memory_properties;
+
     VkPhysicalDeviceProperties *physical_properties;
     VkPhysicalDeviceFeatures   *physical_features;
 
@@ -67,6 +69,11 @@ struct vulkan_pipeline
     VkPipelineLayout layout;
 };
 
+struct vulkan_buffer
+{
+    VkBuffer       handle;
+    VkDeviceMemory memory;
+};
 struct vulkan_context
 {
     u32 current_frame_index;
@@ -80,6 +87,8 @@ struct vulkan_context
     vulkan_pipeline vk_graphics_pipeline;
 
     VkCommandBuffer *command_buffers;
+
+    vulkan_buffer vertex_buffer;
 
     VkCommandPool graphics_command_pool;
 

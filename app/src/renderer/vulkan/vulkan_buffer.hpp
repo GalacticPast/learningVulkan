@@ -1,0 +1,10 @@
+#pragma once
+#include "containers/darray.hpp"
+#include "vulkan_types.hpp"
+
+bool vulkan_create_buffer(vulkan_context *vk_context, vulkan_buffer *out_buffer, VkBufferUsageFlags usg_flags,
+                          VkMemoryPropertyFlags memory_properties_flags, u64 buffer_size);
+bool vulkan_create_vertex_buffer(vulkan_context *vk_context);
+bool vulkan_copy_buffer(vulkan_context *vk_context, vulkan_buffer *dst_buffer, vulkan_buffer *src_buffer,
+                        u64 buffer_size);
+bool vulkan_destroy_buffer(vulkan_context *vk_context, vulkan_buffer *buffer);

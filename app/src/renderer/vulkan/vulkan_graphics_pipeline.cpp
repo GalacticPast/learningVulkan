@@ -1,5 +1,6 @@
 #include "vulkan_graphics_pipeline.hpp"
 #include "containers/darray.hpp"
+#include "core/application.hpp"
 #include "core/dfile_system.hpp"
 #include "core/dmemory.hpp"
 #include "core/logger.hpp"
@@ -73,16 +74,36 @@ bool vulkan_create_graphics_pipeline(vulkan_context *vk_context)
     // INFO: Dynamic stated end
 
     // INFO: Vertex INPUT
+    // 2 because we only have 2 fields in out vertex struct
+    VkVertexInputBindingDescription vertex_input_binding_description{};
+    vertex_input_binding_description.binding   = 0;
+    vertex_input_binding_description.stride    = sizeof(vertex);
+    vertex_input_binding_description.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+
+    VkVertexInputAttributeDescription vertex_input_attribute_descriptions[2];
+    VkFormat vertex_input_attribute_formats[2]      = {VK_FORMAT_R32G32_SFLOAT, VK_FORMAT_R32G32B32_SFLOAT};
+
+    // position
+    vertex_input_attribute_descriptions[0].location = 0;
+    vertex_input_attribute_descriptions[0].binding  = 0;
+    vertex_input_attribute_descriptions[0].format   = vertex_input_attribute_formats[0];
+    vertex_input_attribute_descriptions[0].offset   = 0;
+
+    // color
+    vertex_input_attribute_descriptions[1].location = 1;
+    vertex_input_attribute_descriptions[1].binding  = 0;
+    vertex_input_attribute_descriptions[1].format   = vertex_input_attribute_formats[1];
+    vertex_input_attribute_descriptions[1].offset   = sizeof(f32) * 2;
 
     VkPipelineVertexInputStateCreateInfo vertex_input_state_create_info{};
 
     vertex_input_state_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
     vertex_input_state_create_info.pNext = 0;
     vertex_input_state_create_info.flags = 0;
-    vertex_input_state_create_info.vertexBindingDescriptionCount   = 0;
-    vertex_input_state_create_info.pVertexBindingDescriptions      = nullptr;
-    vertex_input_state_create_info.vertexAttributeDescriptionCount = 0;
-    vertex_input_state_create_info.pVertexAttributeDescriptions    = nullptr;
+    vertex_input_state_create_info.vertexBindingDescriptionCount   = 1;
+    vertex_input_state_create_info.pVertexBindingDescriptions      = &vertex_input_binding_description;
+    vertex_input_state_create_info.vertexAttributeDescriptionCount = 2;
+    vertex_input_state_create_info.pVertexAttributeDescriptions    = vertex_input_attribute_descriptions;
 
     VkPipelineInputAssemblyStateCreateInfo input_assembly_state_create_info{};
     input_assembly_state_create_info.sType    = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;

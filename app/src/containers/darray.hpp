@@ -9,12 +9,11 @@
 
 template <typename Type> class darray
 {
-  private:
+  public:
     u64 capacity;
     u64 element_size;
     u64 length;
 
-  public:
     void *data;
 
     darray();

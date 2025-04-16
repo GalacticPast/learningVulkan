@@ -102,9 +102,9 @@ void application_shutdown()
     linear_allocator_destroy(&app_state_ptr->application_system_linear_allocator);
 }
 
-void application_run()
+void application_run(render_data *data)
 {
-    renderer_draw_frame();
+    renderer_draw_frame(data);
 }
 
 bool event_callback_quit(event_context context, void *data)

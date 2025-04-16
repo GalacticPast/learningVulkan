@@ -52,9 +52,9 @@ void renderer_system_shutdown()
     }
 }
 
-void renderer_draw_frame()
+void renderer_draw_frame(render_data *data)
 {
-    bool result = vulkan_draw_frame();
+    bool result = vulkan_draw_frame(data);
     if (!result)
     {
         DERROR("Smth wrong with drawing frame");

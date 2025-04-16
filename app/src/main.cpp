@@ -51,11 +51,22 @@ int main()
         return 2;
     }
 
+    vertex a{.position = {0.0f, -0.5f}, .color = {1.0f, 0.0f, 0.0f}};
+    vertex b{.position = {0.5f, 0.5f}, .color = {1.0f, 1.0f, 0.0f}};
+    vertex c{.position = {-0.5f, 0.5f}, .color = {1.0f, 0.0f, 1.0f}};
+
+    darray<vertex> vertices;
+    vertices.push_back(a);
+    vertices.push_back(b);
+    vertices.push_back(c);
+
+    render_data triangle{};
+    triangle.vertices = &vertices;
+
     f64 start_time      = 0;
     f64 curr_frame_time = 0;
-    f64 end_time        = 0;
 
-    f64 req_frame_time  = 1.0f / 240;
+    f64 req_frame_time = 1.0f / 60;
     clock_start(&clock);
 
     while (app_state.is_running)
@@ -64,14 +75,14 @@ int main()
         clock_update(&clock);
         start_time = clock.time_elapsed;
 
-        application_run();
+        application_run(&triangle);
 
         clock_update(&clock);
         curr_frame_time = clock.time_elapsed - start_time;
 
         if (f32_compare(req_frame_time, curr_frame_time, req_frame_time))
         {
-            f64 sleep = req_frame_time - curr_frame_time;
+            f64 sleep = fabs(req_frame_time - curr_frame_time);
             platform_sleep(sleep * D_SEC_TO_MS_MULTIPLIER);
         }
     }

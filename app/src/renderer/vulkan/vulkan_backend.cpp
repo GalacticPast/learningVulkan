@@ -4,6 +4,7 @@
 #include "defines.hpp"
 
 #include "vulkan_backend.hpp"
+#include "vulkan_buffer.hpp"
 #include "vulkan_command_buffers.hpp"
 #include "vulkan_device.hpp"
 #include "vulkan_framebuffer.hpp"
@@ -14,7 +15,7 @@
 #include "vulkan_sync_objects.hpp"
 #include "vulkan_types.hpp"
 
-static vulkan_context *vulkan_context_ptr;
+static vulkan_context *vk_context;
 
 VkBool32 vulkan_dbg_msg_rprt_callback(VkDebugUtilsMessageSeverityFlagBitsEXT      messageSeverity,
                                       VkDebugUtilsMessageTypeFlagsEXT             messageTypes,
@@ -31,20 +32,20 @@ bool vulkan_backend_initialize(u64 *vulkan_backend_memory_requirements, applicat
         return true;
     }
     DDEBUG("Initializing Vulkan backend...");
-    vulkan_context_ptr               = (vulkan_context *)state;
-    vulkan_context_ptr->vk_allocator = nullptr;
+    vk_context               = (vulkan_context *)state;
+    vk_context->vk_allocator = nullptr;
 
     DDEBUG("Creating vulkan instance...");
 
     VkApplicationInfo app_info{};
 
-    app_info.sType                = VK_STRUCTURE_TYPE_APPLICATION_INFO;
-    app_info.pNext                = nullptr;
-    app_info.pApplicationName     = app_config->application_name;
-    app_info.applicationVersion   = VK_MAKE_VERSION(1, 0, 0);
-    app_info.pEngineName          = app_config->application_name;
-    app_info.engineVersion        = VK_MAKE_VERSION(1, 0, 0);
-    app_info.apiVersion           = VK_API_VERSION_1_3;
+    app_info.sType              = VK_STRUCTURE_TYPE_APPLICATION_INFO;
+    app_info.pNext              = nullptr;
+    app_info.pApplicationName   = app_config->application_name;
+    app_info.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
+    app_info.pEngineName        = app_config->application_name;
+    app_info.engineVersion      = VK_MAKE_VERSION(1, 0, 0);
+    app_info.apiVersion         = VK_API_VERSION_1_3;
 
     bool enable_validation_layers = false;
     bool validation_layer_support = false;
@@ -62,13 +63,13 @@ bool vulkan_backend_initialize(u64 *vulkan_backend_memory_requirements, applicat
     }
 #endif
 
-    vulkan_context_ptr->enabled_layer_count = 0;
+    vk_context->enabled_layer_count = 0;
 
-    u32 index                               = 0;
+    u32 index = 0;
     if (enable_validation_layers && validation_layer_support)
     {
-        vulkan_context_ptr->enabled_layer_count++;
-        vulkan_context_ptr->enabled_layer_names[index++] = "VK_LAYER_KHRONOS_validation";
+        vk_context->enabled_layer_count++;
+        vk_context->enabled_layer_names[index++] = "VK_LAYER_KHRONOS_validation";
     }
 
     // INFO: get platform specifig extensions and extensions count
@@ -135,14 +136,13 @@ bool vulkan_backend_initialize(u64 *vulkan_backend_memory_requirements, applicat
     inst_create_info.sType                   = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
     inst_create_info.pNext                   = 0;
     inst_create_info.flags                   = 0;
-    inst_create_info.enabledLayerCount       = vulkan_context_ptr->enabled_layer_count;
-    inst_create_info.ppEnabledLayerNames     = vulkan_context_ptr->enabled_layer_names;
+    inst_create_info.enabledLayerCount       = vk_context->enabled_layer_count;
+    inst_create_info.ppEnabledLayerNames     = vk_context->enabled_layer_names;
     inst_create_info.enabledExtensionCount   = (u32)vulkan_instance_extensions.size();
     inst_create_info.ppEnabledExtensionNames = (const char **)vulkan_instance_extensions.data;
     inst_create_info.pApplicationInfo        = &app_info;
 
-    VkResult result =
-        vkCreateInstance(&inst_create_info, vulkan_context_ptr->vk_allocator, &vulkan_context_ptr->vk_instance);
+    VkResult result = vkCreateInstance(&inst_create_info, vk_context->vk_allocator, &vk_context->vk_instance);
     VK_CHECK(result);
 
     if (enable_validation_layers && validation_layer_support)
@@ -155,61 +155,67 @@ bool vulkan_backend_initialize(u64 *vulkan_backend_memory_requirements, applicat
         }
     }
 
-    if (!vulkan_platform_create_surface(vulkan_context_ptr))
+    if (!vulkan_platform_create_surface(vk_context))
     {
         DERROR("Vulkan surface creation failed.");
         return false;
     }
 
-    if (!vulkan_create_logical_device(vulkan_context_ptr))
+    if (!vulkan_create_logical_device(vk_context))
     {
         DERROR("Vulkan logical device creation failed.");
         return false;
     }
 
-    if (!vulkan_create_swapchain(vulkan_context_ptr))
+    if (!vulkan_create_swapchain(vk_context))
     {
         DERROR("Vulkan swapchain creation failed.");
         return false;
     }
 
-    if (!vulkan_create_renderpass(vulkan_context_ptr))
+    if (!vulkan_create_renderpass(vk_context))
     {
         DERROR("Vulkan renderpass creation failed.");
         return false;
     }
 
-    if (!vulkan_create_graphics_pipeline(vulkan_context_ptr))
+    if (!vulkan_create_graphics_pipeline(vk_context))
     {
         DERROR("Vulkan graphics pipline creation failed.");
         return false;
     }
 
-    if (!vulkan_create_framebuffers(vulkan_context_ptr))
+    if (!vulkan_create_framebuffers(vk_context))
     {
         DERROR("Vulkan framebuffer creation failed.");
         return false;
     }
 
-    if (!vulkan_create_command_pool(vulkan_context_ptr))
+    if (!vulkan_create_command_pool(vk_context))
     {
         DERROR("Vulkan command pool creation failed.");
         return false;
     }
 
-    if (!vulkan_create_command_buffer(vulkan_context_ptr, &vulkan_context_ptr->graphics_command_pool))
+    if (!vulkan_create_vertex_buffer(vk_context))
+    {
+        DERROR("Vulkan Vertex buffer creation failed.");
+        return false;
+    }
+
+    if (!vulkan_create_command_buffer(vk_context, &vk_context->graphics_command_pool))
     {
         DERROR("Vulkan command buffer creation failed.");
         return false;
     }
 
-    if (!vulkan_create_sync_objects(vulkan_context_ptr))
+    if (!vulkan_create_sync_objects(vk_context))
     {
         DERROR("Vulkan sync objects creation failed.");
         return false;
     }
 
-    vulkan_context_ptr->current_frame_index = 0;
+    vk_context->current_frame_index = 0;
 
     return true;
 }
@@ -229,14 +235,14 @@ bool vulkan_create_debug_messenger(VkDebugUtilsMessengerCreateInfoEXT *dbg_messe
     dbg_messenger_create_info->pfnUserCallback = vulkan_dbg_msg_rprt_callback;
     dbg_messenger_create_info->pUserData       = nullptr;
 
-    if (!vulkan_context_ptr->vk_instance)
+    if (!vk_context->vk_instance)
     {
         DDEBUG("Populating vulkan_debug_utils_messenger struct");
         return true;
     }
 
     PFN_vkCreateDebugUtilsMessengerEXT func_create_dbg_utils_messenger_ext =
-        (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(vulkan_context_ptr->vk_instance,
+        (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(vk_context->vk_instance,
                                                                   "vkCreateDebugUtilsMessengerEXT");
 
     if (func_create_dbg_utils_messenger_ext == nullptr)
@@ -244,11 +250,10 @@ bool vulkan_create_debug_messenger(VkDebugUtilsMessengerCreateInfoEXT *dbg_messe
         DERROR("Vulkan Create debug messenger ext called but fucn ptr to vkCreateDebugUtilsMessengerEXT is nullptr");
         return false;
     }
-    if (vulkan_context_ptr->vk_instance)
+    if (vk_context->vk_instance)
     {
-        VK_CHECK(func_create_dbg_utils_messenger_ext(vulkan_context_ptr->vk_instance, dbg_messenger_create_info,
-                                                     vulkan_context_ptr->vk_allocator,
-                                                     &vulkan_context_ptr->vk_dbg_messenger));
+        VK_CHECK(func_create_dbg_utils_messenger_ext(vk_context->vk_instance, dbg_messenger_create_info,
+                                                     vk_context->vk_allocator, &vk_context->vk_dbg_messenger));
     }
 
     return true;
@@ -257,78 +262,73 @@ bool vulkan_create_debug_messenger(VkDebugUtilsMessengerCreateInfoEXT *dbg_messe
 void vulkan_backend_shutdown()
 {
     DDEBUG("Shutting down vulkan...");
-    vkDeviceWaitIdle(vulkan_context_ptr->vk_device.logical);
+
+    VkDevice              &device    = vk_context->vk_device.logical;
+    VkAllocationCallbacks *allocator = vk_context->vk_allocator;
+
+    vkDeviceWaitIdle(device);
     for (u32 i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
     {
-        vkDestroyFence(vulkan_context_ptr->vk_device.logical, vulkan_context_ptr->in_flight_fences[i],
-                       vulkan_context_ptr->vk_allocator);
-        vkDestroySemaphore(vulkan_context_ptr->vk_device.logical, vulkan_context_ptr->render_finished_semaphores[i],
-                           vulkan_context_ptr->vk_allocator);
-        vkDestroySemaphore(vulkan_context_ptr->vk_device.logical, vulkan_context_ptr->image_available_semaphores[i],
-                           vulkan_context_ptr->vk_allocator);
+        vkDestroyFence(device, vk_context->in_flight_fences[i], allocator);
+        vkDestroySemaphore(device, vk_context->render_finished_semaphores[i], allocator);
+        vkDestroySemaphore(device, vk_context->image_available_semaphores[i], allocator);
     }
-    dfree(vulkan_context_ptr->image_available_semaphores, sizeof(VkSemaphore) * MAX_FRAMES_IN_FLIGHT, MEM_TAG_RENDERER);
-    dfree(vulkan_context_ptr->render_finished_semaphores, sizeof(VkSemaphore) * MAX_FRAMES_IN_FLIGHT, MEM_TAG_RENDERER);
-    dfree(vulkan_context_ptr->in_flight_fences, sizeof(VkFence) * MAX_FRAMES_IN_FLIGHT, MEM_TAG_RENDERER);
+    dfree(vk_context->image_available_semaphores, sizeof(VkSemaphore) * MAX_FRAMES_IN_FLIGHT, MEM_TAG_RENDERER);
+    dfree(vk_context->render_finished_semaphores, sizeof(VkSemaphore) * MAX_FRAMES_IN_FLIGHT, MEM_TAG_RENDERER);
+    dfree(vk_context->in_flight_fences, sizeof(VkFence) * MAX_FRAMES_IN_FLIGHT, MEM_TAG_RENDERER);
 
-    vkDestroyCommandPool(vulkan_context_ptr->vk_device.logical, vulkan_context_ptr->graphics_command_pool,
-                         vulkan_context_ptr->vk_allocator);
+    vulkan_destroy_buffer(vk_context, &vk_context->vertex_buffer);
 
-    dfree(vulkan_context_ptr->command_buffers, sizeof(VkCommandBuffer) * MAX_FRAMES_IN_FLIGHT, MEM_TAG_RENDERER);
+    vkDestroyCommandPool(device, vk_context->graphics_command_pool, allocator);
 
-    for (u32 i = 0; i < vulkan_context_ptr->vk_swapchain.images_count; i++)
+    dfree(vk_context->command_buffers, sizeof(VkCommandBuffer) * MAX_FRAMES_IN_FLIGHT, MEM_TAG_RENDERER);
+
+    for (u32 i = 0; i < vk_context->vk_swapchain.images_count; i++)
     {
-        vkDestroyFramebuffer(vulkan_context_ptr->vk_device.logical, vulkan_context_ptr->vk_swapchain.buffers[i].handle,
-                             vulkan_context_ptr->vk_allocator);
+        vkDestroyFramebuffer(device, vk_context->vk_swapchain.buffers[i].handle, allocator);
     }
-    dfree(vulkan_context_ptr->vk_swapchain.buffers,
-          sizeof(VkFramebuffer) * vulkan_context_ptr->vk_swapchain.images_count, MEM_TAG_RENDERER);
+    dfree(vk_context->vk_swapchain.buffers, sizeof(VkFramebuffer) * vk_context->vk_swapchain.images_count,
+          MEM_TAG_RENDERER);
 
-    vkDestroyPipeline(vulkan_context_ptr->vk_device.logical, vulkan_context_ptr->vk_graphics_pipeline.handle,
-                      vulkan_context_ptr->vk_allocator);
+    vkDestroyPipeline(device, vk_context->vk_graphics_pipeline.handle, allocator);
 
-    vkDestroyRenderPass(vulkan_context_ptr->vk_device.logical, vulkan_context_ptr->vk_renderpass,
-                        vulkan_context_ptr->vk_allocator);
+    vkDestroyRenderPass(device, vk_context->vk_renderpass, allocator);
 
-    vkDestroyPipelineLayout(vulkan_context_ptr->vk_device.logical, vulkan_context_ptr->vk_graphics_pipeline.layout,
-                            vulkan_context_ptr->vk_allocator);
+    vkDestroyPipelineLayout(device, vk_context->vk_graphics_pipeline.layout, allocator);
 
-    for (u32 i = 0; i < vulkan_context_ptr->vk_swapchain.images_count; i++)
+    for (u32 i = 0; i < vk_context->vk_swapchain.images_count; i++)
     {
-        vkDestroyImageView(vulkan_context_ptr->vk_device.logical, vulkan_context_ptr->vk_swapchain.vk_images.views[i],
-                           vulkan_context_ptr->vk_allocator);
+        vkDestroyImageView(device, vk_context->vk_swapchain.vk_images.views[i], allocator);
     }
 
-    dfree(vulkan_context_ptr->vk_swapchain.vk_images.handles,
-          sizeof(VkImage) * vulkan_context_ptr->vk_swapchain.images_count, MEM_TAG_RENDERER);
-    dfree(vulkan_context_ptr->vk_swapchain.vk_images.views,
-          sizeof(VkImageView) * vulkan_context_ptr->vk_swapchain.images_count, MEM_TAG_RENDERER);
+    dfree(vk_context->vk_swapchain.vk_images.handles, sizeof(VkImage) * vk_context->vk_swapchain.images_count,
+          MEM_TAG_RENDERER);
+    dfree(vk_context->vk_swapchain.vk_images.views, sizeof(VkImageView) * vk_context->vk_swapchain.images_count,
+          MEM_TAG_RENDERER);
 
-    dfree(vulkan_context_ptr->vk_swapchain.surface_formats,
-          sizeof(VkSurfaceFormatKHR) * vulkan_context_ptr->vk_swapchain.images_count, MEM_TAG_RENDERER);
-    dfree(vulkan_context_ptr->vk_swapchain.present_modes,
-          sizeof(VkPresentModeKHR) * vulkan_context_ptr->vk_swapchain.images_count, MEM_TAG_RENDERER);
+    dfree(vk_context->vk_swapchain.surface_formats, sizeof(VkSurfaceFormatKHR) * vk_context->vk_swapchain.images_count,
+          MEM_TAG_RENDERER);
+    dfree(vk_context->vk_swapchain.present_modes, sizeof(VkPresentModeKHR) * vk_context->vk_swapchain.images_count,
+          MEM_TAG_RENDERER);
 
-    vkDestroySwapchainKHR(vulkan_context_ptr->vk_device.logical, vulkan_context_ptr->vk_swapchain.handle,
-                          vulkan_context_ptr->vk_allocator);
+    vkDestroySwapchainKHR(device, vk_context->vk_swapchain.handle, allocator);
 
-    vkDestroySurfaceKHR(vulkan_context_ptr->vk_instance, vulkan_context_ptr->vk_surface,
-                        vulkan_context_ptr->vk_allocator);
+    vkDestroySurfaceKHR(vk_context->vk_instance, vk_context->vk_surface, allocator);
 
     // destroy logical device
-    if (vulkan_context_ptr->vk_device.physical_properties)
+    if (vk_context->vk_device.physical_properties)
     {
-        dfree(vulkan_context_ptr->vk_device.physical_properties, sizeof(VkPhysicalDeviceProperties), MEM_TAG_RENDERER);
+        dfree(vk_context->vk_device.physical_properties, sizeof(VkPhysicalDeviceProperties), MEM_TAG_RENDERER);
     }
-    if (vulkan_context_ptr->vk_device.physical_features)
+    if (vk_context->vk_device.physical_features)
     {
-        dfree(vulkan_context_ptr->vk_device.physical_features, sizeof(VkPhysicalDeviceFeatures), MEM_TAG_RENDERER);
+        dfree(vk_context->vk_device.physical_features, sizeof(VkPhysicalDeviceFeatures), MEM_TAG_RENDERER);
     }
-    vkDestroyDevice(vulkan_context_ptr->vk_device.logical, vulkan_context_ptr->vk_allocator);
+    vkDestroyDevice(device, allocator);
 
 #if DEBUG
     PFN_vkDestroyDebugUtilsMessengerEXT func_destroy_dbg_utils_messenger_ext =
-        (PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(vulkan_context_ptr->vk_instance,
+        (PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(vk_context->vk_instance,
                                                                    "vkDestroyDebugUtilsMessengerEXT");
 
     if (func_destroy_dbg_utils_messenger_ext == nullptr)
@@ -337,11 +337,10 @@ void vulkan_backend_shutdown()
     }
     else
     {
-        func_destroy_dbg_utils_messenger_ext(vulkan_context_ptr->vk_instance, vulkan_context_ptr->vk_dbg_messenger,
-                                             vulkan_context_ptr->vk_allocator);
+        func_destroy_dbg_utils_messenger_ext(vk_context->vk_instance, vk_context->vk_dbg_messenger, allocator);
     }
 #endif
-    vkDestroyInstance(vulkan_context_ptr->vk_instance, vulkan_context_ptr->vk_allocator);
+    vkDestroyInstance(vk_context->vk_instance, allocator);
 }
 
 bool vulkan_check_validation_layer_support()
@@ -354,7 +353,7 @@ bool vulkan_check_validation_layer_support()
 
     const char *validation_layer_name = "VK_LAYER_KHRONOS_validation";
 
-    bool validation_layer_found       = false;
+    bool validation_layer_found = false;
 
 #ifdef DEBUG
     // for (u32 i = 0; i < inst_layer_properties_count; i++)
@@ -405,34 +404,47 @@ VkBool32 vulkan_dbg_msg_rprt_callback(VkDebugUtilsMessageSeverityFlagBitsEXT    
     return VK_TRUE;
 }
 
-bool vulkan_draw_frame()
+bool vulkan_draw_frame(render_data *render_data)
 {
+    u32 current_frame = vk_context->current_frame_index;
+    vkWaitForFences(vk_context->vk_device.logical, 1, &vk_context->in_flight_fences[current_frame], VK_TRUE,
+                    INVALID_ID_64);
+    vkResetFences(vk_context->vk_device.logical, 1, &vk_context->in_flight_fences[current_frame]);
 
-    u32 current_frame = vulkan_context_ptr->current_frame_index;
-    vkWaitForFences(vulkan_context_ptr->vk_device.logical, 1, &vulkan_context_ptr->in_flight_fences[current_frame],
-                    VK_TRUE, INVALID_ID_64);
-    vkResetFences(vulkan_context_ptr->vk_device.logical, 1, &vulkan_context_ptr->in_flight_fences[current_frame]);
+    void *data;
+    u32   buffer_size = (u32)render_data->vertices->capacity;
 
-    u32      image_index = INVALID_ID;
-    VkResult result      = vkAcquireNextImageKHR(
-        vulkan_context_ptr->vk_device.logical, vulkan_context_ptr->vk_swapchain.handle, INVALID_ID_64,
-        vulkan_context_ptr->image_available_semaphores[current_frame], VK_NULL_HANDLE, &image_index);
+    vulkan_buffer staging_buffer;
+    vulkan_create_buffer(vk_context, &staging_buffer, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+                         VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, buffer_size);
+
+    VkResult result = vkMapMemory(vk_context->vk_device.logical, staging_buffer.memory, 0, buffer_size, 0, &data);
+    VK_CHECK(result);
+    dcopy_memory(data, render_data->vertices->data, buffer_size);
+    vkUnmapMemory(vk_context->vk_device.logical, staging_buffer.memory);
+    vulkan_copy_buffer(vk_context, &vk_context->vertex_buffer, &staging_buffer, buffer_size);
+
+    vulkan_destroy_buffer(vk_context, &staging_buffer);
+
+    u32 image_index = INVALID_ID;
+    result = vkAcquireNextImageKHR(vk_context->vk_device.logical, vk_context->vk_swapchain.handle, INVALID_ID_64,
+                                   vk_context->image_available_semaphores[current_frame], VK_NULL_HANDLE, &image_index);
 
     if (result == VK_ERROR_OUT_OF_DATE_KHR)
     {
-        vulkan_recreate_swapchain(vulkan_context_ptr);
+        vulkan_recreate_swapchain(vk_context);
         DDEBUG("VK_ERROR_OUT_OF_DATE_KHR");
         return false;
     }
     VK_CHECK(result);
 
-    vkResetCommandBuffer(vulkan_context_ptr->command_buffers[current_frame], 0);
+    vkResetCommandBuffer(vk_context->command_buffers[current_frame], 0);
 
-    vulkan_record_command_buffer_and_use(vulkan_context_ptr, vulkan_context_ptr->command_buffers[current_frame],
+    vulkan_record_command_buffer_and_use(vk_context, vk_context->command_buffers[current_frame], render_data,
                                          image_index);
 
-    VkSemaphore          wait_semaphores[]   = {vulkan_context_ptr->image_available_semaphores[current_frame]};
-    VkSemaphore          signal_semaphores[] = {vulkan_context_ptr->render_finished_semaphores[current_frame]};
+    VkSemaphore          wait_semaphores[]   = {vk_context->image_available_semaphores[current_frame]};
+    VkSemaphore          signal_semaphores[] = {vk_context->render_finished_semaphores[current_frame]};
     VkPipelineStageFlags wait_stages[]       = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
 
     VkSubmitInfo submit_info{};
@@ -441,39 +453,38 @@ bool vulkan_draw_frame()
     submit_info.pWaitSemaphores      = wait_semaphores;
     submit_info.pWaitDstStageMask    = wait_stages;
     submit_info.commandBufferCount   = 1;
-    submit_info.pCommandBuffers      = &vulkan_context_ptr->command_buffers[current_frame];
+    submit_info.pCommandBuffers      = &vk_context->command_buffers[current_frame];
     submit_info.signalSemaphoreCount = 1;
     submit_info.pSignalSemaphores    = signal_semaphores;
 
-    result                           = vkQueueSubmit(vulkan_context_ptr->vk_graphics_queue, 1, &submit_info,
-                                                     vulkan_context_ptr->in_flight_fences[current_frame]);
+    result = vkQueueSubmit(vk_context->vk_graphics_queue, 1, &submit_info, vk_context->in_flight_fences[current_frame]);
     VK_CHECK(result);
 
-    VkSwapchainKHR swapchains[] = {vulkan_context_ptr->vk_swapchain.handle};
+    VkSwapchainKHR swapchains[] = {vk_context->vk_swapchain.handle};
 
     VkPresentInfoKHR present_info{};
     present_info.sType              = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
     present_info.waitSemaphoreCount = 1;
     present_info.pWaitSemaphores    = signal_semaphores;
     present_info.swapchainCount     = 1;
-    present_info.pSwapchains        = &vulkan_context_ptr->vk_swapchain.handle;
+    present_info.pSwapchains        = &vk_context->vk_swapchain.handle;
     present_info.pImageIndices      = &image_index;
 
-    result                          = vkQueuePresentKHR(vulkan_context_ptr->vk_present_queue, &present_info);
+    result = vkQueuePresentKHR(vk_context->vk_present_queue, &present_info);
     if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR)
     {
         DDEBUG("VK_ERROR_OUT_OF_DATE_KHR or VK_SUBOTIMAL_KHR");
-        vulkan_recreate_swapchain(vulkan_context_ptr);
+        vulkan_recreate_swapchain(vk_context);
     }
     VK_CHECK(result);
 
-    vulkan_context_ptr->current_frame_index++;
-    vulkan_context_ptr->current_frame_index %= MAX_FRAMES_IN_FLIGHT;
+    vk_context->current_frame_index++;
+    vk_context->current_frame_index %= MAX_FRAMES_IN_FLIGHT;
 
     return true;
 }
 bool vulkan_backend_resize()
 {
-    bool result = vulkan_recreate_swapchain(vulkan_context_ptr);
+    bool result = vulkan_recreate_swapchain(vk_context);
     return result;
 }

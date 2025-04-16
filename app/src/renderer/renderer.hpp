@@ -7,4 +7,4 @@ bool renderer_system_startup(u64 *renderer_system_memory_requirements, struct ap
 void renderer_system_shutdown();
 bool renderer_resize();
 
-void renderer_draw_frame();
+void renderer_draw_frame(struct render_data *data);

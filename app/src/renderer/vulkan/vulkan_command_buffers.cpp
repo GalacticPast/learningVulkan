@@ -1,4 +1,5 @@
 #include "vulkan_command_buffers.hpp"
+#include "core/application.hpp"
 #include "core/dmemory.hpp"
 
 bool vulkan_create_command_pool(vulkan_context *vk_context)
@@ -35,7 +36,8 @@ bool vulkan_create_command_buffer(vulkan_context *vk_context, VkCommandPool *com
     return true;
 }
 
-void vulkan_record_command_buffer_and_use(vulkan_context *vk_context, VkCommandBuffer command_buffer, u32 image_index)
+void vulkan_record_command_buffer_and_use(vulkan_context *vk_context, VkCommandBuffer command_buffer,
+                                          struct render_data *render_data, u32 image_index)
 {
     VkCommandBufferBeginInfo command_buffer_begin_info{};
     command_buffer_begin_info.sType            = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
@@ -83,7 +85,12 @@ void vulkan_record_command_buffer_and_use(vulkan_context *vk_context, VkCommandB
     scissor.extent = *swapchain_extent;
     vkCmdSetScissor(command_buffer, 0, 1, &scissor);
 
-    vkCmdDraw(command_buffer, 3, 1, 0, 0);
+    VkBuffer     vertex_buffers[] = {vk_context->vertex_buffer.handle};
+    VkDeviceSize offsets[]        = {0};
+
+    vkCmdBindVertexBuffers(command_buffer, 0, 1, vertex_buffers, offsets);
+
+    vkCmdDraw(command_buffer, (render_data->vertices)->size(), 1, 0, 0);
 
     vkCmdEndRenderPass(command_buffer);
 

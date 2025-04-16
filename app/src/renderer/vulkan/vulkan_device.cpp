@@ -252,7 +252,7 @@ bool vulkan_is_physical_device_suitable(vulkan_context *vk_context, VkPhysicalDe
             }
         }
 
-        // swapchain_support
+        // swapchain extension support
         if (physical_device_requirements->has_swapchain_support)
         {
             u32                    device_extension_properties_count = 0;
@@ -309,7 +309,10 @@ bool vulkan_is_physical_device_suitable(vulkan_context *vk_context, VkPhysicalDe
         }
         //
 
-        // if all above is true, then copy the device physical properties and physical features.
+        // if all above is true, then copy the device physical properties and physical features and query physical
+        // memory properties.
+        vkGetPhysicalDeviceMemoryProperties(physical_device, &vk_context->vk_device.memory_properties);
+
         vk_context->vk_device.physical_properties =
             (VkPhysicalDeviceProperties *)dallocate(sizeof(VkPhysicalDeviceProperties), MEM_TAG_RENDERER);
         dcopy_memory(vk_context->vk_device.physical_properties, &physical_properties,
