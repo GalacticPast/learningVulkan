@@ -22,6 +22,7 @@ struct vertex
 struct render_data
 {
     darray<vertex> *vertices;
+    darray<u32>    *indices;
 };
 
 struct application_state

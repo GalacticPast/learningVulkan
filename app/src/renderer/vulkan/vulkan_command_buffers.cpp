@@ -44,7 +44,7 @@ void vulkan_record_command_buffer_and_use(vulkan_context *vk_context, VkCommandB
     command_buffer_begin_info.flags            = 0;       // Optional
     command_buffer_begin_info.pInheritanceInfo = nullptr; // Optional
 
-    VkResult result                            = vkBeginCommandBuffer(command_buffer, &command_buffer_begin_info);
+    VkResult result = vkBeginCommandBuffer(command_buffer, &command_buffer_begin_info);
     VK_CHECK(result);
 
     // start a render pass
@@ -89,8 +89,9 @@ void vulkan_record_command_buffer_and_use(vulkan_context *vk_context, VkCommandB
     VkDeviceSize offsets[]        = {0};
 
     vkCmdBindVertexBuffers(command_buffer, 0, 1, vertex_buffers, offsets);
+    vkCmdBindIndexBuffer(command_buffer, vk_context->index_buffer.handle, 0, VK_INDEX_TYPE_UINT32);
 
-    vkCmdDraw(command_buffer, (render_data->vertices)->size(), 1, 0, 0);
+    vkCmdDrawIndexed(command_buffer, (render_data->indices)->size(), 1, 0, 0, 0);
 
     vkCmdEndRenderPass(command_buffer);
 

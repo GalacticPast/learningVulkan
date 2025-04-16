@@ -202,6 +202,11 @@ bool vulkan_backend_initialize(u64 *vulkan_backend_memory_requirements, applicat
         DERROR("Vulkan Vertex buffer creation failed.");
         return false;
     }
+    if (!vulkan_create_index_buffer(vk_context))
+    {
+        DERROR("Vulkan Vertex buffer creation failed.");
+        return false;
+    }
 
     if (!vulkan_create_command_buffer(vk_context, &vk_context->graphics_command_pool))
     {
@@ -278,6 +283,7 @@ void vulkan_backend_shutdown()
     dfree(vk_context->in_flight_fences, sizeof(VkFence) * MAX_FRAMES_IN_FLIGHT, MEM_TAG_RENDERER);
 
     vulkan_destroy_buffer(vk_context, &vk_context->vertex_buffer);
+    vulkan_destroy_buffer(vk_context, &vk_context->index_buffer);
 
     vkDestroyCommandPool(device, vk_context->graphics_command_pool, allocator);
 
@@ -411,20 +417,39 @@ bool vulkan_draw_frame(render_data *render_data)
                     INVALID_ID_64);
     vkResetFences(vk_context->vk_device.logical, 1, &vk_context->in_flight_fences[current_frame]);
 
-    void *data;
+    // vertex
+    void *vertex_data;
     u32   buffer_size = (u32)render_data->vertices->capacity;
 
-    vulkan_buffer staging_buffer;
-    vulkan_create_buffer(vk_context, &staging_buffer, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+    vulkan_buffer vertex_staging_buffer;
+    vulkan_create_buffer(vk_context, &vertex_staging_buffer, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
                          VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, buffer_size);
 
-    VkResult result = vkMapMemory(vk_context->vk_device.logical, staging_buffer.memory, 0, buffer_size, 0, &data);
+    VkResult result =
+        vkMapMemory(vk_context->vk_device.logical, vertex_staging_buffer.memory, 0, buffer_size, 0, &vertex_data);
     VK_CHECK(result);
-    dcopy_memory(data, render_data->vertices->data, buffer_size);
-    vkUnmapMemory(vk_context->vk_device.logical, staging_buffer.memory);
-    vulkan_copy_buffer(vk_context, &vk_context->vertex_buffer, &staging_buffer, buffer_size);
+    dcopy_memory(vertex_data, render_data->vertices->data, buffer_size);
+    vkUnmapMemory(vk_context->vk_device.logical, vertex_staging_buffer.memory);
+    vulkan_copy_buffer(vk_context, &vk_context->vertex_buffer, &vertex_staging_buffer, buffer_size);
 
-    vulkan_destroy_buffer(vk_context, &staging_buffer);
+    vulkan_destroy_buffer(vk_context, &vertex_staging_buffer);
+
+    // index
+    void *index_data;
+    buffer_size = (u32)render_data->indices->capacity;
+
+    vulkan_buffer index_staging_buffer;
+    vulkan_create_buffer(vk_context, &index_staging_buffer, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+                         VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, buffer_size);
+
+    result = vkMapMemory(vk_context->vk_device.logical, index_staging_buffer.memory, 0, buffer_size, 0, &index_data);
+    VK_CHECK(result);
+    dcopy_memory(index_data, render_data->indices->data, buffer_size);
+    vkUnmapMemory(vk_context->vk_device.logical, index_staging_buffer.memory);
+    vulkan_copy_buffer(vk_context, &vk_context->index_buffer, &index_staging_buffer, buffer_size);
+
+    vulkan_destroy_buffer(vk_context, &index_staging_buffer);
+    //
 
     u32 image_index = INVALID_ID;
     result = vkAcquireNextImageKHR(vk_context->vk_device.logical, vk_context->vk_swapchain.handle, INVALID_ID_64,

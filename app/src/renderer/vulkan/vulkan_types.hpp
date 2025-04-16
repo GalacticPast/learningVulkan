@@ -89,6 +89,7 @@ struct vulkan_context
     VkCommandBuffer *command_buffers;
 
     vulkan_buffer vertex_buffer;
+    vulkan_buffer index_buffer;
 
     VkCommandPool graphics_command_pool;
 

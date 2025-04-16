@@ -51,17 +51,29 @@ int main()
         return 2;
     }
 
-    vertex a{.position = {0.0f, -0.5f}, .color = {1.0f, 0.0f, 0.0f}};
-    vertex b{.position = {0.5f, 0.5f}, .color = {1.0f, 1.0f, 0.0f}};
-    vertex c{.position = {-0.5f, 0.5f}, .color = {1.0f, 0.0f, 1.0f}};
+    vertex a{.position = {-0.5f, -0.5f}, .color = {1.0f, 0.0f, 0.0f}};
+    vertex b{.position = {0.5f, -0.5f}, .color = {1.0f, 1.0f, 0.0f}};
+    vertex c{.position = {0.5f, 0.5f}, .color = {1.0f, 0.0f, 1.0f}};
+    vertex d{.position = {-0.5f, 0.5f}, .color = {0.0f, 0.0f, 1.0f}};
 
     darray<vertex> vertices;
     vertices.push_back(a);
     vertices.push_back(b);
     vertices.push_back(c);
+    vertices.push_back(d);
+
+    darray<u32> indices(6);
+
+    indices[0] = 0;
+    indices[1] = 1;
+    indices[2] = 2;
+    indices[3] = 2;
+    indices[4] = 3;
+    indices[5] = 0;
 
     render_data triangle{};
     triangle.vertices = &vertices;
+    triangle.indices  = &indices;
 
     f64 start_time      = 0;
     f64 curr_frame_time = 0;
