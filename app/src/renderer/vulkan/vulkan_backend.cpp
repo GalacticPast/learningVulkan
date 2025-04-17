@@ -309,8 +309,6 @@ void vulkan_backend_shutdown()
     }
     dfree(vk_context->global_uniform_buffers, sizeof(vulkan_buffer) * MAX_FRAMES_IN_FLIGHT, MEM_TAG_RENDERER);
 
-    vkDestroyDescriptorSetLayout(device, vk_context->global_uniform_descriptor_layout, allocator);
-
     vkDestroyPipeline(device, vk_context->vk_graphics_pipeline.handle, allocator);
 
     vkDestroyRenderPass(device, vk_context->vk_renderpass, allocator);

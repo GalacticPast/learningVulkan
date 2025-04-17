@@ -83,11 +83,17 @@ template <typename T> void darray<T>::resize(u64 out_size)
         DERROR("Resizing array from %ldbytes to smaller %ldBytes", capacity, out_size);
         DASSERT_MSG(new_capacity > capacity, "Old capacity is bigger than the new capcity");
     }
-    void *buffer = dallocate(element_size * out_size, MEM_TAG_DARRAY);
-    dcopy_memory(buffer, data, capacity);
-    dfree(data, capacity, MEM_TAG_DARRAY);
-
-    data     = buffer;
+    if (data)
+    {
+        void *buffer = dallocate(element_size * out_size, MEM_TAG_DARRAY);
+        dcopy_memory(buffer, data, capacity);
+        dfree(data, capacity, MEM_TAG_DARRAY);
+        data = buffer;
+    }
+    else
+    {
+        data = dallocate(element_size * out_size, MEM_TAG_DARRAY);
+    }
     capacity = element_size * out_size;
 }
 

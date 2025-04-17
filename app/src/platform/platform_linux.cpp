@@ -55,7 +55,7 @@ bool platform_startup(u64 *platform_mem_requirements, void *plat_state, const ch
     {
         return true;
     }
-    platform_state_ptr          = plat_state;
+    platform_state_ptr = plat_state;
 
     // Connect to X
     platform_state_ptr->display = XOpenDisplay(NULL);
@@ -76,8 +76,8 @@ bool platform_startup(u64 *platform_mem_requirements, void *plat_state, const ch
     const struct xcb_setup_t *setup = xcb_get_setup(platform_state_ptr->connection);
 
     // Loop through screens using iterator
-    xcb_screen_iterator_t it        = xcb_setup_roots_iterator(setup);
-    s32                   screen_p  = 0;
+    xcb_screen_iterator_t it       = xcb_setup_roots_iterator(setup);
+    s32                   screen_p = 0;
     for (s32 s = screen_p; s > 0; s--)
     {
         xcb_screen_next(&it);
@@ -92,7 +92,7 @@ bool platform_startup(u64 *platform_mem_requirements, void *plat_state, const ch
     // Register event types.
     // XCB_CW_BACK_PIXEL = filling then window bg with a single color
     // XCB_CW_EVENT_MASK is required.
-    u32 event_mask             = XCB_CW_BACK_PIXEL | XCB_CW_EVENT_MASK;
+    u32 event_mask = XCB_CW_BACK_PIXEL | XCB_CW_EVENT_MASK;
 
     // Listen for keyboard and mouse buttons
     u32 event_values = XCB_EVENT_MASK_BUTTON_PRESS | XCB_EVENT_MASK_BUTTON_RELEASE | XCB_EVENT_MASK_KEY_PRESS |
@@ -100,7 +100,7 @@ bool platform_startup(u64 *platform_mem_requirements, void *plat_state, const ch
                        XCB_EVENT_MASK_STRUCTURE_NOTIFY;
 
     // Values to be sent over XCB (bg color, events)
-    u32 value_list[]         = {platform_state_ptr->screen->black_pixel, event_values};
+    u32 value_list[] = {platform_state_ptr->screen->black_pixel, event_values};
 
     // Create the window
     xcb_void_cookie_t cookie = xcb_create_window(platform_state_ptr->connection,
@@ -190,7 +190,7 @@ bool platform_pump_messages()
                                                                  (KeyCode)code, // event.xkey.keycode,
                                                                  0, code & ShiftMask ? 1 : 0);
 
-            keys key                        = translate_keycode(key_sym);
+            keys key = translate_keycode(key_sym);
 
             // Pass to the input subsystem for processing.
             input_process_key(key, pressed);
@@ -706,7 +706,7 @@ static void wl_keyboard_key(void *data, struct wl_keyboard *wl_keyboard, u32 ser
 
     xkb_keysym_t sym = xkb_state_key_get_one_sym(platform_state_ptr->xkb_state, keycode);
 
-    keys code        = translate_keycode(sym);
+    keys code = translate_keycode(sym);
 
     input_process_key(code, (bool)state);
 }
@@ -870,7 +870,7 @@ bool platform_system_startup(u64 *platform_mem_requirements, void *plat_state, a
     }
     DINFO("Initializing linux-Wayland platform...");
 
-    platform_state_ptr             = (platform_state *)plat_state;
+    platform_state_ptr = (platform_state *)plat_state;
 
     platform_state_ptr->wl_display = wl_display_connect(NULL);
     if (!platform_state_ptr->wl_display)
