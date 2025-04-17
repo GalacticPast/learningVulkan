@@ -11,7 +11,7 @@ bool create_swapchain(vulkan_context *vk_context)
     // INFO: query swapchain support
     vulkan_device_query_swapchain_support(vk_context, vk_context->vk_device.physical, &vk_context->vk_swapchain);
 
-    vulkan_swapchain *vk_swapchain       = &vk_context->vk_swapchain;
+    vulkan_swapchain *vk_swapchain = &vk_context->vk_swapchain;
 
     u32        best_surface_format_index = INVALID_ID;
     u32        best_present_mode_index   = INVALID_ID;
@@ -74,7 +74,7 @@ bool create_swapchain(vulkan_context *vk_context)
 
     // Create swapchain
     //  INFO: triple-buffering if possible
-    u32 image_count = 3;
+    u32 image_count = MAX_FRAMES_IN_FLIGHT;
     if (vk_swapchain->surface_capabilities.minImageCount + 1 < image_count)
     {
         image_count = vk_swapchain->surface_capabilities.minImageCount + 1;

@@ -26,6 +26,7 @@ template <typename Type> class darray
     Type &operator[](u64 index);
 
     u64  size();
+    void resize(u64 size);
     void push_back(Type a);
     Type pop_back();
     Type pop_at(u32 index);
@@ -72,6 +73,22 @@ template <typename T> T &darray<T>::operator[](u64 index)
     }
     T *elem = ((T *)((u8 *)data + (index * element_size)));
     return *elem;
+}
+
+template <typename T> void darray<T>::resize(u64 out_size)
+{
+    u64 new_capacity = (out_size * element_size);
+    if (capacity > new_capacity)
+    {
+        DERROR("Resizing array from %ldbytes to smaller %ldBytes", capacity, out_size);
+        DASSERT_MSG(new_capacity > capacity, "Old capacity is bigger than the new capcity");
+    }
+    void *buffer = dallocate(element_size * out_size, MEM_TAG_DARRAY);
+    dcopy_memory(buffer, data, capacity);
+    dfree(data, capacity, MEM_TAG_DARRAY);
+
+    data     = buffer;
+    capacity = element_size * out_size;
 }
 
 template <typename T> u64 darray<T>::size()

@@ -33,17 +33,17 @@ bool vulkan_create_graphics_pipeline(vulkan_context *vk_context)
     file_open_and_read(frag_shader_file_name, &frag_shader_code_buffer_size_requirements, (char *)frag_shader_code.data,
                        1);
 
-    VkShaderModule vert_shader_module        = create_shader_module(vk_context, (const char *)vert_shader_code.data,
-                                                                    vert_shader_code_buffer_size_requirements);
+    VkShaderModule vert_shader_module = create_shader_module(vk_context, (const char *)vert_shader_code.data,
+                                                             vert_shader_code_buffer_size_requirements);
 
-    VkShaderModule frag_shader_module        = create_shader_module(vk_context, (const char *)frag_shader_code.data,
-                                                                    frag_shader_code_buffer_size_requirements);
+    VkShaderModule frag_shader_module = create_shader_module(vk_context, (const char *)frag_shader_code.data,
+                                                             frag_shader_code_buffer_size_requirements);
 
     // create the pipeline shader stage
     u32                   shader_stage_count = 2;
     VkShaderStageFlagBits stage_flag_bits[2] = {VK_SHADER_STAGE_VERTEX_BIT, VK_SHADER_STAGE_FRAGMENT_BIT};
 
-    VkShaderModule shader_modules[2]         = {vert_shader_module, frag_shader_module};
+    VkShaderModule shader_modules[2] = {vert_shader_module, frag_shader_module};
 
     VkPipelineShaderStageCreateInfo shader_stage_create_infos[2]{};
 
@@ -57,7 +57,7 @@ bool vulkan_create_graphics_pipeline(vulkan_context *vk_context)
         shader_stage_create_info.module = shader_modules[i];
         shader_stage_create_info.pName  = "main";
 
-        shader_stage_create_infos[i]    = shader_stage_create_info;
+        shader_stage_create_infos[i] = shader_stage_create_info;
     }
     // INFO:shader stage end
 
@@ -81,7 +81,7 @@ bool vulkan_create_graphics_pipeline(vulkan_context *vk_context)
     vertex_input_binding_description.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
 
     VkVertexInputAttributeDescription vertex_input_attribute_descriptions[2];
-    VkFormat vertex_input_attribute_formats[2]      = {VK_FORMAT_R32G32_SFLOAT, VK_FORMAT_R32G32B32_SFLOAT};
+    VkFormat vertex_input_attribute_formats[2] = {VK_FORMAT_R32G32_SFLOAT, VK_FORMAT_R32G32B32_SFLOAT};
 
     // position
     vertex_input_attribute_descriptions[0].location = 0;
@@ -140,8 +140,8 @@ bool vulkan_create_graphics_pipeline(vulkan_context *vk_context)
     rasterization_state_create_info.depthClampEnable = VK_FALSE;
     rasterization_state_create_info.rasterizerDiscardEnable = VK_FALSE;
     rasterization_state_create_info.polygonMode             = VK_POLYGON_MODE_FILL;
-    rasterization_state_create_info.cullMode                = VK_CULL_MODE_BACK_BIT;
-    rasterization_state_create_info.frontFace               = VK_FRONT_FACE_CLOCKWISE;
+    rasterization_state_create_info.cullMode                = VK_CULL_MODE_NONE;
+    rasterization_state_create_info.frontFace               = VK_FRONT_FACE_COUNTER_CLOCKWISE;
     rasterization_state_create_info.depthBiasEnable         = VK_FALSE;
     rasterization_state_create_info.depthBiasConstantFactor = 0.0f;
     rasterization_state_create_info.depthBiasClamp          = 0.0f;
@@ -183,18 +183,37 @@ bool vulkan_create_graphics_pipeline(vulkan_context *vk_context)
     color_blend_state_create_info.blendConstants[2] = 0.0f;
     color_blend_state_create_info.blendConstants[3] = 0.0f;
 
+    VkDescriptorSetLayoutBinding descriptor_set_layout_binding{};
+    descriptor_set_layout_binding.binding            = 0;
+    descriptor_set_layout_binding.descriptorType     = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    descriptor_set_layout_binding.descriptorCount    = 1;
+    descriptor_set_layout_binding.stageFlags         = VK_SHADER_STAGE_VERTEX_BIT;
+    descriptor_set_layout_binding.pImmutableSamplers = 0;
+
+    VkDescriptorSetLayoutCreateInfo descriptor_set_layout_create_info{};
+    descriptor_set_layout_create_info.sType        = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+    descriptor_set_layout_create_info.pNext        = 0;
+    descriptor_set_layout_create_info.flags        = 0;
+    descriptor_set_layout_create_info.bindingCount = 1;
+    descriptor_set_layout_create_info.pBindings    = &descriptor_set_layout_binding;
+
+    VkResult result =
+        vkCreateDescriptorSetLayout(vk_context->vk_device.logical, &descriptor_set_layout_create_info,
+                                    vk_context->vk_allocator, &vk_context->global_uniform_descriptor_layout);
+    VK_CHECK(result);
+
     VkPipelineLayoutCreateInfo pipeline_layout_create_info{};
 
     pipeline_layout_create_info.sType                  = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
     pipeline_layout_create_info.pNext                  = 0;
     pipeline_layout_create_info.flags                  = 0;
-    pipeline_layout_create_info.setLayoutCount         = 0;
-    pipeline_layout_create_info.pSetLayouts            = nullptr;
+    pipeline_layout_create_info.setLayoutCount         = 1;
+    pipeline_layout_create_info.pSetLayouts            = &vk_context->global_uniform_descriptor_layout;
     pipeline_layout_create_info.pushConstantRangeCount = 0;
     pipeline_layout_create_info.pPushConstantRanges    = nullptr;
 
-    VkResult result = vkCreatePipelineLayout(vk_context->vk_device.logical, &pipeline_layout_create_info,
-                                             vk_context->vk_allocator, &vk_context->vk_graphics_pipeline.layout);
+    result = vkCreatePipelineLayout(vk_context->vk_device.logical, &pipeline_layout_create_info,
+                                    vk_context->vk_allocator, &vk_context->vk_graphics_pipeline.layout);
     VK_CHECK(result);
 
     VkGraphicsPipelineCreateInfo graphics_pipeline_create_info{};

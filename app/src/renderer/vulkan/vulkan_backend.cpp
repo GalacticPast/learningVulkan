@@ -154,7 +154,6 @@ bool vulkan_backend_initialize(u64 *vulkan_backend_memory_requirements, applicat
             return false;
         }
     }
-
     if (!vulkan_platform_create_surface(vk_context))
     {
         DERROR("Vulkan surface creation failed.");
@@ -178,7 +177,6 @@ bool vulkan_backend_initialize(u64 *vulkan_backend_memory_requirements, applicat
         DERROR("Vulkan renderpass creation failed.");
         return false;
     }
-
     if (!vulkan_create_graphics_pipeline(vk_context))
     {
         DERROR("Vulkan graphics pipline creation failed.");
@@ -190,13 +188,11 @@ bool vulkan_backend_initialize(u64 *vulkan_backend_memory_requirements, applicat
         DERROR("Vulkan framebuffer creation failed.");
         return false;
     }
-
-    if (!vulkan_create_command_pool(vk_context))
+    if (!vulkan_create_graphics_command_pool(vk_context))
     {
         DERROR("Vulkan command pool creation failed.");
         return false;
     }
-
     if (!vulkan_create_vertex_buffer(vk_context))
     {
         DERROR("Vulkan Vertex buffer creation failed.");
@@ -207,13 +203,21 @@ bool vulkan_backend_initialize(u64 *vulkan_backend_memory_requirements, applicat
         DERROR("Vulkan Vertex buffer creation failed.");
         return false;
     }
-
+    if (!vulkan_create_global_uniform_buffers(vk_context))
+    {
+        DERROR("Vulkan global uniform buffer creation failed.");
+        return false;
+    }
+    if (!vulkan_create_descriptor_command_pool_n_sets(vk_context))
+    {
+        DERROR("Vulkan descriptor command pool and sets creation failed.");
+        return false;
+    }
     if (!vulkan_create_command_buffer(vk_context, &vk_context->graphics_command_pool))
     {
         DERROR("Vulkan command buffer creation failed.");
         return false;
     }
-
     if (!vulkan_create_sync_objects(vk_context))
     {
         DERROR("Vulkan sync objects creation failed.");
@@ -285,6 +289,9 @@ void vulkan_backend_shutdown()
     vulkan_destroy_buffer(vk_context, &vk_context->vertex_buffer);
     vulkan_destroy_buffer(vk_context, &vk_context->index_buffer);
 
+    vkDestroyDescriptorPool(device, vk_context->descriptor_command_pool, allocator);
+    vkDestroyDescriptorSetLayout(device, vk_context->global_uniform_descriptor_layout, allocator);
+
     vkDestroyCommandPool(device, vk_context->graphics_command_pool, allocator);
 
     dfree(vk_context->command_buffers, sizeof(VkCommandBuffer) * MAX_FRAMES_IN_FLIGHT, MEM_TAG_RENDERER);
@@ -295,6 +302,14 @@ void vulkan_backend_shutdown()
     }
     dfree(vk_context->vk_swapchain.buffers, sizeof(VkFramebuffer) * vk_context->vk_swapchain.images_count,
           MEM_TAG_RENDERER);
+
+    for (u32 i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
+    {
+        vulkan_destroy_buffer(vk_context, &vk_context->global_uniform_buffers[i]);
+    }
+    dfree(vk_context->global_uniform_buffers, sizeof(vulkan_buffer) * MAX_FRAMES_IN_FLIGHT, MEM_TAG_RENDERER);
+
+    vkDestroyDescriptorSetLayout(device, vk_context->global_uniform_descriptor_layout, allocator);
 
     vkDestroyPipeline(device, vk_context->vk_graphics_pipeline.handle, allocator);
 
@@ -410,6 +425,12 @@ VkBool32 vulkan_dbg_msg_rprt_callback(VkDebugUtilsMessageSeverityFlagBitsEXT    
     return VK_TRUE;
 }
 
+void vulkan_update_global_uniform_buffer(uniform_buffer_object *global_ubo, u32 current_frame_index)
+{
+    dcopy_memory(vk_context->global_uniform_buffers_memory_data[current_frame_index], global_ubo,
+                 sizeof(uniform_buffer_object));
+}
+
 bool vulkan_draw_frame(render_data *render_data)
 {
     u32 current_frame = vk_context->current_frame_index;
@@ -450,6 +471,8 @@ bool vulkan_draw_frame(render_data *render_data)
 
     vulkan_destroy_buffer(vk_context, &index_staging_buffer);
     //
+
+    vulkan_update_global_uniform_buffer(&render_data->global_ubo, current_frame);
 
     u32 image_index = INVALID_ID;
     result = vkAcquireNextImageKHR(vk_context->vk_device.logical, vk_context->vk_swapchain.handle, INVALID_ID_64,

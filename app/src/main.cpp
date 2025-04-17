@@ -36,8 +36,8 @@ int main()
     application_config app_config;
     app_config.width            = INVALID_ID;
     app_config.height           = INVALID_ID;
-    app_config.x                = INVALID_ID;
-    app_config.y                = INVALID_ID;
+    app_config.x                = 1280;
+    app_config.y                = 720;
     app_config.application_name = "Learning Vulkan";
 
     dclock clock{};
@@ -71,9 +71,18 @@ int main()
     indices[4] = 3;
     indices[5] = 0;
 
+    f32 fov_rad      = 45 * D_DEG2RAD_MULTIPLIER;
+    f32 aspect_ratio = (f32)app_config.x / app_config.y;
+
+    uniform_buffer_object global_ubo{};
+    global_ubo.model      = mat4();
+    global_ubo.view       = mat4_look_at({2, 2, 2}, {0, 0, 0}, {0, 0, 1.0f});
+    global_ubo.projection = mat4_perspective(fov_rad, aspect_ratio, 0.01f, 1000.0f);
+
     render_data triangle{};
-    triangle.vertices = &vertices;
-    triangle.indices  = &indices;
+    triangle.vertices   = &vertices;
+    triangle.indices    = &indices;
+    triangle.global_ubo = global_ubo;
 
     f64 start_time      = 0;
     f64 curr_frame_time = 0;

@@ -10,3 +10,4 @@ bool vulkan_destroy_buffer(vulkan_context *vk_context, vulkan_buffer *buffer);
 
 bool vulkan_create_vertex_buffer(vulkan_context *vk_context);
 bool vulkan_create_index_buffer(vulkan_context *vk_context);
+bool vulkan_create_global_uniform_buffers(vulkan_context *vk_context);

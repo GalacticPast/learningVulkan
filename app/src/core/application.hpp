@@ -19,10 +19,19 @@ struct vertex
     vec2 position;
     vec3 color;
 };
+
+struct uniform_buffer_object
+{
+    mat4 model;
+    mat4 view;
+    mat4 projection;
+};
+
 struct render_data
 {
-    darray<vertex> *vertices;
-    darray<u32>    *indices;
+    darray<vertex>       *vertices;
+    darray<u32>          *indices;
+    uniform_buffer_object global_ubo;
 };
 
 struct application_state

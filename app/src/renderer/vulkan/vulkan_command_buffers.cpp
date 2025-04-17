@@ -2,7 +2,7 @@
 #include "core/application.hpp"
 #include "core/dmemory.hpp"
 
-bool vulkan_create_command_pool(vulkan_context *vk_context)
+bool vulkan_create_graphics_command_pool(vulkan_context *vk_context)
 {
     VkCommandPoolCreateInfo command_pool_create_info{};
 
@@ -14,6 +14,71 @@ bool vulkan_create_command_pool(vulkan_context *vk_context)
     VkResult result = vkCreateCommandPool(vk_context->vk_device.logical, &command_pool_create_info,
                                           vk_context->vk_allocator, &vk_context->graphics_command_pool);
     VK_CHECK(result);
+
+    return true;
+}
+
+bool vulkan_create_descriptor_command_pool_n_sets(vulkan_context *vk_context)
+{
+    VkDescriptorPoolSize pool_size{};
+    pool_size.type            = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    pool_size.descriptorCount = MAX_FRAMES_IN_FLIGHT;
+
+    VkDescriptorPoolCreateInfo pool_create_info{};
+    pool_create_info.sType         = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+    pool_create_info.pNext         = 0;
+    pool_create_info.flags         = 0;
+    pool_create_info.maxSets       = MAX_FRAMES_IN_FLIGHT;
+    pool_create_info.poolSizeCount = 1;
+    pool_create_info.pPoolSizes    = &pool_size;
+
+    VkResult result = vkCreateDescriptorPool(vk_context->vk_device.logical, &pool_create_info, vk_context->vk_allocator,
+                                             &vk_context->descriptor_command_pool);
+    VK_CHECK(result);
+
+    darray<VkDescriptorSetLayout> desc_set_layout(MAX_FRAMES_IN_FLIGHT);
+    for (u32 i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
+    {
+        desc_set_layout[i] = vk_context->global_uniform_descriptor_layout;
+    }
+
+    VkDescriptorSetAllocateInfo desc_set_alloc_info{};
+    desc_set_alloc_info.sType              = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+    desc_set_alloc_info.pNext              = 0;
+    desc_set_alloc_info.descriptorPool     = vk_context->descriptor_command_pool;
+    desc_set_alloc_info.descriptorSetCount = MAX_FRAMES_IN_FLIGHT;
+    desc_set_alloc_info.pSetLayouts        = (const VkDescriptorSetLayout *)desc_set_layout.data;
+
+    vk_context->descriptor_sets.resize(MAX_FRAMES_IN_FLIGHT);
+    result = vkAllocateDescriptorSets(vk_context->vk_device.logical, &desc_set_alloc_info,
+                                      (VkDescriptorSet *)vk_context->descriptor_sets.data);
+
+    vk_context->descriptor_sets.length += MAX_FRAMES_IN_FLIGHT;
+    VK_CHECK(result);
+
+    for (u32 i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
+    {
+        VkDescriptorBufferInfo desc_buffer_info{};
+
+        desc_buffer_info.buffer = vk_context->global_uniform_buffers[i].handle;
+        desc_buffer_info.offset = 0;
+        desc_buffer_info.range  = sizeof(uniform_buffer_object);
+
+        VkWriteDescriptorSet desc_write{};
+
+        desc_write.sType            = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        desc_write.pNext            = 0;
+        desc_write.dstSet           = vk_context->descriptor_sets[i];
+        desc_write.dstBinding       = 0;
+        desc_write.dstArrayElement  = 0;
+        desc_write.descriptorCount  = 1;
+        desc_write.descriptorType   = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        desc_write.pBufferInfo      = &desc_buffer_info;
+        desc_write.pImageInfo       = 0;
+        desc_write.pTexelBufferView = 0;
+
+        vkUpdateDescriptorSets(vk_context->vk_device.logical, 1, &desc_write, 0, nullptr);
+    }
 
     return true;
 }
@@ -90,6 +155,9 @@ void vulkan_record_command_buffer_and_use(vulkan_context *vk_context, VkCommandB
 
     vkCmdBindVertexBuffers(command_buffer, 0, 1, vertex_buffers, offsets);
     vkCmdBindIndexBuffer(command_buffer, vk_context->index_buffer.handle, 0, VK_INDEX_TYPE_UINT32);
+
+    vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, vk_context->vk_graphics_pipeline.layout, 0,
+                            1, &vk_context->descriptor_sets[image_index], 0, nullptr);
 
     vkCmdDrawIndexed(command_buffer, (render_data->indices)->size(), 1, 0, 0, 0);
 
