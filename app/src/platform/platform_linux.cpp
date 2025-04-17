@@ -619,8 +619,6 @@ void wl_pointer_move(void *data, struct wl_pointer *wl_pointer, uint32_t time, w
     u32 mouse_x = wl_fixed_to_int(surface_x);
     u32 mouse_y = wl_fixed_to_int(surface_y);
 
-    DDEBUG("Moue moved x:%d y:%d", mouse_x, mouse_y);
-
     input_process_mouse_move((s16)mouse_x, (s16)mouse_y);
 
     if (mouse_x >= platform_state_ptr->width - 10)

@@ -291,6 +291,7 @@ void vulkan_backend_shutdown()
 
     vkDestroyDescriptorPool(device, vk_context->descriptor_command_pool, allocator);
     vkDestroyDescriptorSetLayout(device, vk_context->global_uniform_descriptor_layout, allocator);
+    vk_context->descriptor_sets.~darray();
 
     vkDestroyCommandPool(device, vk_context->graphics_command_pool, allocator);
 
@@ -307,6 +308,7 @@ void vulkan_backend_shutdown()
     {
         vulkan_destroy_buffer(vk_context, &vk_context->global_uniform_buffers[i]);
     }
+    vk_context->global_uniform_buffers_memory_data.~darray();
     dfree(vk_context->global_uniform_buffers, sizeof(vulkan_buffer) * MAX_FRAMES_IN_FLIGHT, MEM_TAG_RENDERER);
 
     vkDestroyPipeline(device, vk_context->vk_graphics_pipeline.handle, allocator);

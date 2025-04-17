@@ -182,6 +182,8 @@ bool destroy_swapchain(vulkan_context *vk_context)
 
         vkDestroySwapchainKHR(vk_context->vk_device.logical, vk_context->vk_swapchain.handle, vk_context->vk_allocator);
 
+        dfree(vk_context->vk_swapchain.vk_images.handles, sizeof(VkImage) * vk_context->vk_swapchain.images_count,
+              MEM_TAG_RENDERER);
         dfree(vk_context->vk_swapchain.vk_images.views, sizeof(VkImageView) * vk_context->vk_swapchain.images_count,
               MEM_TAG_RENDERER);
 

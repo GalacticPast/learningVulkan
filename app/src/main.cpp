@@ -77,7 +77,7 @@ int main()
     platform_get_window_dimensions(&s_width, &s_height);
 
     f32 fov_rad      = 45 * D_DEG2RAD_MULTIPLIER;
-    f32 aspect_ratio = (f32)s_width / (f32)s_height;
+    f32 aspect_ratio = 16.0f / 9.0f;
 
     uniform_buffer_object global_ubo{};
     global_ubo.view       = mat4_look_at({2, 2, 2}, {0, 0, 0}, {0, 0, 1.0f});

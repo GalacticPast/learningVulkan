@@ -7,8 +7,15 @@ bool vulkan_create_framebuffers(vulkan_context *vk_context)
     DINFO("Creating vulkan framebuffers...");
 
     u32 framebuffers_count = vk_context->vk_swapchain.images_count;
-    vk_context->vk_swapchain.buffers =
-        (vulkan_framebuffer *)dallocate(sizeof(vulkan_framebuffer) * framebuffers_count, MEM_TAG_RENDERER);
+    if (vk_context->vk_swapchain.buffers == nullptr)
+    {
+        vk_context->vk_swapchain.buffers =
+            (vulkan_framebuffer *)dallocate(sizeof(vulkan_framebuffer) * framebuffers_count, MEM_TAG_RENDERER);
+    }
+    else
+    {
+        dzero_memory(vk_context->vk_swapchain.buffers, sizeof(vulkan_framebuffer) * framebuffers_count);
+    }
 
     vulkan_framebuffer *buffers = vk_context->vk_swapchain.buffers;
 
@@ -32,5 +39,6 @@ bool vulkan_create_framebuffers(vulkan_context *vk_context)
                                               vk_context->vk_allocator, &buffers[i].handle);
         VK_CHECK(result);
     }
+
     return true;
 }

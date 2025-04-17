@@ -33,9 +33,14 @@ bool vulkan_create_logical_device(vulkan_context *vk_context)
 
     // INFO: This should be the same amount as the number of char literals in required_device_extensions array. Im doing
     // this to avoid clang givimg me vla warnings.
-    u32         required_device_extensions_count           = 1;
-    const char *required_device_extensions[8]              = {};
-    required_device_extensions[0]                          = VK_KHR_SWAPCHAIN_EXTENSION_NAME;
+    u32         required_device_extensions_count = 1;
+    const char *required_device_extensions[8]    = {};
+    required_device_extensions[0]                = VK_KHR_SWAPCHAIN_EXTENSION_NAME;
+
+    vk_context->vk_device.physical_properties =
+        (VkPhysicalDeviceProperties *)dallocate(sizeof(VkPhysicalDeviceProperties), MEM_TAG_RENDERER);
+    vk_context->vk_device.physical_features =
+        (VkPhysicalDeviceFeatures *)dallocate(sizeof(VkPhysicalDeviceFeatures), MEM_TAG_RENDERER);
 
     bool result = vulkan_choose_physical_device(vk_context, &physical_device_requirements,
                                                 required_device_extensions_count, required_device_extensions);
@@ -128,6 +133,11 @@ bool vulkan_choose_physical_device(vulkan_context                      *vk_conte
             vk_context->vk_device.physical = physical_devices[i];
             break;
         }
+        else
+        {
+            dzero_memory(vk_context->vk_device.physical_properties, sizeof(VkPhysicalDeviceProperties));
+            dzero_memory(vk_context->vk_device.physical_features, sizeof(VkPhysicalDeviceFeatures));
+        }
     }
 
     if (vk_context->vk_device.physical == VK_NULL_HANDLE)
@@ -184,11 +194,11 @@ bool vulkan_is_physical_device_suitable(vulkan_context *vk_context, VkPhysicalDe
                 u32  offset = 0;
                 char buffer[2000]{};
 
-                offset             += string_copy_format(buffer, "Queue Index: %d", offset, i);
+                offset += string_copy_format(buffer, "Queue Index: %d", offset, i);
 
                 // INFO: putting offset - 1 because the string_copy_format null terminates the string
                 // WARN: might be dangerous but idk :)
-                buffer[offset - 1]  = ' ';
+                buffer[offset - 1] = ' ';
 
                 if (queue_family_properties[i].queueFlags & VK_QUEUE_GRAPHICS_BIT)
                 {
@@ -313,13 +323,8 @@ bool vulkan_is_physical_device_suitable(vulkan_context *vk_context, VkPhysicalDe
         // memory properties.
         vkGetPhysicalDeviceMemoryProperties(physical_device, &vk_context->vk_device.memory_properties);
 
-        vk_context->vk_device.physical_properties =
-            (VkPhysicalDeviceProperties *)dallocate(sizeof(VkPhysicalDeviceProperties), MEM_TAG_RENDERER);
         dcopy_memory(vk_context->vk_device.physical_properties, &physical_properties,
                      sizeof(VkPhysicalDeviceProperties));
-
-        vk_context->vk_device.physical_features =
-            (VkPhysicalDeviceFeatures *)dallocate(sizeof(VkPhysicalDeviceFeatures), MEM_TAG_RENDERER);
         dcopy_memory(vk_context->vk_device.physical_features, &physical_features, sizeof(VkPhysicalDeviceFeatures));
 
         dfree(dummy_swapchain.surface_formats, sizeof(VkSurfaceFormatKHR) * dummy_swapchain.surface_formats_count,
