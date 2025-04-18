@@ -1,7 +1,6 @@
 #pragma once
 #include "containers/darray.hpp"
 #include "core/dasserts.hpp"
-#include <vector>
 #include <vulkan/vulkan.h>
 
 #define VK_CHECK(expr)                                                                                                 \
@@ -97,18 +96,18 @@ struct vulkan_context
 
     vulkan_pipeline vk_graphics_pipeline;
 
-    vulkan_buffer      *global_uniform_buffers;
-    std::vector<void *> global_uniform_buffers_memory_data;
+    vulkan_buffer *global_uniform_buffers;
+    darray<void *> global_uniform_buffers_memory_data;
 
     VkCommandBuffer *command_buffers;
 
     vulkan_buffer vertex_buffer;
     vulkan_buffer index_buffer;
 
-    VkCommandPool                graphics_command_pool;
-    VkDescriptorPool             descriptor_command_pool;
-    VkDescriptorSetLayout        global_uniform_descriptor_layout;
-    std::vector<VkDescriptorSet> descriptor_sets;
+    VkCommandPool           graphics_command_pool;
+    VkDescriptorPool        descriptor_command_pool;
+    VkDescriptorSetLayout   global_uniform_descriptor_layout;
+    darray<VkDescriptorSet> descriptor_sets;
 
     VkSemaphore *image_available_semaphores;
     VkSemaphore *render_finished_semaphores;

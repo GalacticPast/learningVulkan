@@ -34,6 +34,14 @@ bool vulkan_backend_initialize(u64 *vulkan_backend_memory_requirements, applicat
     DDEBUG("Initializing Vulkan backend...");
     vk_context               = (vulkan_context *)state;
     vk_context->vk_allocator = nullptr;
+    {
+        darray<void *> global_ubo_mem_data;
+        vk_context->global_uniform_buffers_memory_data = global_ubo_mem_data;
+    }
+    {
+        darray<VkDescriptorSet> descriptor_sets;
+        vk_context->descriptor_sets = descriptor_sets;
+    }
 
     DDEBUG("Creating vulkan instance...");
 
@@ -73,8 +81,8 @@ bool vulkan_backend_initialize(u64 *vulkan_backend_memory_requirements, applicat
     }
 
     // INFO: get platform specifig extensions and extensions count
-    std::vector<const char *> vulkan_instance_extensions;
-    const char               *vk_generic_surface_ext = VK_KHR_SURFACE_EXTENSION_NAME;
+    darray<const char *> vulkan_instance_extensions;
+    const char          *vk_generic_surface_ext = VK_KHR_SURFACE_EXTENSION_NAME;
 
     vulkan_instance_extensions.push_back(vk_generic_surface_ext);
     vulkan_platform_get_required_vulkan_extensions(vulkan_instance_extensions);
@@ -139,7 +147,7 @@ bool vulkan_backend_initialize(u64 *vulkan_backend_memory_requirements, applicat
     inst_create_info.enabledLayerCount       = vk_context->enabled_layer_count;
     inst_create_info.ppEnabledLayerNames     = vk_context->enabled_layer_names;
     inst_create_info.enabledExtensionCount   = (u32)vulkan_instance_extensions.size();
-    inst_create_info.ppEnabledExtensionNames = (const char **)vulkan_instance_extensions.data();
+    inst_create_info.ppEnabledExtensionNames = (const char **)vulkan_instance_extensions.data;
     inst_create_info.pApplicationInfo        = &app_info;
 
     VkResult result = vkCreateInstance(&inst_create_info, vk_context->vk_allocator, &vk_context->vk_instance);
@@ -369,8 +377,8 @@ bool vulkan_check_validation_layer_support()
     u32 inst_layer_properties_count = 0;
     vkEnumerateInstanceLayerProperties(&inst_layer_properties_count, 0);
 
-    std::vector<VkLayerProperties> inst_layer_properties(inst_layer_properties_count);
-    vkEnumerateInstanceLayerProperties(&inst_layer_properties_count, (VkLayerProperties *)inst_layer_properties.data());
+    darray<VkLayerProperties> inst_layer_properties(inst_layer_properties_count);
+    vkEnumerateInstanceLayerProperties(&inst_layer_properties_count, (VkLayerProperties *)inst_layer_properties.data);
 
     const char *validation_layer_name = "VK_LAYER_KHRONOS_validation";
 

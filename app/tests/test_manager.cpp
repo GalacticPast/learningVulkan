@@ -1,3 +1,4 @@
+#pragma once
 #include "test_manager.hpp"
 #include "core/logger.hpp"
 #include <core/dmemory.hpp>
@@ -29,7 +30,7 @@ void test_manager_register_tests(bool (*test_func_ptr)(), const char *func_descr
 
 void test_manager_run_tests()
 {
-    u64 test_func_length     = instance_ptr->tests->size();
+    u64 test_func_length = instance_ptr->tests->size();
 
     const char   *status[2]  = {"FAILED", "PASSED"};
     darray<test> *test_array = instance_ptr->tests;

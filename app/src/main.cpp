@@ -61,7 +61,6 @@ int main()
     vertex g{.position = {0.5f, 0.5f, 0.5f}, .color = {1.0f, 0.5f, 0.0f}};   // Orange
     vertex h{.position = {-0.5f, 0.5f, 0.5f}, .color = {0.5f, 0.0f, 0.5f}};  // Purple
 
-    // std::vector<vertex> vertices;
     darray<vertex> vertices;
     vertices.push_back(a);
     vertices.push_back(b);
@@ -72,7 +71,6 @@ int main()
     vertices.push_back(g);
     vertices.push_back(h);
 
-    // std::vector<u32> indices(36);
     darray<u32> indices(36);
     indices[0] = 0;
     indices[1] = 3;

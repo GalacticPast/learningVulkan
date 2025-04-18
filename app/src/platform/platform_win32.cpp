@@ -396,7 +396,7 @@ LRESULT CALLBACK win32_process_message(HWND hwnd, u32 msg, WPARAM w_param, LPARA
     return DefWindowProcA(hwnd, msg, w_param, l_param);
 }
 
-bool vulkan_platform_get_required_vulkan_extensions(std::vector<const char *> &extensions_array)
+bool vulkan_platform_get_required_vulkan_extensions(darray<const char *> &extensions_array)
 {
     const char *win32_surface = VK_KHR_WIN32_SURFACE_EXTENSION_NAME;
     extensions_array.push_back(win32_surface);
