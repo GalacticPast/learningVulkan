@@ -61,6 +61,7 @@ int main()
     vertex g{.position = {0.5f, 0.5f, 0.5f}, .color = {1.0f, 0.5f, 0.0f}};   // Orange
     vertex h{.position = {-0.5f, 0.5f, 0.5f}, .color = {0.5f, 0.0f, 0.5f}};  // Purple
 
+    // std::vector<vertex> vertices;
     darray<vertex> vertices;
     vertices.push_back(a);
     vertices.push_back(b);
@@ -71,6 +72,7 @@ int main()
     vertices.push_back(g);
     vertices.push_back(h);
 
+    // std::vector<u32> indices(36);
     darray<u32> indices(36);
     indices[0] = 0;
     indices[1] = 3;
@@ -127,8 +129,8 @@ int main()
     global_ubo.projection = mat4_perspective(fov_rad, aspect_ratio, 0.01f, 1000.0f);
 
     render_data triangle{};
-    triangle.vertices = &vertices;
-    triangle.indices  = &indices;
+    triangle.vertices = vertices;
+    triangle.indices  = indices;
 
     f64 start_time      = 0;
     f64 curr_frame_time = 0;

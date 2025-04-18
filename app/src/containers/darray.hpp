@@ -7,7 +7,7 @@
 #define DEFAULT_DARRAY_SIZE 10
 #define DEFAULT_DARRAY_RESIZE_FACTOR 2
 
-template <typename Type> class darray
+template <typename T> class darray
 {
   public:
     u64 capacity;
@@ -21,22 +21,34 @@ template <typename Type> class darray
     ~darray();
 
     // returns a copy of the value
-    Type operator[](u64 index) const;
+    T    operator[](u64 index) const;
+    void operator=(darray<T> &in_darray);
 
-    Type &operator[](u64 index);
+    T &operator[](u64 index);
 
     u64  size();
     void resize(u64 size);
-    void push_back(Type a);
-    Type pop_back();
-    Type pop_at(u32 index);
+    void push_back(T a);
+    T    pop_back();
+    T    pop_at(u32 index);
 };
 
 template <typename T> darray<T>::darray(u64 size)
 {
     element_size = sizeof(T);
     capacity     = size * element_size;
-    length       = size;
+    if (capacity < DEFAULT_DARRAY_SIZE * element_size)
+    {
+        capacity = DEFAULT_DARRAY_SIZE * element_size;
+    }
+    length = size;
+    data   = dallocate(capacity, MEM_TAG_DARRAY);
+}
+template <typename T> darray<T>::darray()
+{
+    element_size = sizeof(T);
+    capacity     = DEFAULT_DARRAY_SIZE * element_size;
+    length       = 0;
     data         = dallocate(capacity, MEM_TAG_DARRAY);
 }
 template <typename T> darray<T>::~darray()
@@ -48,12 +60,21 @@ template <typename T> darray<T>::~darray()
     data         = 0;
 }
 
-template <typename T> darray<T>::darray()
+template <typename T> void darray<T>::operator=(darray<T> &in_darray)
 {
-    element_size = sizeof(T);
-    capacity     = DEFAULT_DARRAY_SIZE * element_size;
-    length       = 0;
-    data         = dallocate(capacity, MEM_TAG_DARRAY);
+    if (capacity < in_darray.capacity)
+    {
+        DASSERT_MSG(
+            length == 0,
+            "There is still some data in the array, cannot assign another array into a already initialized array.");
+        dfree(data, capacity, MEM_TAG_DARRAY);
+        data     = dallocate(in_darray.capacity, MEM_TAG_DARRAY);
+        capacity = in_darray.capacity;
+    }
+
+    dcopy_memory(data, in_darray.data, in_darray.capacity);
+    length = in_darray.length;
+    return;
 }
 template <typename T> T darray<T>::operator[](u64 index) const
 {

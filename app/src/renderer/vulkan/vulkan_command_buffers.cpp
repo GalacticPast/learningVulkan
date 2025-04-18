@@ -36,7 +36,7 @@ bool vulkan_create_descriptor_command_pool_n_sets(vulkan_context *vk_context)
                                              &vk_context->descriptor_command_pool);
     VK_CHECK(result);
 
-    darray<VkDescriptorSetLayout> desc_set_layout(MAX_FRAMES_IN_FLIGHT);
+    std::vector<VkDescriptorSetLayout> desc_set_layout(MAX_FRAMES_IN_FLIGHT);
     for (u32 i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
     {
         desc_set_layout[i] = vk_context->global_uniform_descriptor_layout;
@@ -47,13 +47,12 @@ bool vulkan_create_descriptor_command_pool_n_sets(vulkan_context *vk_context)
     desc_set_alloc_info.pNext              = 0;
     desc_set_alloc_info.descriptorPool     = vk_context->descriptor_command_pool;
     desc_set_alloc_info.descriptorSetCount = MAX_FRAMES_IN_FLIGHT;
-    desc_set_alloc_info.pSetLayouts        = (const VkDescriptorSetLayout *)desc_set_layout.data;
+    desc_set_alloc_info.pSetLayouts        = (const VkDescriptorSetLayout *)desc_set_layout.data();
 
     vk_context->descriptor_sets.resize(MAX_FRAMES_IN_FLIGHT);
     result = vkAllocateDescriptorSets(vk_context->vk_device.logical, &desc_set_alloc_info,
-                                      (VkDescriptorSet *)vk_context->descriptor_sets.data);
+                                      (VkDescriptorSet *)vk_context->descriptor_sets.data());
 
-    vk_context->descriptor_sets.length += MAX_FRAMES_IN_FLIGHT;
     VK_CHECK(result);
 
     for (u32 i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
@@ -159,7 +158,7 @@ void vulkan_record_command_buffer_and_use(vulkan_context *vk_context, VkCommandB
     vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, vk_context->vk_graphics_pipeline.layout, 0,
                             1, &vk_context->descriptor_sets[image_index], 0, nullptr);
 
-    vkCmdDrawIndexed(command_buffer, (render_data->indices)->size(), 1, 0, 0, 0);
+    vkCmdDrawIndexed(command_buffer, render_data->indices.size(), 1, 0, 0, 0);
 
     vkCmdEndRenderPass(command_buffer);
 

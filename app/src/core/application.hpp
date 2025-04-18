@@ -4,6 +4,7 @@
 #include "defines.hpp"
 #include "math/dmath.hpp"
 #include "memory/linear_allocator.hpp"
+#include <vector>
 
 struct application_config
 {
@@ -29,8 +30,11 @@ struct uniform_buffer_object
 
 struct render_data
 {
-    darray<vertex>       *vertices;
-    darray<u32>          *indices;
+    darray<vertex> vertices;
+    darray<u32>    indices;
+    // std::vector<vertex> vertices;
+    // std::vector<u32>    indices;
+
     uniform_buffer_object global_ubo;
 };
 

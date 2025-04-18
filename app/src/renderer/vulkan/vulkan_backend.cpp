@@ -73,8 +73,8 @@ bool vulkan_backend_initialize(u64 *vulkan_backend_memory_requirements, applicat
     }
 
     // INFO: get platform specifig extensions and extensions count
-    darray<const char *> vulkan_instance_extensions;
-    const char          *vk_generic_surface_ext = VK_KHR_SURFACE_EXTENSION_NAME;
+    std::vector<const char *> vulkan_instance_extensions;
+    const char               *vk_generic_surface_ext = VK_KHR_SURFACE_EXTENSION_NAME;
 
     vulkan_instance_extensions.push_back(vk_generic_surface_ext);
     vulkan_platform_get_required_vulkan_extensions(vulkan_instance_extensions);
@@ -139,7 +139,7 @@ bool vulkan_backend_initialize(u64 *vulkan_backend_memory_requirements, applicat
     inst_create_info.enabledLayerCount       = vk_context->enabled_layer_count;
     inst_create_info.ppEnabledLayerNames     = vk_context->enabled_layer_names;
     inst_create_info.enabledExtensionCount   = (u32)vulkan_instance_extensions.size();
-    inst_create_info.ppEnabledExtensionNames = (const char **)vulkan_instance_extensions.data;
+    inst_create_info.ppEnabledExtensionNames = (const char **)vulkan_instance_extensions.data();
     inst_create_info.pApplicationInfo        = &app_info;
 
     VkResult result = vkCreateInstance(&inst_create_info, vk_context->vk_allocator, &vk_context->vk_instance);
@@ -291,7 +291,6 @@ void vulkan_backend_shutdown()
 
     vkDestroyDescriptorPool(device, vk_context->descriptor_command_pool, allocator);
     vkDestroyDescriptorSetLayout(device, vk_context->global_uniform_descriptor_layout, allocator);
-    vk_context->descriptor_sets.~darray();
 
     vkDestroyCommandPool(device, vk_context->graphics_command_pool, allocator);
 
@@ -308,7 +307,6 @@ void vulkan_backend_shutdown()
     {
         vulkan_destroy_buffer(vk_context, &vk_context->global_uniform_buffers[i]);
     }
-    vk_context->global_uniform_buffers_memory_data.~darray();
     dfree(vk_context->global_uniform_buffers, sizeof(vulkan_buffer) * MAX_FRAMES_IN_FLIGHT, MEM_TAG_RENDERER);
 
     vkDestroyPipeline(device, vk_context->vk_graphics_pipeline.handle, allocator);
@@ -371,8 +369,8 @@ bool vulkan_check_validation_layer_support()
     u32 inst_layer_properties_count = 0;
     vkEnumerateInstanceLayerProperties(&inst_layer_properties_count, 0);
 
-    darray<VkLayerProperties> inst_layer_properties(inst_layer_properties_count);
-    vkEnumerateInstanceLayerProperties(&inst_layer_properties_count, (VkLayerProperties *)inst_layer_properties.data);
+    std::vector<VkLayerProperties> inst_layer_properties(inst_layer_properties_count);
+    vkEnumerateInstanceLayerProperties(&inst_layer_properties_count, (VkLayerProperties *)inst_layer_properties.data());
 
     const char *validation_layer_name = "VK_LAYER_KHRONOS_validation";
 
@@ -442,7 +440,7 @@ bool vulkan_draw_frame(render_data *render_data)
 
     // vertex
     void *vertex_data;
-    u32   buffer_size = (u32)render_data->vertices->capacity;
+    u32   buffer_size = (u32)render_data->vertices.size() * sizeof(vertex);
 
     vulkan_buffer vertex_staging_buffer;
     vulkan_create_buffer(vk_context, &vertex_staging_buffer, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
@@ -451,7 +449,7 @@ bool vulkan_draw_frame(render_data *render_data)
     VkResult result =
         vkMapMemory(vk_context->vk_device.logical, vertex_staging_buffer.memory, 0, buffer_size, 0, &vertex_data);
     VK_CHECK(result);
-    dcopy_memory(vertex_data, render_data->vertices->data, buffer_size);
+    dcopy_memory(vertex_data, render_data->vertices.data, buffer_size);
     vkUnmapMemory(vk_context->vk_device.logical, vertex_staging_buffer.memory);
     vulkan_copy_buffer(vk_context, &vk_context->vertex_buffer, &vertex_staging_buffer, buffer_size);
 
@@ -459,7 +457,7 @@ bool vulkan_draw_frame(render_data *render_data)
 
     // index
     void *index_data;
-    buffer_size = (u32)render_data->indices->capacity;
+    buffer_size = (u32)render_data->indices.size() * sizeof(u32);
 
     vulkan_buffer index_staging_buffer;
     vulkan_create_buffer(vk_context, &index_staging_buffer, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
@@ -467,7 +465,7 @@ bool vulkan_draw_frame(render_data *render_data)
 
     result = vkMapMemory(vk_context->vk_device.logical, index_staging_buffer.memory, 0, buffer_size, 0, &index_data);
     VK_CHECK(result);
-    dcopy_memory(index_data, render_data->indices->data, buffer_size);
+    dcopy_memory(index_data, render_data->indices.data, buffer_size);
     vkUnmapMemory(vk_context->vk_device.logical, index_staging_buffer.memory);
     vulkan_copy_buffer(vk_context, &vk_context->index_buffer, &index_staging_buffer, buffer_size);
 

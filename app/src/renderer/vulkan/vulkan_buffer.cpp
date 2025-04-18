@@ -144,7 +144,6 @@ bool vulkan_create_global_uniform_buffers(vulkan_context *vk_context)
 
     vulkan_buffer *buffers = vk_context->global_uniform_buffers;
     vk_context->global_uniform_buffers_memory_data.resize(MAX_FRAMES_IN_FLIGHT);
-    vk_context->global_uniform_buffers_memory_data.length += MAX_FRAMES_IN_FLIGHT;
 
     for (u32 i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
     {
