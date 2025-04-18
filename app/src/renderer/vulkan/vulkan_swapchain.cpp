@@ -176,8 +176,9 @@ bool destroy_swapchain(vulkan_context *vk_context)
         vkDestroyImage(device, vk_context->vk_swapchain.depth_image.handle, allocator);
         vkFreeMemory(device, vk_context->vk_swapchain.depth_image.memory, allocator);
 
-        vkDestroySwapchainKHR(vk_context->vk_device.logical, vk_context->vk_swapchain.handle, vk_context->vk_allocator);
+        vkDestroySwapchainKHR(device, vk_context->vk_swapchain.handle, allocator);
     }
+    vk_context->vk_swapchain.handle = 0;
     return true;
 }
 

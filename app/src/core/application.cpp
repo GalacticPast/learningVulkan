@@ -28,10 +28,10 @@ bool application_initialize(application_state *state, application_config *config
         return false;
     }
 
-    app_state_ptr                                                          = state;
-    app_state_ptr->application_config                                      = config;
-    app_state_ptr->is_running                                              = true;
-    app_state_ptr->is_minimized                                            = false;
+    app_state_ptr                     = state;
+    app_state_ptr->application_config = config;
+    app_state_ptr->is_running         = true;
+    app_state_ptr->is_minimized       = false;
 
     bool result                                                            = false;
     app_state_ptr->application_system_linear_allocator_memory_requirements = 10 * 1024 * 1024; // 1 mega bytes
@@ -123,8 +123,8 @@ bool event_callback_resize(event_context context, void *data)
     {
         application_config *config = app_state_ptr->application_config;
 
-        config->width              = context.data.u32[0];
-        config->height             = context.data.u32[1];
+        config->width  = context.data.u32[0];
+        config->height = context.data.u32[1];
 
         DDEBUG("Resized event, new width: %d new height: %d", config->width, config->height);
 

@@ -25,7 +25,7 @@ bool vulkan_create_logical_device(vulkan_context *vk_context)
     DDEBUG("Creating Vulkan logical device...");
 
     vulkan_physical_device_requirements physical_device_requirements{};
-    physical_device_requirements.is_discrete_gpu           = true;
+    physical_device_requirements.is_discrete_gpu           = false;
     physical_device_requirements.has_geometry_shader       = true;
     physical_device_requirements.has_graphics_queue_family = true;
     physical_device_requirements.has_present_queue_family  = true;
@@ -225,7 +225,7 @@ bool vulkan_is_physical_device_suitable(vulkan_context *vk_context, VkPhysicalDe
     u32 present_family_index  = INVALID_ID;
 
     if ((physical_properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU &&
-         physical_device_requirements->is_discrete_gpu) &&
+         physical_device_requirements->is_discrete_gpu) ||
         (physical_features.geometryShader && physical_device_requirements->has_geometry_shader))
     {
         if (physical_device_requirements->has_graphics_queue_family &&

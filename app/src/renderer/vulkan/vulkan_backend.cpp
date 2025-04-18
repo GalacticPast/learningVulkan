@@ -424,7 +424,7 @@ VkBool32 vulkan_dbg_msg_rprt_callback(VkDebugUtilsMessageSeverityFlagBitsEXT    
     break;
     }
 
-    return VK_TRUE;
+    return VK_FALSE;
 }
 
 void vulkan_update_global_uniform_buffer(uniform_buffer_object *global_ubo, u32 current_frame_index)

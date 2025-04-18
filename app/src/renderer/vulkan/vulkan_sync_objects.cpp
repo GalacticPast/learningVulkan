@@ -19,6 +19,7 @@ bool vulkan_create_sync_objects(vulkan_context *vk_context)
         (VkSemaphore *)dallocate(sizeof(VkSemaphore) * MAX_FRAMES_IN_FLIGHT, MEM_TAG_RENDERER);
     vk_context->render_finished_semaphores =
         (VkSemaphore *)dallocate(sizeof(VkSemaphore) * MAX_FRAMES_IN_FLIGHT, MEM_TAG_RENDERER);
+
     vk_context->in_flight_fences = (VkFence *)dallocate(sizeof(VkFence) * MAX_FRAMES_IN_FLIGHT, MEM_TAG_RENDERER);
 
     for (u32 i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
