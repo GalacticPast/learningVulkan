@@ -51,25 +51,68 @@ int main()
         return 2;
     }
 
-    vertex a{.position = {-0.5f, -0.5f}, .color = {1.0f, 0.0f, 0.0f}};
-    vertex b{.position = {0.5f, -0.5f}, .color = {1.0f, 1.0f, 0.0f}};
-    vertex c{.position = {0.5f, 0.5f}, .color = {1.0f, 0.0f, 1.0f}};
-    vertex d{.position = {-0.5f, 0.5f}, .color = {0.0f, 0.0f, 1.0f}};
+    vertex a{.position = {-0.5f, -0.5f, -0.5f}, .color = {1.0f, 0.0f, 0.0f}}; // Red
+    vertex b{.position = {0.5f, -0.5f, -0.5f}, .color = {0.0f, 1.0f, 0.0f}};  // Green
+    vertex c{.position = {0.5f, 0.5f, -0.5f}, .color = {0.0f, 0.0f, 1.0f}};   // Blue
+    vertex d{.position = {-0.5f, 0.5f, -0.5f}, .color = {1.0f, 1.0f, 0.0f}};  // Yellow
+
+    vertex e{.position = {-0.5f, -0.5f, 0.5f}, .color = {1.0f, 0.0f, 1.0f}}; // Magenta
+    vertex f{.position = {0.5f, -0.5f, 0.5f}, .color = {0.0f, 1.0f, 1.0f}};  // Cyan
+    vertex g{.position = {0.5f, 0.5f, 0.5f}, .color = {1.0f, 0.5f, 0.0f}};   // Orange
+    vertex h{.position = {-0.5f, 0.5f, 0.5f}, .color = {0.5f, 0.0f, 0.5f}};  // Purple
 
     darray<vertex> vertices;
     vertices.push_back(a);
     vertices.push_back(b);
     vertices.push_back(c);
     vertices.push_back(d);
+    vertices.push_back(e);
+    vertices.push_back(f);
+    vertices.push_back(g);
+    vertices.push_back(h);
 
-    darray<u32> indices(6);
-
+    darray<u32> indices(36);
     indices[0] = 0;
-    indices[1] = 1;
-    indices[2] = 2;
-    indices[3] = 2;
-    indices[4] = 3;
-    indices[5] = 0;
+    indices[1] = 3;
+    indices[2] = 1;
+    indices[3] = 3;
+    indices[4] = 2;
+    indices[5] = 1;
+
+    indices[6]  = 1;
+    indices[7]  = 2;
+    indices[8]  = 5;
+    indices[9]  = 2;
+    indices[10] = 6;
+    indices[11] = 5;
+
+    indices[12] = 5;
+    indices[13] = 6;
+    indices[14] = 4;
+    indices[15] = 6;
+    indices[16] = 7;
+    indices[17] = 4;
+
+    indices[18] = 4;
+    indices[19] = 7;
+    indices[20] = 0;
+    indices[21] = 7;
+    indices[22] = 3;
+    indices[23] = 0;
+
+    indices[24] = 3;
+    indices[25] = 7;
+    indices[26] = 2;
+    indices[27] = 7;
+    indices[28] = 6;
+    indices[29] = 2;
+
+    indices[30] = 4;
+    indices[31] = 0;
+    indices[32] = 5;
+    indices[33] = 0;
+    indices[34] = 1;
+    indices[35] = 5;
 
     u32 s_width;
     u32 s_height;

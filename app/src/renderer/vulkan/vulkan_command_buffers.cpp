@@ -115,9 +115,9 @@ void vulkan_record_command_buffer_and_use(vulkan_context *vk_context, VkCommandB
     // start a render pass
 
     // starting color
-    VkClearValue clear_color = {
-        .color = {0.0f, 0.0f, 0.0f, 1.0f},
-    };
+    VkClearValue clear_values[2] = {};
+    clear_values[0]              = {.color = {0.0f, 0.0f, 0.0f, 1.0f}};
+    clear_values[1]              = {.depthStencil = {1.0f, 0}};
 
     VkRenderPassBeginInfo renderpass_begin_info{};
     renderpass_begin_info.sType             = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
@@ -126,8 +126,8 @@ void vulkan_record_command_buffer_and_use(vulkan_context *vk_context, VkCommandB
     renderpass_begin_info.framebuffer       = vk_context->vk_swapchain.buffers[image_index].handle;
     renderpass_begin_info.renderArea.offset = {0, 0};
     renderpass_begin_info.renderArea.extent = vk_context->vk_swapchain.surface_extent;
-    renderpass_begin_info.clearValueCount   = 1;
-    renderpass_begin_info.pClearValues      = &clear_color;
+    renderpass_begin_info.clearValueCount   = 2;
+    renderpass_begin_info.pClearValues      = clear_values;
 
     vkCmdBeginRenderPass(command_buffer, &renderpass_begin_info, VK_SUBPASS_CONTENTS_INLINE);
 

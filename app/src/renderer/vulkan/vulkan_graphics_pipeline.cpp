@@ -81,7 +81,7 @@ bool vulkan_create_graphics_pipeline(vulkan_context *vk_context)
     vertex_input_binding_description.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
 
     VkVertexInputAttributeDescription vertex_input_attribute_descriptions[2];
-    VkFormat vertex_input_attribute_formats[2] = {VK_FORMAT_R32G32_SFLOAT, VK_FORMAT_R32G32B32_SFLOAT};
+    VkFormat vertex_input_attribute_formats[2] = {VK_FORMAT_R32G32B32_SFLOAT, VK_FORMAT_R32G32B32_SFLOAT};
 
     // position
     vertex_input_attribute_descriptions[0].location = 0;
@@ -93,7 +93,7 @@ bool vulkan_create_graphics_pipeline(vulkan_context *vk_context)
     vertex_input_attribute_descriptions[1].location = 1;
     vertex_input_attribute_descriptions[1].binding  = 0;
     vertex_input_attribute_descriptions[1].format   = vertex_input_attribute_formats[1];
-    vertex_input_attribute_descriptions[1].offset   = sizeof(f32) * 2;
+    vertex_input_attribute_descriptions[1].offset   = sizeof(f32) * 3;
 
     VkPipelineVertexInputStateCreateInfo vertex_input_state_create_info{};
 
@@ -183,6 +183,20 @@ bool vulkan_create_graphics_pipeline(vulkan_context *vk_context)
     color_blend_state_create_info.blendConstants[2] = 0.0f;
     color_blend_state_create_info.blendConstants[3] = 0.0f;
 
+    VkPipelineDepthStencilStateCreateInfo depth_stencil_state_create_info{};
+    depth_stencil_state_create_info.sType                 = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
+    depth_stencil_state_create_info.pNext                 = 0;
+    depth_stencil_state_create_info.flags                 = 0;
+    depth_stencil_state_create_info.depthTestEnable       = VK_TRUE;
+    depth_stencil_state_create_info.depthWriteEnable      = VK_TRUE;
+    depth_stencil_state_create_info.depthCompareOp        = VK_COMPARE_OP_LESS;
+    depth_stencil_state_create_info.depthBoundsTestEnable = VK_FALSE;
+    depth_stencil_state_create_info.minDepthBounds        = 0.0f;
+    depth_stencil_state_create_info.maxDepthBounds        = 1.0f;
+    depth_stencil_state_create_info.stencilTestEnable     = VK_FALSE;
+    depth_stencil_state_create_info.front                 = {};
+    depth_stencil_state_create_info.back                  = {};
+
     VkDescriptorSetLayoutBinding descriptor_set_layout_binding{};
     descriptor_set_layout_binding.binding            = 0;
     descriptor_set_layout_binding.descriptorType     = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
@@ -228,7 +242,7 @@ bool vulkan_create_graphics_pipeline(vulkan_context *vk_context)
     graphics_pipeline_create_info.pViewportState      = &viewport_state_create_info;
     graphics_pipeline_create_info.pRasterizationState = &rasterization_state_create_info;
     graphics_pipeline_create_info.pMultisampleState   = &multisampling_state_create_info;
-    graphics_pipeline_create_info.pDepthStencilState  = nullptr;
+    graphics_pipeline_create_info.pDepthStencilState  = &depth_stencil_state_create_info;
     graphics_pipeline_create_info.pColorBlendState    = &color_blend_state_create_info;
     graphics_pipeline_create_info.pDynamicState       = &dynamic_state_create_info;
     graphics_pipeline_create_info.layout              = vk_context->vk_graphics_pipeline.layout;

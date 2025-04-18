@@ -100,9 +100,9 @@ bool vulkan_create_logical_device(vulkan_context *vk_context)
 
     // get the queue handles
     vkGetDeviceQueue(vk_context->vk_device.logical, vk_context->vk_device.graphics_family_index, 0,
-                     &vk_context->vk_graphics_queue);
+                     &vk_context->vk_device.graphics_queue);
     vkGetDeviceQueue(vk_context->vk_device.logical, vk_context->vk_device.present_family_index, 0,
-                     &vk_context->vk_present_queue);
+                     &vk_context->vk_device.present_queue);
 
     return true;
 }
@@ -159,6 +159,53 @@ bool vulkan_choose_physical_device(vulkan_context                      *vk_conte
     DINFO("Vulkan: Found Present Queue Family. Queue family Index: %d", vk_context->vk_device.present_family_index);
 
     return true;
+}
+
+bool vulkan_find_suitable_depth_format(vulkan_device *device, vulkan_image *depth_image)
+{
+    // Format candidates
+    const u64 candidate_count = 3;
+    VkFormat  candidates[3]   = {VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT};
+
+    u32 flags = VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT;
+    for (u64 i = 0; i < candidate_count; ++i)
+    {
+        VkFormatProperties properties;
+        vkGetPhysicalDeviceFormatProperties(device->physical, candidates[i], &properties);
+
+        if ((properties.linearTilingFeatures & flags) == flags)
+        {
+            depth_image->format = candidates[i];
+            return true;
+        }
+        else if ((properties.optimalTilingFeatures & flags) == flags)
+        {
+            depth_image->format = candidates[i];
+            return true;
+        }
+    }
+
+    return false;
+}
+
+u32 vulkan_find_memory_type_index(vulkan_context *vk_context, u32 mem_type_filter,
+                                  VkMemoryPropertyFlags mem_properties_flags)
+{
+
+    VkPhysicalDeviceMemoryProperties mem_properties;
+    vkGetPhysicalDeviceMemoryProperties(vk_context->vk_device.physical, &mem_properties);
+
+    u32 memory_type_index = INVALID_ID;
+    for (u32 i = 0; i < mem_properties.memoryTypeCount; i++)
+    {
+        if (mem_type_filter & (1 << i) &&
+            (mem_properties.memoryTypes[i].propertyFlags & mem_properties_flags) == mem_properties_flags)
+        {
+            return i;
+        }
+    }
+    DERROR("Couldn't find memory type index.");
+    DASSERT(true == false);
 }
 
 bool vulkan_is_physical_device_suitable(vulkan_context *vk_context, VkPhysicalDevice physical_device,

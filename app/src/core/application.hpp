@@ -16,7 +16,7 @@ struct application_config
 
 struct vertex
 {
-    vec2 position;
+    vec3 position;
     vec3 color;
 };
 

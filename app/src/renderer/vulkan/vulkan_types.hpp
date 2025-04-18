@@ -13,9 +13,11 @@
 struct vulkan_device
 {
 
-    VkDevice logical;
-
+    VkDevice         logical;
     VkPhysicalDevice physical;
+
+    VkQueue graphics_queue;
+    VkQueue present_queue;
 
     VkPhysicalDeviceMemoryProperties memory_properties;
 
@@ -33,9 +35,10 @@ struct vulkan_device
 
 struct vulkan_image
 {
-    VkImage     *handles;
-    VkImageView *views;
-    VkFormat     format;
+    VkImage        handle;
+    VkImageView    view;
+    VkFormat       format;
+    VkDeviceMemory memory;
 };
 
 struct vulkan_framebuffer
@@ -46,16 +49,22 @@ struct vulkan_framebuffer
 struct vulkan_swapchain
 {
 
+    u32 width;
+    u32 height;
+
     VkSwapchainKHR      handle;
     VkExtent2D          surface_extent;
     vulkan_framebuffer *buffers;
 
-    u32 curr_img_index;
-
     u32          images_count = INVALID_ID;
-    vulkan_image vk_images;
+    VkImage     *images;
+    VkImageView *img_views;
+    VkFormat     img_format;
+
+    vulkan_image depth_image;
 
     VkSurfaceCapabilitiesKHR surface_capabilities;
+
     // TODO: linear alloc??
     u32                 surface_formats_count = INVALID_ID;
     VkSurfaceFormatKHR *surface_formats;
@@ -105,8 +114,6 @@ struct vulkan_context
     VkFence     *in_flight_fences;
 
     // INFO: maybe should be inside vulkan_device??
-    VkQueue vk_graphics_queue;
-    VkQueue vk_present_queue;
 
     VkSurfaceKHR vk_surface;
 

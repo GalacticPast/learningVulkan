@@ -5,6 +5,7 @@
 #include "platform/platform.hpp"
 #include "vulkan_device.hpp"
 #include "vulkan_framebuffer.hpp"
+#include "vulkan_image.hpp"
 
 bool create_swapchain(vulkan_context *vk_context)
 {
@@ -53,24 +54,17 @@ bool create_swapchain(vulkan_context *vk_context)
             }
         }
     }
-    // choose the swap extent
-    if (vk_swapchain->surface_capabilities.currentExtent.width != INVALID_ID &&
-        vk_swapchain->surface_capabilities.currentExtent.height != INVALID_ID)
-    {
-        best_2d_extent = vk_swapchain->surface_capabilities.currentExtent;
-    }
-    else
-    {
-        u32 screen_width  = INVALID_ID;
-        u32 screen_height = INVALID_ID;
-        platform_get_window_dimensions(&screen_width, &screen_height);
+    u32 screen_width  = INVALID_ID;
+    u32 screen_height = INVALID_ID;
+    platform_get_window_dimensions(&screen_width, &screen_height);
 
-        best_2d_extent        = {};
-        best_2d_extent.width  = DCLAMP(screen_width, vk_swapchain->surface_capabilities.minImageExtent.width,
-                                       vk_swapchain->surface_capabilities.maxImageExtent.width);
-        best_2d_extent.height = DCLAMP(screen_height, vk_swapchain->surface_capabilities.minImageExtent.height,
-                                       vk_swapchain->surface_capabilities.maxImageExtent.height);
-    }
+    // choose the swap extent
+
+    best_2d_extent        = {};
+    best_2d_extent.width  = DCLAMP(screen_width, vk_swapchain->surface_capabilities.minImageExtent.width,
+                                   vk_swapchain->surface_capabilities.maxImageExtent.width);
+    best_2d_extent.height = DCLAMP(screen_height, vk_swapchain->surface_capabilities.minImageExtent.height,
+                                   vk_swapchain->surface_capabilities.maxImageExtent.height);
 
     // Create swapchain
     //  INFO: triple-buffering if possible
@@ -123,74 +117,66 @@ bool create_swapchain(vulkan_context *vk_context)
 
     result = vkGetSwapchainImagesKHR(vk_context->vk_device.logical, vk_swapchain->handle, &swapchain_images_count, 0);
     VK_CHECK(result);
-    vk_swapchain->vk_images.handles = (VkImage *)dallocate(sizeof(VkImage) * swapchain_images_count, MEM_TAG_RENDERER);
+
+    if (vk_swapchain->images == nullptr)
+    {
+        vk_swapchain->images = (VkImage *)dallocate(sizeof(VkImage) * swapchain_images_count, MEM_TAG_RENDERER);
+    }
     vkGetSwapchainImagesKHR(vk_context->vk_device.logical, vk_swapchain->handle, &swapchain_images_count,
-                            vk_swapchain->vk_images.handles);
+                            vk_swapchain->images);
 
-    vk_swapchain->images_count     = swapchain_images_count;
-    vk_swapchain->vk_images.format = vk_swapchain->surface_formats[best_surface_format_index].format;
-    vk_swapchain->surface_extent   = best_2d_extent;
+    vk_swapchain->images_count   = swapchain_images_count;
+    vk_swapchain->img_format     = vk_swapchain->surface_formats[best_surface_format_index].format;
+    vk_swapchain->surface_extent = best_2d_extent;
+    vk_swapchain->width          = screen_width;
+    vk_swapchain->height         = screen_height;
 
-    // INFO:create image views
-    // TODO: maybe make this a seperate function?
-
-    vk_context->vk_swapchain.vk_images.views =
-        (VkImageView *)dallocate(sizeof(VkImageView) * swapchain_images_count, MEM_TAG_RENDERER);
+    if (vk_context->vk_swapchain.img_views == nullptr)
+    {
+        vk_context->vk_swapchain.img_views =
+            (VkImageView *)dallocate(sizeof(VkImageView) * swapchain_images_count, MEM_TAG_RENDERER);
+    }
 
     for (u32 i = 0; i < swapchain_images_count; i++)
     {
-        VkImageViewCreateInfo image_view_create_info{};
-
-        image_view_create_info.sType                           = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-        image_view_create_info.pNext                           = 0;
-        image_view_create_info.flags                           = 0;
-        image_view_create_info.image                           = vk_swapchain->vk_images.handles[i];
-        image_view_create_info.viewType                        = VK_IMAGE_VIEW_TYPE_2D;
-        image_view_create_info.format                          = vk_swapchain->vk_images.format;
-        image_view_create_info.components.r                    = VK_COMPONENT_SWIZZLE_IDENTITY;
-        image_view_create_info.components.g                    = VK_COMPONENT_SWIZZLE_IDENTITY;
-        image_view_create_info.components.b                    = VK_COMPONENT_SWIZZLE_IDENTITY;
-        image_view_create_info.components.a                    = VK_COMPONENT_SWIZZLE_IDENTITY;
-        image_view_create_info.subresourceRange.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT;
-        image_view_create_info.subresourceRange.baseMipLevel   = 0;
-        image_view_create_info.subresourceRange.levelCount     = 1;
-        image_view_create_info.subresourceRange.baseArrayLayer = 0;
-        image_view_create_info.subresourceRange.layerCount     = 1;
-
-        result = vkCreateImageView(vk_context->vk_device.logical, &image_view_create_info, vk_context->vk_allocator,
-                                   &vk_swapchain->vk_images.views[i]);
-        VK_CHECK(result);
+        vulkan_create_image_view(vk_context, vk_swapchain->images[i], vk_swapchain->img_format,
+                                 &vk_swapchain->img_views[i], VK_IMAGE_ASPECT_COLOR_BIT);
     }
+
+    bool res = vulkan_find_suitable_depth_format(&vk_context->vk_device, &vk_context->vk_swapchain.depth_image);
+    DASSERT(res == true);
+
+    res = vulkan_create_image(vk_context, &vk_context->vk_swapchain.depth_image,
+                              vk_context->vk_swapchain.depth_image.format, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+                              VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_IMAGE_TILING_OPTIMAL);
+    DASSERT(res == true);
+    res = vulkan_create_image_view(vk_context, vk_context->vk_swapchain.depth_image.handle,
+                                   vk_context->vk_swapchain.depth_image.format,
+                                   &vk_context->vk_swapchain.depth_image.view, VK_IMAGE_ASPECT_DEPTH_BIT);
+    DASSERT(res == true);
 
     return true;
 }
 
 bool destroy_swapchain(vulkan_context *vk_context)
 {
+    VkDevice              &device    = vk_context->vk_device.logical;
+    VkAllocationCallbacks *allocator = vk_context->vk_allocator;
     if (vk_context->vk_swapchain.handle)
     {
         for (u32 i = 0; i < vk_context->vk_swapchain.images_count; i++)
         {
-            vkDestroyImageView(vk_context->vk_device.logical, vk_context->vk_swapchain.vk_images.views[i],
-                               vk_context->vk_allocator);
+            vkDestroyImageView(device, vk_context->vk_swapchain.img_views[i], vk_context->vk_allocator);
         }
         for (u32 i = 0; i < vk_context->vk_swapchain.images_count; i++)
         {
-            vkDestroyFramebuffer(vk_context->vk_device.logical, vk_context->vk_swapchain.buffers[i].handle,
-                                 vk_context->vk_allocator);
+            vkDestroyFramebuffer(device, vk_context->vk_swapchain.buffers[i].handle, vk_context->vk_allocator);
         }
+        vkDestroyImageView(device, vk_context->vk_swapchain.depth_image.view, allocator);
+        vkDestroyImage(device, vk_context->vk_swapchain.depth_image.handle, allocator);
+        vkFreeMemory(device, vk_context->vk_swapchain.depth_image.memory, allocator);
 
         vkDestroySwapchainKHR(vk_context->vk_device.logical, vk_context->vk_swapchain.handle, vk_context->vk_allocator);
-
-        dfree(vk_context->vk_swapchain.vk_images.handles, sizeof(VkImage) * vk_context->vk_swapchain.images_count,
-              MEM_TAG_RENDERER);
-        dfree(vk_context->vk_swapchain.vk_images.views, sizeof(VkImageView) * vk_context->vk_swapchain.images_count,
-              MEM_TAG_RENDERER);
-
-        dfree(vk_context->vk_swapchain.surface_formats,
-              sizeof(VkSurfaceFormatKHR) * vk_context->vk_swapchain.images_count, MEM_TAG_RENDERER);
-        dfree(vk_context->vk_swapchain.present_modes, sizeof(VkPresentModeKHR) * vk_context->vk_swapchain.images_count,
-              MEM_TAG_RENDERER);
     }
     return true;
 }

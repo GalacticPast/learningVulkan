@@ -319,12 +319,14 @@ void vulkan_backend_shutdown()
 
     for (u32 i = 0; i < vk_context->vk_swapchain.images_count; i++)
     {
-        vkDestroyImageView(device, vk_context->vk_swapchain.vk_images.views[i], allocator);
+        vkDestroyImageView(device, vk_context->vk_swapchain.img_views[i], allocator);
     }
+    vkDestroyImageView(device, vk_context->vk_swapchain.depth_image.view, allocator);
+    vkDestroyImage(device, vk_context->vk_swapchain.depth_image.handle, allocator);
+    vkFreeMemory(device, vk_context->vk_swapchain.depth_image.memory, allocator);
 
-    dfree(vk_context->vk_swapchain.vk_images.handles, sizeof(VkImage) * vk_context->vk_swapchain.images_count,
-          MEM_TAG_RENDERER);
-    dfree(vk_context->vk_swapchain.vk_images.views, sizeof(VkImageView) * vk_context->vk_swapchain.images_count,
+    dfree(vk_context->vk_swapchain.images, sizeof(VkImage) * vk_context->vk_swapchain.images_count, MEM_TAG_RENDERER);
+    dfree(vk_context->vk_swapchain.img_views, sizeof(VkImageView) * vk_context->vk_swapchain.images_count,
           MEM_TAG_RENDERER);
 
     dfree(vk_context->vk_swapchain.surface_formats, sizeof(VkSurfaceFormatKHR) * vk_context->vk_swapchain.images_count,
@@ -505,7 +507,8 @@ bool vulkan_draw_frame(render_data *render_data)
     submit_info.signalSemaphoreCount = 1;
     submit_info.pSignalSemaphores    = signal_semaphores;
 
-    result = vkQueueSubmit(vk_context->vk_graphics_queue, 1, &submit_info, vk_context->in_flight_fences[current_frame]);
+    result = vkQueueSubmit(vk_context->vk_device.graphics_queue, 1, &submit_info,
+                           vk_context->in_flight_fences[current_frame]);
     VK_CHECK(result);
 
     VkSwapchainKHR swapchains[] = {vk_context->vk_swapchain.handle};
@@ -518,7 +521,7 @@ bool vulkan_draw_frame(render_data *render_data)
     present_info.pSwapchains        = &vk_context->vk_swapchain.handle;
     present_info.pImageIndices      = &image_index;
 
-    result = vkQueuePresentKHR(vk_context->vk_present_queue, &present_info);
+    result = vkQueuePresentKHR(vk_context->vk_device.present_queue, &present_info);
     if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR)
     {
         DDEBUG("VK_ERROR_OUT_OF_DATE_KHR or VK_SUBOTIMAL_KHR");

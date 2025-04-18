@@ -21,7 +21,8 @@ bool vulkan_create_framebuffers(vulkan_context *vk_context)
 
     for (u32 i = 0; i < framebuffers_count; i++)
     {
-        VkImageView framebuffer_attachments[] = {vk_context->vk_swapchain.vk_images.views[i]};
+        VkImageView framebuffer_attachments[2] = {vk_context->vk_swapchain.img_views[i],
+                                                  vk_context->vk_swapchain.depth_image.view};
 
         VkFramebufferCreateInfo framebuffer_create_info{};
 
@@ -29,7 +30,7 @@ bool vulkan_create_framebuffers(vulkan_context *vk_context)
         framebuffer_create_info.pNext           = 0;
         framebuffer_create_info.flags           = 0;
         framebuffer_create_info.renderPass      = vk_context->vk_renderpass;
-        framebuffer_create_info.attachmentCount = 1;
+        framebuffer_create_info.attachmentCount = 2;
         framebuffer_create_info.pAttachments    = framebuffer_attachments;
         framebuffer_create_info.width           = vk_context->vk_swapchain.surface_extent.width;
         framebuffer_create_info.height          = vk_context->vk_swapchain.surface_extent.height;
