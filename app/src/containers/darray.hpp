@@ -4,7 +4,7 @@
 #include "core/logger.hpp"
 #include "defines.hpp"
 
-#define DEFAULT_DARRAY_SIZE 10
+#define DEFAULT_DARRAY_SIZE 1
 #define DEFAULT_DARRAY_RESIZE_FACTOR 2
 
 template <typename T> class darray
@@ -67,13 +67,16 @@ template <typename T> void darray<T>::operator=(darray<T> &in_darray)
         DASSERT_MSG(
             length == 0,
             "There is still some data in the array, cannot assign another array into a already initialized array.");
-        dfree(data, capacity, MEM_TAG_DARRAY);
+        if (data)
+        {
+            dfree(data, capacity, MEM_TAG_DARRAY);
+        }
         data     = dallocate(in_darray.capacity, MEM_TAG_DARRAY);
         capacity = in_darray.capacity;
     }
-
     dcopy_memory(data, in_darray.data, in_darray.capacity);
-    length = in_darray.length;
+    length       = in_darray.length;
+    element_size = in_darray.element_size;
     return;
 }
 template <typename T> T darray<T>::operator[](u64 index) const
@@ -101,8 +104,11 @@ template <typename T> void darray<T>::resize(u64 out_size)
     u64 new_capacity = (out_size * element_size);
     if (capacity > new_capacity)
     {
+        if (data && length > 0)
+        {
+            DASSERT_MSG(new_capacity > capacity, "Old capacity is bigger than the new capcity");
+        }
         DERROR("Resizing array from %ldbytes to smaller %ldBytes", capacity, out_size);
-        DASSERT_MSG(new_capacity > capacity, "Old capacity is bigger than the new capcity");
     }
     if (data)
     {
@@ -116,6 +122,7 @@ template <typename T> void darray<T>::resize(u64 out_size)
         data = dallocate(element_size * out_size, MEM_TAG_DARRAY);
     }
     capacity = element_size * out_size;
+    length   = out_size;
 }
 
 template <typename T> u64 darray<T>::size()

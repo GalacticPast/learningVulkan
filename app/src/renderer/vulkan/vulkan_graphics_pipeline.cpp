@@ -21,22 +21,22 @@ bool vulkan_create_graphics_pipeline(vulkan_context *vk_context)
         DFATAL("File size error");
         return false;
     }
-    std::vector<char *> vert_shader_code(vert_shader_code_buffer_size_requirements);
-    file_open_and_read(vert_shader_file_name, &vert_shader_code_buffer_size_requirements,
-                       (char *)vert_shader_code.data(), 1);
+    darray<char *> vert_shader_code(vert_shader_code_buffer_size_requirements);
+    file_open_and_read(vert_shader_file_name, &vert_shader_code_buffer_size_requirements, (char *)vert_shader_code.data,
+                       1);
 
     u64         frag_shader_code_buffer_size_requirements = INVALID_ID_64;
     const char *frag_shader_file_name                     = "default_shader.frag.spv";
 
     file_open_and_read(frag_shader_file_name, &frag_shader_code_buffer_size_requirements, 0, 1);
-    std::vector<char *> frag_shader_code(frag_shader_code_buffer_size_requirements);
-    file_open_and_read(frag_shader_file_name, &frag_shader_code_buffer_size_requirements,
-                       (char *)frag_shader_code.data(), 1);
+    darray<char *> frag_shader_code(frag_shader_code_buffer_size_requirements);
+    file_open_and_read(frag_shader_file_name, &frag_shader_code_buffer_size_requirements, (char *)frag_shader_code.data,
+                       1);
 
-    VkShaderModule vert_shader_module = create_shader_module(vk_context, (const char *)vert_shader_code.data(),
+    VkShaderModule vert_shader_module = create_shader_module(vk_context, (const char *)vert_shader_code.data,
                                                              vert_shader_code_buffer_size_requirements);
 
-    VkShaderModule frag_shader_module = create_shader_module(vk_context, (const char *)frag_shader_code.data(),
+    VkShaderModule frag_shader_module = create_shader_module(vk_context, (const char *)frag_shader_code.data,
                                                              frag_shader_code_buffer_size_requirements);
 
     // create the pipeline shader stage
