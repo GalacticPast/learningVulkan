@@ -44,6 +44,10 @@ bool vulkan_backend_initialize(u64 *vulkan_backend_memory_requirements, applicat
         darray<VkDescriptorSet> descriptor_sets;
         vk_context->descriptor_sets = descriptor_sets;
     }
+    {
+        darray<VkCommandBuffer> command_buffers;
+        vk_context->command_buffers = command_buffers;
+    }
 
     DDEBUG("Creating vulkan instance...");
 
@@ -223,7 +227,11 @@ bool vulkan_backend_initialize(u64 *vulkan_backend_memory_requirements, applicat
         DERROR("Vulkan descriptor command pool and sets creation failed.");
         return false;
     }
-    if (!vulkan_create_command_buffer(vk_context, &vk_context->graphics_command_pool))
+
+    vk_context->command_buffers.resize(MAX_FRAMES_IN_FLIGHT);
+    if (!vulkan_allocate_command_buffers(vk_context, &vk_context->graphics_command_pool,
+                                         (VkCommandBuffer *)vk_context->command_buffers.data, MAX_FRAMES_IN_FLIGHT,
+                                         false))
     {
         DERROR("Vulkan command buffer creation failed.");
         return false;
@@ -246,21 +254,50 @@ bool vulkan_backend_initialize(u64 *vulkan_backend_memory_requirements, applicat
 
 bool vulkan_create_default_texture()
 {
-    u32 default_tex_width  = 512;
-    u32 default_tex_height = 512;
-    u32 default_tex_size   = default_tex_width * default_tex_height;
+    u32 default_tex_dimensions = 256;
+    u32 channel_count          = 4;
+    u32 pixel_count            = default_tex_dimensions * default_tex_dimensions;
+
+    u32 texture_size                   = pixel_count * channel_count;
+    vk_context->default_texture.width  = default_tex_dimensions;
+    vk_context->default_texture.height = default_tex_dimensions;
 
     vulkan_buffer staging_buffer{};
 
-    bool result = vulkan_create_buffer(vk_context, &staging_buffer, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-                                       VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-                                       default_tex_size);
+    darray<u32> pixels(pixel_count);
+
+    for (u32 y = 0; y < default_tex_dimensions; y++)
+    {
+        for (u32 x = 0; x < default_tex_dimensions; x++)
+        {
+            u32 *pixel = &pixels[(y * default_tex_dimensions) + x];
+            u8   red   = 123;
+            u8   green = 123;
+            u8   blue  = 123;
+            *pixel     = (red << 16 | green << 8 | blue << 0);
+        }
+    }
+
+    bool result =
+        vulkan_create_buffer(vk_context, &staging_buffer, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+                             VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, texture_size);
     DASSERT(result == true);
 
-    result = vulkan_create_image(vk_context, &vk_context->default_texture, default_tex_width, default_tex_height,
-                                 VK_FORMAT_R8G8B8A8_SRGB, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+    void *data;
+    vulkan_copy_data_to_buffer(vk_context, &staging_buffer, data, pixels.data, pixel_count);
+
+    result = vulkan_create_image(vk_context, &vk_context->default_texture, default_tex_dimensions,
+                                 default_tex_dimensions, VK_FORMAT_R8G8B8A8_SRGB, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
                                  VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_IMAGE_TILING_OPTIMAL);
     DASSERT(result == true);
+
+    vulkan_transition_image_layout(vk_context, &vk_context->default_texture, VK_IMAGE_LAYOUT_UNDEFINED,
+                                   VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+
+    vulkan_copy_buffer_data_to_image(vk_context, &staging_buffer, &vk_context->default_texture);
+    vulkan_transition_image_layout(vk_context, &vk_context->default_texture, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                                   VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+
     vulkan_destroy_buffer(vk_context, &staging_buffer);
 
     return true;
@@ -331,9 +368,9 @@ void vulkan_backend_shutdown()
     vkDestroyDescriptorPool(device, vk_context->descriptor_command_pool, allocator);
     vkDestroyDescriptorSetLayout(device, vk_context->global_uniform_descriptor_layout, allocator);
 
+    vulkan_free_command_buffers(vk_context, &vk_context->graphics_command_pool,
+                                (VkCommandBuffer *)vk_context->command_buffers.data, MAX_FRAMES_IN_FLIGHT);
     vkDestroyCommandPool(device, vk_context->graphics_command_pool, allocator);
-
-    dfree(vk_context->command_buffers, sizeof(VkCommandBuffer) * MAX_FRAMES_IN_FLIGHT, MEM_TAG_RENDERER);
 
     for (u32 i = 0; i < vk_context->vk_swapchain.images_count; i++)
     {
@@ -470,7 +507,9 @@ void vulkan_update_global_uniform_buffer(uniform_buffer_object *global_ubo, u32 
 
 bool vulkan_draw_frame(render_data *render_data)
 {
-    u32 current_frame = vk_context->current_frame_index;
+    u32      current_frame = vk_context->current_frame_index;
+    VkResult result;
+
     vkWaitForFences(vk_context->vk_device.logical, 1, &vk_context->in_flight_fences[current_frame], VK_TRUE,
                     INVALID_ID_64);
     vkResetFences(vk_context->vk_device.logical, 1, &vk_context->in_flight_fences[current_frame]);
@@ -483,11 +522,8 @@ bool vulkan_draw_frame(render_data *render_data)
     vulkan_create_buffer(vk_context, &vertex_staging_buffer, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
                          VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, buffer_size);
 
-    VkResult result =
-        vkMapMemory(vk_context->vk_device.logical, vertex_staging_buffer.memory, 0, buffer_size, 0, &vertex_data);
-    VK_CHECK(result);
-    dcopy_memory(vertex_data, render_data->vertices.data, buffer_size);
-    vkUnmapMemory(vk_context->vk_device.logical, vertex_staging_buffer.memory);
+    vulkan_copy_data_to_buffer(vk_context, &vertex_staging_buffer, vertex_data, render_data->vertices.data,
+                               buffer_size);
     vulkan_copy_buffer(vk_context, &vk_context->vertex_buffer, &vertex_staging_buffer, buffer_size);
 
     vulkan_destroy_buffer(vk_context, &vertex_staging_buffer);
@@ -500,10 +536,7 @@ bool vulkan_draw_frame(render_data *render_data)
     vulkan_create_buffer(vk_context, &index_staging_buffer, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
                          VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, buffer_size);
 
-    result = vkMapMemory(vk_context->vk_device.logical, index_staging_buffer.memory, 0, buffer_size, 0, &index_data);
-    VK_CHECK(result);
-    dcopy_memory(index_data, render_data->indices.data, buffer_size);
-    vkUnmapMemory(vk_context->vk_device.logical, index_staging_buffer.memory);
+    vulkan_copy_data_to_buffer(vk_context, &index_staging_buffer, index_data, render_data->indices.data, buffer_size);
     vulkan_copy_buffer(vk_context, &vk_context->index_buffer, &index_staging_buffer, buffer_size);
 
     vulkan_destroy_buffer(vk_context, &index_staging_buffer);

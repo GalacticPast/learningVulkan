@@ -1,6 +1,5 @@
 #include "vulkan_command_buffers.hpp"
 #include "core/application.hpp"
-#include "core/dmemory.hpp"
 
 bool vulkan_create_graphics_command_pool(vulkan_context *vk_context)
 {
@@ -82,21 +81,25 @@ bool vulkan_create_descriptor_command_pool_n_sets(vulkan_context *vk_context)
     return true;
 }
 
-bool vulkan_create_command_buffer(vulkan_context *vk_context, VkCommandPool *command_pool)
+bool vulkan_allocate_command_buffers(vulkan_context *vk_context, VkCommandPool *command_pool,
+                                     VkCommandBuffer *cmd_buffers, u32 command_buffers_count, bool is_single_use)
 {
     VkCommandBufferAllocateInfo command_buffer_alloc_info{};
 
-    vk_context->command_buffers =
-        (VkCommandBuffer *)dallocate(sizeof(VkCommandBuffer) * MAX_FRAMES_IN_FLIGHT, MEM_TAG_RENDERER);
-
     command_buffer_alloc_info.sType              = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
     command_buffer_alloc_info.pNext              = nullptr;
-    command_buffer_alloc_info.commandPool        = vk_context->graphics_command_pool;
+    command_buffer_alloc_info.commandPool        = *command_pool;
     command_buffer_alloc_info.level              = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-    command_buffer_alloc_info.commandBufferCount = MAX_FRAMES_IN_FLIGHT;
+    command_buffer_alloc_info.commandBufferCount = command_buffers_count;
 
-    VkResult result = vkAllocateCommandBuffers(vk_context->vk_device.logical, &command_buffer_alloc_info,
-                                               vk_context->command_buffers);
+    VkResult result = vkAllocateCommandBuffers(vk_context->vk_device.logical, &command_buffer_alloc_info, cmd_buffers);
+    VK_CHECK(result);
+
+    if (is_single_use)
+    {
+        vulkan_begin_command_buffer_single_use(vk_context, *cmd_buffers);
+    }
+
     return true;
 }
 
@@ -114,4 +117,9 @@ void vulkan_end_command_buffer_single_use(vulkan_context *vk_context, VkCommandB
 {
     VkResult result = vkEndCommandBuffer(command_buffer);
     VK_CHECK(result);
+}
+void vulkan_free_command_buffers(vulkan_context *vk_context, VkCommandPool *command_pool, VkCommandBuffer *cmd_buffers,
+                                 u32 cmd_buffers_count)
+{
+    vkFreeCommandBuffers(vk_context->vk_device.logical, *command_pool, cmd_buffers_count, cmd_buffers);
 }

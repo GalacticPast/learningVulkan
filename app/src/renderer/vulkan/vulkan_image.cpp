@@ -1,4 +1,5 @@
 #include "vulkan_image.hpp"
+#include "renderer/vulkan/vulkan_command_buffers.hpp"
 #include "vulkan_device.hpp"
 
 bool vulkan_create_image(vulkan_context *vk_context, vulkan_image *out_image, u32 img_width, u32 img_height,
@@ -78,5 +79,93 @@ bool vulkan_destroy_image(vulkan_context *vk_context, vulkan_image *image)
     image->handle = 0;
     image->view   = 0;
     image->memory = 0;
+    return true;
+}
+// NOTE: for now we use graphics command pool to allocate. Maybe we have to make it a function parameter??
+bool vulkan_transition_image_layout(vulkan_context *vk_context, vulkan_image *image, VkImageLayout old_layout,
+                                    VkImageLayout new_layout)
+{
+    VkCommandBuffer staging_cmd_buffer;
+    bool            result =
+        vulkan_allocate_command_buffers(vk_context, &vk_context->graphics_command_pool, &staging_cmd_buffer, 1, true);
+    if (!result)
+    {
+        DERROR("Vulkan command buffer allocation failed.");
+        return false;
+    }
+
+    VkImageMemoryBarrier img_barrier{};
+
+    img_barrier.sType                           = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+    img_barrier.pNext                           = 0;
+    img_barrier.oldLayout                       = old_layout;
+    img_barrier.newLayout                       = new_layout;
+    img_barrier.srcQueueFamilyIndex             = VK_QUEUE_FAMILY_IGNORED;
+    img_barrier.dstQueueFamilyIndex             = VK_QUEUE_FAMILY_IGNORED;
+    img_barrier.image                           = image->handle;
+    img_barrier.subresourceRange.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT;
+    img_barrier.subresourceRange.baseMipLevel   = 0;
+    img_barrier.subresourceRange.levelCount     = 1;
+    img_barrier.subresourceRange.baseArrayLayer = 0;
+    img_barrier.subresourceRange.layerCount     = 1;
+
+    VkPipelineStageFlags source_stage_flags;
+    VkPipelineStageFlags destination_stage_flags;
+
+    if (old_layout == VK_IMAGE_LAYOUT_UNDEFINED && new_layout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
+    {
+        img_barrier.srcAccessMask = 0;
+        img_barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+
+        source_stage_flags      = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+        destination_stage_flags = VK_PIPELINE_STAGE_TRANSFER_BIT;
+    }
+    else if (old_layout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL &&
+             new_layout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
+    {
+        img_barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+        img_barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+
+        source_stage_flags      = VK_PIPELINE_STAGE_TRANSFER_BIT;
+        destination_stage_flags = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+    }
+    else
+    {
+        DERROR("Invalid image format");
+        return false;
+    }
+
+    vkCmdPipelineBarrier(staging_cmd_buffer, source_stage_flags, destination_stage_flags, 0, 0, nullptr, 0, nullptr, 1,
+                         &img_barrier);
+
+    vulkan_end_command_buffer_single_use(vk_context, staging_cmd_buffer);
+    vulkan_free_command_buffers(vk_context, &vk_context->graphics_command_pool, &staging_cmd_buffer, 1);
+
+    return true;
+}
+
+bool vulkan_copy_buffer_data_to_image(vulkan_context *vk_context, vulkan_buffer *src_buffer, vulkan_image *image)
+{
+    VkCommandBuffer staging_command_buffer;
+    vulkan_allocate_command_buffers(vk_context, &vk_context->graphics_command_pool, &staging_command_buffer, 1, true);
+
+    VkBufferImageCopy buffer_img_cpy_region{};
+    buffer_img_cpy_region.bufferOffset      = 0;
+    buffer_img_cpy_region.bufferRowLength   = 0;
+    buffer_img_cpy_region.bufferImageHeight = 0;
+
+    buffer_img_cpy_region.imageSubresource.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT;
+    buffer_img_cpy_region.imageSubresource.mipLevel       = 0;
+    buffer_img_cpy_region.imageSubresource.baseArrayLayer = 0;
+    buffer_img_cpy_region.imageSubresource.layerCount     = 1;
+
+    buffer_img_cpy_region.imageOffset = {0, 0, 0};
+    buffer_img_cpy_region.imageExtent = {image->width, image->height, 1};
+
+    vkCmdCopyBufferToImage(staging_command_buffer, src_buffer->handle, image->handle,
+                           VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &buffer_img_cpy_region);
+
+    vulkan_end_command_buffer_single_use(vk_context, staging_command_buffer);
+    vulkan_free_command_buffers(vk_context, &vk_context->graphics_command_pool, &staging_command_buffer, 1);
     return true;
 }

@@ -39,6 +39,9 @@ struct vulkan_image
     VkImageView    view;
     VkFormat       format;
     VkDeviceMemory memory;
+
+    u32 width;
+    u32 height;
 };
 
 struct vulkan_framebuffer
@@ -99,7 +102,7 @@ struct vulkan_context
     vulkan_buffer *global_uniform_buffers;
     darray<void *> global_uniform_buffers_memory_data;
 
-    VkCommandBuffer *command_buffers;
+    darray<VkCommandBuffer> command_buffers;
 
     vulkan_buffer vertex_buffer;
     vulkan_buffer index_buffer;

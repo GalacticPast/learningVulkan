@@ -1,5 +1,6 @@
 #include "vulkan_buffer.hpp"
 #include "core/application.hpp"
+#include "renderer/vulkan/vulkan_command_buffers.hpp"
 #include "vulkan_buffer.hpp"
 
 bool vulkan_create_buffer(vulkan_context *vk_context, vulkan_buffer *out_buffer, VkBufferUsageFlags usg_flags,
@@ -53,35 +54,19 @@ bool vulkan_create_buffer(vulkan_context *vk_context, vulkan_buffer *out_buffer,
 bool vulkan_copy_buffer(vulkan_context *vk_context, vulkan_buffer *dst_buffer, vulkan_buffer *src_buffer,
                         u64 buffer_size)
 {
-    VkCommandBufferAllocateInfo buffer_alloc_info{};
 
-    buffer_alloc_info.sType              = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-    buffer_alloc_info.pNext              = 0;
-    buffer_alloc_info.commandPool        = vk_context->graphics_command_pool;
-    buffer_alloc_info.level              = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-    buffer_alloc_info.commandBufferCount = 1;
-
-    VkCommandBuffer command_buffer;
-
-    VkResult result = vkAllocateCommandBuffers(vk_context->vk_device.logical, &buffer_alloc_info, &command_buffer);
-    VK_CHECK(result);
-
-    VkCommandBufferBeginInfo cmd_buffer_begin_info{};
-    cmd_buffer_begin_info.sType            = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-    cmd_buffer_begin_info.pNext            = 0;
-    cmd_buffer_begin_info.flags            = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-    cmd_buffer_begin_info.pInheritanceInfo = 0;
-
-    result = vkBeginCommandBuffer(command_buffer, &cmd_buffer_begin_info);
-    VK_CHECK(result);
+    VkCommandBuffer staging_command_buffer;
+    bool            result = vulkan_allocate_command_buffers(vk_context, &vk_context->graphics_command_pool,
+                                                             &staging_command_buffer, 1, true);
+    DASSERT_MSG(result == true, "Couldnt allocate command buffers");
 
     VkBufferCopy cpy_region{};
     cpy_region.srcOffset = 0;
     cpy_region.dstOffset = 0;
     cpy_region.size      = buffer_size;
 
-    vkCmdCopyBuffer(command_buffer, src_buffer->handle, dst_buffer->handle, 1, &cpy_region);
-    vkEndCommandBuffer(command_buffer);
+    vkCmdCopyBuffer(staging_command_buffer, src_buffer->handle, dst_buffer->handle, 1, &cpy_region);
+    vulkan_end_command_buffer_single_use(vk_context, staging_command_buffer);
 
     VkSubmitInfo queue_submit_info{};
     queue_submit_info.sType                = VK_STRUCTURE_TYPE_SUBMIT_INFO;
@@ -90,7 +75,7 @@ bool vulkan_copy_buffer(vulkan_context *vk_context, vulkan_buffer *dst_buffer, v
     queue_submit_info.pWaitSemaphores      = 0;
     queue_submit_info.pWaitDstStageMask    = 0;
     queue_submit_info.commandBufferCount   = 1;
-    queue_submit_info.pCommandBuffers      = &command_buffer;
+    queue_submit_info.pCommandBuffers      = &staging_command_buffer;
     queue_submit_info.signalSemaphoreCount = 0;
     queue_submit_info.pSignalSemaphores    = 0;
 
@@ -99,7 +84,7 @@ bool vulkan_copy_buffer(vulkan_context *vk_context, vulkan_buffer *dst_buffer, v
     result = vkQueueWaitIdle(vk_context->vk_device.graphics_queue);
     VK_CHECK(result);
 
-    vkFreeCommandBuffers(vk_context->vk_device.logical, vk_context->graphics_command_pool, 1, &command_buffer);
+    vulkan_free_command_buffers(vk_context, &vk_context->graphics_command_pool, &staging_command_buffer, 1);
     return true;
 }
 
@@ -153,5 +138,16 @@ bool vulkan_create_global_uniform_buffers(vulkan_context *vk_context)
         vkMapMemory(vk_context->vk_device.logical, vk_context->global_uniform_buffers[i].memory, 0,
                     global_uniform_buffer_size, 0, &vk_context->global_uniform_buffers_memory_data[i]);
     }
+    return true;
+}
+
+bool vulkan_copy_data_to_buffer(vulkan_context *vk_context, vulkan_buffer *src_buffer, void *to_be_mapped_data,
+                                void *to_be_copied_data, u32 to_be_copied_data_size)
+{
+    VkResult result = vkMapMemory(vk_context->vk_device.logical, src_buffer->memory, 0, to_be_copied_data_size, 0,
+                                  &to_be_mapped_data);
+    VK_CHECK(result);
+    dcopy_memory(to_be_mapped_data, to_be_copied_data, to_be_copied_data_size);
+    vkUnmapMemory(vk_context->vk_device.logical, src_buffer->memory);
     return true;
 }
