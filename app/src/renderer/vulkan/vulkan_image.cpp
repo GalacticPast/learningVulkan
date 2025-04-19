@@ -1,16 +1,16 @@
 #include "vulkan_image.hpp"
 #include "vulkan_device.hpp"
 
-bool vulkan_create_image(vulkan_context *vk_context, vulkan_image *out_image, VkFormat img_format,
-                         VkMemoryPropertyFlags mem_properties_flags, VkImageUsageFlags img_usage,
+bool vulkan_create_image(vulkan_context *vk_context, vulkan_image *out_image, u32 img_width, u32 img_height,
+                         VkFormat img_format, VkMemoryPropertyFlags mem_properties_flags, VkImageUsageFlags img_usage,
                          VkImageTiling img_tiling)
 {
     VkDevice &device = vk_context->vk_device.logical;
 
     VkImageCreateInfo image_create_info = {VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO};
     image_create_info.imageType         = VK_IMAGE_TYPE_2D;
-    image_create_info.extent.width      = vk_context->vk_swapchain.width;
-    image_create_info.extent.height     = vk_context->vk_swapchain.height;
+    image_create_info.extent.width      = img_width;
+    image_create_info.extent.height     = img_height;
     image_create_info.extent.depth      = 1; // TODO: Support configurable depth.
     image_create_info.mipLevels         = 4; // TODO: Support mip mapping
     image_create_info.arrayLayers       = 1; // TODO: Support number of layers in the image.
@@ -64,5 +64,19 @@ bool vulkan_create_image_view(vulkan_context *vk_context, VkImage image, VkForma
     VkResult result =
         vkCreateImageView(vk_context->vk_device.logical, &image_view_create_info, vk_context->vk_allocator, out_view);
     VK_CHECK(result);
+    return true;
+}
+bool vulkan_destroy_image(vulkan_context *vk_context, vulkan_image *image)
+{
+    VkDevice              &device    = vk_context->vk_device.logical;
+    VkAllocationCallbacks *allocator = vk_context->vk_allocator;
+
+    vkDestroyImage(device, image->handle, allocator);
+    vkDestroyImageView(device, image->view, allocator);
+    vkFreeMemory(device, image->memory, allocator);
+
+    image->handle = 0;
+    image->view   = 0;
+    image->memory = 0;
     return true;
 }

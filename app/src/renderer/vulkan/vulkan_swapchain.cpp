@@ -146,9 +146,10 @@ bool create_swapchain(vulkan_context *vk_context)
     bool res = vulkan_find_suitable_depth_format(&vk_context->vk_device, &vk_context->vk_swapchain.depth_image);
     DASSERT(res == true);
 
-    res = vulkan_create_image(vk_context, &vk_context->vk_swapchain.depth_image,
-                              vk_context->vk_swapchain.depth_image.format, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-                              VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_IMAGE_TILING_OPTIMAL);
+    res = vulkan_create_image(vk_context, &vk_context->vk_swapchain.depth_image, vk_context->vk_swapchain.width,
+                              vk_context->vk_swapchain.height, vk_context->vk_swapchain.depth_image.format,
+                              VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
+                              VK_IMAGE_TILING_OPTIMAL);
     DASSERT(res == true);
     res = vulkan_create_image_view(vk_context, vk_context->vk_swapchain.depth_image.handle,
                                    vk_context->vk_swapchain.depth_image.format,
