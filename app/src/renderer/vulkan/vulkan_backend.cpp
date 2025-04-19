@@ -524,10 +524,10 @@ bool vulkan_draw_frame(render_data *render_data)
     VK_CHECK(result);
 
     VkCommandBuffer &curr_command_buffer = vk_context->command_buffers[current_frame];
-    vkResetCommandBuffer(curr_command_buffer, 0);
 
+    vkResetCommandBuffer(curr_command_buffer, 0);
     vulkan_begin_command_buffer_single_use(vk_context, curr_command_buffer);
-    vulkan_begin_frame_renderpass(vk_context, curr_command_buffer, render_data, current_frame);
+    vulkan_begin_frame_renderpass(vk_context, curr_command_buffer, render_data, image_index);
     vulkan_end_command_buffer_single_use(vk_context, curr_command_buffer);
 
     VkSemaphore          wait_semaphores[]   = {vk_context->image_available_semaphores[current_frame]};
@@ -547,7 +547,7 @@ bool vulkan_draw_frame(render_data *render_data)
     result = vkQueueSubmit(vk_context->vk_device.graphics_queue, 1, &submit_info,
                            vk_context->in_flight_fences[current_frame]);
     VK_CHECK(result);
-
+    vkQueueWaitIdle(vk_context->vk_device.graphics_queue);
     VkSwapchainKHR swapchains[] = {vk_context->vk_swapchain.handle};
 
     VkPresentInfoKHR present_info{};
