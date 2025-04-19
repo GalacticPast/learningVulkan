@@ -9,6 +9,7 @@
 #include "vulkan_device.hpp"
 #include "vulkan_framebuffer.hpp"
 #include "vulkan_graphics_pipeline.hpp"
+#include "vulkan_image.hpp"
 #include "vulkan_platform.hpp"
 #include "vulkan_renderpass.hpp"
 #include "vulkan_swapchain.hpp"
@@ -23,6 +24,7 @@ VkBool32 vulkan_dbg_msg_rprt_callback(VkDebugUtilsMessageSeverityFlagBitsEXT    
 
 bool vulkan_check_validation_layer_support();
 bool vulkan_create_debug_messenger(VkDebugUtilsMessengerCreateInfoEXT *dbg_messenger_create_info);
+bool vulkan_create_default_texture();
 
 bool vulkan_backend_initialize(u64 *vulkan_backend_memory_requirements, application_config *app_config, void *state)
 {
@@ -232,9 +234,33 @@ bool vulkan_backend_initialize(u64 *vulkan_backend_memory_requirements, applicat
         return false;
     }
 
+    // INFO:  creating default textrue
+    if (!vulkan_create_default_texture())
+    {
+    }
+
     vk_context->current_frame_index = 0;
 
     return true;
+}
+
+bool vulkan_create_default_texture()
+{
+    u32 default_tex_width  = 512;
+    u32 default_tex_height = 512;
+    u32 default_tex_size   = default_tex_width * default_tex_height;
+
+    vulkan_buffer staging_buffer{};
+
+    bool result = vulkan_create_buffer(vk_context, &staging_buffer, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+                                       VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+                                       default_tex_size);
+    DASSERT(result == true);
+
+    result = vulkan_create_image(vk_context, &vk_context->default_texture, default_tex_width, default_tex_height,
+                                 VK_FORMAT_R8G8B8A8_SRGB, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+                                 VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_IMAGE_TILING_OPTIMAL);
+    DASSERT(result == true);
 }
 
 bool vulkan_create_debug_messenger(VkDebugUtilsMessengerCreateInfoEXT *dbg_messenger_create_info)

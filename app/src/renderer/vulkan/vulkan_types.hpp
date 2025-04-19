@@ -104,6 +104,9 @@ struct vulkan_context
     vulkan_buffer vertex_buffer;
     vulkan_buffer index_buffer;
 
+    // HACK: remove this later
+    vulkan_image default_texture;
+    //
     VkCommandPool           graphics_command_pool;
     VkDescriptorPool        descriptor_command_pool;
     VkDescriptorSetLayout   global_uniform_descriptor_layout;
@@ -112,8 +115,6 @@ struct vulkan_context
     VkSemaphore *image_available_semaphores;
     VkSemaphore *render_finished_semaphores;
     VkFence     *in_flight_fences;
-
-    // INFO: maybe should be inside vulkan_device??
 
     VkSurfaceKHR vk_surface;
 
