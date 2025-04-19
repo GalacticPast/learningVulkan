@@ -66,3 +66,17 @@ bool vulkan_create_image_view(vulkan_context *vk_context, VkImage image, VkForma
     VK_CHECK(result);
     return true;
 }
+bool vulkan_destroy_image(vulkan_context *vk_context, vulkan_image *image)
+{
+    VkDevice              &device    = vk_context->vk_device.logical;
+    VkAllocationCallbacks *allocator = vk_context->vk_allocator;
+
+    vkDestroyImage(device, image->handle, allocator);
+    vkDestroyImageView(device, image->view, allocator);
+    vkFreeMemory(device, image->memory, allocator);
+
+    image->handle = 0;
+    image->view   = 0;
+    image->memory = 0;
+    return true;
+}

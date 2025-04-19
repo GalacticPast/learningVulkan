@@ -7,3 +7,4 @@ bool vulkan_create_image(vulkan_context *vk_context, vulkan_image *out_image, u3
 
 bool vulkan_create_image_view(vulkan_context *vk_context, VkImage image, VkFormat format, VkImageView *out_view,
                               VkImageAspectFlags img_aspect_flags);
+bool vulkan_destroy_image(vulkan_context *vk_context, vulkan_image *image);

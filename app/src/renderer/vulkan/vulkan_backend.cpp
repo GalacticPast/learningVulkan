@@ -261,6 +261,9 @@ bool vulkan_create_default_texture()
                                  VK_FORMAT_R8G8B8A8_SRGB, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
                                  VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_IMAGE_TILING_OPTIMAL);
     DASSERT(result == true);
+    vulkan_destroy_buffer(vk_context, &staging_buffer);
+
+    return true;
 }
 
 bool vulkan_create_debug_messenger(VkDebugUtilsMessengerCreateInfoEXT *dbg_messenger_create_info)
@@ -320,6 +323,8 @@ void vulkan_backend_shutdown()
     dfree(vk_context->render_finished_semaphores, sizeof(VkSemaphore) * MAX_FRAMES_IN_FLIGHT, MEM_TAG_RENDERER);
     dfree(vk_context->in_flight_fences, sizeof(VkFence) * MAX_FRAMES_IN_FLIGHT, MEM_TAG_RENDERER);
 
+    vulkan_destroy_image(vk_context, &vk_context->default_texture);
+
     vulkan_destroy_buffer(vk_context, &vk_context->vertex_buffer);
     vulkan_destroy_buffer(vk_context, &vk_context->index_buffer);
 
@@ -353,9 +358,7 @@ void vulkan_backend_shutdown()
     {
         vkDestroyImageView(device, vk_context->vk_swapchain.img_views[i], allocator);
     }
-    vkDestroyImageView(device, vk_context->vk_swapchain.depth_image.view, allocator);
-    vkDestroyImage(device, vk_context->vk_swapchain.depth_image.handle, allocator);
-    vkFreeMemory(device, vk_context->vk_swapchain.depth_image.memory, allocator);
+    vulkan_destroy_image(vk_context, &vk_context->vk_swapchain.depth_image);
 
     dfree(vk_context->vk_swapchain.images, sizeof(VkImage) * vk_context->vk_swapchain.images_count, MEM_TAG_RENDERER);
     dfree(vk_context->vk_swapchain.img_views, sizeof(VkImageView) * vk_context->vk_swapchain.images_count,
@@ -512,7 +515,7 @@ bool vulkan_draw_frame(render_data *render_data)
     result = vkAcquireNextImageKHR(vk_context->vk_device.logical, vk_context->vk_swapchain.handle, INVALID_ID_64,
                                    vk_context->image_available_semaphores[current_frame], VK_NULL_HANDLE, &image_index);
 
-    if (result == VK_ERROR_OUT_OF_DATE_KHR)
+    if (result & VK_ERROR_OUT_OF_DATE_KHR)
     {
         vulkan_recreate_swapchain(vk_context);
         DDEBUG("VK_ERROR_OUT_OF_DATE_KHR");
@@ -520,10 +523,12 @@ bool vulkan_draw_frame(render_data *render_data)
     }
     VK_CHECK(result);
 
-    vkResetCommandBuffer(vk_context->command_buffers[current_frame], 0);
+    VkCommandBuffer &curr_command_buffer = vk_context->command_buffers[current_frame];
+    vkResetCommandBuffer(curr_command_buffer, 0);
 
-    vulkan_record_command_buffer_and_use(vk_context, vk_context->command_buffers[current_frame], render_data,
-                                         image_index);
+    vulkan_begin_command_buffer_single_use(vk_context, curr_command_buffer);
+    vulkan_begin_frame_renderpass(vk_context, curr_command_buffer, render_data, current_frame);
+    vulkan_end_command_buffer_single_use(vk_context, curr_command_buffer);
 
     VkSemaphore          wait_semaphores[]   = {vk_context->image_available_semaphores[current_frame]};
     VkSemaphore          signal_semaphores[] = {vk_context->render_finished_semaphores[current_frame]};
@@ -535,7 +540,7 @@ bool vulkan_draw_frame(render_data *render_data)
     submit_info.pWaitSemaphores      = wait_semaphores;
     submit_info.pWaitDstStageMask    = wait_stages;
     submit_info.commandBufferCount   = 1;
-    submit_info.pCommandBuffers      = &vk_context->command_buffers[current_frame];
+    submit_info.pCommandBuffers      = &curr_command_buffer;
     submit_info.signalSemaphoreCount = 1;
     submit_info.pSignalSemaphores    = signal_semaphores;
 

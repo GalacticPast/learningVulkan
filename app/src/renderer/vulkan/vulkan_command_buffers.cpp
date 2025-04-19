@@ -100,8 +100,7 @@ bool vulkan_create_command_buffer(vulkan_context *vk_context, VkCommandPool *com
     return true;
 }
 
-void vulkan_record_command_buffer_and_use(vulkan_context *vk_context, VkCommandBuffer command_buffer,
-                                          struct render_data *render_data, u32 image_index)
+void vulkan_begin_command_buffer_single_use(vulkan_context *vk_context, VkCommandBuffer command_buffer)
 {
     VkCommandBufferBeginInfo command_buffer_begin_info{};
     command_buffer_begin_info.sType            = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
@@ -110,58 +109,9 @@ void vulkan_record_command_buffer_and_use(vulkan_context *vk_context, VkCommandB
 
     VkResult result = vkBeginCommandBuffer(command_buffer, &command_buffer_begin_info);
     VK_CHECK(result);
-
-    // start a render pass
-
-    // starting color
-    VkClearValue clear_values[2] = {};
-    clear_values[0]              = {.color = {0.0f, 0.0f, 0.0f, 1.0f}};
-    clear_values[1]              = {.depthStencil = {1.0f, 0}};
-
-    VkRenderPassBeginInfo renderpass_begin_info{};
-    renderpass_begin_info.sType             = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-    renderpass_begin_info.pNext             = 0;
-    renderpass_begin_info.renderPass        = vk_context->vk_renderpass;
-    renderpass_begin_info.framebuffer       = vk_context->vk_swapchain.buffers[image_index].handle;
-    renderpass_begin_info.renderArea.offset = {0, 0};
-    renderpass_begin_info.renderArea.extent = vk_context->vk_swapchain.surface_extent;
-    renderpass_begin_info.clearValueCount   = 2;
-    renderpass_begin_info.pClearValues      = clear_values;
-
-    vkCmdBeginRenderPass(command_buffer, &renderpass_begin_info, VK_SUBPASS_CONTENTS_INLINE);
-
-    vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, vk_context->vk_graphics_pipeline.handle);
-
-    VkExtent2D *swapchain_extent = &vk_context->vk_swapchain.surface_extent;
-
-    VkViewport view_port{};
-    view_port.x        = 0.0f;
-    view_port.y        = 0.0f;
-    view_port.width    = swapchain_extent->width;
-    view_port.height   = swapchain_extent->height;
-    view_port.minDepth = 0.0f;
-    view_port.maxDepth = 1.0f;
-
-    vkCmdSetViewport(command_buffer, 0, 1, &view_port);
-
-    VkRect2D scissor{};
-    scissor.offset = {0, 0};
-    scissor.extent = *swapchain_extent;
-    vkCmdSetScissor(command_buffer, 0, 1, &scissor);
-
-    VkBuffer     vertex_buffers[] = {vk_context->vertex_buffer.handle};
-    VkDeviceSize offsets[]        = {0};
-
-    vkCmdBindVertexBuffers(command_buffer, 0, 1, vertex_buffers, offsets);
-    vkCmdBindIndexBuffer(command_buffer, vk_context->index_buffer.handle, 0, VK_INDEX_TYPE_UINT32);
-
-    vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, vk_context->vk_graphics_pipeline.layout, 0,
-                            1, &vk_context->descriptor_sets[image_index], 0, nullptr);
-
-    vkCmdDrawIndexed(command_buffer, render_data->indices.size(), 1, 0, 0, 0);
-
-    vkCmdEndRenderPass(command_buffer);
-
-    result = vkEndCommandBuffer(command_buffer);
+}
+void vulkan_end_command_buffer_single_use(vulkan_context *vk_context, VkCommandBuffer command_buffer)
+{
+    VkResult result = vkEndCommandBuffer(command_buffer);
     VK_CHECK(result);
 }
