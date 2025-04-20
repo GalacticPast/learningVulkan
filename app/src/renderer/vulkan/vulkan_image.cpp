@@ -8,19 +8,21 @@ bool vulkan_create_image(vulkan_context *vk_context, vulkan_image *out_image, u3
 {
     VkDevice &device = vk_context->vk_device.logical;
 
-    VkImageCreateInfo image_create_info = {VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO};
-    image_create_info.imageType         = VK_IMAGE_TYPE_2D;
-    image_create_info.extent.width      = img_width;
-    image_create_info.extent.height     = img_height;
-    image_create_info.extent.depth      = 1; // TODO: Support configurable depth.
-    image_create_info.mipLevels         = 4; // TODO: Support mip mapping
-    image_create_info.arrayLayers       = 1; // TODO: Support number of layers in the image.
-    image_create_info.format            = img_format;
-    image_create_info.tiling            = img_tiling;
-    image_create_info.initialLayout     = VK_IMAGE_LAYOUT_UNDEFINED;
-    image_create_info.usage             = img_usage;
-    image_create_info.samples           = VK_SAMPLE_COUNT_1_BIT;     // TODO: Configurable sample count.
-    image_create_info.sharingMode       = VK_SHARING_MODE_EXCLUSIVE; // TODO: Configurable sharing mode.
+    VkImageCreateInfo image_create_info = {};
+
+    image_create_info.sType         = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+    image_create_info.imageType     = VK_IMAGE_TYPE_2D;
+    image_create_info.extent.width  = img_width;
+    image_create_info.extent.height = img_height;
+    image_create_info.extent.depth  = 1; // TODO: Support configurable depth.
+    image_create_info.mipLevels     = 4; // TODO: Support mip mapping
+    image_create_info.arrayLayers   = 1; // TODO: Support number of layers in the image.
+    image_create_info.format        = img_format;
+    image_create_info.tiling        = img_tiling;
+    image_create_info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    image_create_info.usage         = img_usage;
+    image_create_info.samples       = VK_SAMPLE_COUNT_1_BIT;     // TODO: Configurable sample count.
+    image_create_info.sharingMode   = VK_SHARING_MODE_EXCLUSIVE; // TODO: Configurable sharing mode.
 
     VkResult result = vkCreateImage(device, &image_create_info, vk_context->vk_allocator, &out_image->handle);
     VK_CHECK(result);

@@ -1,4 +1,3 @@
-#pragma once
 #include "test_manager.hpp"
 #include "core/logger.hpp"
 #include <core/dmemory.hpp>

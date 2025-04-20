@@ -197,7 +197,6 @@ u32 vulkan_find_memory_type_index(vulkan_context *vk_context, u32 mem_type_filte
     VkPhysicalDeviceMemoryProperties mem_properties;
     vkGetPhysicalDeviceMemoryProperties(vk_context->vk_device.physical, &mem_properties);
 
-    u32 memory_type_index = INVALID_ID;
     for (u32 i = 0; i < mem_properties.memoryTypeCount; i++)
     {
         if (mem_type_filter & (1 << i) &&

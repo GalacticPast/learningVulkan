@@ -29,13 +29,13 @@ bool event_system_register_and_unregister_test()
 
     event_system_register(EVENT_CODE_TEST_A, 0, event_code_test_A_callback);
 
-    event_context context = {0};
+    event_context context = {};
     context.data.u32[0]   = 0;
     context.data.u32[1]   = 1;
     context.data.u32[2]   = 2;
     context.data.u32[3]   = 3;
 
-    event_code code       = EVENT_CODE_TEST_A;
+    event_code code = EVENT_CODE_TEST_A;
     event_fire(code, context);
 
     event_system_unregister(EVENT_CODE_TEST_A, 0, event_code_test_A_callback);

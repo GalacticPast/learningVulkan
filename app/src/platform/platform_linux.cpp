@@ -1124,9 +1124,9 @@ keys translate_keycode(xkb_keysym_t xkb_sym)
     case XKB_KEY_Alt_R: {
         return KEY_RALT;
     }
-
-    defualt:
+    defualt: {
         return KEYS_MAX_KEYS;
+    }
     }
     return KEYS_MAX_KEYS;
 }

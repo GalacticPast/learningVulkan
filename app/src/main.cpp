@@ -133,7 +133,7 @@ int main()
     f64 start_time      = 0;
     f64 curr_frame_time = 0;
 
-    f64 req_frame_time = 1.0f / 240;
+    f64 req_frame_time = (f64)(1.0f / 240);
     clock_start(&clock);
 
     while (app_state.is_running)
@@ -142,7 +142,7 @@ int main()
         clock_update(&clock);
         start_time = clock.time_elapsed;
 
-        global_ubo.model    = mat4_euler_z(start_time * (90.0f * D_DEG2RAD_MULTIPLIER));
+        global_ubo.model    = mat4_euler_z((start_time * (90.0f * D_DEG2RAD_MULTIPLIER)));
         triangle.global_ubo = global_ubo;
 
         application_run(&triangle);
@@ -150,10 +150,10 @@ int main()
         clock_update(&clock);
         curr_frame_time = clock.time_elapsed - start_time;
 
-        if (f32_compare(req_frame_time, curr_frame_time, req_frame_time))
+        if (f32_compare((f32)req_frame_time, (f32)curr_frame_time, (f32)req_frame_time))
         {
             f64 sleep = fabs(req_frame_time - curr_frame_time);
-            platform_sleep(sleep * D_SEC_TO_MS_MULTIPLIER);
+            platform_sleep((u64)sleep * D_SEC_TO_MS_MULTIPLIER);
         }
     }
     application_shutdown();

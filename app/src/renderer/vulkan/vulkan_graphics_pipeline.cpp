@@ -123,8 +123,8 @@ bool vulkan_create_graphics_pipeline(vulkan_context *vk_context)
     VkViewport view_port{};
     view_port.x        = 0.0f;
     view_port.y        = 0.0f;
-    view_port.width    = vk_context->vk_swapchain.surface_extent.width;
-    view_port.height   = vk_context->vk_swapchain.surface_extent.width;
+    view_port.width    = (f32)vk_context->vk_swapchain.surface_extent.width;
+    view_port.height   = (f32)vk_context->vk_swapchain.surface_extent.width;
     view_port.minDepth = 0.0f;
     view_port.maxDepth = 1.0f;
 

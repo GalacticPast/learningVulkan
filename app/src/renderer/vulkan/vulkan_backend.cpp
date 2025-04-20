@@ -257,10 +257,10 @@ bool vulkan_backend_initialize(u64 *vulkan_backend_memory_requirements, applicat
 bool vulkan_create_default_texture()
 {
 
-    s32 tex_width    = 512;
-    s32 tex_height   = 512;
-    s32 tex_channel  = 4;
-    s32 texture_size = tex_width * tex_height * 4;
+    u32 tex_width    = 512;
+    u32 tex_height   = 512;
+    u32 tex_channel  = 4;
+    u32 texture_size = tex_width * tex_height * 4;
 
     u8 *default_texture = (u8 *)dallocate(texture_size, MEM_TAG_UNKNOWN);
 
@@ -288,7 +288,7 @@ bool vulkan_create_default_texture()
                              VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, texture_size);
     DASSERT(result == true);
 
-    void *data;
+    void *data = nullptr;
     vulkan_copy_data_to_buffer(vk_context, &staging_buffer, data, default_texture, texture_size);
 
     result = vulkan_create_image(vk_context, texture, tex_width, tex_height, VK_FORMAT_R8G8B8A8_SRGB,
@@ -553,10 +553,10 @@ bool vulkan_draw_frame(render_data *render_data)
     vkResetFences(vk_context->vk_device.logical, 1, &vk_context->in_flight_fences[current_frame]);
 
     // vertex
-    void *vertex_data;
+    void *vertex_data = nullptr;
     u32   buffer_size = (u32)render_data->vertices.size() * sizeof(vertex);
 
-    vulkan_buffer vertex_staging_buffer;
+    vulkan_buffer vertex_staging_buffer{};
     vulkan_create_buffer(vk_context, &vertex_staging_buffer, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
                          VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, buffer_size);
 
@@ -567,8 +567,8 @@ bool vulkan_draw_frame(render_data *render_data)
     vulkan_destroy_buffer(vk_context, &vertex_staging_buffer);
 
     // index
-    void *index_data;
-    buffer_size = (u32)render_data->indices.size() * sizeof(u32);
+    void *index_data = nullptr;
+    buffer_size      = (u32)render_data->indices.size() * sizeof(u32);
 
     vulkan_buffer index_staging_buffer;
     vulkan_create_buffer(vk_context, &index_staging_buffer, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
@@ -619,7 +619,9 @@ bool vulkan_draw_frame(render_data *render_data)
                            vk_context->in_flight_fences[current_frame]);
     VK_CHECK(result);
     vkQueueWaitIdle(vk_context->vk_device.graphics_queue);
-    VkSwapchainKHR swapchains[] = {vk_context->vk_swapchain.handle};
+
+    VkSwapchainKHR swapchains[1] = {};
+    swapchains[0]                = vk_context->vk_swapchain.handle;
 
     VkPresentInfoKHR present_info{};
     present_info.sType              = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;

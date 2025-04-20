@@ -18,7 +18,7 @@ bool darray_create_and_destroy()
 bool darray_create_and_resize()
 {
     darray<s32> array;
-    u32         size = 100000;
+    s32         size = 100000;
     for (s32 i = 0; i < size; i++)
     {
         array.push_back(i);
@@ -36,7 +36,7 @@ bool darray_create_and_resize()
 bool darray_pop_back_test()
 {
     darray<s32> array;
-    u32         size = 100000;
+    s32         size = 100000;
     for (s32 i = 0; i < size; i++)
     {
         array.push_back(i);
@@ -53,9 +53,9 @@ bool darray_pop_back_test()
 
 void print_array(darray<s32> &array)
 {
-    u32 length = array.size();
+    s32 length = (s32)array.size();
 
-    for (u32 i = 0; i < length; i++)
+    for (s32 i = 0; i < length; i++)
     {
         DDEBUG("%d", array[i]);
     }

@@ -1,3 +1,6 @@
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Weverything"
+
 #pragma once
 #include "core/dmemory.hpp"
 #include "defines.hpp"
@@ -939,3 +942,5 @@ inline bool f32_compare(f32 a, f32 b, f32 tolerance)
     bool result = fabs(a - b) < tolerance;
     return result;
 }
+
+#pragma clang diagnostic pop

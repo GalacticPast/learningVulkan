@@ -16,7 +16,7 @@ bool string_compare(const char *str0, const char *str1)
 
 u32 string_copy(char *dest, const char *src, u32 offset_to_dest)
 {
-    u32 str_len       = strlen(src);
+    u32   str_len     = (u32)strlen(src);
     void *dest_offset = (u8 *)dest + offset_to_dest;
     dcopy_memory(dest_offset, (void *)src, (u64)str_len);
     return str_len;
@@ -30,7 +30,7 @@ u32 string_copy_format(char *dest, const char *src, u32 offset_to_dest, ...)
     va_start(arg_ptr, src);
 
     char buffer[32000];
-    s32 written     = vsnprintf(buffer, 32000, src, arg_ptr);
+    s32  written    = vsnprintf(buffer, 32000, src, arg_ptr);
     buffer[written] = 0;
 
     void *dest_offset = (u8 *)dest + offset_to_dest;

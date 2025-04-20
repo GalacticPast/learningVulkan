@@ -77,7 +77,7 @@ bool vulkan_begin_frame_renderpass(vulkan_context *vk_context, VkCommandBuffer c
                                    struct render_data *render_data, u32 image_index)
 {
     VkClearValue clear_values[2] = {};
-    clear_values[0]              = {.color = {0.0f, 0.0f, 0.0f, 1.0f}};
+    clear_values[0]              = {.color = {{0.0f, 0.0f, 0.0f, 1.0f}}};
     clear_values[1]              = {.depthStencil = {1.0f, 0}};
 
     VkRenderPassBeginInfo renderpass_begin_info{};
@@ -99,8 +99,8 @@ bool vulkan_begin_frame_renderpass(vulkan_context *vk_context, VkCommandBuffer c
     VkViewport view_port{};
     view_port.x        = 0.0f;
     view_port.y        = 0.0f;
-    view_port.width    = swapchain_extent->width;
-    view_port.height   = swapchain_extent->height;
+    view_port.width    = (f32)swapchain_extent->width;
+    view_port.height   = (f32)swapchain_extent->height;
     view_port.minDepth = 0.0f;
     view_port.maxDepth = 1.0f;
 
@@ -120,7 +120,7 @@ bool vulkan_begin_frame_renderpass(vulkan_context *vk_context, VkCommandBuffer c
     vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, vk_context->vk_graphics_pipeline.layout, 0,
                             1, &vk_context->descriptor_sets[image_index], 0, nullptr);
 
-    vkCmdDrawIndexed(command_buffer, (render_data->indices).size(), 1, 0, 0, 0);
+    vkCmdDrawIndexed(command_buffer, (u32)(render_data->indices).size(), 1, 0, 0, 0);
 
     vkCmdEndRenderPass(command_buffer);
 

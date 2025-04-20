@@ -80,7 +80,8 @@ bool application_initialize(application_state *state, application_config *config
 
     u64 buffer_usg_mem_requirements = 0;
     get_memory_usg_str(&buffer_usg_mem_requirements, (char *)0);
-    char buffer[buffer_usg_mem_requirements];
+
+    char buffer[8000];
     get_memory_usg_str(&buffer_usg_mem_requirements, buffer);
     DDEBUG("%s", buffer);
 

@@ -12,13 +12,10 @@ bool memory_system_test()
     test_inst = malloc(memory_system_mem_requirements);
     memory_system_startup(&memory_system_mem_requirements, test_inst);
 
-    u64 size    = 64 * 1024 * 1024;
-    void *block = dallocate(size, MEM_TAG_UNKNOWN);
-
     u64 buffer_usg_mem_requirements = 0;
     get_memory_usg_str(&buffer_usg_mem_requirements, (char *)0);
-    char buffer[buffer_usg_mem_requirements];
-    get_memory_usg_str(&buffer_usg_mem_requirements, buffer);
+    darray<char *> buffer(buffer_usg_mem_requirements);
+    get_memory_usg_str(&buffer_usg_mem_requirements, (char *)buffer.data);
 
     return true;
 }
