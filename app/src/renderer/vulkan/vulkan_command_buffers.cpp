@@ -19,17 +19,21 @@ bool vulkan_create_graphics_command_pool(vulkan_context *vk_context)
 
 bool vulkan_create_descriptor_command_pool_n_sets(vulkan_context *vk_context)
 {
-    VkDescriptorPoolSize pool_size{};
-    pool_size.type            = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    pool_size.descriptorCount = MAX_FRAMES_IN_FLIGHT;
+    VkDescriptorPoolSize pool_sizes[2]{};
+
+    pool_sizes[0].type            = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    pool_sizes[0].descriptorCount = MAX_FRAMES_IN_FLIGHT;
+
+    pool_sizes[1].type            = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    pool_sizes[1].descriptorCount = MAX_FRAMES_IN_FLIGHT;
 
     VkDescriptorPoolCreateInfo pool_create_info{};
     pool_create_info.sType         = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
     pool_create_info.pNext         = 0;
     pool_create_info.flags         = 0;
     pool_create_info.maxSets       = MAX_FRAMES_IN_FLIGHT;
-    pool_create_info.poolSizeCount = 1;
-    pool_create_info.pPoolSizes    = &pool_size;
+    pool_create_info.poolSizeCount = 2;
+    pool_create_info.pPoolSizes    = pool_sizes;
 
     VkResult result = vkCreateDescriptorPool(vk_context->vk_device.logical, &pool_create_info, vk_context->vk_allocator,
                                              &vk_context->descriptor_command_pool);
@@ -38,7 +42,7 @@ bool vulkan_create_descriptor_command_pool_n_sets(vulkan_context *vk_context)
     darray<VkDescriptorSetLayout> desc_set_layout(MAX_FRAMES_IN_FLIGHT);
     for (u32 i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
     {
-        desc_set_layout[i] = vk_context->global_uniform_descriptor_layout;
+        desc_set_layout[i] = vk_context->descriptor_layout;
     }
 
     VkDescriptorSetAllocateInfo desc_set_alloc_info{};
@@ -62,20 +66,36 @@ bool vulkan_create_descriptor_command_pool_n_sets(vulkan_context *vk_context)
         desc_buffer_info.offset = 0;
         desc_buffer_info.range  = sizeof(uniform_buffer_object);
 
-        VkWriteDescriptorSet desc_write{};
+        VkDescriptorImageInfo desc_image_info{};
+        desc_image_info.sampler     = vk_context->default_tex_sampler;
+        desc_image_info.imageView   = vk_context->default_texture.view;
+        desc_image_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
-        desc_write.sType            = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-        desc_write.pNext            = 0;
-        desc_write.dstSet           = vk_context->descriptor_sets[i];
-        desc_write.dstBinding       = 0;
-        desc_write.dstArrayElement  = 0;
-        desc_write.descriptorCount  = 1;
-        desc_write.descriptorType   = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-        desc_write.pBufferInfo      = &desc_buffer_info;
-        desc_write.pImageInfo       = 0;
-        desc_write.pTexelBufferView = 0;
+        VkWriteDescriptorSet desc_writes[2]{};
 
-        vkUpdateDescriptorSets(vk_context->vk_device.logical, 1, &desc_write, 0, nullptr);
+        desc_writes[0].sType            = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        desc_writes[0].pNext            = 0;
+        desc_writes[0].dstSet           = vk_context->descriptor_sets[i];
+        desc_writes[0].dstBinding       = 0;
+        desc_writes[0].dstArrayElement  = 0;
+        desc_writes[0].descriptorCount  = 1;
+        desc_writes[0].descriptorType   = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        desc_writes[0].pBufferInfo      = &desc_buffer_info;
+        desc_writes[0].pImageInfo       = 0;
+        desc_writes[0].pTexelBufferView = 0;
+
+        desc_writes[1].sType            = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        desc_writes[1].pNext            = 0;
+        desc_writes[1].dstSet           = vk_context->descriptor_sets[i];
+        desc_writes[1].dstBinding       = 1;
+        desc_writes[1].dstArrayElement  = 0;
+        desc_writes[1].descriptorCount  = 1;
+        desc_writes[1].descriptorType   = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        desc_writes[1].pBufferInfo      = 0;
+        desc_writes[1].pImageInfo       = &desc_image_info;
+        desc_writes[1].pTexelBufferView = 0;
+
+        vkUpdateDescriptorSets(vk_context->vk_device.logical, 2, desc_writes, 0, nullptr);
     }
 
     return true;

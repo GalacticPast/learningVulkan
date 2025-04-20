@@ -109,10 +109,13 @@ struct vulkan_context
 
     // HACK: remove this later
     vulkan_image default_texture;
+    VkSampler    default_tex_sampler;
     //
-    VkCommandPool           graphics_command_pool;
-    VkDescriptorPool        descriptor_command_pool;
-    VkDescriptorSetLayout   global_uniform_descriptor_layout;
+    VkCommandPool    graphics_command_pool;
+    VkDescriptorPool descriptor_command_pool;
+
+    VkDescriptorSetLayout descriptor_layout;
+
     darray<VkDescriptorSet> descriptor_sets;
 
     VkSemaphore *image_available_semaphores;

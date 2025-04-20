@@ -139,8 +139,8 @@ bool create_swapchain(vulkan_context *vk_context)
 
     for (u32 i = 0; i < swapchain_images_count; i++)
     {
-        vulkan_create_image_view(vk_context, vk_swapchain->images[i], vk_swapchain->img_format,
-                                 &vk_swapchain->img_views[i], VK_IMAGE_ASPECT_COLOR_BIT);
+        vulkan_create_image_view(vk_context, &vk_swapchain->images[i], &vk_swapchain->img_views[i],
+                                 vk_swapchain->img_format, VK_IMAGE_ASPECT_COLOR_BIT);
     }
 
     bool res = vulkan_find_suitable_depth_format(&vk_context->vk_device, &vk_context->vk_swapchain.depth_image);
@@ -151,9 +151,9 @@ bool create_swapchain(vulkan_context *vk_context)
                               VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
                               VK_IMAGE_TILING_OPTIMAL);
     DASSERT(res == true);
-    res = vulkan_create_image_view(vk_context, vk_context->vk_swapchain.depth_image.handle,
-                                   vk_context->vk_swapchain.depth_image.format,
-                                   &vk_context->vk_swapchain.depth_image.view, VK_IMAGE_ASPECT_DEPTH_BIT);
+    res = vulkan_create_image_view(vk_context, &vk_context->vk_swapchain.depth_image.handle,
+                                   &vk_context->vk_swapchain.depth_image.view,
+                                   vk_context->vk_swapchain.depth_image.format, VK_IMAGE_ASPECT_DEPTH_BIT);
     DASSERT(res == true);
 
     return true;

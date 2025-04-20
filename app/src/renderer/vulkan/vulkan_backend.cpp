@@ -222,6 +222,10 @@ bool vulkan_backend_initialize(u64 *vulkan_backend_memory_requirements, applicat
         DERROR("Vulkan global uniform buffer creation failed.");
         return false;
     }
+    // INFO:  creating default textrue
+    if (!vulkan_create_default_texture())
+    {
+    }
     if (!vulkan_create_descriptor_command_pool_n_sets(vk_context))
     {
         DERROR("Vulkan descriptor command pool and sets creation failed.");
@@ -242,11 +246,6 @@ bool vulkan_backend_initialize(u64 *vulkan_backend_memory_requirements, applicat
         return false;
     }
 
-    // INFO:  creating default textrue
-    if (!vulkan_create_default_texture())
-    {
-    }
-
     vk_context->current_frame_index = 0;
 
     return true;
@@ -258,9 +257,11 @@ bool vulkan_create_default_texture()
     u32 channel_count          = 4;
     u32 pixel_count            = default_tex_dimensions * default_tex_dimensions;
 
-    u32 texture_size                   = pixel_count * channel_count;
-    vk_context->default_texture.width  = default_tex_dimensions;
-    vk_context->default_texture.height = default_tex_dimensions;
+    u32           texture_size = pixel_count * channel_count;
+    vulkan_image *texture      = &vk_context->default_texture;
+
+    texture->width  = default_tex_dimensions;
+    texture->height = default_tex_dimensions;
 
     vulkan_buffer staging_buffer{};
 
@@ -286,19 +287,49 @@ bool vulkan_create_default_texture()
     void *data;
     vulkan_copy_data_to_buffer(vk_context, &staging_buffer, data, pixels.data, pixel_count);
 
-    result = vulkan_create_image(vk_context, &vk_context->default_texture, default_tex_dimensions,
-                                 default_tex_dimensions, VK_FORMAT_R8G8B8A8_SRGB, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+    result = vulkan_create_image(vk_context, texture, default_tex_dimensions, default_tex_dimensions,
+                                 VK_FORMAT_R8G8B8A8_SRGB, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
                                  VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_IMAGE_TILING_OPTIMAL);
     DASSERT(result == true);
 
-    vulkan_transition_image_layout(vk_context, &vk_context->default_texture, VK_IMAGE_LAYOUT_UNDEFINED,
+    vulkan_transition_image_layout(vk_context, texture, VK_IMAGE_LAYOUT_UNDEFINED,
                                    VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
-    vulkan_copy_buffer_data_to_image(vk_context, &staging_buffer, &vk_context->default_texture);
-    vulkan_transition_image_layout(vk_context, &vk_context->default_texture, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+    vulkan_copy_buffer_data_to_image(vk_context, &staging_buffer, texture);
+    vulkan_transition_image_layout(vk_context, texture, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
                                    VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
     vulkan_destroy_buffer(vk_context, &staging_buffer);
+
+    result = vulkan_create_image_view(vk_context, &texture->handle, &texture->view, VK_FORMAT_R8G8B8A8_SRGB,
+                                      VK_IMAGE_ASPECT_COLOR_BIT);
+    DASSERT(result == true);
+
+    f32 max_sampler_anisotropy = vk_context->vk_device.physical_properties->limits.maxSamplerAnisotropy;
+
+    VkSamplerCreateInfo texture_sampler_create_info{};
+    texture_sampler_create_info.sType                   = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+    texture_sampler_create_info.pNext                   = 0;
+    texture_sampler_create_info.flags                   = 0;
+    texture_sampler_create_info.magFilter               = VK_FILTER_LINEAR;
+    texture_sampler_create_info.minFilter               = VK_FILTER_LINEAR;
+    texture_sampler_create_info.mipmapMode              = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+    texture_sampler_create_info.addressModeU            = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+    texture_sampler_create_info.addressModeV            = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+    texture_sampler_create_info.addressModeW            = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+    texture_sampler_create_info.mipLodBias              = 0.0f;
+    texture_sampler_create_info.anisotropyEnable        = VK_TRUE;
+    texture_sampler_create_info.maxAnisotropy           = max_sampler_anisotropy;
+    texture_sampler_create_info.compareEnable           = VK_FALSE;
+    texture_sampler_create_info.compareOp               = VK_COMPARE_OP_ALWAYS;
+    texture_sampler_create_info.minLod                  = 0.0f;
+    texture_sampler_create_info.maxLod                  = 0.0f;
+    texture_sampler_create_info.borderColor             = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
+    texture_sampler_create_info.unnormalizedCoordinates = VK_FALSE;
+
+    VkResult res = vkCreateSampler(vk_context->vk_device.logical, &texture_sampler_create_info,
+                                   vk_context->vk_allocator, &vk_context->default_tex_sampler);
+    VK_CHECK(res);
 
     return true;
 }
@@ -361,12 +392,13 @@ void vulkan_backend_shutdown()
     dfree(vk_context->in_flight_fences, sizeof(VkFence) * MAX_FRAMES_IN_FLIGHT, MEM_TAG_RENDERER);
 
     vulkan_destroy_image(vk_context, &vk_context->default_texture);
+    vkDestroySampler(device, vk_context->default_tex_sampler, allocator);
 
     vulkan_destroy_buffer(vk_context, &vk_context->vertex_buffer);
     vulkan_destroy_buffer(vk_context, &vk_context->index_buffer);
 
     vkDestroyDescriptorPool(device, vk_context->descriptor_command_pool, allocator);
-    vkDestroyDescriptorSetLayout(device, vk_context->global_uniform_descriptor_layout, allocator);
+    vkDestroyDescriptorSetLayout(device, vk_context->descriptor_layout, allocator);
 
     vulkan_free_command_buffers(vk_context, &vk_context->graphics_command_pool,
                                 (VkCommandBuffer *)vk_context->command_buffers.data, MAX_FRAMES_IN_FLIGHT);

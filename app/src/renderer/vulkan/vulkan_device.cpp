@@ -11,6 +11,7 @@ struct vulkan_physical_device_requirements
     bool has_present_queue_family;
     // INFO: I mean we need this for every gpu right??
     bool has_swapchain_support;
+    bool has_sampler_anisotropy;
 };
 
 bool vulkan_is_physical_device_suitable(vulkan_context *vk_context, VkPhysicalDevice physical_device,
@@ -25,11 +26,12 @@ bool vulkan_create_logical_device(vulkan_context *vk_context)
     DDEBUG("Creating Vulkan logical device...");
 
     vulkan_physical_device_requirements physical_device_requirements{};
-    physical_device_requirements.is_discrete_gpu           = false;
+    physical_device_requirements.is_discrete_gpu           = true;
     physical_device_requirements.has_geometry_shader       = true;
     physical_device_requirements.has_graphics_queue_family = true;
     physical_device_requirements.has_present_queue_family  = true;
     physical_device_requirements.has_swapchain_support     = true;
+    physical_device_requirements.has_sampler_anisotropy    = true;
 
     // INFO: This should be the same amount as the number of char literals in required_device_extensions array. Im doing
     // this to avoid clang givimg me vla warnings.
@@ -353,6 +355,12 @@ bool vulkan_is_physical_device_suitable(vulkan_context *vk_context, VkPhysicalDe
         vulkan_swapchain dummy_swapchain{};
         vulkan_device_query_swapchain_support(vk_context, physical_device, &dummy_swapchain);
 
+        if (!(physical_features.samplerAnisotropy) && physical_device_requirements->has_sampler_anisotropy)
+        {
+            DERROR("Sampler Anisotropy requested but current device doesnt support it. Skipping...");
+            return false;
+        }
+
         if (dummy_swapchain.surface_formats_count == INVALID_ID || dummy_swapchain.present_modes_count == INVALID_ID)
         {
             DERROR("Device VkSurfaceFormatKHR is 0. Skipping device.. ");
@@ -364,7 +372,6 @@ bool vulkan_is_physical_device_suitable(vulkan_context *vk_context, VkPhysicalDe
 
             return false;
         }
-        //
 
         // if all above is true, then copy the device physical properties and physical features and query physical
         // memory properties.

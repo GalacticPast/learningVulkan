@@ -18,6 +18,7 @@ struct vertex
 {
     vec3 position;
     vec3 color;
+    vec2 tex_coord;
 };
 
 struct uniform_buffer_object

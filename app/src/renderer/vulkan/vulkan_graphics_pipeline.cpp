@@ -74,14 +74,16 @@ bool vulkan_create_graphics_pipeline(vulkan_context *vk_context)
     // INFO: Dynamic stated end
 
     // INFO: Vertex INPUT
-    // 2 because we only have 2 fields in out vertex struct
+
+    u32                             vertex_input_attribute_descriptions_count = 3;
     VkVertexInputBindingDescription vertex_input_binding_description{};
     vertex_input_binding_description.binding   = 0;
     vertex_input_binding_description.stride    = sizeof(vertex);
     vertex_input_binding_description.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
 
-    VkVertexInputAttributeDescription vertex_input_attribute_descriptions[2];
-    VkFormat vertex_input_attribute_formats[2] = {VK_FORMAT_R32G32B32_SFLOAT, VK_FORMAT_R32G32B32_SFLOAT};
+    VkVertexInputAttributeDescription vertex_input_attribute_descriptions[3]{};
+    VkFormat vertex_input_attribute_formats[3] = {VK_FORMAT_R32G32B32_SFLOAT, VK_FORMAT_R32G32B32_SFLOAT,
+                                                  VK_FORMAT_R32G32_SFLOAT};
 
     // position
     vertex_input_attribute_descriptions[0].location = 0;
@@ -95,6 +97,12 @@ bool vulkan_create_graphics_pipeline(vulkan_context *vk_context)
     vertex_input_attribute_descriptions[1].format   = vertex_input_attribute_formats[1];
     vertex_input_attribute_descriptions[1].offset   = sizeof(f32) * 3;
 
+    // texture coordinates
+    vertex_input_attribute_descriptions[2].location = 2;
+    vertex_input_attribute_descriptions[2].binding  = 0;
+    vertex_input_attribute_descriptions[2].format   = vertex_input_attribute_formats[2];
+    vertex_input_attribute_descriptions[2].offset   = sizeof(f32) * 6;
+
     VkPipelineVertexInputStateCreateInfo vertex_input_state_create_info{};
 
     vertex_input_state_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
@@ -102,7 +110,7 @@ bool vulkan_create_graphics_pipeline(vulkan_context *vk_context)
     vertex_input_state_create_info.flags = 0;
     vertex_input_state_create_info.vertexBindingDescriptionCount   = 1;
     vertex_input_state_create_info.pVertexBindingDescriptions      = &vertex_input_binding_description;
-    vertex_input_state_create_info.vertexAttributeDescriptionCount = 2;
+    vertex_input_state_create_info.vertexAttributeDescriptionCount = vertex_input_attribute_descriptions_count;
     vertex_input_state_create_info.pVertexAttributeDescriptions    = vertex_input_attribute_descriptions;
 
     VkPipelineInputAssemblyStateCreateInfo input_assembly_state_create_info{};
@@ -197,23 +205,33 @@ bool vulkan_create_graphics_pipeline(vulkan_context *vk_context)
     depth_stencil_state_create_info.front                 = {};
     depth_stencil_state_create_info.back                  = {};
 
-    VkDescriptorSetLayoutBinding descriptor_set_layout_binding{};
-    descriptor_set_layout_binding.binding            = 0;
-    descriptor_set_layout_binding.descriptorType     = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    descriptor_set_layout_binding.descriptorCount    = 1;
-    descriptor_set_layout_binding.stageFlags         = VK_SHADER_STAGE_VERTEX_BIT;
-    descriptor_set_layout_binding.pImmutableSamplers = 0;
+    VkDescriptorSetLayoutBinding descriptor_set_ubo_layout_binding{};
+    descriptor_set_ubo_layout_binding.binding            = 0;
+    descriptor_set_ubo_layout_binding.descriptorType     = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    descriptor_set_ubo_layout_binding.descriptorCount    = 1;
+    descriptor_set_ubo_layout_binding.stageFlags         = VK_SHADER_STAGE_VERTEX_BIT;
+    descriptor_set_ubo_layout_binding.pImmutableSamplers = 0;
+
+    VkDescriptorSetLayoutBinding descriptor_set_sampler_layout_binding{};
+    descriptor_set_sampler_layout_binding.binding            = 1;
+    descriptor_set_sampler_layout_binding.descriptorCount    = 1;
+    descriptor_set_sampler_layout_binding.descriptorType     = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    descriptor_set_sampler_layout_binding.stageFlags         = VK_SHADER_STAGE_FRAGMENT_BIT;
+    descriptor_set_sampler_layout_binding.pImmutableSamplers = 0;
+
+    VkDescriptorSetLayoutBinding descriptor_set_layout_bindings[2]{};
+    descriptor_set_layout_bindings[0] = descriptor_set_ubo_layout_binding;
+    descriptor_set_layout_bindings[1] = descriptor_set_sampler_layout_binding;
 
     VkDescriptorSetLayoutCreateInfo descriptor_set_layout_create_info{};
     descriptor_set_layout_create_info.sType        = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
     descriptor_set_layout_create_info.pNext        = 0;
     descriptor_set_layout_create_info.flags        = 0;
-    descriptor_set_layout_create_info.bindingCount = 1;
-    descriptor_set_layout_create_info.pBindings    = &descriptor_set_layout_binding;
+    descriptor_set_layout_create_info.bindingCount = 2;
+    descriptor_set_layout_create_info.pBindings    = descriptor_set_layout_bindings;
 
-    VkResult result =
-        vkCreateDescriptorSetLayout(vk_context->vk_device.logical, &descriptor_set_layout_create_info,
-                                    vk_context->vk_allocator, &vk_context->global_uniform_descriptor_layout);
+    VkResult result = vkCreateDescriptorSetLayout(vk_context->vk_device.logical, &descriptor_set_layout_create_info,
+                                                  vk_context->vk_allocator, &vk_context->descriptor_layout);
     VK_CHECK(result);
 
     VkPipelineLayoutCreateInfo pipeline_layout_create_info{};
@@ -222,7 +240,7 @@ bool vulkan_create_graphics_pipeline(vulkan_context *vk_context)
     pipeline_layout_create_info.pNext                  = 0;
     pipeline_layout_create_info.flags                  = 0;
     pipeline_layout_create_info.setLayoutCount         = 1;
-    pipeline_layout_create_info.pSetLayouts            = &vk_context->global_uniform_descriptor_layout;
+    pipeline_layout_create_info.pSetLayouts            = &vk_context->descriptor_layout;
     pipeline_layout_create_info.pushConstantRangeCount = 0;
     pipeline_layout_create_info.pPushConstantRanges    = nullptr;
 

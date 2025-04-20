@@ -41,7 +41,7 @@ bool vulkan_create_image(vulkan_context *vk_context, vulkan_image *out_image, u3
     return true;
 }
 
-bool vulkan_create_image_view(vulkan_context *vk_context, VkImage image, VkFormat format, VkImageView *out_view,
+bool vulkan_create_image_view(vulkan_context *vk_context, VkImage *image, VkImageView *out_view, VkFormat img_format,
                               VkImageAspectFlags img_aspect_flags)
 {
     VkImageViewCreateInfo image_view_create_info{};
@@ -49,9 +49,9 @@ bool vulkan_create_image_view(vulkan_context *vk_context, VkImage image, VkForma
     image_view_create_info.sType                           = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
     image_view_create_info.pNext                           = 0;
     image_view_create_info.flags                           = 0;
-    image_view_create_info.image                           = image;
+    image_view_create_info.image                           = *image;
     image_view_create_info.viewType                        = VK_IMAGE_VIEW_TYPE_2D;
-    image_view_create_info.format                          = format;
+    image_view_create_info.format                          = img_format;
     image_view_create_info.components.r                    = VK_COMPONENT_SWIZZLE_IDENTITY;
     image_view_create_info.components.g                    = VK_COMPONENT_SWIZZLE_IDENTITY;
     image_view_create_info.components.b                    = VK_COMPONENT_SWIZZLE_IDENTITY;
