@@ -256,13 +256,27 @@ bool vulkan_backend_initialize(u64 *vulkan_backend_memory_requirements, applicat
 
 bool vulkan_create_default_texture()
 {
-    s32 tex_width;
-    s32 tex_height;
-    s32 tex_channel;
 
-    stbi_uc *pixels =
-        stbi_load("../assets/textures/texture.jpg", &tex_width, &tex_height, &tex_channel, STBI_rgb_alpha);
+    s32 tex_width    = 512;
+    s32 tex_height   = 512;
+    s32 tex_channel  = 4;
     s32 texture_size = tex_width * tex_height * 4;
+
+    u8 *default_texture = (u8 *)dallocate(texture_size, MEM_TAG_UNKNOWN);
+
+    for (u32 y = 0; y < tex_height; y++)
+    {
+        for (u32 x = 0; x < tex_width; x++)
+        {
+            u32 pixel_index = (y * tex_width + x) * tex_channel;
+            u8  color       = ((x / 256 + y / 256) % 2) ? 255 : 0;
+
+            default_texture[pixel_index + 0] = color;
+            default_texture[pixel_index + 1] = color;
+            default_texture[pixel_index + 2] = color;
+            default_texture[pixel_index + 3] = 255;
+        }
+    }
 
     vulkan_buffer staging_buffer{};
     vulkan_image *texture = &vk_context->default_texture;
@@ -275,9 +289,7 @@ bool vulkan_create_default_texture()
     DASSERT(result == true);
 
     void *data;
-    vulkan_copy_data_to_buffer(vk_context, &staging_buffer, data, pixels, texture_size);
-
-    stbi_image_free(pixels);
+    vulkan_copy_data_to_buffer(vk_context, &staging_buffer, data, default_texture, texture_size);
 
     result = vulkan_create_image(vk_context, texture, tex_width, tex_height, VK_FORMAT_R8G8B8A8_SRGB,
                                  VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
