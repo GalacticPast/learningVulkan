@@ -35,10 +35,10 @@ bool vulkan_create_logical_device(vulkan_context *vk_context)
 
     // INFO: This should be the same amount as the number of char literals in required_device_extensions array. Im doing
     // this to avoid clang givimg me vla warnings.
-    u32         required_device_extensions_count = 1;
+    u32         required_device_extensions_count = 2;
     const char *required_device_extensions[8]    = {};
     required_device_extensions[0]                = VK_KHR_SWAPCHAIN_EXTENSION_NAME;
-
+    required_device_extensions[1]                = VK_KHR_SHADER_NON_SEMANTIC_INFO_EXTENSION_NAME;
     vk_context->vk_device.physical_properties =
         (VkPhysicalDeviceProperties *)dallocate(sizeof(VkPhysicalDeviceProperties), MEM_TAG_RENDERER);
     vk_context->vk_device.physical_features =

@@ -139,6 +139,21 @@ bool vulkan_transition_image_layout(vulkan_context *vk_context, vulkan_image *im
                          &img_barrier);
 
     vulkan_end_command_buffer_single_use(vk_context, staging_cmd_buffer);
+
+    VkSubmitInfo queue_submit_info{};
+    queue_submit_info.sType                = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    queue_submit_info.pNext                = 0;
+    queue_submit_info.waitSemaphoreCount   = 0;
+    queue_submit_info.pWaitSemaphores      = 0;
+    queue_submit_info.pWaitDstStageMask    = 0;
+    queue_submit_info.commandBufferCount   = 1;
+    queue_submit_info.pCommandBuffers      = &staging_cmd_buffer;
+    queue_submit_info.signalSemaphoreCount = 0;
+    queue_submit_info.pSignalSemaphores    = 0;
+
+    vkQueueSubmit(vk_context->vk_device.graphics_queue, 1, &queue_submit_info, VK_NULL_HANDLE);
+    vkQueueWaitIdle(vk_context->vk_device.graphics_queue);
+
     vulkan_free_command_buffers(vk_context, &vk_context->graphics_command_pool, &staging_cmd_buffer, 1);
 
     return true;
@@ -166,6 +181,21 @@ bool vulkan_copy_buffer_data_to_image(vulkan_context *vk_context, vulkan_buffer 
                            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &buffer_img_cpy_region);
 
     vulkan_end_command_buffer_single_use(vk_context, staging_command_buffer);
+
+    VkSubmitInfo queue_submit_info{};
+    queue_submit_info.sType                = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    queue_submit_info.pNext                = 0;
+    queue_submit_info.waitSemaphoreCount   = 0;
+    queue_submit_info.pWaitSemaphores      = 0;
+    queue_submit_info.pWaitDstStageMask    = 0;
+    queue_submit_info.commandBufferCount   = 1;
+    queue_submit_info.pCommandBuffers      = &staging_command_buffer;
+    queue_submit_info.signalSemaphoreCount = 0;
+    queue_submit_info.pSignalSemaphores    = 0;
+
+    vkQueueSubmit(vk_context->vk_device.graphics_queue, 1, &queue_submit_info, VK_NULL_HANDLE);
+    vkQueueWaitIdle(vk_context->vk_device.graphics_queue);
+
     vulkan_free_command_buffers(vk_context, &vk_context->graphics_command_pool, &staging_command_buffer, 1);
     return true;
 }

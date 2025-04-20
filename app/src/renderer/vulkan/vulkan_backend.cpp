@@ -16,6 +16,9 @@
 #include "vulkan_sync_objects.hpp"
 #include "vulkan_types.hpp"
 
+#define STB_IMAGE_IMPLEMENTATION
+#include "vendor/stb_image.h"
+
 static vulkan_context *vk_context;
 
 VkBool32 vulkan_dbg_msg_rprt_callback(VkDebugUtilsMessageSeverityFlagBitsEXT      messageSeverity,
@@ -253,31 +256,18 @@ bool vulkan_backend_initialize(u64 *vulkan_backend_memory_requirements, applicat
 
 bool vulkan_create_default_texture()
 {
-    u32 default_tex_dimensions = 256;
-    u32 channel_count          = 4;
-    u32 pixel_count            = default_tex_dimensions * default_tex_dimensions;
+    s32 tex_width;
+    s32 tex_height;
+    s32 tex_channel;
 
-    u32           texture_size = pixel_count * channel_count;
-    vulkan_image *texture      = &vk_context->default_texture;
-
-    texture->width  = default_tex_dimensions;
-    texture->height = default_tex_dimensions;
+    stbi_uc *pixels =
+        stbi_load("../assets/textures/texture.jpg", &tex_width, &tex_height, &tex_channel, STBI_rgb_alpha);
+    s32 texture_size = tex_width * tex_height * 4;
 
     vulkan_buffer staging_buffer{};
-
-    darray<u32> pixels(pixel_count);
-
-    for (u32 y = 0; y < default_tex_dimensions; y++)
-    {
-        for (u32 x = 0; x < default_tex_dimensions; x++)
-        {
-            u32 *pixel = &pixels[(y * default_tex_dimensions) + x];
-            u8   red   = 123;
-            u8   green = 123;
-            u8   blue  = 123;
-            *pixel     = (red << 16 | green << 8 | blue << 0);
-        }
-    }
+    vulkan_image *texture = &vk_context->default_texture;
+    texture->width        = tex_width;
+    texture->height       = tex_height;
 
     bool result =
         vulkan_create_buffer(vk_context, &staging_buffer, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
@@ -285,10 +275,12 @@ bool vulkan_create_default_texture()
     DASSERT(result == true);
 
     void *data;
-    vulkan_copy_data_to_buffer(vk_context, &staging_buffer, data, pixels.data, pixel_count);
+    vulkan_copy_data_to_buffer(vk_context, &staging_buffer, data, pixels, texture_size);
 
-    result = vulkan_create_image(vk_context, texture, default_tex_dimensions, default_tex_dimensions,
-                                 VK_FORMAT_R8G8B8A8_SRGB, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+    stbi_image_free(pixels);
+
+    result = vulkan_create_image(vk_context, texture, tex_width, tex_height, VK_FORMAT_R8G8B8A8_SRGB,
+                                 VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
                                  VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_IMAGE_TILING_OPTIMAL);
     DASSERT(result == true);
 
@@ -296,6 +288,7 @@ bool vulkan_create_default_texture()
                                    VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
     vulkan_copy_buffer_data_to_image(vk_context, &staging_buffer, texture);
+
     vulkan_transition_image_layout(vk_context, texture, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
                                    VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
@@ -343,6 +336,7 @@ bool vulkan_create_debug_messenger(VkDebugUtilsMessengerCreateInfoEXT *dbg_messe
     dbg_messenger_create_info->messageSeverity =
         VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT |
         VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
+
     dbg_messenger_create_info->messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT |
                                              VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT |
                                              VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;

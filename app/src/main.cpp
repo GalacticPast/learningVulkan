@@ -51,15 +51,15 @@ int main()
         return 2;
     }
 
-    vertex a{.position = {-0.5f, -0.5f, -0.5f}, .color = {1.0f, 0.0f, 0.0f}, .tex_coord = {0.0f, 0.0f}}; // Red
-    vertex b{.position = {0.5f, -0.5f, -0.5f}, .color = {0.0f, 1.0f, 0.0f}, .tex_coord = {1.0f, 0.0f}};  // Green
-    vertex c{.position = {0.5f, 0.5f, -0.5f}, .color = {0.0f, 0.0f, 1.0f}, .tex_coord = {1.0f, 1.0f}};   // Blue
-    vertex d{.position = {-0.5f, 0.5f, -0.5f}, .color = {1.0f, 1.0f, 0.0f}, .tex_coord = {0.0f, 1.0f}};  // Yellow
+    vertex a{.position = {-0.5f, -0.5f, -0.5f}, .color = {1.0f, 1.0f, 1.0f}, .tex_coord = {0.0f, 0.0f}}; // Red
+    vertex b{.position = {0.5f, -0.5f, -0.5f}, .color = {1.0f, 1.0f, 1.0f}, .tex_coord = {1.0f, 0.0f}};  // Green
+    vertex c{.position = {0.5f, 0.5f, -0.5f}, .color = {1.0f, 1.0f, 1.0f}, .tex_coord = {1.0f, 1.0f}};   // Blue
+    vertex d{.position = {-0.5f, 0.5f, -0.5f}, .color = {1.0f, 1.0f, 1.0f}, .tex_coord = {0.0f, 1.0f}};  // Yellow
 
-    vertex e{.position = {-0.5f, -0.5f, 0.5f}, .color = {1.0f, 0.0f, 1.0f}, .tex_coord = {0.0f, 0.0f}}; // Magenta
-    vertex f{.position = {0.5f, -0.5f, 0.5f}, .color = {0.0f, 1.0f, 1.0f}, .tex_coord = {1.0f, 0.0f}};  // Cyan
-    vertex g{.position = {0.5f, 0.5f, 0.5f}, .color = {1.0f, 0.5f, 0.0f}, .tex_coord = {1.0f, 1.0f}};   // Orange
-    vertex h{.position = {-0.5f, 0.5f, 0.5f}, .color = {0.5f, 0.0f, 0.5f}, .tex_coord = {0.0f, 1.0f}};  // Purple
+    vertex e{.position = {-0.5f, -0.5f, 0.5f}, .color = {1.0f, 1.0f, 1.0f}, .tex_coord = {0.0f, 0.0f}}; // Magenta
+    vertex f{.position = {0.5f, -0.5f, 0.5f}, .color = {1.0f, 1.0f, 1.0f}, .tex_coord = {1.0f, 0.0f}};  // Cyan
+    vertex g{.position = {0.5f, 0.5f, 0.5f}, .color = {1.0f, 1.0f, 1.0f}, .tex_coord = {1.0f, 1.0f}};   // Orange
+    vertex h{.position = {-0.5f, 0.5f, 0.5f}, .color = {1.0f, 1.0f, 1.0f}, .tex_coord = {0.0f, 1.0f}};  // Purple
 
     darray<vertex> vertices;
     vertices.push_back(a);
@@ -133,7 +133,7 @@ int main()
     f64 start_time      = 0;
     f64 curr_frame_time = 0;
 
-    f64 req_frame_time = 1.0f / 60;
+    f64 req_frame_time = 1.0f / 240;
     clock_start(&clock);
 
     while (app_state.is_running)
