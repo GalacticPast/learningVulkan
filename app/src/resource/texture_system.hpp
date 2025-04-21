@@ -2,6 +2,8 @@
 #include "core/dstring.hpp"
 #include "defines.hpp"
 
+#define DEFAULT_TEXTURE_HANDLE "DEFAULT_TEXTURE"
+
 struct texture
 {
 

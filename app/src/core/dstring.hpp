@@ -3,13 +3,13 @@
 
 // strings because I dont know c strings good enough :(
 //
-
+#define MAX_STRING_LENGTH 512
 class dstring
 {
   private:
-    u64   capacity = 0;
-    u64   str_len  = 0;
-    char *string   = nullptr;
+    u64  capacity = 0;
+    u64  str_len  = 0;
+    char string[512];
 
   public:
     void operator=(const char *c_string);

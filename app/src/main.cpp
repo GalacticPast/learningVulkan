@@ -65,63 +65,19 @@ int main()
     vertex c{.position = {0.5f, 0.5f, 0.0f}, .color = {1.0f, 1.0f, 1.0f}, .tex_coord = {1.0f, 1.0f}};   // Blue
     vertex d{.position = {-0.5f, 0.5f, 0.0f}, .color = {1.0f, 1.0f, 1.0f}, .tex_coord = {0.0f, 1.0f}};  // Yellow
 
-    vertex e{.position = {-0.5f, -0.5f, 0.0f}, .color = {1.0f, 1.0f, 1.0f}, .tex_coord = {0.0f, 0.0f}}; // Magenta
-    vertex f{.position = {0.5f, -0.5f, 0.0f}, .color = {1.0f, 1.0f, 1.0f}, .tex_coord = {1.0f, 0.0f}};  // Cyan
-    vertex g{.position = {0.5f, 0.5f, 0.0f}, .color = {1.0f, 1.0f, 1.0f}, .tex_coord = {1.0f, 1.0f}};   // Orange
-    vertex h{.position = {-0.5f, 0.5f, 0.0f}, .color = {1.0f, 1.0f, 1.0f}, .tex_coord = {0.0f, 1.0f}};  // Purple
-
     darray<vertex> vertices;
     vertices.push_back(a);
     vertices.push_back(b);
     vertices.push_back(c);
     vertices.push_back(d);
-    vertices.push_back(e);
-    vertices.push_back(f);
-    vertices.push_back(g);
-    vertices.push_back(h);
 
-    darray<u32> indices(36);
+    darray<u32> indices(6);
     indices[0] = 0;
-    indices[1] = 3;
-    indices[2] = 1;
+    indices[1] = 1;
+    indices[2] = 3;
     indices[3] = 3;
-    indices[4] = 2;
-    indices[5] = 1;
-
-    indices[6]  = 1;
-    indices[7]  = 2;
-    indices[8]  = 5;
-    indices[9]  = 2;
-    indices[10] = 6;
-    indices[11] = 5;
-
-    indices[12] = 5;
-    indices[13] = 6;
-    indices[14] = 4;
-    indices[15] = 6;
-    indices[16] = 7;
-    indices[17] = 4;
-
-    indices[18] = 4;
-    indices[19] = 7;
-    indices[20] = 0;
-    indices[21] = 7;
-    indices[22] = 3;
-    indices[23] = 0;
-
-    indices[24] = 3;
-    indices[25] = 7;
-    indices[26] = 2;
-    indices[27] = 7;
-    indices[28] = 6;
-    indices[29] = 2;
-
-    indices[30] = 4;
-    indices[31] = 0;
-    indices[32] = 5;
-    indices[33] = 0;
-    indices[34] = 1;
-    indices[35] = 5;
+    indices[4] = 1;
+    indices[5] = 2;
 
     u32 s_width;
     u32 s_height;
@@ -137,26 +93,20 @@ int main()
 
     const char *texture_names[5] = {"DEFAULT_TEXTURE", "texture.jpg", "paving.png", "paving2.png", "cobblestone.png"};
 
-    dstring file_name_1;
-    file_name_1 = "texture.jpg";
-    texture_system_create_texture(&file_name_1);
-
-    dstring file_name_2;
-    file_name_2 = "paving.png";
-    texture_system_create_texture(&file_name_2);
-
-    dstring file_name_3;
-    file_name_3 = "paving2.png";
-    texture_system_create_texture(&file_name_3);
-
-    dstring file_name_4;
-    file_name_4 = "cobblestone.png";
-    texture_system_create_texture(&file_name_4);
+    dstring file_name;
+    file_name = texture_names[1];
+    texture_system_create_texture(&file_name);
+    file_name = texture_names[2];
+    texture_system_create_texture(&file_name);
+    file_name = texture_names[3];
+    texture_system_create_texture(&file_name);
+    file_name = texture_names[4];
+    texture_system_create_texture(&file_name);
 
     render_data triangle{};
     triangle.vertices = vertices;
     triangle.indices  = indices;
-    texture_system_get_texture(file_name_1.c_str(), &triangle.texture);
+    triangle.texture  = new texture();
 
     f64 start_time = 0;
     f64 end_time   = 0;
@@ -180,7 +130,7 @@ int main()
         bool b = input_was_key_down(KEY_T);
         if (b && a)
         {
-            texture_system_get_texture(texture_names[index], &triangle.texture);
+            texture_system_get_texture(texture_names[index], triangle.texture);
             index++;
             index %= 5;
         }

@@ -46,25 +46,24 @@ u32 string_copy_format(char *dest, const char *format, u32 offset_to_dest, ...)
 void dstring::operator=(const dstring *in_string)
 {
     dcopy_memory(this, string, sizeof(dstring));
-    // dcopy_memory(string, c_string, len * sizeof(char));
-    // capacity = len * sizeof(char);
-    // str_len  = len;
 }
 
 void dstring::operator=(const char *c_string)
 {
     u64 len = strlen(c_string);
-    if (string)
+    if (len > MAX_STRING_LENGTH)
+    {
+        DWARN("String you want to assign is bigger than 512bytes.");
+        return;
+    }
+    if (string[0])
     {
         DWARN("Overiding string %s", string);
-        dfree(string, capacity, MEM_TAG_DSTRING);
+        dzero_memory(string, 512);
     }
-
-    string = (char *)dallocate((len + 1) * sizeof(char), MEM_TAG_DSTRING);
-    dset_memory_value(string, '\0', len + 1);
     dcopy_memory(string, (char *)c_string, len * sizeof(char));
-    capacity = sizeof(char) * (len + 1);
-    str_len  = len + 1;
+    str_len     = len;
+    string[len] = '\0';
 }
 const char *dstring::c_str()
 {

@@ -16,6 +16,8 @@
 #include "vulkan_sync_objects.hpp"
 #include "vulkan_types.hpp"
 
+#include "resource/texture_system.hpp"
+
 static vulkan_context *vk_context;
 
 VkBool32 vulkan_dbg_msg_rprt_callback(VkDebugUtilsMessageSeverityFlagBitsEXT      messageSeverity,
@@ -313,9 +315,6 @@ bool vulkan_create_texture(texture *in_texture)
                                    vk_context->vk_allocator, &vk_texture->sampler);
     VK_CHECK(res);
 
-    // HACK:
-    // vulkan_update_descriptor_sets(vk_context, vk_texture);
-
     return true;
 }
 
@@ -569,7 +568,19 @@ bool vulkan_draw_frame(render_data *render_data)
     //
 
     vulkan_update_global_uniform_buffer(&render_data->global_ubo, current_frame);
-    vulkan_texture *vk_texture = (vulkan_texture *)render_data->texture.vulkan_texture_state;
+
+    vulkan_texture *vk_texture = nullptr;
+    if (!render_data->texture->vulkan_texture_state)
+    {
+        DDEBUG("No textures were provided using default texture");
+        texture_system_get_texture(DEFAULT_TEXTURE_HANDLE, render_data->texture);
+        vk_texture = (vulkan_texture *)render_data->texture->vulkan_texture_state;
+    }
+    else
+    {
+        vk_texture = (vulkan_texture *)render_data->texture->vulkan_texture_state;
+    }
+
     vulkan_update_descriptor_sets(vk_context, vk_texture);
 
     u32 image_index = INVALID_ID;

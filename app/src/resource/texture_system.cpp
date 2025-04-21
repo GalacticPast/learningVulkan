@@ -6,7 +6,6 @@
 #include "vendor/stb_image.h"
 
 #define MAX_TEXTURES_LOADED 1024
-#define DEFAULT_TEXTURE_HANDLE "DEFAULT_TEXTURE"
 #define TEXTURE_FILE_NAME_MAX_LENGTH 512
 
 struct texture_system_state
