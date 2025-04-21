@@ -64,6 +64,7 @@ void input_process_key(keys key, bool pressed)
     {
         // Update internal input_state_ptr->
         input_state_ptr->keyboard_current.keys[key] = pressed;
+
         event_context context;
         context.data.u16[0] = key;
 
@@ -74,6 +75,10 @@ void input_process_key(keys key, bool pressed)
         if (key == KEY_A)
         {
             DINFO("key A %s.", pressed ? "pressed" : "released");
+        }
+        if (key == KEY_T)
+        {
+            DINFO("key T %s.", pressed ? "pressed" : "released");
         }
 
         if (key == KEY_LALT)

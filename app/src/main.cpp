@@ -159,16 +159,16 @@ int main()
         global_ubo.model    = mat4_euler_z((start_time * (90.0f * D_DEG2RAD_MULTIPLIER)));
         triangle.global_ubo = global_ubo;
 
-        bool b = input_is_key_down(KEY_S);
+        application_run(&triangle);
 
-        if (b != 0)
+        bool a = input_is_key_up(KEY_T);
+        bool b = input_was_key_down(KEY_T);
+        if (b && a)
         {
             texture_system_get_texture(texture_names[index], &triangle.texture);
             index++;
             index %= 2;
         }
-
-        application_run(&triangle);
 
         clock_update(&clock);
         curr_frame_time = clock.time_elapsed - start_time;

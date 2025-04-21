@@ -108,8 +108,8 @@ void application_shutdown()
     event_system_unregister(EVENT_CODE_APPLICATION_QUIT, 0, event_callback_quit);
     event_system_unregister(EVENT_CODE_APPLICATION_RESIZED, 0, event_callback_resize);
 
-    renderer_system_shutdown();
     texture_system_shutdown(app_state_ptr->texture_system_state);
+    renderer_system_shutdown();
     platform_system_shutdown(app_state_ptr->platform_system_state);
     input_system_shutdown(app_state_ptr->input_system_state);
     event_system_shutdown(app_state_ptr->event_system_state);

@@ -11,11 +11,14 @@
 
 struct texture_system_state
 {
-    dhashtable<texture> hashtable;
+    darray<const char *> loaded_textures;
+    dhashtable<texture>  hashtable;
 };
 
 static texture_system_state *tex_sys_state_ptr;
 bool                         texture_system_create_default_texture();
+
+bool texture_system_create_release_textures(const char *texture_name);
 
 bool texture_system_initialize(u64 *texture_system_mem_requirements, void *state)
 {
@@ -25,16 +28,24 @@ bool texture_system_initialize(u64 *texture_system_mem_requirements, void *state
         return true;
     }
     DINFO("Initializing texture system...");
-    tex_sys_state_ptr            = (texture_system_state *)state;
-    tex_sys_state_ptr->hashtable = *new dhashtable<texture>(MAX_TEXTURES_LOADED);
+    tex_sys_state_ptr                  = (texture_system_state *)state;
+    tex_sys_state_ptr->hashtable       = *new dhashtable<texture>(MAX_TEXTURES_LOADED);
+    tex_sys_state_ptr->loaded_textures = *new darray<const char *>;
 
     texture_system_create_default_texture();
-
     return true;
 }
 
 bool texture_system_shutdown(void *state)
 {
+    u64 loaded_textures_count = tex_sys_state_ptr->loaded_textures.size();
+    for (u64 i = 0; i < loaded_textures_count; i++)
+    {
+        const char *tex_name = tex_sys_state_ptr->loaded_textures[i];
+        texture_system_create_release_textures(tex_name);
+    }
+
+    tex_sys_state_ptr->loaded_textures.~darray();
     tex_sys_state_ptr->hashtable.~dhashtable();
     tex_sys_state_ptr = nullptr;
     return true;
@@ -69,6 +80,7 @@ bool texture_system_create_texture(dstring *file_base_name)
     }
     tex_sys_state_ptr->hashtable.insert(texture.name.c_str(), texture);
     DDEBUG("Default texture loaded in hastable.");
+    tex_sys_state_ptr->loaded_textures.push_back(file_base_name->c_str());
     return true;
 }
 
@@ -112,6 +124,7 @@ bool texture_system_create_default_texture()
     }
     tex_sys_state_ptr->hashtable.insert(default_texture.name.c_str(), default_texture);
     DDEBUG("Default texture loaded in hastable.");
+    tex_sys_state_ptr->loaded_textures.push_back(DEFAULT_TEXTURE_HANDLE);
     return true;
 }
 
@@ -120,4 +133,17 @@ void texture_system_get_texture(const char *texture_name, texture *out_texture)
     texture texture = tex_sys_state_ptr->hashtable.find(texture_name);
     dcopy_memory(out_texture, &texture, sizeof(texture));
     return;
+}
+
+bool texture_system_create_release_textures(const char *texture_name)
+{
+    texture texture = tex_sys_state_ptr->hashtable.find(texture_name);
+    bool    result  = vulkan_destroy_texture(&texture);
+    if (!result)
+    {
+        DERROR("Couldn't release texture %s", texture_name);
+        return false;
+    }
+    tex_sys_state_ptr->hashtable.erase(texture_name);
+    return true;
 }

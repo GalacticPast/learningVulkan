@@ -7,9 +7,9 @@
 class dstring
 {
   private:
-    u64   capacity;
-    u64   str_len;
-    char *string;
+    u64   capacity = 0;
+    u64   str_len  = 0;
+    char *string   = nullptr;
 
   public:
     void operator=(const char *c_string);

@@ -4,15 +4,17 @@
 
 struct texture
 {
+
     dstring name;
     u32     id           = INVALID_ID;
     u32     tex_width    = INVALID_ID;
     u32     tex_height   = INVALID_ID;
     u32     num_channels = INVALID_ID;
 
-    u8 **pixels;
+    // hack maybe move this to the backend
+    u8 **pixels = nullptr;
 
-    void *vulkan_texture_state;
+    void *vulkan_texture_state = nullptr;
 };
 
 bool texture_system_initialize(u64 *texture_system_mem_requirements, void *state);
