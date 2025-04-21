@@ -5,15 +5,19 @@
 #include "core/dstring.hpp"
 #include "core/input.hpp"
 #include "core/logger.hpp"
+
 #include "defines.hpp"
+
 #include "math/dmath.hpp"
+
 #include "platform/platform.hpp"
+
 #include "resource/texture_system.hpp"
 
-// #include "../tests/containers/hashtable_test.hpp"
-#include "../tests/containers/dhashtable_test.hpp"
-#include "../tests/events/event_system_test.hpp"
-#include "../tests/linear_allocator/linear_allocator_test.hpp"
+//// #include "../tests/containers/hashtable_test.hpp"
+// #include "../tests/containers/dhashtable_test.hpp"
+// #include "../tests/events/event_system_test.hpp"
+// #include "../tests/linear_allocator/linear_allocator_test.hpp"
 #include "../tests/test_manager.hpp"
 
 void run_tests()
@@ -131,23 +135,34 @@ int main()
     global_ubo.view       = mat4_look_at({2, 2, 2}, {0, 0, 0}, {0, 0, 1.0f});
     global_ubo.projection = mat4_perspective(fov_rad, aspect_ratio, 0.01f, 1000.0f);
 
-    dstring file_name;
-    file_name = "texture.jpg";
+    const char *texture_names[5] = {"DEFAULT_TEXTURE", "texture.jpg", "paving.png", "paving2.png", "cobblestone.png"};
 
-    texture_system_create_texture(&file_name);
+    dstring file_name_1;
+    file_name_1 = "texture.jpg";
+    texture_system_create_texture(&file_name_1);
+
+    dstring file_name_2;
+    file_name_2 = "paving.png";
+    texture_system_create_texture(&file_name_2);
+
+    dstring file_name_3;
+    file_name_3 = "paving2.png";
+    texture_system_create_texture(&file_name_3);
+
+    dstring file_name_4;
+    file_name_4 = "cobblestone.png";
+    texture_system_create_texture(&file_name_4);
 
     render_data triangle{};
     triangle.vertices = vertices;
     triangle.indices  = indices;
-    texture_system_get_texture(file_name.c_str(), &triangle.texture);
+    texture_system_get_texture(file_name_1.c_str(), &triangle.texture);
 
-    f64 start_time      = 0;
-    f64 curr_frame_time = 0;
+    f64 start_time = 0;
+    f64 end_time   = 0;
 
     f64 req_frame_time = (f64)(1.0f / 60);
     clock_start(&clock);
-
-    const char *texture_names[2] = {"DEFAULT_TEXTURE", "texture.jpg"};
 
     u32 index = 0;
     while (app_state.is_running)
@@ -167,16 +182,20 @@ int main()
         {
             texture_system_get_texture(texture_names[index], &triangle.texture);
             index++;
-            index %= 2;
+            index %= 5;
         }
 
         clock_update(&clock);
-        curr_frame_time = clock.time_elapsed - start_time;
+        end_time = clock.time_elapsed - start_time;
 
-        if (f32_compare((f32)req_frame_time, (f32)curr_frame_time, (f32)req_frame_time))
+        if (!f32_compare(req_frame_time, end_time, 0.0001))
         {
-            f64 sleep = fabs(req_frame_time - curr_frame_time);
-            platform_sleep((u64)sleep * D_SEC_TO_MS_MULTIPLIER);
+            f64 sleep    = req_frame_time - end_time;
+            u64 sleep_ms = (u64)(sleep * D_SEC_TO_MS_MULTIPLIER);
+            if (sleep_ms > 0)
+            {
+                platform_sleep(sleep_ms);
+            }
         }
         input_update(0);
     }

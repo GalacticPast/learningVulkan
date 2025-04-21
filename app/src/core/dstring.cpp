@@ -57,15 +57,14 @@ void dstring::operator=(const char *c_string)
     if (string)
     {
         DWARN("Overiding string %s", string);
-        dzero_memory(string, capacity);
+        dfree(string, capacity, MEM_TAG_DSTRING);
     }
-    else
-    {
-        string = (char *)dallocate(len * sizeof(char), MEM_TAG_DSTRING);
-    }
+
+    string = (char *)dallocate((len + 1) * sizeof(char), MEM_TAG_DSTRING);
+    dset_memory_value(string, '\0', len + 1);
     dcopy_memory(string, (char *)c_string, len * sizeof(char));
-    capacity = len * sizeof(char);
-    str_len  = len;
+    capacity = sizeof(char) * (len + 1);
+    str_len  = len + 1;
 }
 const char *dstring::c_str()
 {

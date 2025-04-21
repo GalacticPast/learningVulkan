@@ -1,3 +1,4 @@
+#include "core/logger.hpp"
 #include "platform/platform.hpp"
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Weverything"
@@ -937,7 +938,7 @@ inline f32 rad_to_deg(f32 radians)
 {
     return radians * D_RAD2DEG_MULTIPLIER;
 }
-
+// if |a - b| < epsilon then we consider them to be equal so always negate the result if you want a > b
 inline bool f32_compare(f32 a, f32 b, f32 tolerance)
 {
     bool result = fabs(a - b) < tolerance;

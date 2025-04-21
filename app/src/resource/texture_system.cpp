@@ -11,14 +11,14 @@
 
 struct texture_system_state
 {
-    darray<const char *> loaded_textures;
-    dhashtable<texture>  hashtable;
+    darray<dstring>     loaded_textures;
+    dhashtable<texture> hashtable;
 };
 
 static texture_system_state *tex_sys_state_ptr;
 bool                         texture_system_create_default_texture();
 
-bool texture_system_create_release_textures(const char *texture_name);
+static bool texture_system_create_release_textures(dstring *texture_name);
 
 bool texture_system_initialize(u64 *texture_system_mem_requirements, void *state)
 {
@@ -30,7 +30,7 @@ bool texture_system_initialize(u64 *texture_system_mem_requirements, void *state
     DINFO("Initializing texture system...");
     tex_sys_state_ptr                  = (texture_system_state *)state;
     tex_sys_state_ptr->hashtable       = *new dhashtable<texture>(MAX_TEXTURES_LOADED);
-    tex_sys_state_ptr->loaded_textures = *new darray<const char *>;
+    tex_sys_state_ptr->loaded_textures = *new darray<dstring>;
 
     texture_system_create_default_texture();
     return true;
@@ -41,7 +41,7 @@ bool texture_system_shutdown(void *state)
     u64 loaded_textures_count = tex_sys_state_ptr->loaded_textures.size();
     for (u64 i = 0; i < loaded_textures_count; i++)
     {
-        const char *tex_name = tex_sys_state_ptr->loaded_textures[i];
+        dstring *tex_name = &tex_sys_state_ptr->loaded_textures[i];
         texture_system_create_release_textures(tex_name);
     }
 
@@ -51,14 +51,33 @@ bool texture_system_shutdown(void *state)
     return true;
 }
 
+bool create_texture(texture *texture)
+{
+    bool result = vulkan_create_texture(texture);
+    if (!result)
+    {
+        DERROR("Couldnt create default texture.");
+        return false;
+    }
+
+    const char *file_base_name = texture->name.c_str();
+
+    tex_sys_state_ptr->hashtable.insert(texture->name.c_str(), *texture);
+    DDEBUG("Texture %s loaded in hastable.", file_base_name);
+
+    tex_sys_state_ptr->loaded_textures.push_back(texture->name);
+    return true;
+}
+
 bool texture_system_create_texture(dstring *file_base_name)
 {
     texture texture{};
     texture.name = *file_base_name;
 
-    char full_path_name[TEXTURE_FILE_NAME_MAX_LENGTH] = {};
+    char full_path_name[TEXTURE_FILE_NAME_MAX_LENGTH] = {0};
 
     const char *prefix = "../assets/textures/";
+
     string_copy_format((char *)full_path_name, "%s%s", 0, prefix, file_base_name->c_str());
 
     stbi_uc *pixels = stbi_load((const char *)full_path_name, &(int &)texture.tex_width, &(int &)texture.tex_height,
@@ -71,17 +90,8 @@ bool texture_system_create_texture(dstring *file_base_name)
     }
 
     texture.pixels = &pixels;
-
-    bool result = vulkan_create_texture(&texture);
-    if (!result)
-    {
-        DERROR("Couldnt create default texture.");
-        return false;
-    }
-    tex_sys_state_ptr->hashtable.insert(texture.name.c_str(), texture);
-    DDEBUG("Default texture loaded in hastable.");
-    tex_sys_state_ptr->loaded_textures.push_back(file_base_name->c_str());
-    return true;
+    bool result    = create_texture(&texture);
+    return result;
 }
 
 bool texture_system_create_default_texture()
@@ -115,17 +125,8 @@ bool texture_system_create_default_texture()
     }
 
     default_texture.pixels = &pixels;
-
-    bool result = vulkan_create_texture(&default_texture);
-    if (!result)
-    {
-        DERROR("Couldnt create default texture.");
-        return false;
-    }
-    tex_sys_state_ptr->hashtable.insert(default_texture.name.c_str(), default_texture);
-    DDEBUG("Default texture loaded in hastable.");
-    tex_sys_state_ptr->loaded_textures.push_back(DEFAULT_TEXTURE_HANDLE);
-    return true;
+    bool result            = create_texture(&default_texture);
+    return result;
 }
 
 void texture_system_get_texture(const char *texture_name, texture *out_texture)
@@ -135,10 +136,11 @@ void texture_system_get_texture(const char *texture_name, texture *out_texture)
     return;
 }
 
-bool texture_system_create_release_textures(const char *texture_name)
+bool texture_system_create_release_textures(dstring *tex_name)
 {
-    texture texture = tex_sys_state_ptr->hashtable.find(texture_name);
-    bool    result  = vulkan_destroy_texture(&texture);
+    const char *texture_name = tex_name->c_str();
+    texture     texture      = tex_sys_state_ptr->hashtable.find(texture_name);
+    bool        result       = vulkan_destroy_texture(&texture);
     if (!result)
     {
         DERROR("Couldn't release texture %s", texture_name);
