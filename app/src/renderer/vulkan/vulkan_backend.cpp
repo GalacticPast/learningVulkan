@@ -39,16 +39,20 @@ bool vulkan_backend_initialize(u64 *vulkan_backend_memory_requirements, applicat
     vk_context               = (vulkan_context *)state;
     vk_context->vk_allocator = nullptr;
     {
-        darray<void *> global_ubo_mem_data;
-        vk_context->global_uniform_buffers_memory_data = global_ubo_mem_data;
+        // darray<void *> global_ubo_mem_data;
+        // vk_context->global_uniform_buffers_memory_data = global_ubo_mem_data;
     }
     {
-        darray<VkDescriptorSet> descriptor_sets;
-        vk_context->descriptor_sets = descriptor_sets;
+        // darray<VkDescriptorSet> descriptor_sets;
+        // vk_context->descriptor_sets = descriptor_sets;
+        vk_context->descriptor_sets =
+            (VkDescriptorSet *)dallocate(sizeof(VkDescriptorSet) * MAX_FRAMES_IN_FLIGHT, MEM_TAG_RENDERER);
     }
     {
-        darray<VkCommandBuffer> command_buffers;
-        vk_context->command_buffers = command_buffers;
+        // darray<VkCommandBuffer> command_buffers;
+        // vk_context->command_buffers = command_buffers;
+        vk_context->command_buffers =
+            (VkCommandBuffer *)dallocate(sizeof(VkCommandBuffer) * MAX_FRAMES_IN_FLIGHT, MEM_TAG_RENDERER);
     }
 
     DDEBUG("Creating vulkan instance...");
@@ -229,10 +233,8 @@ bool vulkan_backend_initialize(u64 *vulkan_backend_memory_requirements, applicat
         return false;
     }
 
-    vk_context->command_buffers.resize(MAX_FRAMES_IN_FLIGHT);
     if (!vulkan_allocate_command_buffers(vk_context, &vk_context->graphics_command_pool,
-                                         (VkCommandBuffer *)vk_context->command_buffers.data, MAX_FRAMES_IN_FLIGHT,
-                                         false))
+                                         (VkCommandBuffer *)vk_context->command_buffers, MAX_FRAMES_IN_FLIGHT, false))
     {
         DERROR("Vulkan command buffer creation failed.");
         return false;
@@ -393,13 +395,13 @@ void vulkan_backend_shutdown()
 
     vkDestroyDescriptorPool(device, vk_context->descriptor_command_pool, allocator);
     vkDestroyDescriptorSetLayout(device, vk_context->descriptor_layout, allocator);
-    vk_context->descriptor_sets.~darray();
+    // vk_context->descriptor_sets.~darray();
 
-    vk_context->global_uniform_buffers_memory_data.~darray();
+    // vk_context->global_uniform_buffers_memory_data.~darray();
 
     vulkan_free_command_buffers(vk_context, &vk_context->graphics_command_pool,
-                                (VkCommandBuffer *)vk_context->command_buffers.data, MAX_FRAMES_IN_FLIGHT);
-    vk_context->command_buffers.~darray();
+                                (VkCommandBuffer *)vk_context->command_buffers, MAX_FRAMES_IN_FLIGHT);
+    // vk_context->command_buffers.~darray();
     vkDestroyCommandPool(device, vk_context->graphics_command_pool, allocator);
 
     for (u32 i = 0; i < vk_context->vk_swapchain.images_count; i++)
@@ -531,8 +533,7 @@ VkBool32 vulkan_dbg_msg_rprt_callback(VkDebugUtilsMessageSeverityFlagBitsEXT    
 
 void vulkan_update_global_uniform_buffer(uniform_buffer_object *global_ubo, u32 current_frame_index)
 {
-    dcopy_memory(vk_context->global_uniform_buffers_memory_data[current_frame_index], global_ubo,
-                 sizeof(uniform_buffer_object));
+    dcopy_memory(&vk_context->global_ubo_data, global_ubo, sizeof(uniform_buffer_object));
 }
 
 bool vulkan_draw_frame(render_data *render_data)

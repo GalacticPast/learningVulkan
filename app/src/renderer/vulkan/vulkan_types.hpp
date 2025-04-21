@@ -1,5 +1,6 @@
 #pragma once
 #include "containers/darray.hpp"
+#include "core/application.hpp"
 #include "core/dasserts.hpp"
 #include <vulkan/vulkan.h>
 
@@ -106,9 +107,11 @@ struct vulkan_context
     vulkan_pipeline vk_graphics_pipeline;
 
     vulkan_buffer *global_uniform_buffers = nullptr;
-    darray<void *> global_uniform_buffers_memory_data;
+    void          *global_ubo_data;
 
-    darray<VkCommandBuffer> command_buffers;
+    // darray<VkCommandBuffer> command_buffers;
+    u32              command_buffers_count;
+    VkCommandBuffer *command_buffers;
 
     vulkan_buffer vertex_buffer;
     vulkan_buffer index_buffer;
@@ -118,7 +121,9 @@ struct vulkan_context
 
     VkDescriptorSetLayout descriptor_layout;
 
-    darray<VkDescriptorSet> descriptor_sets;
+    // darray<VkDescriptorSet> descriptor_sets;
+    u32              descriptor_set_count;
+    VkDescriptorSet *descriptor_sets;
 
     VkSemaphore *image_available_semaphores = nullptr;
     VkSemaphore *render_finished_semaphores = nullptr;
@@ -127,7 +132,7 @@ struct vulkan_context
     VkSurfaceKHR vk_surface;
 
     VkDebugUtilsMessengerEXT vk_dbg_messenger;
-    VkAllocationCallbacks   *vk_allocator = nullptr;
+    VkAllocationCallbacks   *vk_allocator = 0;
 
     VkInstance vk_instance;
 

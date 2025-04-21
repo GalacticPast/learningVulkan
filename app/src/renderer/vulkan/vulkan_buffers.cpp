@@ -54,7 +54,7 @@ bool vulkan_copy_buffer(vulkan_context *vk_context, vulkan_buffer *dst_buffer, v
                         u64 buffer_size)
 {
 
-    VkCommandBuffer staging_command_buffer;
+    VkCommandBuffer staging_command_buffer{};
     bool            result = vulkan_allocate_command_buffers(vk_context, &vk_context->graphics_command_pool,
                                                              &staging_command_buffer, 1, true);
     DASSERT_MSG(result == true, "Couldnt allocate command buffers");
@@ -127,7 +127,6 @@ bool vulkan_create_global_uniform_buffers(vulkan_context *vk_context)
         (vulkan_buffer *)dallocate(sizeof(vulkan_buffer) * MAX_FRAMES_IN_FLIGHT, MEM_TAG_RENDERER);
 
     vulkan_buffer *buffers = vk_context->global_uniform_buffers;
-    vk_context->global_uniform_buffers_memory_data.resize(MAX_FRAMES_IN_FLIGHT);
 
     for (u32 i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
     {
@@ -135,7 +134,7 @@ bool vulkan_create_global_uniform_buffers(vulkan_context *vk_context)
                              VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
                              global_uniform_buffer_size);
         vkMapMemory(vk_context->vk_device.logical, vk_context->global_uniform_buffers[i].memory, 0,
-                    global_uniform_buffer_size, 0, &vk_context->global_uniform_buffers_memory_data[i]);
+                    global_uniform_buffer_size, 0, &vk_context->global_ubo_data);
     }
     return true;
 }

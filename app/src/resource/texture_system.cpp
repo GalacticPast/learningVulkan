@@ -96,6 +96,8 @@ bool texture_system_create_texture(dstring *file_base_name)
 
     texture.pixels = &pixels;
     bool result    = create_texture(&texture);
+    stbi_image_free(*texture.pixels);
+
     return result;
 }
 
@@ -131,6 +133,7 @@ bool texture_system_create_default_texture()
 
     default_texture.pixels = &pixels;
     bool result            = create_texture(&default_texture);
+    dfree(pixels, texture_size, MEM_TAG_UNKNOWN);
     return result;
 }
 
@@ -152,6 +155,5 @@ bool texture_system_create_release_textures(dstring *tex_name)
         return false;
     }
     tex_sys_state_ptr->hashtable.erase(texture_name);
-    stbi_image_free(*texture.pixels);
     return true;
 }

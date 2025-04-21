@@ -52,9 +52,9 @@ bool vulkan_create_descriptor_command_pool(vulkan_context *vk_context)
     desc_set_alloc_info.descriptorSetCount = MAX_FRAMES_IN_FLIGHT;
     desc_set_alloc_info.pSetLayouts        = (const VkDescriptorSetLayout *)desc_set_layout.data;
 
-    vk_context->descriptor_sets.resize(MAX_FRAMES_IN_FLIGHT);
+    // vk_context->descriptor_sets.resize(MAX_FRAMES_IN_FLIGHT);
     result = vkAllocateDescriptorSets(vk_context->vk_device.logical, &desc_set_alloc_info,
-                                      (VkDescriptorSet *)vk_context->descriptor_sets.data);
+                                      (VkDescriptorSet *)vk_context->descriptor_sets);
     VK_CHECK(result);
 
     return true;

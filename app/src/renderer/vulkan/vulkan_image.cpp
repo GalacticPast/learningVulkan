@@ -88,7 +88,7 @@ bool vulkan_destroy_image(vulkan_context *vk_context, vulkan_image *image)
 bool vulkan_transition_image_layout(vulkan_context *vk_context, vulkan_image *image, VkImageLayout old_layout,
                                     VkImageLayout new_layout)
 {
-    VkCommandBuffer staging_cmd_buffer;
+    VkCommandBuffer staging_cmd_buffer{};
     bool            result =
         vulkan_allocate_command_buffers(vk_context, &vk_context->graphics_command_pool, &staging_cmd_buffer, 1, true);
     if (!result)
@@ -164,7 +164,7 @@ bool vulkan_transition_image_layout(vulkan_context *vk_context, vulkan_image *im
 
 bool vulkan_copy_buffer_data_to_image(vulkan_context *vk_context, vulkan_buffer *src_buffer, vulkan_image *image)
 {
-    VkCommandBuffer staging_command_buffer;
+    VkCommandBuffer staging_command_buffer{};
     vulkan_allocate_command_buffers(vk_context, &vk_context->graphics_command_pool, &staging_command_buffer, 1, true);
 
     VkBufferImageCopy buffer_img_cpy_region{};
