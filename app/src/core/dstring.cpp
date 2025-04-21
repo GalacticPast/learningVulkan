@@ -1,6 +1,7 @@
 #include "dstring.hpp"
 #include "core/dasserts.hpp"
 #include "core/dmemory.hpp"
+#include "core/logger.hpp"
 
 // TODO: temporary
 #include <cstdio>
@@ -40,4 +41,25 @@ u32 string_copy_format(char *dest, const char *src, u32 offset_to_dest, ...)
     va_end(arg_ptr);
 
     return written + 1;
+}
+
+void dstring::operator=(char *c_string)
+{
+    u64 len = strlen(c_string);
+    if (string)
+    {
+        DWARN("Overiding string %s", string);
+        dzero_memory(string, capacity);
+    }
+    else
+    {
+        string = (char *)dallocate(len * sizeof(char), MEM_TAG_DSTRING);
+    }
+    dcopy_memory(string, c_string, len * sizeof(char));
+    capacity = len * sizeof(char);
+    str_len  = len;
+}
+const char *dstring::c_str()
+{
+    return string;
 }

@@ -9,6 +9,8 @@ static memory_system *memory_system_ptr;
 static const char *memory_tag_strings[MEM_TAG_MAX_TAGS] = {
     "UNKNOWN    ",
     "LINEAR_ALLC",
+    "DSTRING     ",
+    "DHASHTABLE ",
     "DARRAY     ",
     "APPLICATION",
     "RENDERER   "

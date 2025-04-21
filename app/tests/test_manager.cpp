@@ -40,5 +40,6 @@ void test_manager_run_tests()
         bool        result = t.test();
         const char *desc   = t.desc;
         DDEBUG("Desc: %s, result: %s", desc, status[result]);
+        DDEBUG("-------------------------------");
     }
 }

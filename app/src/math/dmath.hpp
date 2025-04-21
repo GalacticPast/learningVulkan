@@ -1,3 +1,4 @@
+#include "platform/platform.hpp"
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Weverything"
 
@@ -942,5 +943,11 @@ inline bool f32_compare(f32 a, f32 b, f32 tolerance)
     bool result = fabs(a - b) < tolerance;
     return result;
 }
+
+s32 drandom();
+s32 drandom_in_range(s32 min, s32 max);
+
+f32 fdrandom();
+f32 fdrandom_in_range(f32 min, f32 max);
 
 #pragma clang diagnostic pop
