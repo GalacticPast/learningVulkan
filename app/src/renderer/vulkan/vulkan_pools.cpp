@@ -1,5 +1,5 @@
-#include "vulkan_command_buffers.hpp"
 #include "core/application.hpp"
+#include "vulkan_buffers.hpp"
 
 bool vulkan_create_graphics_command_pool(vulkan_context *vk_context)
 {
@@ -17,7 +17,7 @@ bool vulkan_create_graphics_command_pool(vulkan_context *vk_context)
     return true;
 }
 
-bool vulkan_create_descriptor_command_pool_n_sets(vulkan_context *vk_context)
+bool vulkan_create_descriptor_command_pool(vulkan_context *vk_context)
 {
     VkDescriptorPoolSize pool_sizes[2]{};
 
@@ -55,9 +55,13 @@ bool vulkan_create_descriptor_command_pool_n_sets(vulkan_context *vk_context)
     vk_context->descriptor_sets.resize(MAX_FRAMES_IN_FLIGHT);
     result = vkAllocateDescriptorSets(vk_context->vk_device.logical, &desc_set_alloc_info,
                                       (VkDescriptorSet *)vk_context->descriptor_sets.data);
-
     VK_CHECK(result);
 
+    return true;
+}
+
+bool vulkan_update_descriptor_sets(vulkan_context *vk_context, vulkan_texture *texture)
+{
     for (u32 i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
     {
         VkDescriptorBufferInfo desc_buffer_info{};
@@ -67,8 +71,8 @@ bool vulkan_create_descriptor_command_pool_n_sets(vulkan_context *vk_context)
         desc_buffer_info.range  = sizeof(uniform_buffer_object);
 
         VkDescriptorImageInfo desc_image_info{};
-        desc_image_info.sampler     = vk_context->default_tex_sampler;
-        desc_image_info.imageView   = vk_context->default_texture.view;
+        desc_image_info.sampler     = texture->sampler;
+        desc_image_info.imageView   = texture->image.view;
         desc_image_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
         VkWriteDescriptorSet desc_writes[2]{};
@@ -97,49 +101,5 @@ bool vulkan_create_descriptor_command_pool_n_sets(vulkan_context *vk_context)
 
         vkUpdateDescriptorSets(vk_context->vk_device.logical, 2, desc_writes, 0, nullptr);
     }
-
     return true;
-}
-
-bool vulkan_allocate_command_buffers(vulkan_context *vk_context, VkCommandPool *command_pool,
-                                     VkCommandBuffer *cmd_buffers, u32 command_buffers_count, bool is_single_use)
-{
-    VkCommandBufferAllocateInfo command_buffer_alloc_info{};
-
-    command_buffer_alloc_info.sType              = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-    command_buffer_alloc_info.pNext              = nullptr;
-    command_buffer_alloc_info.commandPool        = *command_pool;
-    command_buffer_alloc_info.level              = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-    command_buffer_alloc_info.commandBufferCount = command_buffers_count;
-
-    VkResult result = vkAllocateCommandBuffers(vk_context->vk_device.logical, &command_buffer_alloc_info, cmd_buffers);
-    VK_CHECK(result);
-
-    if (is_single_use)
-    {
-        vulkan_begin_command_buffer_single_use(vk_context, *cmd_buffers);
-    }
-
-    return true;
-}
-
-void vulkan_begin_command_buffer_single_use(vulkan_context *vk_context, VkCommandBuffer command_buffer)
-{
-    VkCommandBufferBeginInfo command_buffer_begin_info{};
-    command_buffer_begin_info.sType            = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-    command_buffer_begin_info.flags            = 0;       // Optional
-    command_buffer_begin_info.pInheritanceInfo = nullptr; // Optional
-
-    VkResult result = vkBeginCommandBuffer(command_buffer, &command_buffer_begin_info);
-    VK_CHECK(result);
-}
-void vulkan_end_command_buffer_single_use(vulkan_context *vk_context, VkCommandBuffer command_buffer)
-{
-    VkResult result = vkEndCommandBuffer(command_buffer);
-    VK_CHECK(result);
-}
-void vulkan_free_command_buffers(vulkan_context *vk_context, VkCommandPool *command_pool, VkCommandBuffer *cmd_buffers,
-                                 u32 cmd_buffers_count)
-{
-    vkFreeCommandBuffers(vk_context->vk_device.logical, *command_pool, cmd_buffers_count, cmd_buffers);
 }

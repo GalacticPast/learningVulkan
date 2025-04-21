@@ -105,7 +105,6 @@ template <typename value> class dhashtable
         if (*entry_ptr == INVALID_ID_64)
         {
             DWARN("There is a no entry for hash code %d", hash_code);
-            return NULL;
         }
         value type = *(value *)entry_ptr;
         return type;

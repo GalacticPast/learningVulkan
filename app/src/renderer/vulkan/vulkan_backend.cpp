@@ -4,20 +4,17 @@
 #include "defines.hpp"
 
 #include "vulkan_backend.hpp"
-#include "vulkan_buffer.hpp"
-#include "vulkan_command_buffers.hpp"
+#include "vulkan_buffers.hpp"
 #include "vulkan_device.hpp"
 #include "vulkan_framebuffer.hpp"
 #include "vulkan_graphics_pipeline.hpp"
 #include "vulkan_image.hpp"
 #include "vulkan_platform.hpp"
+#include "vulkan_pools.hpp"
 #include "vulkan_renderpass.hpp"
 #include "vulkan_swapchain.hpp"
 #include "vulkan_sync_objects.hpp"
 #include "vulkan_types.hpp"
-
-#define STB_IMAGE_IMPLEMENTATION
-#include "vendor/stb_image.h"
 
 static vulkan_context *vk_context;
 
@@ -199,7 +196,6 @@ bool vulkan_backend_initialize(u64 *vulkan_backend_memory_requirements, applicat
         DERROR("Vulkan graphics pipline creation failed.");
         return false;
     }
-
     if (!vulkan_create_framebuffers(vk_context))
     {
         DERROR("Vulkan framebuffer creation failed.");
@@ -225,11 +221,7 @@ bool vulkan_backend_initialize(u64 *vulkan_backend_memory_requirements, applicat
         DERROR("Vulkan global uniform buffer creation failed.");
         return false;
     }
-    // INFO:  creating default textrue
-    if (!vulkan_create_default_texture())
-    {
-    }
-    if (!vulkan_create_descriptor_command_pool_n_sets(vk_context))
+    if (!vulkan_create_descriptor_command_pool(vk_context))
     {
         DERROR("Vulkan descriptor command pool and sets creation failed.");
         return false;
@@ -254,34 +246,20 @@ bool vulkan_backend_initialize(u64 *vulkan_backend_memory_requirements, applicat
     return true;
 }
 
-bool vulkan_create_default_texture()
+bool vulkan_create_texture(texture *in_texture)
 {
+    in_texture->vulkan_texture_state = (vulkan_texture *)dallocate(sizeof(vulkan_texture), MEM_TAG_RENDERER);
+    vulkan_texture *vk_texture       = (vulkan_texture *)in_texture->vulkan_texture_state;
 
-    u32 tex_width    = 512;
-    u32 tex_height   = 512;
+    u32 tex_width    = in_texture->tex_width;
+    u32 tex_height   = in_texture->tex_height;
     u32 tex_channel  = 4;
     u32 texture_size = tex_width * tex_height * 4;
 
-    u8 *default_texture = (u8 *)dallocate(texture_size, MEM_TAG_UNKNOWN);
-
-    for (u32 y = 0; y < tex_height; y++)
-    {
-        for (u32 x = 0; x < tex_width; x++)
-        {
-            u32 pixel_index = (y * tex_width + x) * tex_channel;
-            u8  color       = ((x / 256 + y / 256) % 2) ? 255 : 0;
-
-            default_texture[pixel_index + 0] = color;
-            default_texture[pixel_index + 1] = color;
-            default_texture[pixel_index + 2] = color;
-            default_texture[pixel_index + 3] = 255;
-        }
-    }
-
     vulkan_buffer staging_buffer{};
-    vulkan_image *texture = &vk_context->default_texture;
-    texture->width        = tex_width;
-    texture->height       = tex_height;
+    vulkan_image *image = &vk_texture->image;
+    image->width        = tex_width;
+    image->height       = tex_height;
 
     bool result =
         vulkan_create_buffer(vk_context, &staging_buffer, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
@@ -289,24 +267,23 @@ bool vulkan_create_default_texture()
     DASSERT(result == true);
 
     void *data = nullptr;
-    vulkan_copy_data_to_buffer(vk_context, &staging_buffer, data, default_texture, texture_size);
+    vulkan_copy_data_to_buffer(vk_context, &staging_buffer, data, *in_texture->pixels, texture_size);
 
-    result = vulkan_create_image(vk_context, texture, tex_width, tex_height, VK_FORMAT_R8G8B8A8_SRGB,
+    result = vulkan_create_image(vk_context, image, tex_width, tex_height, VK_FORMAT_R8G8B8A8_SRGB,
                                  VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
                                  VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_IMAGE_TILING_OPTIMAL);
     DASSERT(result == true);
 
-    vulkan_transition_image_layout(vk_context, texture, VK_IMAGE_LAYOUT_UNDEFINED,
-                                   VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+    vulkan_transition_image_layout(vk_context, image, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
-    vulkan_copy_buffer_data_to_image(vk_context, &staging_buffer, texture);
+    vulkan_copy_buffer_data_to_image(vk_context, &staging_buffer, image);
 
-    vulkan_transition_image_layout(vk_context, texture, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+    vulkan_transition_image_layout(vk_context, image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
                                    VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
     vulkan_destroy_buffer(vk_context, &staging_buffer);
 
-    result = vulkan_create_image_view(vk_context, &texture->handle, &texture->view, VK_FORMAT_R8G8B8A8_SRGB,
+    result = vulkan_create_image_view(vk_context, &image->handle, &image->view, VK_FORMAT_R8G8B8A8_SRGB,
                                       VK_IMAGE_ASPECT_COLOR_BIT);
     DASSERT(result == true);
 
@@ -333,9 +310,22 @@ bool vulkan_create_default_texture()
     texture_sampler_create_info.unnormalizedCoordinates = VK_FALSE;
 
     VkResult res = vkCreateSampler(vk_context->vk_device.logical, &texture_sampler_create_info,
-                                   vk_context->vk_allocator, &vk_context->default_tex_sampler);
+                                   vk_context->vk_allocator, &vk_texture->sampler);
     VK_CHECK(res);
 
+    // HACK:
+    vulkan_update_descriptor_sets(vk_context, vk_texture);
+
+    return true;
+}
+
+bool vulkan_destroy_texture(texture *in_texture)
+{
+    vulkan_texture *vk_texture = (vulkan_texture *)in_texture->vulkan_texture_state;
+    vulkan_image   *image      = &vk_texture->image;
+
+    vulkan_destroy_image(vk_context, image);
+    vkDestroySampler(vk_context->vk_device.logical, vk_texture->sampler, vk_context->vk_allocator);
     return true;
 }
 
@@ -380,6 +370,7 @@ bool vulkan_create_debug_messenger(VkDebugUtilsMessengerCreateInfoEXT *dbg_messe
 }
 
 void vulkan_backend_shutdown()
+
 {
     DDEBUG("Shutting down vulkan...");
 
@@ -396,9 +387,6 @@ void vulkan_backend_shutdown()
     dfree(vk_context->image_available_semaphores, sizeof(VkSemaphore) * MAX_FRAMES_IN_FLIGHT, MEM_TAG_RENDERER);
     dfree(vk_context->render_finished_semaphores, sizeof(VkSemaphore) * MAX_FRAMES_IN_FLIGHT, MEM_TAG_RENDERER);
     dfree(vk_context->in_flight_fences, sizeof(VkFence) * MAX_FRAMES_IN_FLIGHT, MEM_TAG_RENDERER);
-
-    vulkan_destroy_image(vk_context, &vk_context->default_texture);
-    vkDestroySampler(device, vk_context->default_tex_sampler, allocator);
 
     vulkan_destroy_buffer(vk_context, &vk_context->vertex_buffer);
     vulkan_destroy_buffer(vk_context, &vk_context->index_buffer);

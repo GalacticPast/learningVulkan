@@ -1,11 +1,15 @@
-#include "application.hpp"
+#include "core/application.hpp"
 #include "core/dasserts.hpp"
 #include "core/dmemory.hpp"
 #include "core/event.hpp"
 #include "core/input.hpp"
-#include "logger.hpp"
+#include "core/logger.hpp"
+
 #include "platform/platform.hpp"
+
 #include "renderer/renderer.hpp"
+
+#include "resource/texture_system.hpp"
 
 static application_state *app_state_ptr;
 
@@ -78,6 +82,15 @@ bool application_initialize(application_state *state, application_config *config
         &app_state_ptr->application_system_linear_allocator, app_state_ptr->renderer_system_state);
     DASSERT(result == true);
 
+    texture_system_initialize(&app_state_ptr->texture_system_memory_requirements, 0);
+
+    app_state_ptr->texture_system_state = linear_allocator_allocate(&app_state_ptr->application_system_linear_allocator,
+                                                                    app_state_ptr->texture_system_memory_requirements);
+
+    result = texture_system_initialize(&app_state_ptr->texture_system_memory_requirements,
+                                       app_state_ptr->texture_system_state);
+    DASSERT(result == true);
+
     u64 buffer_usg_mem_requirements = 0;
     get_memory_usg_str(&buffer_usg_mem_requirements, (char *)0);
 
@@ -96,6 +109,7 @@ void application_shutdown()
     event_system_unregister(EVENT_CODE_APPLICATION_RESIZED, 0, event_callback_resize);
 
     renderer_system_shutdown();
+    texture_system_shutdown(app_state_ptr->texture_system_state);
     platform_system_shutdown(app_state_ptr->platform_system_state);
     input_system_shutdown(app_state_ptr->input_system_state);
     event_system_shutdown(app_state_ptr->event_system_state);

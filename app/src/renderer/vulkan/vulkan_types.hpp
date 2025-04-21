@@ -44,6 +44,12 @@ struct vulkan_image
     u32 height;
 };
 
+struct vulkan_texture
+{
+    vulkan_image image;
+    VkSampler    sampler;
+};
+
 struct vulkan_framebuffer
 {
     VkFramebuffer handle;
@@ -107,10 +113,6 @@ struct vulkan_context
     vulkan_buffer vertex_buffer;
     vulkan_buffer index_buffer;
 
-    // HACK: remove this later
-    vulkan_image default_texture;
-    VkSampler    default_tex_sampler;
-    //
     VkCommandPool    graphics_command_pool;
     VkDescriptorPool descriptor_command_pool;
 

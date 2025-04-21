@@ -4,6 +4,7 @@
 #include "defines.hpp"
 #include "math/dmath.hpp"
 #include "memory/linear_allocator.hpp"
+#include "resource/texture_system.hpp"
 
 struct application_config
 {
@@ -34,6 +35,7 @@ struct render_data
     darray<u32>    indices;
 
     uniform_buffer_object global_ubo;
+    texture               texture;
 };
 
 struct application_state
@@ -59,6 +61,9 @@ struct application_state
 
     u64   renderer_system_memory_requirements; // 1 mega bytes
     void *renderer_system_state;
+
+    u64   texture_system_memory_requirements; // 1 mega bytes
+    void *texture_system_state;
 };
 
 bool application_initialize(application_state *out_state, application_config *config);

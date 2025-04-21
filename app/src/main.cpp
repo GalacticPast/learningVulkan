@@ -2,10 +2,12 @@
 #include "core/application.hpp"
 #include "core/dasserts.hpp"
 #include "core/dclock.hpp"
+#include "core/dstring.hpp"
 #include "core/logger.hpp"
 #include "defines.hpp"
 #include "math/dmath.hpp"
 #include "platform/platform.hpp"
+#include "resource/texture_system.hpp"
 
 // #include "../tests/containers/hashtable_test.hpp"
 #include "../tests/containers/dhashtable_test.hpp"
@@ -131,6 +133,12 @@ int main()
     render_data triangle{};
     triangle.vertices = vertices;
     triangle.indices  = indices;
+    texture_system_get_default_texture(&triangle.texture);
+
+    dstring file_name;
+    file_name = "texture.jpg";
+
+    texture_system_create_texture(&file_name);
 
     f64 start_time      = 0;
     f64 curr_frame_time = 0;

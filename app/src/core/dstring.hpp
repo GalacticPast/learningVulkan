@@ -12,7 +12,9 @@ class dstring
     char *string;
 
   public:
-    void        operator=(char *c_string);
+    void operator=(const char *c_string);
+    void operator=(const dstring *str);
+
     const char *c_str();
 };
 
@@ -21,4 +23,4 @@ bool string_compare(const char *str0, const char *str1);
 
 u32 string_copy(char *dest, const char *src, u32 offset_to_dest);
 
-u32 string_copy_format(char *dest, const char *src, u32 offset_to_dest, ...);
+u32 string_copy_format(char *dest, const char *format, u32 offset_to_dest, ...);

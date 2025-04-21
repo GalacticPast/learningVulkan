@@ -1,7 +1,6 @@
-#include "vulkan_buffer.hpp"
+#include "vulkan_buffers.hpp"
 #include "core/application.hpp"
-#include "renderer/vulkan/vulkan_command_buffers.hpp"
-#include "vulkan_buffer.hpp"
+#include "vulkan_pools.hpp"
 
 bool vulkan_create_buffer(vulkan_context *vk_context, vulkan_buffer *out_buffer, VkBufferUsageFlags usg_flags,
                           VkMemoryPropertyFlags memory_properties_flags, u64 buffer_size)
@@ -150,4 +149,47 @@ bool vulkan_copy_data_to_buffer(vulkan_context *vk_context, vulkan_buffer *src_b
     dcopy_memory(to_be_mapped_data, to_be_copied_data, to_be_copied_data_size);
     vkUnmapMemory(vk_context->vk_device.logical, src_buffer->memory);
     return true;
+}
+
+bool vulkan_allocate_command_buffers(vulkan_context *vk_context, VkCommandPool *command_pool,
+                                     VkCommandBuffer *cmd_buffers, u32 command_buffers_count, bool is_single_use)
+{
+    VkCommandBufferAllocateInfo command_buffer_alloc_info{};
+
+    command_buffer_alloc_info.sType              = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    command_buffer_alloc_info.pNext              = nullptr;
+    command_buffer_alloc_info.commandPool        = *command_pool;
+    command_buffer_alloc_info.level              = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    command_buffer_alloc_info.commandBufferCount = command_buffers_count;
+
+    VkResult result = vkAllocateCommandBuffers(vk_context->vk_device.logical, &command_buffer_alloc_info, cmd_buffers);
+    VK_CHECK(result);
+
+    if (is_single_use)
+    {
+        vulkan_begin_command_buffer_single_use(vk_context, *cmd_buffers);
+    }
+
+    return true;
+}
+
+void vulkan_begin_command_buffer_single_use(vulkan_context *vk_context, VkCommandBuffer command_buffer)
+{
+    VkCommandBufferBeginInfo command_buffer_begin_info{};
+    command_buffer_begin_info.sType            = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+    command_buffer_begin_info.flags            = 0;       // Optional
+    command_buffer_begin_info.pInheritanceInfo = nullptr; // Optional
+
+    VkResult result = vkBeginCommandBuffer(command_buffer, &command_buffer_begin_info);
+    VK_CHECK(result);
+}
+void vulkan_end_command_buffer_single_use(vulkan_context *vk_context, VkCommandBuffer command_buffer)
+{
+    VkResult result = vkEndCommandBuffer(command_buffer);
+    VK_CHECK(result);
+}
+void vulkan_free_command_buffers(vulkan_context *vk_context, VkCommandPool *command_pool, VkCommandBuffer *cmd_buffers,
+                                 u32 cmd_buffers_count)
+{
+    vkFreeCommandBuffers(vk_context->vk_device.logical, *command_pool, cmd_buffers_count, cmd_buffers);
 }
