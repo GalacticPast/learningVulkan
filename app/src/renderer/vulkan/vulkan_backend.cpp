@@ -314,7 +314,7 @@ bool vulkan_create_texture(texture *in_texture)
     VK_CHECK(res);
 
     // HACK:
-    vulkan_update_descriptor_sets(vk_context, vk_texture);
+    // vulkan_update_descriptor_sets(vk_context, vk_texture);
 
     return true;
 }
@@ -569,6 +569,8 @@ bool vulkan_draw_frame(render_data *render_data)
     //
 
     vulkan_update_global_uniform_buffer(&render_data->global_ubo, current_frame);
+    vulkan_texture *vk_texture = (vulkan_texture *)render_data->texture.vulkan_texture_state;
+    vulkan_update_descriptor_sets(vk_context, vk_texture);
 
     u32 image_index = INVALID_ID;
     result = vkAcquireNextImageKHR(vk_context->vk_device.logical, vk_context->vk_swapchain.handle, INVALID_ID_64,

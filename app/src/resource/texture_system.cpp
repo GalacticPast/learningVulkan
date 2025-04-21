@@ -115,9 +115,9 @@ bool texture_system_create_default_texture()
     return true;
 }
 
-void texture_system_get_default_texture(texture *out_texture)
+void texture_system_get_texture(const char *texture_name, texture *out_texture)
 {
-    texture default_texture = tex_sys_state_ptr->hashtable.find(DEFAULT_TEXTURE_HANDLE);
-    dcopy_memory(out_texture, &default_texture, sizeof(texture));
+    texture texture = tex_sys_state_ptr->hashtable.find(texture_name);
+    dcopy_memory(out_texture, &texture, sizeof(texture));
     return;
 }

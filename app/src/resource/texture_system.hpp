@@ -18,5 +18,5 @@ struct texture
 bool texture_system_initialize(u64 *texture_system_mem_requirements, void *state);
 
 bool texture_system_shutdown(void *state);
-void texture_system_get_default_texture(texture *out_texture);
+void texture_system_get_texture(const char *texture_name, texture *out_texture);
 bool texture_system_create_texture(dstring *file_base_name);

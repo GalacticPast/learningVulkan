@@ -3,6 +3,7 @@
 #include "core/dasserts.hpp"
 #include "core/dclock.hpp"
 #include "core/dstring.hpp"
+#include "core/input.hpp"
 #include "core/logger.hpp"
 #include "defines.hpp"
 #include "math/dmath.hpp"
@@ -130,22 +131,25 @@ int main()
     global_ubo.view       = mat4_look_at({2, 2, 2}, {0, 0, 0}, {0, 0, 1.0f});
     global_ubo.projection = mat4_perspective(fov_rad, aspect_ratio, 0.01f, 1000.0f);
 
-    render_data triangle{};
-    triangle.vertices = vertices;
-    triangle.indices  = indices;
-    texture_system_get_default_texture(&triangle.texture);
-
     dstring file_name;
     file_name = "texture.jpg";
 
     texture_system_create_texture(&file_name);
 
+    render_data triangle{};
+    triangle.vertices = vertices;
+    triangle.indices  = indices;
+    texture_system_get_texture(file_name.c_str(), &triangle.texture);
+
     f64 start_time      = 0;
     f64 curr_frame_time = 0;
 
-    f64 req_frame_time = (f64)(1.0f / 240);
+    f64 req_frame_time = (f64)(1.0f / 60);
     clock_start(&clock);
 
+    const char *texture_names[2] = {"DEFAULT_TEXTURE", "texture.jpg"};
+
+    u32 index = 0;
     while (app_state.is_running)
     {
 
@@ -154,6 +158,15 @@ int main()
 
         global_ubo.model    = mat4_euler_z((start_time * (90.0f * D_DEG2RAD_MULTIPLIER)));
         triangle.global_ubo = global_ubo;
+
+        bool b = input_is_key_down(KEY_S);
+
+        if (b != 0)
+        {
+            texture_system_get_texture(texture_names[index], &triangle.texture);
+            index++;
+            index %= 2;
+        }
 
         application_run(&triangle);
 
@@ -165,6 +178,7 @@ int main()
             f64 sleep = fabs(req_frame_time - curr_frame_time);
             platform_sleep((u64)sleep * D_SEC_TO_MS_MULTIPLIER);
         }
+        input_update(0);
     }
     application_shutdown();
 }
