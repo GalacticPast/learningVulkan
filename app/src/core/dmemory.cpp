@@ -66,7 +66,7 @@ void dfree(void *block, u64 mem_size, memory_tags tag)
     }
     return platform_free(block, false);
 }
-void dset_memory_value(void *block, s64 value, u64 size)
+void dset_memory_value(void *block, u64 value, u64 size)
 {
     platform_set_memory(block, value, size);
 }

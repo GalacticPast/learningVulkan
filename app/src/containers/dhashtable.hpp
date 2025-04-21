@@ -5,7 +5,9 @@
 // works better than many other constants, prime or not) has never been adequately explained.
 
 #include "core/dmemory.hpp"
+#include "core/logger.hpp"
 #include "defines.hpp"
+#include <cstddef>
 
 #define MAX_KEY_LENGTH 64
 #define DEFAULT_HASH_TABLE_SIZE 20
@@ -42,6 +44,7 @@ template <typename value> class dhashtable
         max_length            = DEFAULT_HASH_TABLE_SIZE;
         num_elements_in_table = 0;
         table                 = (u64 *)dallocate(capacity, MEM_TAG_DHASHTABLE);
+        dset_memory_value(table, INVALID_ID_64, capacity);
     }
     dhashtable(u64 table_size)
     {
@@ -50,6 +53,15 @@ template <typename value> class dhashtable
         max_length            = table_size;
         num_elements_in_table = 0;
         table                 = (u64 *)dallocate(capacity, MEM_TAG_DHASHTABLE);
+        dset_memory_value(table, INVALID_ID_64, capacity);
+    }
+    ~dhashtable()
+    {
+        dfree(table, capacity, MEM_TAG_DHASHTABLE);
+        element_size          = 0;
+        capacity              = 0;
+        max_length            = 0;
+        num_elements_in_table = 0;
     }
 
     void insert(const char *key, value type)
@@ -71,7 +83,7 @@ template <typename value> class dhashtable
             table     = new_table;
         }
         u64 *entry_ptr = table + hash_code;
-        if (*entry_ptr != 0)
+        if (*entry_ptr != INVALID_ID_64)
         {
             DWARN("Collison!!!. Overriding the value for index %d", hash_code);
             num_elements_in_table--;
@@ -90,7 +102,7 @@ template <typename value> class dhashtable
         hash_code      %= max_length;
         u64 *entry_ptr  = table + hash_code;
 
-        if (*entry_ptr == 0)
+        if (*entry_ptr == INVALID_ID_64)
         {
             DWARN("There is a no entry for hash code %d", hash_code);
             return NULL;
@@ -104,12 +116,12 @@ template <typename value> class dhashtable
         hash_code      %= max_length;
         u64 *entry_ptr  = table + hash_code;
 
-        if (entry_ptr == 0)
+        if (*entry_ptr == INVALID_ID_64)
         {
             DWARN("There is a no entry for hash code %d", hash_code);
             return;
         }
-        dzero_memory(entry_ptr, element_size);
+        dset_memory_value(entry_ptr, INVALID_ID_64, element_size);
         num_elements_in_table--;
         return;
     }

@@ -26,7 +26,7 @@ void run_tests()
     // linear_allocator_register_tests();
     // event_system_register_tests();
     // darray_register_tests();
-    dhashtable_register_tests();
+    // dhashtable_register_tests();
 
     test_manager_run_tests();
     test_instance->tests = 0;
@@ -35,8 +35,6 @@ void run_tests()
 
 int main()
 {
-    run_tests();
-    return 0;
     application_config app_config;
     app_config.width            = INVALID_ID;
     app_config.height           = INVALID_ID;
