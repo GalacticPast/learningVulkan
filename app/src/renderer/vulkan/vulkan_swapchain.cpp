@@ -9,7 +9,7 @@
 
 bool create_swapchain(vulkan_context *vk_context)
 {
-    // INFO: query swapchain support
+    // INFO: query swapchain support. I mean we only have to do this once when we start the application right??
     vulkan_device_query_swapchain_support(vk_context, vk_context->vk_device.physical, &vk_context->vk_swapchain);
 
     vulkan_swapchain *vk_swapchain = &vk_context->vk_swapchain;
@@ -179,7 +179,7 @@ bool destroy_swapchain(vulkan_context *vk_context)
 
         vkDestroySwapchainKHR(device, vk_context->vk_swapchain.handle, allocator);
     }
-    vk_context->vk_swapchain.handle = 0;
+    vk_context->vk_swapchain.handle = nullptr;
     return true;
 }
 

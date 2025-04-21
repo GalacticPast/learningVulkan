@@ -140,10 +140,10 @@ int main()
 
         if (!f32_compare(req_frame_time, end_time, 0.0001))
         {
-            f64 sleep    = req_frame_time - end_time;
-            u64 sleep_ms = (u64)(sleep * D_SEC_TO_MS_MULTIPLIER);
-            if (sleep_ms > 0)
+            f64 sleep = req_frame_time - end_time;
+            if (sleep > 0)
             {
+                u64 sleep_ms = (u64)(sleep * D_SEC_TO_MS_MULTIPLIER);
                 platform_sleep(sleep_ms);
             }
         }

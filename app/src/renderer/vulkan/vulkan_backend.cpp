@@ -325,6 +325,7 @@ bool vulkan_destroy_texture(texture *in_texture)
 
     vulkan_destroy_image(vk_context, image);
     vkDestroySampler(vk_context->vk_device.logical, vk_texture->sampler, vk_context->vk_allocator);
+    dfree(vk_texture, sizeof(vulkan_texture), MEM_TAG_RENDERER);
     return true;
 }
 
@@ -392,9 +393,13 @@ void vulkan_backend_shutdown()
 
     vkDestroyDescriptorPool(device, vk_context->descriptor_command_pool, allocator);
     vkDestroyDescriptorSetLayout(device, vk_context->descriptor_layout, allocator);
+    vk_context->descriptor_sets.~darray();
+
+    vk_context->global_uniform_buffers_memory_data.~darray();
 
     vulkan_free_command_buffers(vk_context, &vk_context->graphics_command_pool,
                                 (VkCommandBuffer *)vk_context->command_buffers.data, MAX_FRAMES_IN_FLIGHT);
+    vk_context->command_buffers.~darray();
     vkDestroyCommandPool(device, vk_context->graphics_command_pool, allocator);
 
     for (u32 i = 0; i < vk_context->vk_swapchain.images_count; i++)
@@ -647,6 +652,10 @@ bool vulkan_draw_frame(render_data *render_data)
 }
 bool vulkan_backend_resize()
 {
-    bool result = vulkan_recreate_swapchain(vk_context);
-    return result;
+    if (vk_context)
+    {
+        bool result = vulkan_recreate_swapchain(vk_context);
+        return true;
+    }
+    return false;
 }

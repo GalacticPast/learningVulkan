@@ -63,11 +63,11 @@ struct vulkan_swapchain
 
     VkSwapchainKHR      handle;
     VkExtent2D          surface_extent;
-    vulkan_framebuffer *buffers;
+    vulkan_framebuffer *buffers = nullptr;
 
     u32          images_count = INVALID_ID;
-    VkImage     *images;
-    VkImageView *img_views;
+    VkImage     *images       = nullptr;
+    VkImageView *img_views    = nullptr;
     VkFormat     img_format;
 
     vulkan_image depth_image;
@@ -76,10 +76,10 @@ struct vulkan_swapchain
 
     // TODO: linear alloc??
     u32                 surface_formats_count = INVALID_ID;
-    VkSurfaceFormatKHR *surface_formats;
+    VkSurfaceFormatKHR *surface_formats       = nullptr;
 
     u32               present_modes_count = INVALID_ID;
-    VkPresentModeKHR *present_modes;
+    VkPresentModeKHR *present_modes       = nullptr;
 };
 
 struct vulkan_pipeline
@@ -105,7 +105,7 @@ struct vulkan_context
 
     vulkan_pipeline vk_graphics_pipeline;
 
-    vulkan_buffer *global_uniform_buffers;
+    vulkan_buffer *global_uniform_buffers = nullptr;
     darray<void *> global_uniform_buffers_memory_data;
 
     darray<VkCommandBuffer> command_buffers;
@@ -120,14 +120,14 @@ struct vulkan_context
 
     darray<VkDescriptorSet> descriptor_sets;
 
-    VkSemaphore *image_available_semaphores;
-    VkSemaphore *render_finished_semaphores;
-    VkFence     *in_flight_fences;
+    VkSemaphore *image_available_semaphores = nullptr;
+    VkSemaphore *render_finished_semaphores = nullptr;
+    VkFence     *in_flight_fences           = nullptr;
 
     VkSurfaceKHR vk_surface;
 
     VkDebugUtilsMessengerEXT vk_dbg_messenger;
-    VkAllocationCallbacks   *vk_allocator;
+    VkAllocationCallbacks   *vk_allocator = nullptr;
 
     VkInstance vk_instance;
 

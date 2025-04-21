@@ -27,9 +27,15 @@ bool texture_system_initialize(u64 *texture_system_mem_requirements, void *state
         return true;
     }
     DINFO("Initializing texture system...");
-    tex_sys_state_ptr                  = (texture_system_state *)state;
-    tex_sys_state_ptr->hashtable       = *new dhashtable<texture>(MAX_TEXTURES_LOADED);
-    tex_sys_state_ptr->loaded_textures = *new darray<dstring>;
+    tex_sys_state_ptr = (texture_system_state *)state;
+    {
+        dhashtable<texture> table(MAX_TEXTURES_LOADED);
+        tex_sys_state_ptr->hashtable = table;
+    }
+    {
+        darray<dstring> strings;
+        tex_sys_state_ptr->loaded_textures = strings;
+    }
 
     texture_system_create_default_texture();
     return true;
@@ -114,7 +120,7 @@ bool texture_system_create_default_texture()
         for (u32 x = 0; x < tex_width; x++)
         {
             u32 pixel_index = (y * tex_width + x) * tex_channels;
-            u8  color       = ((x / 256 + y / 256) % 2) ? 255 : 0;
+            u8  color       = ((x / 32 + y / 32) % 2) ? 255 : 0;
 
             pixels[pixel_index + 0] = color;
             pixels[pixel_index + 1] = color;
@@ -146,5 +152,6 @@ bool texture_system_create_release_textures(dstring *tex_name)
         return false;
     }
     tex_sys_state_ptr->hashtable.erase(texture_name);
+    stbi_image_free(*texture.pixels);
     return true;
 }

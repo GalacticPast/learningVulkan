@@ -399,8 +399,10 @@ void vulkan_device_query_swapchain_support(vulkan_context *vk_context, VkPhysica
 
     vkGetPhysicalDeviceSurfaceFormatsKHR(physical_device, vk_context->vk_surface, &out_swapchain->surface_formats_count,
                                          0);
+
     out_swapchain->surface_formats = (VkSurfaceFormatKHR *)dallocate(
         sizeof(VkSurfaceFormatKHR) * out_swapchain->surface_formats_count, MEM_TAG_RENDERER);
+
     vkGetPhysicalDeviceSurfaceFormatsKHR(physical_device, vk_context->vk_surface, &out_swapchain->surface_formats_count,
                                          out_swapchain->surface_formats);
 
