@@ -39,8 +39,11 @@ bool vulkan_backend_initialize(u64 *vulkan_backend_memory_requirements, applicat
     vk_context               = (vulkan_context *)state;
     vk_context->vk_allocator = nullptr;
     {
-        // darray<void *> global_ubo_mem_data;
-        // vk_context->global_uniform_buffers_memory_data = global_ubo_mem_data;
+        vk_context->global_ubo_data.data =
+            dallocate(sizeof(uniform_buffer_object) * MAX_FRAMES_IN_FLIGHT, MEM_TAG_DARRAY);
+        vk_context->global_ubo_data.capacity     = sizeof(uniform_buffer_object) * MAX_FRAMES_IN_FLIGHT;
+        vk_context->global_ubo_data.element_size = sizeof(uniform_buffer_object);
+        vk_context->global_ubo_data.length       = MAX_FRAMES_IN_FLIGHT;
     }
     {
         // darray<VkDescriptorSet> descriptor_sets;
@@ -533,8 +536,7 @@ VkBool32 vulkan_dbg_msg_rprt_callback(VkDebugUtilsMessageSeverityFlagBitsEXT    
 
 void vulkan_update_global_uniform_buffer(uniform_buffer_object *global_ubo, u32 current_frame_index)
 {
-    void *data = (void *)&vk_context->global_ubo_data[current_frame_index];
-    dcopy_memory(data, global_ubo, sizeof(uniform_buffer_object));
+    dcopy_memory(vk_context->global_ubo_data[current_frame_index], global_ubo, sizeof(uniform_buffer_object));
 }
 
 bool vulkan_draw_frame(render_data *render_data)

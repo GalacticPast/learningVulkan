@@ -127,17 +127,14 @@ bool vulkan_create_global_uniform_buffers(vulkan_context *vk_context)
         (vulkan_buffer *)dallocate(sizeof(vulkan_buffer) * MAX_FRAMES_IN_FLIGHT, MEM_TAG_RENDERER);
 
     vulkan_buffer *buffers = vk_context->global_uniform_buffers;
-    vk_context->global_ubo_data =
-        (uniform_buffer_object *)dallocate(sizeof(uniform_buffer_object) * MAX_FRAMES_IN_FLIGHT, MEM_TAG_RENDERER);
 
     for (u32 i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
     {
         vulkan_create_buffer(vk_context, &buffers[i], VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
                              VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
                              global_uniform_buffer_size);
-        void *data = &vk_context->global_ubo_data[i];
         vkMapMemory(vk_context->vk_device.logical, vk_context->global_uniform_buffers[i].memory, 0,
-                    global_uniform_buffer_size, 0, &data);
+                    global_uniform_buffer_size, 0, &vk_context->global_ubo_data[i]);
     }
     return true;
 }

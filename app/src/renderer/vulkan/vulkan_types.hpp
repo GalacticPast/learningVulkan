@@ -142,5 +142,5 @@ struct vulkan_context
     u32         enabled_extension_count = INVALID_ID;
     const char *enabled_extension_names[4];
 
-    uniform_buffer_object *global_ubo_data;
+    darray<void *> global_ubo_data;
 };
