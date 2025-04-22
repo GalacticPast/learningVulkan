@@ -94,6 +94,7 @@ struct vulkan_buffer
     VkBuffer       handle;
     VkDeviceMemory memory;
 };
+
 struct vulkan_context
 {
     u32 current_frame_index;
@@ -107,7 +108,6 @@ struct vulkan_context
     vulkan_pipeline vk_graphics_pipeline;
 
     vulkan_buffer *global_uniform_buffers = nullptr;
-    void          *global_ubo_data;
 
     // darray<VkCommandBuffer> command_buffers;
     u32              command_buffers_count;
@@ -121,9 +121,9 @@ struct vulkan_context
 
     VkDescriptorSetLayout descriptor_layout;
 
-    // darray<VkDescriptorSet> descriptor_sets;
-    u32              descriptor_set_count;
-    VkDescriptorSet *descriptor_sets;
+    darray<VkDescriptorSet> descriptor_sets;
+    u32                     descriptor_set_count;
+    // VkDescriptorSet *descriptor_sets;
 
     VkSemaphore *image_available_semaphores = nullptr;
     VkSemaphore *render_finished_semaphores = nullptr;
@@ -141,4 +141,6 @@ struct vulkan_context
 
     u32         enabled_extension_count = INVALID_ID;
     const char *enabled_extension_names[4];
+
+    uniform_buffer_object *global_ubo_data;
 };

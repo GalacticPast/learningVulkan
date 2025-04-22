@@ -44,9 +44,9 @@ bool vulkan_backend_initialize(u64 *vulkan_backend_memory_requirements, applicat
     }
     {
         // darray<VkDescriptorSet> descriptor_sets;
-        // vk_context->descriptor_sets = descriptor_sets;
-        vk_context->descriptor_sets =
-            (VkDescriptorSet *)dallocate(sizeof(VkDescriptorSet) * MAX_FRAMES_IN_FLIGHT, MEM_TAG_RENDERER);
+        vk_context->descriptor_sets = *new darray<VkDescriptorSet>(MAX_FRAMES_IN_FLIGHT);
+        // vk_context->descriptor_sets =
+        //(VkDescriptorSet *)dallocate(sizeof(VkDescriptorSet) * MAX_FRAMES_IN_FLIGHT, MEM_TAG_RENDERER);
     }
     {
         // darray<VkCommandBuffer> command_buffers;
@@ -250,7 +250,7 @@ bool vulkan_backend_initialize(u64 *vulkan_backend_memory_requirements, applicat
     return true;
 }
 
-bool vulkan_create_texture(texture *in_texture)
+bool vulkan_create_texture(texture *in_texture, u8 *pixels)
 {
     in_texture->vulkan_texture_state = (vulkan_texture *)dallocate(sizeof(vulkan_texture), MEM_TAG_RENDERER);
     vulkan_texture *vk_texture       = (vulkan_texture *)in_texture->vulkan_texture_state;
@@ -271,7 +271,7 @@ bool vulkan_create_texture(texture *in_texture)
     DASSERT(result == true);
 
     void *data = nullptr;
-    vulkan_copy_data_to_buffer(vk_context, &staging_buffer, data, *in_texture->pixels, texture_size);
+    vulkan_copy_data_to_buffer(vk_context, &staging_buffer, data, pixels, texture_size);
 
     result = vulkan_create_image(vk_context, image, tex_width, tex_height, VK_FORMAT_R8G8B8A8_SRGB,
                                  VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
@@ -533,7 +533,8 @@ VkBool32 vulkan_dbg_msg_rprt_callback(VkDebugUtilsMessageSeverityFlagBitsEXT    
 
 void vulkan_update_global_uniform_buffer(uniform_buffer_object *global_ubo, u32 current_frame_index)
 {
-    dcopy_memory(&vk_context->global_ubo_data, global_ubo, sizeof(uniform_buffer_object));
+    void *data = (void *)&vk_context->global_ubo_data[current_frame_index];
+    dcopy_memory(data, global_ubo, sizeof(uniform_buffer_object));
 }
 
 bool vulkan_draw_frame(render_data *render_data)

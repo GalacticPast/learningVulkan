@@ -27,15 +27,9 @@ bool texture_system_initialize(u64 *texture_system_mem_requirements, void *state
         return true;
     }
     DINFO("Initializing texture system...");
-    tex_sys_state_ptr = (texture_system_state *)state;
-    {
-        dhashtable<texture> table(MAX_TEXTURES_LOADED);
-        tex_sys_state_ptr->hashtable = table;
-    }
-    {
-        darray<dstring> strings;
-        tex_sys_state_ptr->loaded_textures = strings;
-    }
+    tex_sys_state_ptr                  = (texture_system_state *)state;
+    tex_sys_state_ptr->hashtable       = *new dhashtable<texture>(MAX_TEXTURES_LOADED);
+    tex_sys_state_ptr->loaded_textures = *new darray<dstring>();
 
     texture_system_create_default_texture();
     return true;
@@ -56,9 +50,9 @@ bool texture_system_shutdown(void *state)
     return true;
 }
 
-bool create_texture(texture *texture)
+bool create_texture(texture *texture, u8 *pixels)
 {
-    bool result = vulkan_create_texture(texture);
+    bool result = vulkan_create_texture(texture, pixels);
     if (!result)
     {
         DERROR("Couldnt create default texture.");
@@ -94,9 +88,8 @@ bool texture_system_create_texture(dstring *file_base_name)
         return false;
     }
 
-    texture.pixels = &pixels;
-    bool result    = create_texture(&texture);
-    stbi_image_free(*texture.pixels);
+    bool result = create_texture(&texture, pixels);
+    stbi_image_free(pixels);
 
     return result;
 }
@@ -131,9 +124,7 @@ bool texture_system_create_default_texture()
         }
     }
 
-    default_texture.pixels = &pixels;
-    bool result            = create_texture(&default_texture);
-    dfree(pixels, texture_size, MEM_TAG_UNKNOWN);
+    bool result = create_texture(&default_texture, pixels);
     return result;
 }
 

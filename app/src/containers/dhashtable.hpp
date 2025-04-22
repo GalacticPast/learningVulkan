@@ -44,7 +44,7 @@ template <typename value> class dhashtable
         max_length            = DEFAULT_HASH_TABLE_SIZE;
         num_elements_in_table = 0;
         table                 = (u64 *)dallocate(capacity, MEM_TAG_DHASHTABLE);
-        dset_memory_value(table, INVALID_ID_64, capacity);
+        dzero_memory(table, capacity);
     }
     dhashtable(u64 table_size)
     {
@@ -53,7 +53,7 @@ template <typename value> class dhashtable
         max_length            = table_size;
         num_elements_in_table = 0;
         table                 = (u64 *)dallocate(capacity, MEM_TAG_DHASHTABLE);
-        dset_memory_value(table, INVALID_ID_64, capacity);
+        dzero_memory(table, capacity);
     }
     ~dhashtable()
     {
@@ -83,7 +83,7 @@ template <typename value> class dhashtable
             table     = new_table;
         }
         u64 *entry_ptr = table + hash_code;
-        if (*entry_ptr != INVALID_ID_64)
+        if (*entry_ptr != 0)
         {
             DWARN("Collison!!!. Overriding the value for index %d", hash_code);
             num_elements_in_table--;

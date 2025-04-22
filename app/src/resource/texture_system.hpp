@@ -13,9 +13,6 @@ struct texture
     u32     tex_height   = INVALID_ID;
     u32     num_channels = INVALID_ID;
 
-    // hack maybe move this to the backend
-    u8 **pixels = nullptr;
-
     void *vulkan_texture_state = nullptr;
 };
 
