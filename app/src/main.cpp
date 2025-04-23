@@ -20,6 +20,8 @@
 // #include "../tests/linear_allocator/linear_allocator_test.hpp"
 #include "../tests/test_manager.hpp"
 
+void update_camera(uniform_buffer_object *ubo, u64 start_time);
+
 void run_tests()
 {
     u64 test_manager_mem_requirements = 0;
@@ -60,10 +62,10 @@ int main()
         return 2;
     }
 
-    vertex a{.position = {-0.5f, -0.5f, 0.0f}, .color = {1.0f, 1.0f, 1.0f}, .tex_coord = {0.0f, 0.0f}}; // Red
-    vertex b{.position = {0.5f, -0.5f, 0.0f}, .color = {1.0f, 1.0f, 1.0f}, .tex_coord = {1.0f, 0.0f}};  // Green
-    vertex c{.position = {0.5f, 0.5f, 0.0f}, .color = {1.0f, 1.0f, 1.0f}, .tex_coord = {1.0f, 1.0f}};   // Blue
-    vertex d{.position = {-0.5f, 0.5f, 0.0f}, .color = {1.0f, 1.0f, 1.0f}, .tex_coord = {0.0f, 1.0f}};  // Yellow
+    vertex a{.position = {-0.5f, -0.5f, 1.0f}, .color = {1.0f, 1.0f, 1.0f}, .tex_coord = {0.0f, 0.0f}}; // Red
+    vertex b{.position = {0.5f, -0.5f, 1.0f}, .color = {1.0f, 1.0f, 1.0f}, .tex_coord = {1.0f, 0.0f}};  // Green
+    vertex c{.position = {0.5f, 0.5f, 1.0f}, .color = {1.0f, 1.0f, 1.0f}, .tex_coord = {1.0f, 1.0f}};   // Blue
+    vertex d{.position = {-0.5f, 0.5f, 1.0f}, .color = {1.0f, 1.0f, 1.0f}, .tex_coord = {0.0f, 1.0f}};  // Yellow
 
     darray<vertex> vertices;
     vertices.push_back(a);
@@ -85,7 +87,7 @@ int main()
     platform_get_window_dimensions(&s_width, &s_height);
 
     f32 fov_rad      = 45 * D_DEG2RAD_MULTIPLIER;
-    f32 aspect_ratio = 16.0f / 9.0f;
+    f32 aspect_ratio = (f32)s_width / s_height;
 
     uniform_buffer_object global_ubo{};
     global_ubo.view       = mat4_look_at({2, 2, 2}, {0, 0, 0}, {0, 0, 1.0f});
@@ -104,9 +106,10 @@ int main()
     texture_system_create_texture(&file_name);
 
     render_data triangle{};
-    triangle.vertices = vertices;
-    triangle.indices  = indices;
-    triangle.texture  = new texture();
+    triangle.vertices   = vertices;
+    triangle.indices    = indices;
+    triangle.texture    = new texture();
+    triangle.global_ubo = global_ubo;
 
     f64 start_time = 0;
     f64 end_time   = 0;
@@ -121,8 +124,7 @@ int main()
         clock_update(&clock);
         start_time = clock.time_elapsed;
 
-        global_ubo.model    = mat4_euler_z((start_time * (90.0f * D_DEG2RAD_MULTIPLIER)));
-        triangle.global_ubo = global_ubo;
+        update_camera(&triangle.global_ubo, start_time);
 
         application_run(&triangle);
 
@@ -150,4 +152,36 @@ int main()
         input_update(0);
     }
     application_shutdown();
+}
+
+void update_camera(uniform_buffer_object *ubo, u64 start_time)
+{
+    // ubo->model = mat4_euler_z((start_time * (90.0f * D_DEG2RAD_MULTIPLIER)));
+    ubo->model = mat4();
+
+    static vec3 camera_pos   = vec3(0, 0, 6);
+    static vec3 camera_front = vec3(0, 0, -1);
+    static vec3 camera_up    = vec3(0, 1, 0);
+
+    f32 step = 0.02;
+    if (input_is_key_down(KEY_A))
+    {
+        vec3 cross  = vec3_cross(camera_front, camera_up);
+        camera_pos -= vec3_normalized(cross) * step;
+    }
+    if (input_is_key_down(KEY_D))
+    {
+        vec3 cross  = vec3_cross(camera_front, camera_up);
+        camera_pos += vec3_normalized(cross) * step;
+    }
+    if (input_is_key_down(KEY_W))
+    {
+        camera_pos += (camera_front * step);
+    }
+    if (input_is_key_down(KEY_S))
+    {
+        camera_pos -= (camera_front * step);
+    }
+
+    ubo->view = mat4_look_at(camera_pos, camera_pos + camera_front, camera_up);
 }

@@ -108,10 +108,9 @@ struct vulkan_context
     vulkan_pipeline vk_graphics_pipeline;
 
     vulkan_buffer *global_uniform_buffers = nullptr;
+    darray<void *> global_ubo_data;
 
-    // darray<VkCommandBuffer> command_buffers;
-    u32              command_buffers_count;
-    VkCommandBuffer *command_buffers;
+    darray<VkCommandBuffer> command_buffers;
 
     vulkan_buffer vertex_buffer;
     vulkan_buffer index_buffer;
@@ -123,7 +122,6 @@ struct vulkan_context
 
     darray<VkDescriptorSet> descriptor_sets;
     u32                     descriptor_set_count;
-    // VkDescriptorSet *descriptor_sets;
 
     VkSemaphore *image_available_semaphores = nullptr;
     VkSemaphore *render_finished_semaphores = nullptr;
@@ -141,6 +139,4 @@ struct vulkan_context
 
     u32         enabled_extension_count = INVALID_ID;
     const char *enabled_extension_names[4];
-
-    darray<void *> global_ubo_data;
 };

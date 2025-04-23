@@ -40,6 +40,7 @@ bool texture_system_initialize(u64 *texture_system_mem_requirements, void *state
         tex_sys_state_ptr->loaded_textures = strings;
     }
 
+    stbi_set_flip_vertically_on_load(true);
     texture_system_create_default_texture();
     return true;
 }
