@@ -157,7 +157,15 @@ int main()
 void update_camera(uniform_buffer_object *ubo, u64 start_time)
 {
     // ubo->model = mat4_euler_z((start_time * (90.0f * D_DEG2RAD_MULTIPLIER)));
-    ubo->model = mat4();
+    u32 s_width;
+    u32 s_height;
+    platform_get_window_dimensions(&s_width, &s_height);
+
+    f32 fov_rad      = 45 * D_DEG2RAD_MULTIPLIER;
+    f32 aspect_ratio = (f32)s_width / s_height;
+
+    ubo->projection = mat4_perspective(fov_rad, aspect_ratio, 0.01f, 1000.0f);
+    ubo->model      = mat4();
 
     static vec3 camera_pos   = vec3(0, 0, 6);
     static vec3 camera_front = vec3(0, 0, -1);
