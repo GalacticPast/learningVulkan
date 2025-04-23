@@ -39,23 +39,23 @@ bool vulkan_backend_initialize(u64 *vulkan_backend_memory_requirements, applicat
     vk_context               = (vulkan_context *)state;
     vk_context->vk_allocator = nullptr;
     {
-        vk_context->global_ubo_data.data =
-            dallocate(sizeof(uniform_buffer_object) * MAX_FRAMES_IN_FLIGHT, MEM_TAG_DARRAY);
-        vk_context->global_ubo_data.capacity     = sizeof(uniform_buffer_object) * MAX_FRAMES_IN_FLIGHT;
-        vk_context->global_ubo_data.element_size = sizeof(uniform_buffer_object);
-        vk_context->global_ubo_data.length       = MAX_FRAMES_IN_FLIGHT;
+        vk_context->global_uniform_buffers_memory_data.data =
+            dallocate(sizeof(uniform_buffer_object) * MAX_FRAMES_IN_FLIGHT, MEM_TAG_RENDERER);
+        vk_context->global_uniform_buffers_memory_data.capacity = sizeof(uniform_buffer_object) * MAX_FRAMES_IN_FLIGHT;
+        vk_context->global_uniform_buffers_memory_data.element_size = sizeof(uniform_buffer_object);
+        vk_context->global_uniform_buffers_memory_data.length       = MAX_FRAMES_IN_FLIGHT;
     }
     {
-        // darray<VkDescriptorSet> descriptor_sets;
-        vk_context->descriptor_sets = *new darray<VkDescriptorSet>(MAX_FRAMES_IN_FLIGHT);
-        // vk_context->descriptor_sets =
-        //(VkDescriptorSet *)dallocate(sizeof(VkDescriptorSet) * MAX_FRAMES_IN_FLIGHT, MEM_TAG_RENDERER);
+        vk_context->descriptor_sets.data = dallocate(sizeof(VkDescriptorSet) * MAX_FRAMES_IN_FLIGHT, MEM_TAG_RENDERER);
+        vk_context->descriptor_sets.capacity     = sizeof(VkDescriptorSet) * MAX_FRAMES_IN_FLIGHT;
+        vk_context->descriptor_sets.element_size = sizeof(VkDescriptorSet);
+        vk_context->descriptor_sets.length       = MAX_FRAMES_IN_FLIGHT;
     }
     {
-        // darray<VkCommandBuffer> command_buffers;
-        // vk_context->command_buffers = command_buffers;
-        vk_context->command_buffers =
-            (VkCommandBuffer *)dallocate(sizeof(VkCommandBuffer) * MAX_FRAMES_IN_FLIGHT, MEM_TAG_RENDERER);
+        vk_context->command_buffers.data = dallocate(sizeof(VkCommandBuffer) * MAX_FRAMES_IN_FLIGHT, MEM_TAG_RENDERER);
+        vk_context->command_buffers.capacity     = sizeof(VkCommandBuffer) * MAX_FRAMES_IN_FLIGHT;
+        vk_context->command_buffers.element_size = sizeof(VkCommandBuffer);
+        vk_context->command_buffers.length       = MAX_FRAMES_IN_FLIGHT;
     }
 
     DDEBUG("Creating vulkan instance...");

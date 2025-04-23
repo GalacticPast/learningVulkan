@@ -27,9 +27,18 @@ bool texture_system_initialize(u64 *texture_system_mem_requirements, void *state
         return true;
     }
     DINFO("Initializing texture system...");
-    tex_sys_state_ptr                  = (texture_system_state *)state;
-    tex_sys_state_ptr->hashtable       = *new dhashtable<texture>(MAX_TEXTURES_LOADED);
-    tex_sys_state_ptr->loaded_textures = *new darray<dstring>();
+    tex_sys_state_ptr = (texture_system_state *)state;
+    {
+        tex_sys_state_ptr->hashtable.table =
+            (u64 *)dallocate(MAX_TEXTURES_LOADED * sizeof(texture), MEM_TAG_DHASHTABLE);
+        tex_sys_state_ptr->hashtable.element_size          = sizeof(texture);
+        tex_sys_state_ptr->hashtable.max_length            = MAX_TEXTURES_LOADED;
+        tex_sys_state_ptr->hashtable.num_elements_in_table = 0;
+    }
+    {
+        darray<dstring> strings;
+        tex_sys_state_ptr->loaded_textures = strings;
+    }
 
     texture_system_create_default_texture();
     return true;

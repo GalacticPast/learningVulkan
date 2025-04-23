@@ -15,14 +15,14 @@
 
 template <typename value> class dhashtable
 {
-  private:
+
+  public:
     u64  capacity;
     u64  element_size;
     u64  max_length;
     u64  num_elements_in_table;
     u64 *table;
 
-  public:
     u64 hash_func(const char *key)
     {
         u64 hash = 5381;
