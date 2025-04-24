@@ -5,9 +5,6 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include "vendor/stb_image.h"
 
-#define MAX_TEXTURES_LOADED 1024
-#define TEXTURE_FILE_NAME_MAX_LENGTH 512
-
 struct texture_system_state
 {
     darray<dstring>     loaded_textures;
@@ -83,7 +80,7 @@ bool texture_system_create_texture(dstring *file_base_name)
     texture texture{};
     texture.name = *file_base_name;
 
-    char full_path_name[TEXTURE_FILE_NAME_MAX_LENGTH] = {0};
+    char full_path_name[TEXTURE_NAME_MAX_LENGTH] = {0};
 
     const char *prefix = "../assets/textures/";
 

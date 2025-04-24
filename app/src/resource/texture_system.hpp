@@ -3,6 +3,8 @@
 #include "defines.hpp"
 
 #define DEFAULT_TEXTURE_HANDLE "DEFAULT_TEXTURE"
+#define MAX_TEXTURES_LOADED 1024
+#define TEXTURE_NAME_MAX_LENGTH 512
 
 struct texture
 {
