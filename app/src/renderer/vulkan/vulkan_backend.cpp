@@ -118,13 +118,13 @@ bool vulkan_backend_initialize(u64 *vulkan_backend_memory_requirements, applicat
 
     // check for extensions support
 #ifdef DEBUG
-    //{
+    {
 
-    //    for (u32 i = 0; i < dbg_vulkan_instance_extensions_count; i++)
-    //    {
-    //        DDEBUG("Extension Name: %s", dbg_instance_extension_properties[i].extensionName);
-    //    }
-    //}
+        for (u32 i = 0; i < dbg_vulkan_instance_extensions_count; i++)
+        {
+            DDEBUG("Extension Name: %s", dbg_instance_extension_properties[i].extensionName);
+        }
+    }
 #endif
 
     for (u32 i = 0; i < vulkan_instance_extensions.size(); i++)
@@ -487,11 +487,11 @@ bool vulkan_check_validation_layer_support()
     bool validation_layer_found = false;
 
 #ifdef DEBUG
-    // for (u32 i = 0; i < inst_layer_properties_count; i++)
-    //{
-    //     DDEBUG("Layer Name: %s | Desc: %s", inst_layer_properties[i].layerName,
-    //     inst_layer_properties[i].description);
-    // }
+     for (u32 i = 0; i < inst_layer_properties_count; i++)
+    {
+         DDEBUG("Layer Name: %s | Desc: %s", inst_layer_properties[i].layerName,
+         inst_layer_properties[i].description);
+     }
 #endif
 
     for (u32 i = 0; i < inst_layer_properties_count; i++)
@@ -501,6 +501,11 @@ bool vulkan_check_validation_layer_support()
             validation_layer_found = true;
             break;
         }
+    }
+    if(!validation_layer_found)
+    {
+        DERROR("Validation layers requested but not found!!!"); 
+        return false;
     }
     return validation_layer_found;
 }
