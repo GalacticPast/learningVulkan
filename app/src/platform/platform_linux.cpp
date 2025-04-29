@@ -555,7 +555,7 @@ keys translate_keycode(u32 xk_keycode)
 #include "wayland/xdg-shell-client-protocol.h"
 #include <wayland-client.h>
 #include <xkbcommon/xkbcommon-keysyms.h>
-#include <xkbcommon/xkbcommon.h>
+#include <xkbcommon/xkbcommon.h> // sudo apt-get install libxkbcommon-dev
 
 #include <fcntl.h>
 #include <sys/mman.h>
