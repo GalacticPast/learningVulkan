@@ -1,6 +1,5 @@
 #include "containers/darray.hpp"
 #include "core/application.hpp"
-#include "core/dasserts.hpp"
 #include "core/dclock.hpp"
 #include "core/dstring.hpp"
 #include "core/input.hpp"
@@ -164,6 +163,8 @@ void update_camera(uniform_buffer_object *ubo, f64 start_time)
     f32 fov_rad      = 45 * D_DEG2RAD_MULTIPLIER;
     f32 aspect_ratio = (f32)s_width / s_height;
 
+    // HACK:
+
     ubo->projection = mat4_perspective(fov_rad, aspect_ratio, 0.01f, 1000.0f);
     ubo->model      = mat4();
 
@@ -171,32 +172,26 @@ void update_camera(uniform_buffer_object *ubo, f64 start_time)
     static vec3 camera_euler = vec3(0, 0, 0);
 
     vec3 velocity = vec3();
+    f32  step     = 0.05f;
 
-    f32 step = 0.02;
-    if (input_is_key_down(KEY_A))
+    if (input_is_key_down(KEY_A) || input_is_key_down(KEY_LEFT))
     {
         camera_euler.y += step;
     }
-    if (input_is_key_down(KEY_D))
+
+    if (input_is_key_down(KEY_D) || input_is_key_down(KEY_RIGHT))
     {
         camera_euler.y -= step;
     }
+
     if (input_is_key_down(KEY_UP))
     {
-        camera_euler.x += start_time;
-
-        // Clamp to avoid Gimball lock.
-        f32 limit      = deg_to_rad(89.0f);
-        camera_euler.x = DCLAMP(step, -limit, limit);
+        camera_euler.x += step;
     }
 
     if (input_is_key_down(KEY_DOWN))
     {
-        camera_euler.x -= start_time;
-
-        // Clamp to avoid Gimball lock.
-        f32 limit      = deg_to_rad(89.0f);
-        camera_euler.x = DCLAMP(step, -limit, limit);
+        camera_euler.x -= step;
     }
 
     if (input_is_key_down(KEY_W))

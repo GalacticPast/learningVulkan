@@ -22,6 +22,13 @@ struct vertex
     vec2 tex_coord;
 };
 
+struct camera
+{
+    vec3 euler;
+    vec3 position;
+    vec3 up = vec3(0, 1, 0);
+};
+
 struct uniform_buffer_object
 {
     mat4 model;

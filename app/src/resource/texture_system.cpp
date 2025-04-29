@@ -91,7 +91,8 @@ bool texture_system_create_texture(dstring *file_base_name)
 
     if (!pixels)
     {
-        DERROR("Texture creation failed. Error opening file %s", full_path_name);
+        DERROR("Texture creation failed. Error opening file %s: %s", full_path_name, stbi_failure_reason());
+        stbi__err(0, 0);
         return false;
     }
 

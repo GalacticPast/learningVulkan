@@ -84,7 +84,7 @@ bool vulkan_begin_frame_renderpass(vulkan_context *vk_context, VkCommandBuffer c
     renderpass_begin_info.sType             = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
     renderpass_begin_info.pNext             = 0;
     renderpass_begin_info.renderPass        = vk_context->vk_renderpass;
-    renderpass_begin_info.framebuffer       = vk_context->vk_swapchain.buffers[image_index].handle;
+    renderpass_begin_info.framebuffer       = vk_context->vk_swapchain.buffers[image_index];
     renderpass_begin_info.renderArea.offset = {0, 0};
     renderpass_begin_info.renderArea.extent = vk_context->vk_swapchain.surface_extent;
     renderpass_begin_info.clearValueCount   = 2;

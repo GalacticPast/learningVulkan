@@ -10,14 +10,14 @@ bool vulkan_create_framebuffers(vulkan_context *vk_context)
     if (vk_context->vk_swapchain.buffers == nullptr)
     {
         vk_context->vk_swapchain.buffers =
-            (vulkan_framebuffer *)dallocate(sizeof(vulkan_framebuffer) * framebuffers_count, MEM_TAG_RENDERER);
+            (VkFramebuffer *)dallocate(sizeof(VkFramebuffer) * framebuffers_count, MEM_TAG_RENDERER);
     }
     else
     {
-        dzero_memory(vk_context->vk_swapchain.buffers, sizeof(vulkan_framebuffer) * framebuffers_count);
+        dzero_memory(vk_context->vk_swapchain.buffers, sizeof(VkFramebuffer) * framebuffers_count);
     }
 
-    vulkan_framebuffer *buffers = vk_context->vk_swapchain.buffers;
+    VkFramebuffer *buffers = vk_context->vk_swapchain.buffers;
 
     for (u32 i = 0; i < framebuffers_count; i++)
     {
@@ -37,7 +37,7 @@ bool vulkan_create_framebuffers(vulkan_context *vk_context)
         framebuffer_create_info.layers          = 1;
 
         VkResult result = vkCreateFramebuffer(vk_context->vk_device.logical, &framebuffer_create_info,
-                                              vk_context->vk_allocator, &buffers[i].handle);
+                                              vk_context->vk_allocator, &buffers[i]);
         VK_CHECK(result);
     }
 

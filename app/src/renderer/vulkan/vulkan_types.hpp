@@ -51,20 +51,15 @@ struct vulkan_texture
     VkSampler    sampler;
 };
 
-struct vulkan_framebuffer
-{
-    VkFramebuffer handle;
-};
-
 struct vulkan_swapchain
 {
 
     u32 width;
     u32 height;
 
-    VkSwapchainKHR      handle;
-    VkExtent2D          surface_extent;
-    vulkan_framebuffer *buffers = nullptr;
+    VkSwapchainKHR handle;
+    VkExtent2D     surface_extent;
+    VkFramebuffer *buffers = nullptr;
 
     u32          images_count = INVALID_ID;
     VkImage     *images       = nullptr;

@@ -410,7 +410,7 @@ void vulkan_backend_shutdown()
 
     for (u32 i = 0; i < vk_context->vk_swapchain.images_count; i++)
     {
-        vkDestroyFramebuffer(device, vk_context->vk_swapchain.buffers[i].handle, allocator);
+        vkDestroyFramebuffer(device, vk_context->vk_swapchain.buffers[i], allocator);
     }
     dfree(vk_context->vk_swapchain.buffers, sizeof(VkFramebuffer) * vk_context->vk_swapchain.images_count,
           MEM_TAG_RENDERER);
@@ -487,11 +487,10 @@ bool vulkan_check_validation_layer_support()
     bool validation_layer_found = false;
 
 #ifdef DEBUG
-     for (u32 i = 0; i < inst_layer_properties_count; i++)
+    for (u32 i = 0; i < inst_layer_properties_count; i++)
     {
-         DDEBUG("Layer Name: %s | Desc: %s", inst_layer_properties[i].layerName,
-         inst_layer_properties[i].description);
-     }
+        DDEBUG("Layer Name: %s | Desc: %s", inst_layer_properties[i].layerName, inst_layer_properties[i].description);
+    }
 #endif
 
     for (u32 i = 0; i < inst_layer_properties_count; i++)
@@ -502,9 +501,9 @@ bool vulkan_check_validation_layer_support()
             break;
         }
     }
-    if(!validation_layer_found)
+    if (!validation_layer_found)
     {
-        DERROR("Validation layers requested but not found!!!"); 
+        DERROR("Validation layers requested but not found!!!");
         return false;
     }
     return validation_layer_found;

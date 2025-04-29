@@ -171,7 +171,7 @@ bool destroy_swapchain(vulkan_context *vk_context)
         }
         for (u32 i = 0; i < vk_context->vk_swapchain.images_count; i++)
         {
-            vkDestroyFramebuffer(device, vk_context->vk_swapchain.buffers[i].handle, vk_context->vk_allocator);
+            vkDestroyFramebuffer(device, vk_context->vk_swapchain.buffers[i], vk_context->vk_allocator);
         }
         vkDestroyImageView(device, vk_context->vk_swapchain.depth_image.view, allocator);
         vkDestroyImage(device, vk_context->vk_swapchain.depth_image.handle, allocator);

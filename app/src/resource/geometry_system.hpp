@@ -13,4 +13,5 @@ struct geometry_config
     char           texture_name[TEXTURE_NAME_MAX_LENGTH];
 };
 
-bool geometry_system_initialize();
+bool geometry_system_initialize(u64 *geometry_system_mem_requirements, void *state);
+bool geometry_system_shutdowm(void *state);
