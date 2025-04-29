@@ -20,7 +20,7 @@
 // #include "../tests/linear_allocator/linear_allocator_test.hpp"
 #include "../tests/test_manager.hpp"
 
-void update_camera(uniform_buffer_object *ubo, u64 start_time);
+void update_camera(uniform_buffer_object *ubo, f64 start_time);
 
 void run_tests()
 {
@@ -154,7 +154,7 @@ int main()
     application_shutdown();
 }
 
-void update_camera(uniform_buffer_object *ubo, u64 start_time)
+void update_camera(uniform_buffer_object *ubo, f64 start_time)
 {
     // ubo->model = mat4_euler_z((start_time * (90.0f * D_DEG2RAD_MULTIPLIER)));
     u32 s_width;
@@ -168,28 +168,63 @@ void update_camera(uniform_buffer_object *ubo, u64 start_time)
     ubo->model      = mat4();
 
     static vec3 camera_pos   = vec3(0, 0, 6);
-    static vec3 camera_front = vec3(0, 0, -1);
-    static vec3 camera_up    = vec3(0, 1, 0);
+    static vec3 camera_euler = vec3(0, 0, 0);
+
+    vec3 velocity = vec3();
 
     f32 step = 0.02;
     if (input_is_key_down(KEY_A))
     {
-        vec3 cross  = vec3_cross(camera_front, camera_up);
-        camera_pos -= vec3_normalized(cross) * step;
+        camera_euler.y += step;
     }
     if (input_is_key_down(KEY_D))
     {
-        vec3 cross  = vec3_cross(camera_front, camera_up);
-        camera_pos += vec3_normalized(cross) * step;
+        camera_euler.y -= step;
     }
+    if (input_is_key_down(KEY_UP))
+    {
+        camera_euler.x += start_time;
+
+        // Clamp to avoid Gimball lock.
+        f32 limit      = deg_to_rad(89.0f);
+        camera_euler.x = DCLAMP(step, -limit, limit);
+    }
+
+    if (input_is_key_down(KEY_DOWN))
+    {
+        camera_euler.x -= start_time;
+
+        // Clamp to avoid Gimball lock.
+        f32 limit      = deg_to_rad(89.0f);
+        camera_euler.x = DCLAMP(step, -limit, limit);
+    }
+
     if (input_is_key_down(KEY_W))
     {
-        camera_pos += (camera_front * step);
+        vec3 forward  = mat4_forward(ubo->view);
+        velocity     += forward;
     }
     if (input_is_key_down(KEY_S))
     {
-        camera_pos -= (camera_front * step);
+
+        vec3 backward  = mat4_backward(ubo->view);
+        velocity      += backward;
     }
 
-    ubo->view = mat4_look_at(camera_pos, camera_pos + camera_front, camera_up);
+    vec3  z               = vec3();
+    float temp_move_speed = step;
+    if (!vec3_compare(z, velocity, 0.0002f))
+    {
+        // Be sure to normalize the velocity before applying speed.
+        velocity.normalize();
+        camera_pos.x += velocity.x * temp_move_speed * start_time;
+        camera_pos.y += velocity.y * temp_move_speed * start_time;
+        camera_pos.z += velocity.z * temp_move_speed * start_time;
+    }
+
+    mat4 rotation    = mat4_euler_xyz(camera_euler.x, camera_euler.y, camera_euler.z);
+    mat4 translation = mat4_translation(camera_pos);
+
+    ubo->view = rotation * translation;
+    ubo->view = mat4_inverse(ubo->view);
 }
