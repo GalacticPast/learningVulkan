@@ -11,7 +11,7 @@
 
 #include "platform/platform.hpp"
 
-#include "resource/texture_system.hpp"
+#include "resources/resource_types.hpp"
 
 //// #include "../tests/containers/hashtable_test.hpp"
 // #include "../tests/containers/dhashtable_test.hpp"

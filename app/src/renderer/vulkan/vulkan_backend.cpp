@@ -16,7 +16,7 @@
 #include "vulkan_sync_objects.hpp"
 #include "vulkan_types.hpp"
 
-#include "resource/texture_system.hpp"
+#include "resources/texture_system.hpp"
 
 static vulkan_context *vk_context;
 

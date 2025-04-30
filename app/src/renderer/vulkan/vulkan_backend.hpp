@@ -2,7 +2,7 @@
 
 #include "core/application.hpp"
 #include "defines.hpp"
-#include "resource/texture_system.hpp"
+#include "resources/texture_system.hpp"
 
 bool vulkan_backend_initialize(u64 *vulkan_backend_memory_requirements, application_config *app_config, void *state);
 void vulkan_backend_shutdown();

@@ -9,7 +9,8 @@
 
 #include "renderer/renderer.hpp"
 
-#include "resource/texture_system.hpp"
+#include "resources/material_system.hpp"
+#include "resources/texture_system.hpp"
 
 static application_state *app_state_ptr;
 
@@ -89,6 +90,15 @@ bool application_initialize(application_state *state, application_config *config
 
     result = texture_system_initialize(&app_state_ptr->texture_system_memory_requirements,
                                        app_state_ptr->texture_system_state);
+    DASSERT(result == true);
+
+    material_system_initialize(&app_state_ptr->material_system_memory_requirements, 0);
+
+    app_state_ptr->material_system_state = linear_allocator_allocate(
+        &app_state_ptr->application_system_linear_allocator, app_state_ptr->material_system_memory_requirements);
+
+    result = material_system_initialize(&app_state_ptr->material_system_memory_requirements,
+                                        app_state_ptr->material_system_state);
     DASSERT(result == true);
 
     u64 buffer_usg_mem_requirements = 0;

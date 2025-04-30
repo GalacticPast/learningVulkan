@@ -1,0 +1,51 @@
+#pragma once
+
+#include "defines.hpp"
+
+#include "core/dstring.hpp"
+#include "math/dmath.hpp"
+
+#define DEFAULT_TEXTURE_HANDLE "DEFAULT_TEXTURE"
+#define MAX_TEXTURES_LOADED 1024
+#define TEXTURE_NAME_MAX_LENGTH 512
+
+struct texture
+{
+
+    dstring name;
+    u32     id           = INVALID_ID;
+    u32     tex_width    = INVALID_ID;
+    u32     tex_height   = INVALID_ID;
+    u32     num_channels = INVALID_ID;
+
+    void *vulkan_texture_state = nullptr;
+};
+
+#define DEFAULT_MATERIAL_HANDLE "default_material"
+#define MAX_MATERIALS_LOADED 1024
+#define MATERIAL_NAME_MAX_LENGTH 256
+
+struct texture_map
+{
+    texture *diffuse_tex = nullptr;
+};
+
+struct material_config
+{
+    char mat_name[MATERIAL_NAME_MAX_LENGTH];
+    char diffuse_tex_name[TEXTURE_NAME_MAX_LENGTH];
+    vec4 diffuse_color;
+    // TODO: add normal maps, heightmap etc..
+};
+
+struct material
+{
+
+    dstring     name;
+    u32         id              = INVALID_ID;
+    u32         reference_count = INVALID_ID;
+    texture_map map;
+    vec4        diffuse_color;
+
+    void *vulkan_material_state = nullptr;
+};

@@ -13,9 +13,10 @@ bool vulkan_create_graphics_pipeline(vulkan_context *vk_context)
 
     // INFO: shader stage
     u64         vert_shader_code_buffer_size_requirements = INVALID_ID_64;
-    const char *vert_shader_file_name                     = "default_shader.vert.spv";
+    const char *vert_shader_file_name                     = "../assets/shaders/default_shader.vert.spv";
 
     file_open_and_read(vert_shader_file_name, &vert_shader_code_buffer_size_requirements, 0, 1);
+
     if (vert_shader_code_buffer_size_requirements == INVALID_ID_64)
     {
         DFATAL("File size error");
@@ -26,9 +27,14 @@ bool vulkan_create_graphics_pipeline(vulkan_context *vk_context)
                        1);
 
     u64         frag_shader_code_buffer_size_requirements = INVALID_ID_64;
-    const char *frag_shader_file_name                     = "default_shader.frag.spv";
+    const char *frag_shader_file_name                     = "../assets/shaders/default_shader.frag.spv";
 
     file_open_and_read(frag_shader_file_name, &frag_shader_code_buffer_size_requirements, 0, 1);
+    if (frag_shader_code_buffer_size_requirements == INVALID_ID_64)
+    {
+        DFATAL("File size error");
+        return false;
+    }
     darray<char *> frag_shader_code(frag_shader_code_buffer_size_requirements);
     file_open_and_read(frag_shader_file_name, &frag_shader_code_buffer_size_requirements, (char *)frag_shader_code.data,
                        1);

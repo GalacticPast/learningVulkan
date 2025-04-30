@@ -69,3 +69,59 @@ const char *dstring::c_str()
 {
     return string;
 }
+
+void string_copy_length(char *dest, const char *src, u32 len)
+{
+    dcopy_memory(dest, (void *)src, (u64)len);
+}
+s32 string_first_char_occurence(const char *string, const char ch)
+{
+    u32 str_len = strlen(string);
+
+    for (u32 i = 0; i < str_len; i++)
+    {
+        if (string[i] == ch)
+        {
+            return i;
+        }
+    }
+    return -1;
+}
+
+// @param: ch-> keep searching till the first occurecne of the character
+bool string_to_vec4(const char *string, vec4 *vector, const char ch)
+{
+    char  floats[64] = {};
+    char *ptr        = (char *)string;
+
+    u32 occurence = string_first_char_occurence(ptr, '[');
+    if (occurence == -1)
+    {
+        DERROR("Couldnt find %s in %s", ch, string);
+        return false;
+    }
+    ptr += occurence + 1;
+
+    occurence = string_first_char_occurence(string, ']');
+    if (occurence == -1)
+    {
+        DERROR("Couldnt find %s in %s", ch, string);
+        return false;
+    }
+
+    string_copy_length(floats, ptr, occurence - 1);
+
+    for (int i = 0; i < occurence - 1; i++)
+    {
+        if (floats[i] == ',' || floats[i] == '"' || floats[i] == '[' || floats[i] == ']')
+        {
+            floats[i] = ' ';
+        }
+    }
+
+    vec4 result = vec4();
+
+    sscanf_s(floats, "%f %f %f %f", &result.r, &result.g, &result.b, &result.a);
+    *vector = result;
+    return true;
+}

@@ -4,7 +4,7 @@
 #include "defines.hpp"
 #include "math/dmath.hpp"
 #include "memory/linear_allocator.hpp"
-#include "resource/texture_system.hpp"
+#include "resources/texture_system.hpp"
 
 struct application_config
 {
@@ -71,6 +71,9 @@ struct application_state
 
     u64   texture_system_memory_requirements; // 1 mega bytes
     void *texture_system_state;
+
+    u64   material_system_memory_requirements; // 1 mega bytes
+    void *material_system_state;
 };
 
 bool application_initialize(application_state *out_state, application_config *config);

@@ -1,9 +1,12 @@
 #pragma once
 #include "defines.hpp"
+#include "math/dmath.hpp"
 
 // strings because I dont know c strings good enough :(
 //
+
 #define MAX_STRING_LENGTH 512
+
 class dstring
 {
   private:
@@ -23,4 +26,11 @@ bool string_compare(const char *str0, const char *str1);
 
 u32 string_copy(char *dest, const char *src, u32 offset_to_dest);
 
+void string_copy_length(char *dest, const char *src, u32 len);
+
 u32 string_copy_format(char *dest, const char *format, u32 offset_to_dest, ...);
+
+s32 string_first_char_occurence(const char *string, const char ch);
+
+// @param: ch-> keep searching till the first occurecne of the character
+bool string_to_vec4(const char *string, vec4 *vector, const char ch);
