@@ -42,7 +42,7 @@ struct render_data
     darray<u32>    indices;
 
     uniform_buffer_object global_ubo;
-    texture              *texture = nullptr;
+    material             *test_material = nullptr;
 };
 
 struct application_state

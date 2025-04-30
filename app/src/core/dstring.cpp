@@ -88,6 +88,23 @@ s32 string_first_char_occurence(const char *string, const char ch)
     return -1;
 }
 
+dstring::dstring()
+{
+}
+
+dstring::dstring(const char *c_string)
+{
+    u64 len = strlen(c_string);
+    if (len > MAX_STRING_LENGTH)
+    {
+        DWARN("String you want to assign is bigger than 512bytes.");
+        return;
+    }
+    dcopy_memory(string, (char *)c_string, len * sizeof(char));
+    str_len     = len;
+    string[len] = '\0';
+}
+
 // @param: ch-> keep searching till the first occurecne of the character
 bool string_to_vec4(const char *string, vec4 *vector, const char ch)
 {

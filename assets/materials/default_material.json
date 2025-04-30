@@ -2,5 +2,5 @@
     "version":0.1,
     "name":"DEFAULT_MATERIAL",
     "diffuse_color":[1.0,1.0,1.0,1.0],
-    "diffuse_map_name":"orange_lines_512"
+    "diffuse_map_name":"orange_lines_512.png"
 }

@@ -3,7 +3,6 @@
 #include "containers/dhashtable.hpp"
 #include "core/dstring.hpp"
 #include "math/dmath.hpp"
-#include "platform/platform.hpp"
 
 static const char ascii_chars[95] = {'X', 'r', 'F', 'm', 'S', '{', 'K',  '5', 'T', 'B', 'A', '7', '>', '\'', 'j', '/',
                                      'p', '3', '=', '^', 'W', '&', '|',  'd', '}', 'C', '@', 'h', 'n', 'G',  '0', 'U',
@@ -73,7 +72,7 @@ bool hashtable_insert_and_find()
     for (u64 i = 0; i < size / 2; i++)
     {
         dstring *key   = &keys[i];
-        u64      value = int_table.find(key->c_str());
+        u64      value = *int_table.find(key->c_str());
         if (i == value)
         {
             DDEBUG("Found original value. %d at index %d", value, i);
@@ -111,7 +110,7 @@ bool hashtable_erase_test()
     for (u64 i = 0; i < size; i++)
     {
         key       = &keys[i];
-        u64 value = int_table.find(key->c_str());
+        u64 value = *int_table.find(key->c_str());
         if (i == value)
         {
             DDEBUG("Found original value. %d at index %d", value, i);
@@ -125,7 +124,7 @@ bool hashtable_erase_test()
     int_table.erase(key->c_str());
 
     u64 value = INVALID_ID_64;
-    expect_should_be(value, int_table.find(key->c_str()));
+    expect_should_be(value, *int_table.find(key->c_str()));
 
     return true;
 }

@@ -584,15 +584,16 @@ bool vulkan_draw_frame(render_data *render_data)
     vulkan_update_global_uniform_buffer(&render_data->global_ubo, current_frame);
 
     vulkan_texture *vk_texture = nullptr;
-    if (!render_data->texture->vulkan_texture_state)
+    if (!render_data->test_material->map.diffuse_tex->vulkan_texture_state)
     {
         DDEBUG("No textures were provided using default texture");
-        texture_system_get_texture(DEFAULT_TEXTURE_HANDLE, render_data->texture);
-        vk_texture = (vulkan_texture *)render_data->texture->vulkan_texture_state;
+        render_data->test_material->map.diffuse_tex->vulkan_texture_state =
+            texture_system_get_texture(DEFAULT_TEXTURE_HANDLE);
+        vk_texture = (vulkan_texture *)render_data->test_material->map.diffuse_tex->vulkan_texture_state;
     }
     else
     {
-        vk_texture = (vulkan_texture *)render_data->texture->vulkan_texture_state;
+        vk_texture = (vulkan_texture *)render_data->test_material->map.diffuse_tex->vulkan_texture_state;
     }
 
     vulkan_update_descriptor_sets(vk_context, vk_texture);

@@ -11,6 +11,7 @@
 
 #include "platform/platform.hpp"
 
+#include "resources/material_system.hpp"
 #include "resources/resource_types.hpp"
 
 //// #include "../tests/containers/hashtable_test.hpp"
@@ -92,23 +93,15 @@ int main()
     global_ubo.view       = mat4_look_at({2, 2, 2}, {0, 0, 0}, {0, 0, 1.0f});
     global_ubo.projection = mat4_perspective(fov_rad, aspect_ratio, 0.01f, 1000.0f);
 
-    const char *texture_names[5] = {"DEFAULT_TEXTURE", "texture.jpg", "paving.png", "paving2.png", "cobblestone.png"};
-
-    dstring file_name;
-    file_name = texture_names[1];
-    texture_system_create_texture(&file_name);
-    file_name = texture_names[2];
-    texture_system_create_texture(&file_name);
-    file_name = texture_names[3];
-    texture_system_create_texture(&file_name);
-    file_name = texture_names[4];
-    texture_system_create_texture(&file_name);
+    const char *texture_names[6] = {"DEFAULT_TEXTURE", "texture.jpg",     "paving.png",
+                                    "paving2.png",     "cobblestone.png", "orange_lines_512.png"};
 
     render_data triangle{};
-    triangle.vertices   = vertices;
-    triangle.indices    = indices;
-    triangle.texture    = new texture();
-    triangle.global_ubo = global_ubo;
+    triangle.vertices      = vertices;
+    triangle.indices       = indices;
+    dstring mat_name       = "default_material";
+    triangle.test_material = material_system_acquire_from_file(&mat_name);
+    triangle.global_ubo    = global_ubo;
 
     f64 start_time = 0;
     f64 end_time   = 0;
@@ -131,9 +124,10 @@ int main()
         bool b = input_was_key_down(KEY_T);
         if (b && a)
         {
-            texture_system_get_texture(texture_names[index], triangle.texture);
+            triangle.test_material->map.diffuse_tex = nullptr;
+            triangle.test_material->map.diffuse_tex = texture_system_get_texture(texture_names[index]);
             index++;
-            index %= 5;
+            index %= 6;
         }
 
         clock_update(&clock);

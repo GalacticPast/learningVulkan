@@ -15,6 +15,8 @@ class dstring
     char string[512] = {0};
 
   public:
+    dstring();
+    dstring(const char *c_string);
     void operator=(const char *c_string);
     void operator=(const dstring *str);
 

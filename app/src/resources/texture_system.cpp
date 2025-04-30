@@ -105,7 +105,7 @@ bool texture_system_create_texture(dstring *file_base_name)
 bool texture_system_create_default_texture()
 {
     texture default_texture{};
-    default_texture.name         = (char *)DEFAULT_TEXTURE_HANDLE;
+    default_texture.name         = DEFAULT_TEXTURE_HANDLE;
     default_texture.tex_width    = 512;
     default_texture.tex_height   = 512;
     default_texture.num_channels = 4;
@@ -136,18 +136,33 @@ bool texture_system_create_default_texture()
     return result;
 }
 
-void texture_system_get_texture(const char *texture_name, texture *out_texture)
+texture *texture_system_get_default_texture()
 {
-    texture texture = tex_sys_state_ptr->hashtable.find(texture_name);
-    dcopy_memory(out_texture, &texture, sizeof(texture));
-    return;
+    texture *texture = tex_sys_state_ptr->hashtable.find(DEFAULT_TEXTURE_HANDLE);
+    // TODO: increment the value for texture references
+
+    return texture;
+}
+texture *texture_system_get_texture(const char *texture_name)
+{
+    texture *texture = tex_sys_state_ptr->hashtable.find(texture_name);
+    // TODO: increment the value for texture references
+    if (texture == nullptr)
+    {
+        DTRACE("Texture: %s not loaded in yet, loading it...", texture_name);
+        dstring name = texture_name;
+        texture_system_create_texture(&name);
+    }
+    texture = tex_sys_state_ptr->hashtable.find(texture_name);
+
+    return texture;
 }
 
 bool texture_system_create_release_textures(dstring *tex_name)
 {
     const char *texture_name = tex_name->c_str();
-    texture     texture      = tex_sys_state_ptr->hashtable.find(texture_name);
-    bool        result       = vulkan_destroy_texture(&texture);
+    texture    *texture      = tex_sys_state_ptr->hashtable.find(texture_name);
+    bool        result       = vulkan_destroy_texture(texture);
     if (!result)
     {
         DERROR("Couldn't release texture %s", texture_name);
