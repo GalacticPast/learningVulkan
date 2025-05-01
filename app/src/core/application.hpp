@@ -4,7 +4,7 @@
 #include "defines.hpp"
 #include "math/dmath.hpp"
 #include "memory/linear_allocator.hpp"
-#include "resources/texture_system.hpp"
+#include "resources/resource_types.hpp"
 
 struct application_config
 {
@@ -13,13 +13,6 @@ struct application_config
     s32         height;
     s32         width;
     const char *application_name;
-};
-
-struct vertex
-{
-    vec3 position;
-    vec3 color;
-    vec2 tex_coord;
 };
 
 struct camera
@@ -38,11 +31,8 @@ struct uniform_buffer_object
 
 struct render_data
 {
-    darray<vertex> vertices;
-    darray<u32>    indices;
-
     uniform_buffer_object global_ubo;
-    material             *test_material = nullptr;
+    geometry             *test_geometry = nullptr;
 };
 
 struct application_state
@@ -74,6 +64,9 @@ struct application_state
 
     u64   material_system_memory_requirements; // 1 mega bytes
     void *material_system_state;
+
+    u64   geometry_system_memory_requirements; // 1 mega bytes
+    void *geometry_system_state;
 };
 
 bool application_initialize(application_state *out_state, application_config *config);

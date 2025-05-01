@@ -951,4 +951,11 @@ s32 drandom_in_range(s32 min, s32 max);
 f32 fdrandom();
 f32 fdrandom_in_range(f32 min, f32 max);
 
+struct vertex
+{
+    vec3 position;
+    vec3 normal;
+    vec2 tex_coord;
+};
+
 #pragma clang diagnostic pop

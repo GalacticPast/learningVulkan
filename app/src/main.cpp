@@ -1,9 +1,11 @@
-#include "containers/darray.hpp"
+
 #include "core/application.hpp"
 #include "core/dclock.hpp"
-#include "core/dstring.hpp"
+#include "core/dmemory.hpp"
 #include "core/input.hpp"
 #include "core/logger.hpp"
+
+#include "containers/darray.hpp"
 
 #include "defines.hpp"
 
@@ -11,8 +13,10 @@
 
 #include "platform/platform.hpp"
 
+#include "resources/geometry_system.hpp"
 #include "resources/material_system.hpp"
 #include "resources/resource_types.hpp"
+#include "resources/texture_system.hpp"
 
 //// #include "../tests/containers/hashtable_test.hpp"
 // #include "../tests/containers/dhashtable_test.hpp"
@@ -62,25 +66,6 @@ int main()
         return 2;
     }
 
-    vertex a{.position = {-0.5f, -0.5f, 1.0f}, .color = {1.0f, 1.0f, 1.0f}, .tex_coord = {0.0f, 0.0f}}; // Red
-    vertex b{.position = {0.5f, -0.5f, 1.0f}, .color = {1.0f, 1.0f, 1.0f}, .tex_coord = {1.0f, 0.0f}};  // Green
-    vertex c{.position = {0.5f, 0.5f, 1.0f}, .color = {1.0f, 1.0f, 1.0f}, .tex_coord = {1.0f, 1.0f}};   // Blue
-    vertex d{.position = {-0.5f, 0.5f, 1.0f}, .color = {1.0f, 1.0f, 1.0f}, .tex_coord = {0.0f, 1.0f}};  // Yellow
-
-    darray<vertex> vertices;
-    vertices.push_back(a);
-    vertices.push_back(b);
-    vertices.push_back(c);
-    vertices.push_back(d);
-
-    darray<u32> indices(6);
-    indices[0] = 0;
-    indices[1] = 1;
-    indices[2] = 3;
-    indices[3] = 3;
-    indices[4] = 1;
-    indices[5] = 2;
-
     u32 s_width;
     u32 s_height;
 
@@ -97,16 +82,13 @@ int main()
                                     "paving2.png",     "cobblestone.png", "orange_lines_512.png"};
 
     render_data triangle{};
-    triangle.vertices      = vertices;
-    triangle.indices       = indices;
-    dstring mat_name       = "default_material";
-    triangle.test_material = material_system_acquire_from_file(&mat_name);
+    triangle.test_geometry = geometry_system_get_default_geometry();
     triangle.global_ubo    = global_ubo;
 
     f64 start_time = 0;
     f64 end_time   = 0;
 
-    f64 req_frame_time = (f64)(1.0f / 60);
+    f64 req_frame_time = (f64)(1.0f / 240);
     clock_start(&clock);
 
     u32 index = 0;
@@ -124,8 +106,8 @@ int main()
         bool b = input_was_key_down(KEY_T);
         if (b && a)
         {
-            triangle.test_material->map.diffuse_tex = nullptr;
-            triangle.test_material->map.diffuse_tex = texture_system_get_texture(texture_names[index]);
+            triangle.test_geometry->material->map.diffuse_tex = nullptr;
+            triangle.test_geometry->material->map.diffuse_tex = texture_system_get_texture(texture_names[index]);
             index++;
             index %= 6;
         }
@@ -166,7 +148,7 @@ void update_camera(uniform_buffer_object *ubo, f64 start_time)
     static vec3 camera_euler = vec3(0, 0, 0);
 
     vec3 velocity = vec3();
-    f32  step     = 0.05f;
+    f32  step     = 0.005f;
 
     if (input_is_key_down(KEY_A) || input_is_key_down(KEY_LEFT))
     {

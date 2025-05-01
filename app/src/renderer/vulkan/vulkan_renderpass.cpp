@@ -1,5 +1,6 @@
 #include "vulkan_renderpass.hpp"
 #include "core/application.hpp"
+#include "renderer/vulkan/vulkan_types.hpp"
 
 bool vulkan_create_renderpass(vulkan_context *vk_context)
 {
@@ -74,7 +75,7 @@ bool vulkan_create_renderpass(vulkan_context *vk_context)
     return true;
 }
 bool vulkan_begin_frame_renderpass(vulkan_context *vk_context, VkCommandBuffer command_buffer,
-                                   struct render_data *render_data, u32 image_index)
+                                   vulkan_geometry_data *geo_data, u32 image_index)
 {
     VkClearValue clear_values[2] = {};
     clear_values[0]              = {.color = {{0.11f, 0.125f, 0.51f, 1.0f}}};
@@ -120,7 +121,7 @@ bool vulkan_begin_frame_renderpass(vulkan_context *vk_context, VkCommandBuffer c
     vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, vk_context->vk_graphics_pipeline.layout, 0,
                             1, &vk_context->descriptor_sets[image_index], 0, nullptr);
 
-    vkCmdDrawIndexed(command_buffer, (u32)(render_data->indices).size(), 1, 0, 0, 0);
+    vkCmdDrawIndexed(command_buffer, geo_data->indices_count, 1, 0, 0, 0);
 
     vkCmdEndRenderPass(command_buffer);
 

@@ -9,8 +9,14 @@
         DASSERT(expr == VK_SUCCESS);                                                                                   \
     }
 
-#define MAX_FRAMES_IN_FLIGHT 2
+struct vulkan_geometry_data
+{
+    u32 id            = INVALID_ID;
+    u32 indices_count = INVALID_ID;
+    u32 vertex_count  = INVALID_ID;
+};
 
+#define MAX_FRAMES_IN_FLIGHT 2
 struct vulkan_device
 {
 

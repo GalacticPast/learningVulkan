@@ -3,6 +3,7 @@
 #include "core/logger.hpp"
 #include "defines.hpp"
 
+#include "resources/material_system.hpp"
 #include "vulkan_backend.hpp"
 #include "vulkan_buffers.hpp"
 #include "vulkan_device.hpp"
@@ -544,6 +545,51 @@ void vulkan_update_global_uniform_buffer(uniform_buffer_object *global_ubo, u32 
     dcopy_memory(vk_context->global_ubo_data[current_frame_index], global_ubo, sizeof(uniform_buffer_object));
 }
 
+bool vulkan_create_geometry(geometry *out_geometry, u32 vertex_count, vertex *vertices, u32 index_count, u32 *indices)
+{
+    // TODO: vulkan_geometry_state
+
+    void *vertex_data = nullptr;
+    u32   buffer_size = vertex_count * sizeof(vertex);
+
+    vulkan_buffer vertex_staging_buffer{};
+    vulkan_create_buffer(vk_context, &vertex_staging_buffer, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+                         VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, buffer_size);
+
+    vulkan_copy_data_to_buffer(vk_context, &vertex_staging_buffer, vertex_data, vertices, buffer_size);
+    vulkan_copy_buffer(vk_context, &vk_context->vertex_buffer, &vertex_staging_buffer, buffer_size);
+
+    vulkan_destroy_buffer(vk_context, &vertex_staging_buffer);
+
+    // index
+    void *index_data = nullptr;
+    buffer_size      = index_count * sizeof(u32);
+
+    vulkan_buffer index_staging_buffer;
+    vulkan_create_buffer(vk_context, &index_staging_buffer, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+                         VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, buffer_size);
+
+    vulkan_copy_data_to_buffer(vk_context, &index_staging_buffer, index_data, indices, buffer_size);
+    vulkan_copy_buffer(vk_context, &vk_context->index_buffer, &index_staging_buffer, buffer_size);
+
+    vulkan_destroy_buffer(vk_context, &index_staging_buffer);
+
+    out_geometry->vulkan_geometry_state = dallocate(sizeof(vulkan_geometry_data), MEM_TAG_RENDERER);
+    vulkan_geometry_data *geo_data      = (vulkan_geometry_data *)out_geometry->vulkan_geometry_state;
+    static u32            id_counter    = 0;
+    geo_data->indices_count             = index_count;
+    geo_data->vertex_count              = vertex_count;
+    geo_data->id                        = id_counter;
+    id_counter++;
+
+    return true;
+};
+bool vulkan_destroy_geometry(geometry *geometry)
+{
+    dfree(geometry->vulkan_geometry_state, sizeof(vulkan_geometry_data), MEM_TAG_RENDERER);
+    return true;
+};
+
 bool vulkan_draw_frame(render_data *render_data)
 {
     u32      current_frame = vk_context->current_frame_index;
@@ -553,47 +599,25 @@ bool vulkan_draw_frame(render_data *render_data)
                     INVALID_ID_64);
     vkResetFences(vk_context->vk_device.logical, 1, &vk_context->in_flight_fences[current_frame]);
 
-    // vertex
-    void *vertex_data = nullptr;
-    u32   buffer_size = (u32)render_data->vertices.size() * sizeof(vertex);
-
-    vulkan_buffer vertex_staging_buffer{};
-    vulkan_create_buffer(vk_context, &vertex_staging_buffer, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-                         VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, buffer_size);
-
-    vulkan_copy_data_to_buffer(vk_context, &vertex_staging_buffer, vertex_data, render_data->vertices.data,
-                               buffer_size);
-    vulkan_copy_buffer(vk_context, &vk_context->vertex_buffer, &vertex_staging_buffer, buffer_size);
-
-    vulkan_destroy_buffer(vk_context, &vertex_staging_buffer);
-
-    // index
-    void *index_data = nullptr;
-    buffer_size      = (u32)render_data->indices.size() * sizeof(u32);
-
-    vulkan_buffer index_staging_buffer;
-    vulkan_create_buffer(vk_context, &index_staging_buffer, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-                         VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, buffer_size);
-
-    vulkan_copy_data_to_buffer(vk_context, &index_staging_buffer, index_data, render_data->indices.data, buffer_size);
-    vulkan_copy_buffer(vk_context, &vk_context->index_buffer, &index_staging_buffer, buffer_size);
-
-    vulkan_destroy_buffer(vk_context, &index_staging_buffer);
-    //
-
     vulkan_update_global_uniform_buffer(&render_data->global_ubo, current_frame);
 
-    vulkan_texture *vk_texture = nullptr;
-    if (!render_data->test_material->map.diffuse_tex->vulkan_texture_state)
+    material **mat = &render_data->test_geometry->material;
+    if (!*mat)
+    {
+        *mat = material_system_get_default_material();
+    }
+    vulkan_texture *vk_texture       = nullptr;
+    texture        *instance_texture = (texture *)render_data->test_geometry->material->map.diffuse_tex;
+
+    if (!instance_texture)
     {
         DDEBUG("No textures were provided using default texture");
-        render_data->test_material->map.diffuse_tex->vulkan_texture_state =
-            texture_system_get_texture(DEFAULT_TEXTURE_HANDLE);
-        vk_texture = (vulkan_texture *)render_data->test_material->map.diffuse_tex->vulkan_texture_state;
+        instance_texture = texture_system_get_texture(DEFAULT_TEXTURE_HANDLE);
+        vk_texture       = (vulkan_texture *)instance_texture->vulkan_texture_state;
     }
     else
     {
-        vk_texture = (vulkan_texture *)render_data->test_material->map.diffuse_tex->vulkan_texture_state;
+        vk_texture = (vulkan_texture *)instance_texture->vulkan_texture_state;
     }
 
     vulkan_update_descriptor_sets(vk_context, vk_texture);
@@ -612,9 +636,10 @@ bool vulkan_draw_frame(render_data *render_data)
 
     VkCommandBuffer &curr_command_buffer = vk_context->command_buffers[current_frame];
 
+    vulkan_geometry_data *geo_data = (vulkan_geometry_data *)render_data->test_geometry->vulkan_geometry_state;
     vkResetCommandBuffer(curr_command_buffer, 0);
     vulkan_begin_command_buffer_single_use(vk_context, curr_command_buffer);
-    vulkan_begin_frame_renderpass(vk_context, curr_command_buffer, render_data, image_index);
+    vulkan_begin_frame_renderpass(vk_context, curr_command_buffer, geo_data, image_index);
     vulkan_end_command_buffer_single_use(vk_context, curr_command_buffer);
 
     VkSemaphore          wait_semaphores[]   = {vk_context->image_available_semaphores[current_frame]};

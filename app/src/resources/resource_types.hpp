@@ -2,6 +2,8 @@
 
 #include "defines.hpp"
 
+#include "containers/darray.hpp"
+
 #include "core/dstring.hpp"
 #include "math/dmath.hpp"
 
@@ -46,4 +48,25 @@ struct material
     u32         reference_count = INVALID_ID;
     texture_map map;
     vec4        diffuse_color = {1.0f, 1.0f, 1.0f, 1.0f};
+};
+
+#define DEFAULT_GEOMETRY_HANDLE "default_material"
+#define MAX_GEOMETRIES_LOADED 1024
+#define GEOMETRY_NAME_MAX_LENGTH 256
+
+struct geometry_config
+{
+    char            name[GEOMETRY_NAME_MAX_LENGTH];
+    material       *material = nullptr;
+    darray<vertex> *vertices = nullptr;
+    darray<u32>    *indices  = nullptr;
+};
+
+struct geometry
+{
+    u32       id              = INVALID_ID;
+    u32       reference_count = INVALID_ID;
+    dstring   name;
+    material *material;
+    void     *vulkan_geometry_state = nullptr;
 };

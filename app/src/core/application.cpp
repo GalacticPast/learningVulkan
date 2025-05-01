@@ -9,6 +9,7 @@
 
 #include "renderer/renderer.hpp"
 
+#include "resources/geometry_system.hpp"
 #include "resources/material_system.hpp"
 #include "resources/texture_system.hpp"
 
@@ -99,6 +100,15 @@ bool application_initialize(application_state *state, application_config *config
 
     result = material_system_initialize(&app_state_ptr->material_system_memory_requirements,
                                         app_state_ptr->material_system_state);
+    DASSERT(result == true);
+
+    geometry_system_initialize(&app_state_ptr->geometry_system_memory_requirements, 0);
+
+    app_state_ptr->geometry_system_state = linear_allocator_allocate(
+        &app_state_ptr->application_system_linear_allocator, app_state_ptr->geometry_system_memory_requirements);
+
+    result = geometry_system_initialize(&app_state_ptr->geometry_system_memory_requirements,
+                                        app_state_ptr->geometry_system_state);
     DASSERT(result == true);
 
     u64 buffer_usg_mem_requirements = 0;

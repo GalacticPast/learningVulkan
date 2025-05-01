@@ -97,7 +97,7 @@ bool vulkan_create_graphics_pipeline(vulkan_context *vk_context)
     vertex_input_attribute_descriptions[0].format   = vertex_input_attribute_formats[0];
     vertex_input_attribute_descriptions[0].offset   = 0;
 
-    // color
+    // normals
     vertex_input_attribute_descriptions[1].location = 1;
     vertex_input_attribute_descriptions[1].binding  = 0;
     vertex_input_attribute_descriptions[1].format   = vertex_input_attribute_formats[1];

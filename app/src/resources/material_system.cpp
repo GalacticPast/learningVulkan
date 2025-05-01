@@ -18,10 +18,9 @@ struct material_system_state
 
 static material_system_state *mat_sys_state_ptr;
 
-bool      material_system_create_material(material_config *config);
-bool      material_system_create_default_material();
-material *material_system_get_default_material();
-bool      material_system_initialize(u64 *material_system_mem_requirements, void *state)
+bool material_system_create_material(material_config *config);
+bool material_system_create_default_material();
+bool material_system_initialize(u64 *material_system_mem_requirements, void *state)
 
 {
     *material_system_mem_requirements = sizeof(material_system_state);
@@ -44,6 +43,7 @@ bool      material_system_initialize(u64 *material_system_mem_requirements, void
         darray<dstring> strings;
         mat_sys_state_ptr->loaded_materials = strings;
     }
+    material_system_create_default_material();
     return true;
 }
 bool material_system_shutdown(void *state)

@@ -22,7 +22,7 @@ template <typename T> class darray
 
     // returns a copy of the value
     T    operator[](u64 index) const;
-    void operator=(darray<T> &in_darray);
+    void operator=(const darray<T> &in_darray);
 
     T &operator[](u64 index);
 
@@ -60,7 +60,7 @@ template <typename T> darray<T>::~darray()
     data         = 0;
 }
 
-template <typename T> void darray<T>::operator=(darray<T> &in_darray)
+template <typename T> void darray<T>::operator=(const darray<T> &in_darray)
 {
     if (capacity < in_darray.capacity)
     {

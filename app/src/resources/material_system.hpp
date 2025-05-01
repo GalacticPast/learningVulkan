@@ -7,3 +7,4 @@ bool material_system_shutdown(void *state);
 
 material *material_system_acquire_from_file(dstring *file_base_name);
 material *material_system_acquire(u32 id);
+material *material_system_get_default_material();
