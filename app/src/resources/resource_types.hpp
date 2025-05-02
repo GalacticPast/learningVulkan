@@ -56,10 +56,12 @@ struct material
 
 struct geometry_config
 {
-    char            name[GEOMETRY_NAME_MAX_LENGTH];
-    material       *material = nullptr;
-    darray<vertex> *vertices = nullptr;
-    darray<u32>    *indices  = nullptr;
+    char      name[GEOMETRY_NAME_MAX_LENGTH];
+    material *material     = nullptr;
+    u32       vertex_count = INVALID_ID;
+    vertex   *vertices     = nullptr;
+    u32       index_count  = INVALID_ID;
+    u32      *indices      = nullptr;
 };
 
 struct geometry

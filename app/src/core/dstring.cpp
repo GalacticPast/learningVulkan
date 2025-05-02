@@ -22,6 +22,10 @@ u32 string_copy(char *dest, const char *src, u32 offset_to_dest)
     dcopy_memory(dest_offset, (void *)src, (u64)str_len);
     return str_len;
 }
+void string_ncopy(char *dest, const char *src, u32 length)
+{
+    dcopy_memory(dest, (void *)src, length);
+}
 
 u32 string_copy_format(char *dest, const char *format, u32 offset_to_dest, ...)
 {

@@ -81,8 +81,10 @@ int main()
     const char *texture_names[6] = {"DEFAULT_TEXTURE", "texture.jpg",     "paving.png",
                                     "paving2.png",     "cobblestone.png", "orange_lines_512.png"};
 
+    geometry_config plane_config = geometry_system_generate_plane_config(10, 5, 5, 5, 5, 5, "its_a_plane", "");
+
     render_data triangle{};
-    triangle.test_geometry = geometry_system_get_default_geometry();
+    triangle.test_geometry = geometry_system_get_geometry(&plane_config);
     triangle.global_ubo    = global_ubo;
 
     f64 start_time = 0;
