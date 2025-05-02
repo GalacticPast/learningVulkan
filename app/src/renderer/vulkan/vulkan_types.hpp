@@ -2,6 +2,7 @@
 #include "containers/darray.hpp"
 #include "core/application.hpp"
 #include "core/dasserts.hpp"
+#include "resources/resource_types.hpp"
 #include <vulkan/vulkan.h>
 
 #define VK_CHECK(expr)                                                                                                 \
@@ -134,6 +135,8 @@ struct vulkan_context
     VkAllocationCallbacks   *vk_allocator = 0;
 
     VkInstance vk_instance;
+
+    vulkan_geometry_data internal_geometries[MAX_GEOMETRIES_LOADED];
 
     u32         enabled_layer_count = INVALID_ID;
     const char *enabled_layer_names[4];

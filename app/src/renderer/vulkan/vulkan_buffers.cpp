@@ -50,8 +50,8 @@ bool vulkan_create_buffer(vulkan_context *vk_context, vulkan_buffer *out_buffer,
     return true;
 }
 
-bool vulkan_copy_buffer(vulkan_context *vk_context, vulkan_buffer *dst_buffer, vulkan_buffer *src_buffer,
-                        u64 buffer_size)
+bool vulkan_copy_buffer(vulkan_context *vk_context, vulkan_buffer *dst_buffer, u64 dst_offset,
+                        vulkan_buffer *src_buffer, u64 buffer_size)
 {
 
     VkCommandBuffer staging_command_buffer{};
@@ -61,7 +61,7 @@ bool vulkan_copy_buffer(vulkan_context *vk_context, vulkan_buffer *dst_buffer, v
 
     VkBufferCopy cpy_region{};
     cpy_region.srcOffset = 0;
-    cpy_region.dstOffset = 0;
+    cpy_region.dstOffset = dst_offset;
     cpy_region.size      = buffer_size;
 
     vkCmdCopyBuffer(staging_command_buffer, src_buffer->handle, dst_buffer->handle, 1, &cpy_region);

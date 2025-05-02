@@ -20,5 +20,4 @@ void main() {
     gl_Position = ubo.proj * ubo.view * ubo.model * vec4(in_position, 1.0);
     frag_color = vec3(in_tex_coord.x, in_tex_coord.y,0.0f);
     frag_tex_coord = in_tex_coord;
-    debugPrintfEXT("tex_coord x:%f y:%f",in_tex_coord.x, in_tex_coord.y);
 }

@@ -4,6 +4,7 @@
 #include "defines.hpp"
 
 #include "resources/material_system.hpp"
+#include "resources/resource_types.hpp"
 #include "vulkan_backend.hpp"
 #include "vulkan_buffers.hpp"
 #include "vulkan_device.hpp"
@@ -248,6 +249,13 @@ bool vulkan_backend_initialize(u64 *vulkan_backend_memory_requirements, applicat
     {
         DERROR("Vulkan sync objects creation failed.");
         return false;
+    }
+
+    for (u32 i = 0; i < MAX_GEOMETRIES_LOADED; i++)
+    {
+        vk_context->internal_geometries[i].id            = INVALID_ID;
+        vk_context->internal_geometries[i].vertex_count  = INVALID_ID;
+        vk_context->internal_geometries[i].indices_count = INVALID_ID;
     }
 
     vk_context->current_frame_index = 0;
@@ -545,6 +553,39 @@ void vulkan_update_global_uniform_buffer(uniform_buffer_object *global_ubo, u32 
     dcopy_memory(vk_context->global_ubo_data[current_frame_index], global_ubo, sizeof(uniform_buffer_object));
 }
 
+u32 vulkan_calculate_vertex_offset(vulkan_context *vk_context, u32 geometry_id)
+{
+    // INFO: maybe make this a u64 ?
+    u32 vert_offset = 0;
+
+    for (int i = 0; i < MAX_GEOMETRIES_LOADED && i < geometry_id; i++)
+    {
+        if (vk_context->internal_geometries[i].id == INVALID_ID)
+        {
+            break;
+        }
+        vert_offset += vk_context->internal_geometries[i].vertex_count;
+    }
+    u32 ans = vert_offset;
+    return ans;
+}
+u32 vulkan_calculate_index_offset(vulkan_context *vk_context, u32 geometry_id)
+{
+    // INFO: maybe make this a u64 ?
+    u32 index_offset = 0;
+
+    for (int i = 0; i < MAX_GEOMETRIES_LOADED && i < geometry_id; i++)
+    {
+        if (vk_context->internal_geometries[i].id == INVALID_ID)
+        {
+            break;
+        }
+        index_offset += vk_context->internal_geometries[i].indices_count;
+    }
+    u32 ans = index_offset;
+    return ans;
+}
+
 bool vulkan_create_geometry(geometry *out_geometry, u32 vertex_count, vertex *vertices, u32 index_count, u32 *indices)
 {
     // TODO: vulkan_geometry_state
@@ -557,7 +598,8 @@ bool vulkan_create_geometry(geometry *out_geometry, u32 vertex_count, vertex *ve
                          VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, buffer_size);
 
     vulkan_copy_data_to_buffer(vk_context, &vertex_staging_buffer, vertex_data, vertices, buffer_size);
-    vulkan_copy_buffer(vk_context, &vk_context->vertex_buffer, &vertex_staging_buffer, buffer_size);
+    u32 vertex_offset = vulkan_calculate_vertex_offset(vk_context, out_geometry->id) * sizeof(vertex);
+    vulkan_copy_buffer(vk_context, &vk_context->vertex_buffer, vertex_offset, &vertex_staging_buffer, buffer_size);
 
     vulkan_destroy_buffer(vk_context, &vertex_staging_buffer);
 
@@ -570,23 +612,49 @@ bool vulkan_create_geometry(geometry *out_geometry, u32 vertex_count, vertex *ve
                          VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, buffer_size);
 
     vulkan_copy_data_to_buffer(vk_context, &index_staging_buffer, index_data, indices, buffer_size);
-    vulkan_copy_buffer(vk_context, &vk_context->index_buffer, &index_staging_buffer, buffer_size);
+    u32 index_offset = vulkan_calculate_index_offset(vk_context, out_geometry->id) * sizeof(u32);
+    vulkan_copy_buffer(vk_context, &vk_context->index_buffer, index_offset, &index_staging_buffer, buffer_size);
 
     vulkan_destroy_buffer(vk_context, &index_staging_buffer);
 
     out_geometry->vulkan_geometry_state = dallocate(sizeof(vulkan_geometry_data), MEM_TAG_RENDERER);
     vulkan_geometry_data *geo_data      = (vulkan_geometry_data *)out_geometry->vulkan_geometry_state;
-    static u32            id_counter    = 0;
-    geo_data->indices_count             = index_count;
-    geo_data->vertex_count              = vertex_count;
-    geo_data->id                        = id_counter;
-    id_counter++;
 
+    geo_data->indices_count = index_count;
+    geo_data->vertex_count  = vertex_count;
+
+    for (int i = 0; i < MAX_GEOMETRIES_LOADED; i++)
+    {
+        if (vk_context->internal_geometries[i].id == INVALID_ID)
+        {
+            geo_data->id                                     = i;
+            vk_context->internal_geometries[i].id            = i;
+            vk_context->internal_geometries[i].vertex_count  = vertex_count;
+            vk_context->internal_geometries[i].indices_count = index_count;
+            break;
+        }
+    }
+
+    if (geo_data->id == INVALID_ID)
+    {
+        DERROR("Couldnt load geometry into vulkan_internal_geometries. Maybe we run out space??");
+        return false;
+    }
+    out_geometry->id = geo_data->id;
     return true;
 };
 bool vulkan_destroy_geometry(geometry *geometry)
 {
+    // TODO: we still havenet freed this data from the vertex and index buffers.
+    if (geometry->id < MAX_GEOMETRIES_LOADED)
+    {
+        vk_context->internal_geometries[geometry->id].id            = INVALID_ID;
+        vk_context->internal_geometries[geometry->id].vertex_count  = INVALID_ID;
+        vk_context->internal_geometries[geometry->id].indices_count = INVALID_ID;
+    }
+
     dfree(geometry->vulkan_geometry_state, sizeof(vulkan_geometry_data), MEM_TAG_RENDERER);
+
     return true;
 };
 

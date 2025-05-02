@@ -1,5 +1,6 @@
 #include "vulkan_renderpass.hpp"
 #include "core/application.hpp"
+#include "renderer/vulkan/vulkan_backend.hpp"
 #include "renderer/vulkan/vulkan_types.hpp"
 
 bool vulkan_create_renderpass(vulkan_context *vk_context)
@@ -74,6 +75,7 @@ bool vulkan_create_renderpass(vulkan_context *vk_context)
     VK_CHECK(result);
     return true;
 }
+
 bool vulkan_begin_frame_renderpass(vulkan_context *vk_context, VkCommandBuffer command_buffer,
                                    vulkan_geometry_data *geo_data, u32 image_index)
 {
@@ -121,8 +123,10 @@ bool vulkan_begin_frame_renderpass(vulkan_context *vk_context, VkCommandBuffer c
     vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, vk_context->vk_graphics_pipeline.layout, 0,
                             1, &vk_context->descriptor_sets[image_index], 0, nullptr);
 
-    vkCmdDrawIndexed(command_buffer, geo_data->indices_count, 1, 0, 0, 0);
+    u32 index_offset  = vulkan_calculate_index_offset(vk_context, geo_data->id);
+    u32 vertex_offset = vulkan_calculate_vertex_offset(vk_context, geo_data->id);
 
+    vkCmdDrawIndexed(command_buffer, geo_data->indices_count, 1, index_offset, vertex_offset, 0);
     vkCmdEndRenderPass(command_buffer);
 
     return true;

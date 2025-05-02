@@ -84,6 +84,7 @@ int main()
     geometry_config plane_config = geometry_system_generate_plane_config(10, 5, 5, 5, 5, 5, "its_a_plane", "");
 
     render_data triangle{};
+    triangle.test_geometry = geometry_system_get_geometry(&plane_config);
     triangle.test_geometry = geometry_system_get_default_geometry();
     triangle.global_ubo    = global_ubo;
 
