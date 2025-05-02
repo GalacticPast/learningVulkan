@@ -84,7 +84,7 @@ int main()
     geometry_config plane_config = geometry_system_generate_plane_config(10, 5, 5, 5, 5, 5, "its_a_plane", "");
 
     render_data triangle{};
-    triangle.test_geometry = geometry_system_get_geometry(&plane_config);
+    triangle.test_geometry = geometry_system_get_default_geometry();
     triangle.global_ubo    = global_ubo;
 
     f64 start_time = 0;
@@ -141,16 +141,17 @@ void update_camera(uniform_buffer_object *ubo, f64 start_time)
     f32 fov_rad      = 45 * D_DEG2RAD_MULTIPLIER;
     f32 aspect_ratio = (f32)s_width / s_height;
 
-    // HACK:
+    vec3 velocity = vec3();
+    f32  step     = 0.005f;
 
-    ubo->projection = mat4_perspective(fov_rad, aspect_ratio, 0.01f, 1000.0f);
-    ubo->model      = mat4();
+    // HACK:
+    static f32 z     = 0.01f;
+    z               += step;
+    ubo->projection  = mat4_perspective(fov_rad, aspect_ratio, 0.01f, 1000.0f);
+    ubo->model       = mat4_euler_y(z);
 
     static vec3 camera_pos   = vec3(0, 0, 6);
     static vec3 camera_euler = vec3(0, 0, 0);
-
-    vec3 velocity = vec3();
-    f32  step     = 0.005f;
 
     if (input_is_key_down(KEY_A) || input_is_key_down(KEY_LEFT))
     {
@@ -184,9 +185,9 @@ void update_camera(uniform_buffer_object *ubo, f64 start_time)
         velocity      += backward;
     }
 
-    vec3  z               = vec3();
+    vec3  z_axis          = vec3();
     float temp_move_speed = step;
-    if (!vec3_compare(z, velocity, 0.0002f))
+    if (!vec3_compare(z_axis, velocity, 0.0002f))
     {
         // Be sure to normalize the velocity before applying speed.
         velocity.normalize();
