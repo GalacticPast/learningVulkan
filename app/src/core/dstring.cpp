@@ -141,8 +141,11 @@ bool string_to_vec4(const char *string, vec4 *vector, const char ch)
     }
 
     vec4 result = vec4();
-
+#ifdef DPLATFORM_WINDOWS
     sscanf_s(floats, "%f %f %f %f", &result.r, &result.g, &result.b, &result.a);
+#elif DPLATFORM_LINUX
+    sscanf(floats, "%f %f %f %f", &result.r, &result.g, &result.b, &result.a);
+#endif
     *vector = result;
     return true;
 }

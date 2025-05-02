@@ -5,6 +5,7 @@
 // works better than many other constants, prime or not) has never been adequately explained.
 
 #include "core/dmemory.hpp"
+#include "core/dstring.hpp"
 #include "core/logger.hpp"
 #include "defines.hpp"
 #include <string.h>
