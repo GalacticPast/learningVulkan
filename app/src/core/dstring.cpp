@@ -11,6 +11,7 @@
 bool string_compare(const char *str0, const char *str1)
 {
     // INFO: stcmp returns 0 for sucess...wow...
+    DTRACE("%s %s", str0, str1);
     bool result = strcmp(str0, str1);
     return result == 0 ? 1 : 0;
 }
@@ -92,6 +93,30 @@ s32 string_first_char_occurence(const char *string, const char ch)
     return -1;
 }
 
+s32 string_first_string_occurence(const char *string, const char *sub_str)
+{
+    u32 str_len     = strlen(string);
+    u32 sub_str_len = strlen(sub_str);
+
+    // im trollin :)
+    char *ptr  = (char *)string;
+    char  temp = ' ';
+    u32   ans  = -1;
+
+    for (u32 i = 0; i < str_len - sub_str_len && ans == -1; i++)
+    {
+        temp             = ptr[sub_str_len];
+        ptr[sub_str_len] = '\0';
+        if (string_compare(ptr, sub_str))
+        {
+            ans = i;
+        }
+        ptr[sub_str_len] = temp;
+        temp             = ' ';
+        ptr++;
+    }
+    return ans;
+}
 dstring::dstring()
 {
 }

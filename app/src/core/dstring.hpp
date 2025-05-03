@@ -35,6 +35,7 @@ void string_copy_length(char *dest, const char *src, u32 len);
 u32 string_copy_format(char *dest, const char *format, u32 offset_to_dest, ...);
 
 s32 string_first_char_occurence(const char *string, const char ch);
+s32 string_first_string_occurence(const char *string, const char *str);
 
 // @param: ch-> keep searching till the first occurecne of the character
 bool string_to_vec4(const char *string, vec4 *vector, const char ch);

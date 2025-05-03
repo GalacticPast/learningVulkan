@@ -1,6 +1,10 @@
-#include "geometry_system.hpp"
-#include "containers/dhashtable.hpp"
+#include "core/dfile_system.hpp"
 #include "core/dmemory.hpp"
+
+#include "containers/dhashtable.hpp"
+#include "core/dstring.hpp"
+#include "defines.hpp"
+#include "geometry_system.hpp"
 #include "renderer/vulkan/vulkan_backend.hpp"
 #include "resources/material_system.hpp"
 #include "resources/resource_types.hpp"
@@ -13,6 +17,10 @@ struct geometry_system_state
 
 static geometry_system_state *geo_sys_state_ptr;
 bool                          geometry_system_create_default_geometry();
+
+// this will allocate and write size back, assumes the caller will call free once the data is processed
+void geometry_system_parse_obj(const char *obj_file_full_path, u32 *vertex_count, vertex **vertices, u32 *index_count,
+                               u32 **indices);
 
 bool geometry_system_initialize(u64 *geometry_system_mem_requirements, void *state)
 {
@@ -64,12 +72,12 @@ bool geometry_system_create_geometry(geometry_config *config)
 {
 
     geometry geo{};
-    u32      vertices_count = config->vertex_count;
-    u32      indices_count  = config->index_count;
-    bool     result = vulkan_create_geometry(&geo, vertices_count, config->vertices, indices_count, config->indices);
-    geo.name        = config->name;
-    geo.reference_count = 0;
-    geo.material        = config->material;
+    u32      tris_count    = config->vertex_count;
+    u32      indices_count = config->index_count;
+    bool     result        = vulkan_create_geometry(&geo, tris_count, config->vertices, indices_count, config->indices);
+    geo.name               = config->name;
+    geo.reference_count    = 0;
+    geo.material           = config->material;
 
     if (!result)
     {
@@ -182,7 +190,8 @@ geometry_config geometry_system_generate_plane_config(f32 width, f32 height, u32
     }
 
     string_ncopy(config.name, name, GEOMETRY_NAME_MAX_LENGTH);
-    config.material = material_system_get_default_material();
+    dstring file_name = material_name;
+    config.material   = material_system_acquire_from_file(&file_name);
 
     return config;
 }
@@ -192,7 +201,15 @@ bool geometry_system_create_default_geometry()
     geometry_config default_config{};
 
     default_config.vertex_count = 32;
-    default_config.vertices     = (vertex *)dallocate(sizeof(vertex) * 32, MEM_TAG_RENDERER);
+
+    u32     vertex_count = INVALID_ID;
+    vertex *vertices     = nullptr;
+    u32     index_count  = INVALID_ID;
+    u32    *indices      = 0;
+
+    geometry_system_parse_obj("../assets/meshes/cube.obj", &vertex_count, &vertices, &index_count, &indices);
+
+    default_config.vertices = (vertex *)dallocate(sizeof(vertex) * 32, MEM_TAG_RENDERER);
 
     u32 width  = 1.0f;
     u32 height = 1.0f;
@@ -227,8 +244,7 @@ bool geometry_system_create_default_geometry()
     default_config.vertices[(0 * 4) + 2].normal    = (vec3){0, 0, -1};
     default_config.vertices[(0 * 4) + 3].normal    = (vec3){0, 0, -1};
 
-    // Back face
-    default_config.vertices[(1 * 4) + 0].position  = (vec3){max_x, min_y, min_z};
+    // Back face default_config.vertices[(1 * 4) + 0].position = (vec3){max_x, min_y, min_z};
     default_config.vertices[(1 * 4) + 1].position  = (vec3){min_x, max_y, min_z};
     default_config.vertices[(1 * 4) + 2].position  = (vec3){max_x, max_y, min_z};
     default_config.vertices[(1 * 4) + 3].position  = (vec3){min_x, min_y, min_z};
@@ -241,8 +257,7 @@ bool geometry_system_create_default_geometry()
     default_config.vertices[(1 * 4) + 2].normal    = (vec3){0, 0, 1};
     default_config.vertices[(1 * 4) + 3].normal    = (vec3){0, 0, 1};
 
-    // Left
-    default_config.vertices[(2 * 4) + 0].position  = (vec3){min_x, min_y, min_z};
+    // Left default_config.vertices[(2 * 4) + 0].position = (vec3){min_x, min_y, min_z};
     default_config.vertices[(2 * 4) + 1].position  = (vec3){min_x, max_y, max_z};
     default_config.vertices[(2 * 4) + 2].position  = (vec3){min_x, max_y, min_z};
     default_config.vertices[(2 * 4) + 3].position  = (vec3){min_x, min_y, max_z};
@@ -255,8 +270,7 @@ bool geometry_system_create_default_geometry()
     default_config.vertices[(2 * 4) + 2].normal    = (vec3){-1, 0, 0};
     default_config.vertices[(2 * 4) + 3].normal    = (vec3){-1, 0, 0};
 
-    // Right face
-    default_config.vertices[(3 * 4) + 0].position  = (vec3){max_x, min_y, max_z};
+    // Right face default_config.vertices[(3 * 4) + 0].position = (vec3){max_x, min_y, max_z};
     default_config.vertices[(3 * 4) + 1].position  = (vec3){max_x, max_y, min_z};
     default_config.vertices[(3 * 4) + 2].position  = (vec3){max_x, max_y, max_z};
     default_config.vertices[(3 * 4) + 3].position  = (vec3){max_x, min_y, min_z};
@@ -269,8 +283,7 @@ bool geometry_system_create_default_geometry()
     default_config.vertices[(3 * 4) + 2].normal    = (vec3){0, 1, 0};
     default_config.vertices[(3 * 4) + 3].normal    = (vec3){0, 1, 0};
 
-    // Bottom face
-    default_config.vertices[(4 * 4) + 0].position  = (vec3){max_x, min_y, max_z};
+    // Bottom face default_config.vertices[(4 * 4) + 0].position = (vec3){max_x, min_y, max_z};
     default_config.vertices[(4 * 4) + 1].position  = (vec3){min_x, min_y, min_z};
     default_config.vertices[(4 * 4) + 2].position  = (vec3){max_x, min_y, min_z};
     default_config.vertices[(4 * 4) + 3].position  = (vec3){min_x, min_y, max_z};
@@ -283,8 +296,7 @@ bool geometry_system_create_default_geometry()
     default_config.vertices[(4 * 4) + 2].normal    = (vec3){0, -1, 0};
     default_config.vertices[(4 * 4) + 3].normal    = (vec3){0, -1, 0};
 
-    // Top face
-    default_config.vertices[(5 * 4) + 0].position  = (vec3){min_x, max_y, max_z};
+    // Top face default_config.vertices[(5 * 4) + 0].position = (vec3){min_x, max_y, max_z};
     default_config.vertices[(5 * 4) + 1].position  = (vec3){max_x, max_y, min_z};
     default_config.vertices[(5 * 4) + 2].position  = (vec3){min_x, max_y, min_z};
     default_config.vertices[(5 * 4) + 3].position  = (vec3){max_x, max_y, max_z};
@@ -302,6 +314,7 @@ bool geometry_system_create_default_geometry()
 
     for (u32 i = 0; i < 6; ++i)
     {
+
         u32 v_offset                         = i * 4;
         u32 i_offset                         = i * 6;
         default_config.indices[i_offset + 0] = v_offset + 0;
@@ -371,4 +384,47 @@ geometry *geometry_system_get_default_geometry()
     }
     geo->reference_count++;
     return geo;
+}
+
+// this will allocate and write size back, assumes the caller will call free once the data is processed
+void geometry_system_parse_obj(const char *obj_file_full_path, u32 *vertex_count, vertex **vertices, u32 *index_count,
+                               u32 **indices)
+{
+    u64 buffer_mem_requirements = INVALID_ID_64;
+    file_open_and_read(obj_file_full_path, &buffer_mem_requirements, 0, 0);
+    if (buffer_mem_requirements == INVALID_ID_64)
+    {
+        DERROR("Failed to get size requirements for %s", obj_file_full_path);
+        return;
+    }
+    char *buffer = (char *)dallocate(buffer_mem_requirements, MEM_TAG_RENDERER);
+    file_open_and_read(obj_file_full_path, &buffer_mem_requirements, buffer, 0);
+
+    u64 vertex_first_occurence         = string_first_char_occurence(buffer, 'v');
+    u64 vertex_normal_first_occurence  = string_first_string_occurence((const char *)buffer, "vn");
+    u64 vertex_texture_first_occurence = string_first_string_occurence(buffer, "vt");
+
+    u64   tris_count = -1;
+    u32   f          = 0;
+    char *ptr        = buffer;
+    while (f != -1)
+    {
+        f    = string_first_char_occurence(ptr, 'f');
+        ptr += f + 1;
+        tris_count++;
+    }
+
+    *vertices = (vertex *)dallocate(sizeof(vertex) * tris_count, MEM_TAG_RENDERER);
+    *indices  = (u32 *)dallocate(sizeof(u32) * tris_count, MEM_TAG_RENDERER);
+
+    ptr = buffer;
+    f   = 0;
+    for (u32 i = 0; i < tris_count; i++)
+    {
+    }
+
+    DINFO("trianlge faces count %d", tris_count);
+    DINFO("buffer size %d", buffer_mem_requirements);
+
+    DINFO("%s", buffer);
 }
