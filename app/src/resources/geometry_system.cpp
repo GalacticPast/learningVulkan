@@ -375,8 +375,7 @@ void geometry_system_parse_obj(const char *obj_file_full_path, u32 *num_of_objec
     for (u32 i = 0; i < vertex_count_obj; i++)
     {
         sscanf_s(ptr, "%f %f %f", &vert_coords[i].x, &vert_coords[i].y, &vert_coords[i].z);
-        v    = string_first_string_occurence(ptr, "v ");
-        ptr += v + 2;
+        ptr = strstr(ptr, "v ") + 1;
         vert_processed++;
         if (!(vert_processed / 10000))
         {
@@ -397,8 +396,7 @@ void geometry_system_parse_obj(const char *obj_file_full_path, u32 *num_of_objec
     for (u32 i = 0; i < normal_count_obj; i++)
     {
         sscanf_s(ptr, "%f %f %f", &normals[i].x, &normals[i].y, &normals[i].z);
-        vn   = string_first_string_occurence(ptr, "vn");
-        ptr += vn + 2;
+        ptr = strstr(ptr, "vn") + 1;
         if (!(normal_processed / 10000))
         {
             DTRACE("normals Processed: %d Remaining: %d", normal_processed, normal_count_obj - normal_processed);
@@ -422,8 +420,7 @@ void geometry_system_parse_obj(const char *obj_file_full_path, u32 *num_of_objec
     for (u32 i = 0; i < texture_count_obj; i++)
     {
         sscanf_s(ptr, "%f %f", &textures[i].x, &textures[i].y);
-        vt   = string_first_string_occurence(ptr, "vt");
-        ptr += vt + 2;
+        ptr = strstr(ptr, "vt") + 1;
         if (!(texture_processed / 10000))
         {
             DTRACE("textures Processed: %d Remaining: %d", texture_processed, texture_count_obj - texture_processed);
