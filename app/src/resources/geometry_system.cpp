@@ -20,9 +20,10 @@ static geometry_system_state *geo_sys_state_ptr;
 bool                          geometry_system_create_default_geometry();
 
 // this will allocate and write size back, assumes the caller will call free once the data is processed
-void geometry_system_parse_obj(const char *obj_file_full_path, u32 *vertex_count, vertex **vertices, u32 *index_count,
-                               u32 **indices);
+void geometry_system_parse_obj(const char *obj_file_full_path, u32 *num_of_objects, u32 **object_vertices_size,
+                               void ***object_vertices, u32 **object_indices_size, void ***object_indices,
 
+                               char ***object_names);
 bool geometry_system_initialize(u64 *geometry_system_mem_requirements, void *state)
 {
     *geometry_system_mem_requirements = sizeof(geometry_system_state);
@@ -204,8 +205,18 @@ geometry_config geometry_system_generate_cube_config()
 
     geometry_config config{};
 
-    geometry_system_parse_obj(file_full_path, &config.vertex_count, &config.vertices, &config.index_count,
-                              &config.indices);
+    // u32     *cube_vert_object_size = nullptr;
+    // vertex **cube_vert             = nullptr;
+    // u32     *cube_ind_object_size  = nullptr;
+    // u32    **cube_ind              = nullptr;
+
+    // geometry_system_parse_obj(file_full_path, &cube_vert_object_size, &cube_vert, &cube_ind_object_size, &cube_ind);
+
+    // u32 cube_vert_size = cube_vert[0].size();
+    // u32 cube_ind_size  = cube_ind[0].size();
+
+    // dcopy_memory(config.vertices, cube_vert.data, cube_vert_size);
+    // dcopy_memory(config.indices, cube_ind.data, cube_ind_size);
 
     string_ncopy(config.name, file_name, GEOMETRY_NAME_MAX_LENGTH);
 
@@ -218,17 +229,32 @@ bool geometry_system_create_default_geometry()
 
     default_config.vertex_count = 32;
 
-    u32     vertex_count = INVALID_ID;
-    vertex *vertices     = nullptr;
-    u32     index_count  = INVALID_ID;
-    u32    *indices      = 0;
+    u32    num_of_objects    = INVALID_ID;
+    u32   *default_vert_size = nullptr;
+    u32   *default_ind_size  = nullptr;
+    void **default_vert;
+    void **default_ind;
+    char **default_names;
 
-    geometry_system_parse_obj("../assets/meshes/cube.obj", &vertex_count, &vertices, &index_count, &indices);
+    geometry_system_parse_obj("../assets/meshes/cube.obj", &num_of_objects, &default_vert_size, &default_vert,
+                              &default_ind_size, &default_ind, &default_names);
 
-    default_config.vertices     = vertices;
-    default_config.vertex_count = vertex_count;
-    default_config.index_count  = index_count;
-    default_config.indices      = indices;
+    default_config.vertex_count = *default_vert_size;
+    default_config.vertices     = (vertex *)dallocate(sizeof(vertex) * *default_vert_size, MEM_TAG_RENDERER);
+    dcopy_memory(default_config.vertices, *default_vert, *default_vert_size * sizeof(vertex));
+
+    default_config.index_count = *default_ind_size;
+    default_config.indices     = (u32 *)dallocate(sizeof(u32) * *default_ind_size, MEM_TAG_RENDERER);
+    dcopy_memory(default_config.indices, *default_ind, *default_ind_size * sizeof(u32));
+
+    for (u32 i = 0; i < *default_vert_size; i++)
+    {
+        DTRACE("position{ x: %f , y: %f, z: %f}, normals {x: %f, y: %f, z: %f}, texture{u: %f, v: %f}",
+               default_config.vertices[i].position.x, default_config.vertices[i].position.y,
+               default_config.vertices[i].position.z, default_config.vertices[i].normal.x,
+               default_config.vertices[i].normal.y, default_config.vertices[i].normal.z,
+               default_config.vertices[i].tex_coord.x, default_config.vertices[i].tex_coord.y);
+    }
 
     const char *name = DEFAULT_GEOMETRY_HANDLE;
     u32         len  = strlen(name);
@@ -307,8 +333,9 @@ u32 get_number_of_occurences_of_substring(const char *string, const char *substr
 }
 
 // this will allocate and write size back, assumes the caller will call free once the data is processed
-void geometry_system_parse_obj(const char *obj_file_full_path, darray<darray<vertex>> &sponza_vertex,
-                               darray<darray<u32>> &sponza_indices)
+void geometry_system_parse_obj(const char *obj_file_full_path, u32 *num_of_objects, u32 **object_vertices_size,
+                               void ***object_vertices, u32 **object_indices_size, void ***object_indices,
+                               char ***object_names)
 {
     u64 buffer_mem_requirements = INVALID_ID_64;
     file_open_and_read(obj_file_full_path, &buffer_mem_requirements, 0, 0);
@@ -317,126 +344,194 @@ void geometry_system_parse_obj(const char *obj_file_full_path, darray<darray<ver
         DERROR("Failed to get size requirements for %s", obj_file_full_path);
         return;
     }
+
     char *buffer = (char *)dallocate(buffer_mem_requirements, MEM_TAG_RENDERER);
     file_open_and_read(obj_file_full_path, &buffer_mem_requirements, buffer, 0);
 
     // TODO: cleaup this piece of shit code
+    u32  objects = string_num_of_substring_occurence(buffer, "o ");
+    char temp    = ' ';
 
-    u64   vertex_first_occurence = string_first_char_occurence(buffer, 'v');
-    char *vertex                 = buffer + vertex_first_occurence;
+    *num_of_objects  = objects;
+    *object_names    = (char **)dallocate(sizeof(char *) * objects, MEM_TAG_RENDERER);
+    *object_vertices = (void **)dallocate(sizeof(void *) * objects, MEM_TAG_RENDERER);
+    *object_indices  = (void **)dallocate(sizeof(void *) * objects, MEM_TAG_RENDERER);
 
-    u32 vertex_count_obj = get_number_of_occurences_of_substring(vertex, "v ");
+    *object_vertices_size = (u32 *)dallocate(sizeof(u32) * objects, MEM_TAG_RENDERER);
+    *object_indices_size  = (u32 *)dallocate(sizeof(u32) * objects, MEM_TAG_RENDERER);
 
-    char *ptr  = buffer;
-    u32   v    = string_first_char_occurence(ptr, 'v');
-    ptr       += v + 1;
-
-    vec3 *vert_coords = (vec3 *)dallocate(sizeof(vec3) * vertex_count_obj, MEM_TAG_UNKNOWN);
-
-    for (u32 i = 0; i < vertex_count_obj; i++)
+    for (u32 object = 0; object < objects; object++)
     {
-        sscanf_s(ptr, "%f %f %f", &vert_coords[i].x, &vert_coords[i].y, &vert_coords[i].z);
-        v    = string_first_char_occurence(ptr, 'v');
-        ptr += v + 1;
-    }
+        char *object_ptr              = buffer;
+        u32   object_first_occurence  = string_first_string_occurence(buffer, "o ");
+        object_ptr                   += object_first_occurence + 1;
 
-    u64   vertex_normal_first_occurence = string_first_string_occurence((const char *)buffer, "vn");
-    char *normal                        = buffer + vertex_normal_first_occurence;
-
-    u32   normal_count_obj = get_number_of_occurences_of_substring(normal, "vn");
-    vec3 *normals          = (vec3 *)dallocate(sizeof(vec3) * normal_count_obj, MEM_TAG_UNKNOWN);
-
-    ptr     = buffer;
-    u32 vn  = string_first_string_occurence(ptr, "vn");
-    ptr    += vn + 2;
-
-    for (u32 i = 0; i < normal_count_obj; i++)
-    {
-        sscanf_s(ptr, "%f %f %f", &normals[i].x, &normals[i].y, &normals[i].z);
-        vn   = string_first_string_occurence(ptr, "vn");
-        ptr += vn + 2;
-    }
-
-    u64   vertex_texture_first_occurence = string_first_string_occurence(buffer, "vt");
-    char *texture                        = buffer + vertex_texture_first_occurence;
-
-    u64 texture_first_occurence = string_first_string_occurence((const char *)buffer, "vn");
-
-    u32   texture_count_obj = get_number_of_occurences_of_substring(texture, "vt");
-    vec2 *textures          = (vec2 *)dallocate(sizeof(vec2) * texture_count_obj, MEM_TAG_UNKNOWN);
-
-    ptr     = buffer;
-    u32 vt  = string_first_string_occurence(ptr, "vt");
-    ptr    += vt + 2;
-
-    for (u32 i = 0; i < texture_count_obj; i++)
-    {
-        sscanf_s(ptr, "%f %f", &textures[i].x, &textures[i].y);
-        vt   = string_first_string_occurence(ptr, "vt");
-        ptr += vt + 2;
-    }
-
-    u64 tris_count = get_number_of_occurences_of_substring(buffer, "f");
-
-    *vertices = (struct vertex *)dallocate(tris_count * 3 * sizeof(struct vertex), MEM_TAG_RENDERER);
-    *indices  = (u32 *)dallocate(sizeof(u32) * tris_count * 3, MEM_TAG_RENDERER);
-
-    ptr    = buffer;
-    u32 f  = string_first_char_occurence(ptr, 'f');
-    ptr   += f + 1;
-
-    for (u32 i = 0; i < tris_count; i++)
-    {
-        u32 offsets[9] = {0};
-        u32 j          = 0;
-        while (ptr[j] != '\n')
+        char *name     = *object_names[object];
+        u32   new_line = string_first_char_occurence(object_ptr, '\n');
+        if (new_line != INVALID_ID)
         {
-            if (ptr[j] == '/')
+            name = (char *)dallocate(sizeof(char) * new_line, MEM_TAG_RENDERER);
+            string_ncopy(name, object_ptr, new_line);
+            DTRACE("%s", name);
+        }
+
+        object_first_occurence = string_first_string_occurence(object_ptr, "o ");
+        if (object_first_occurence != INVALID_ID)
+        {
+            object_ptr[object_first_occurence] = '\0';
+            temp                               = object_ptr[object_first_occurence];
+        }
+
+        u64   vertex_first_occurence = string_first_char_occurence(object_ptr, 'v');
+        char *vertex                 = object_ptr + vertex_first_occurence;
+
+        u32 vertex_count_obj = get_number_of_occurences_of_substring(vertex, "v ");
+
+        char *ptr  = object_ptr;
+        u32   v    = string_first_char_occurence(ptr, 'v');
+        ptr       += v + 1;
+
+        vec3 *vert_coords = (vec3 *)dallocate(sizeof(vec3) * vertex_count_obj, MEM_TAG_UNKNOWN);
+
+        for (u32 i = 0; i < vertex_count_obj; i++)
+        {
+            sscanf_s(ptr, "%f %f %f", &vert_coords[i].x, &vert_coords[i].y, &vert_coords[i].z);
+            v    = string_first_char_occurence(ptr, 'v');
+            ptr += v + 1;
+        }
+
+        u64   vertex_normal_first_occurence = string_first_string_occurence(object_ptr, "vn");
+        char *normal                        = object_ptr + vertex_normal_first_occurence;
+
+        u32   normal_count_obj = get_number_of_occurences_of_substring(normal, "vn");
+        vec3 *normals          = (vec3 *)dallocate(sizeof(vec3) * normal_count_obj, MEM_TAG_UNKNOWN);
+
+        ptr     = object_ptr;
+        u32 vn  = string_first_string_occurence(ptr, "vn");
+        ptr    += vn + 2;
+
+        for (u32 i = 0; i < normal_count_obj; i++)
+        {
+            sscanf_s(ptr, "%f %f %f", &normals[i].x, &normals[i].y, &normals[i].z);
+            vn   = string_first_string_occurence(ptr, "vn");
+            ptr += vn + 2;
+        }
+
+        u64   vertex_texture_first_occurence = string_first_string_occurence(object_ptr, "vt");
+        char *texture                        = object_ptr + vertex_texture_first_occurence;
+
+        u64 texture_first_occurence = string_first_string_occurence(object_ptr, "vn");
+
+        u32   texture_count_obj = get_number_of_occurences_of_substring(texture, "vt");
+        vec2 *textures          = (vec2 *)dallocate(sizeof(vec2) * texture_count_obj, MEM_TAG_UNKNOWN);
+
+        ptr     = object_ptr;
+        u32 vt  = string_first_string_occurence(ptr, "vt");
+        ptr    += vt + 2;
+
+        for (u32 i = 0; i < texture_count_obj; i++)
+        {
+            sscanf_s(ptr, "%f %f", &textures[i].x, &textures[i].y);
+            vt   = string_first_string_occurence(ptr, "vt");
+            ptr += vt + 2;
+        }
+
+        for (u32 i = 0; i < vertex_count_obj; i++)
+        {
+            DTRACE("x: %f , y: %f, z: %f", vert_coords[i].x, vert_coords[i].y, vert_coords[i].z);
+        }
+        for (u32 i = 0; i < normal_count_obj; i++)
+        {
+            DTRACE("x: %f , y: %f, z: %f", normals[i].x, normals[i].y, normals[i].z);
+        }
+        for (u32 i = 0; i < texture_count_obj; i++)
+        {
+            DTRACE("x: %f , y: %f, z: %f", textures[i].x, textures[i].y);
+        }
+
+        u64 tris_count = get_number_of_occurences_of_substring(object_ptr, "f");
+
+        (*object_vertices)[object] = dallocate(tris_count * 3 * sizeof(struct vertex), MEM_TAG_RENDERER);
+        (*object_indices)[object]  = dallocate(sizeof(u32) * tris_count * 3, MEM_TAG_RENDERER);
+
+        ptr    = object_ptr;
+        u32 f  = string_first_char_occurence(ptr, 'f');
+        ptr   += f + 1;
+
+        for (u32 i = 0; i < tris_count; i++)
+        {
+            u32 offsets[9] = {0};
+            u32 j          = 0;
+            while (ptr[j] != '\n')
             {
-                ptr[j] = ' ';
+                if (ptr[j] == '/')
+                {
+                    ptr[j] = ' ';
+                }
+                j++;
             }
-            j++;
+            sscanf_s(ptr, "%d %d %d %d %d %d %d %d %d", &offsets[0], &offsets[1], &offsets[2], &offsets[3], &offsets[4],
+                     &offsets[5], &offsets[6], &offsets[7], &offsets[8]);
+
+            // u32 *ind_dum_ptr = (*indices) + (3 * i);
+            u32 *ind_dum_ptr = (u32 *)((*object_indices)[object]) + (3 * i);
+
+            for (u32 k = 0; k < 9; k += 3)
+            {
+                // struct vertex *dum = (*vertices) + (offsets[k] - 1);
+                void          *array = (*object_vertices)[object];
+                struct vertex *dum   = (struct vertex *)(array) + (offsets[k] - 1);
+
+                dum->position  = vert_coords[offsets[k] - 1];
+                dum->normal    = normals[offsets[k + 1] - 1];
+                dum->tex_coord = textures[offsets[k + 2] - 1];
+            }
+
+            ind_dum_ptr[0] = offsets[0] - 1;
+            ind_dum_ptr[1] = offsets[3] - 1;
+            ind_dum_ptr[2] = offsets[6] - 1;
+
+            f    = string_first_char_occurence(ptr, 'f');
+            ptr += f + 1;
         }
-        sscanf_s(ptr, "%d %d %d %d %d %d %d %d %d", &offsets[0], &offsets[1], &offsets[2], &offsets[3], &offsets[4],
-                 &offsets[5], &offsets[6], &offsets[7], &offsets[8]);
 
-        u32 *ind_dum_ptr = (*indices) + (3 * i);
+        dfree(textures, sizeof(vec2) * texture_count_obj, MEM_TAG_UNKNOWN);
+        dfree(normals, sizeof(vec3) * normal_count_obj, MEM_TAG_UNKNOWN);
+        dfree(vert_coords, sizeof(vec3) * vertex_count_obj, MEM_TAG_UNKNOWN);
 
-        for (u32 k = 0; k < 9; k += 3)
+        (*object_vertices_size)[object] = tris_count * 3;
+        (*object_indices_size)[object]  = tris_count * 3;
+
+        if (object_first_occurence != INVALID_ID)
         {
-            struct vertex *dum = (*vertices) + (offsets[k] - 1);
-
-            dum->position  = vert_coords[offsets[k] - 1];
-            dum->normal    = normals[offsets[k + 1] - 1];
-            dum->tex_coord = textures[offsets[k + 2] - 1];
+            object_ptr[object_first_occurence]  = temp;
+            temp                                = ' ';
+            object_ptr                         += object_first_occurence;
         }
-
-        ind_dum_ptr[0] = offsets[0] - 1;
-        ind_dum_ptr[1] = offsets[3] - 1;
-        ind_dum_ptr[2] = offsets[6] - 1;
-
-        f    = string_first_char_occurence(ptr, 'f');
-        ptr += f + 1;
     }
-
-    *vertex_count = tris_count * 3;
-    *index_count  = tris_count * 3;
-
-    dfree(textures, sizeof(vec2) * texture_count_obj, MEM_TAG_UNKNOWN);
-    dfree(normals, sizeof(vec3) * normal_count_obj, MEM_TAG_UNKNOWN);
-    dfree(vert_coords, sizeof(vec3) * vertex_count_obj, MEM_TAG_UNKNOWN);
 }
 
 u32 geometry_system_get_sponza_id()
 {
     const char *file_name   = "sponza.obj";
-    const char *file_prefix = "../assets/meshses/";
+    const char *file_prefix = "../assets/meshes/";
 
     char file_full_path[GEOMETRY_NAME_MAX_LENGTH];
     string_copy_format(file_full_path, "%s%s", 0, file_prefix, file_name);
 
-    darray<darray<vertex>> sponza_vertex;
-    darray<darray<u32>>    sponza_indicies;
+    u32    sponza_objects     = INVALID_ID;
+    u32   *sponza_vert_size   = nullptr;
+    u32   *sponza_ind_size    = nullptr;
+    void **sponza_vert        = nullptr;
+    void **sponza_ind         = nullptr;
+    char **sponza_object_name = nullptr;
 
-    geometry_system_parse_obj();
+    geometry_system_parse_obj(file_full_path, &sponza_objects, &sponza_vert_size, &sponza_vert, &sponza_ind_size,
+                              &sponza_ind, &sponza_object_name);
+
+    for (u32 i = 0; i < sponza_objects; i++)
+    {
+        DTRACE("%s", sponza_object_name[i]);
+    }
+    return 0;
 }

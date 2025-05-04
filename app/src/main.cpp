@@ -87,7 +87,8 @@ int main()
     render_data triangle{};
 
     u32 sponza_id          = geometry_system_get_sponza_id();
-    triangle.test_geometry = geometry_system_get_geometry_by_name("sponza.obj");
+    // triangle.test_geometry = geometry_system_get_geometry_by_name("sponza.obj");
+    triangle.test_geometry = geometry_system_get_default_geometry();
 
     triangle.global_ubo = global_ubo;
 

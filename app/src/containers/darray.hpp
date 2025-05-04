@@ -81,7 +81,7 @@ template <typename T> void darray<T>::operator=(const darray<T> &in_darray)
 }
 template <typename T> T darray<T>::operator[](u64 index) const
 {
-    if (index >= length || index >= capacity)
+    if (index != 0 && index >= length || index >= capacity)
     {
         DASSERT_MSG(index >= length, "Index is out of bounds....");
     }
@@ -91,7 +91,7 @@ template <typename T> T darray<T>::operator[](u64 index) const
 
 template <typename T> T &darray<T>::operator[](u64 index)
 {
-    if (index >= length || index >= capacity)
+    if (index != 0 && index >= length || index >= capacity)
     {
         DASSERT_MSG(index < length, "Index is out of bounds....");
     }
