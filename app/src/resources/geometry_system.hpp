@@ -18,4 +18,7 @@ geometry_config geometry_system_generate_plane_config(f32 width, f32 height, u32
 geometry       *geometry_system_get_geometry(geometry_config *config);
 geometry       *geometry_system_get_geometry_by_name(dstring geometry_name);
 geometry       *geometry_system_get_default_geometry();
-geometry_config geometry_system_generate_geometry_config(const char *file_name);
+geometry_config geometry_system_generate_cube_config();
+
+// HACK:
+u32 geometry_system_get_sponza_id();

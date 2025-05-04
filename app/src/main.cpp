@@ -85,8 +85,11 @@ int main()
         geometry_system_generate_plane_config(10, 5, 5, 5, 5, 5, "its_a_plane", DEFAULT_MATERIAL_HANDLE);
 
     render_data triangle{};
-    triangle.test_geometry = geometry_system_get_default_geometry();
-    triangle.global_ubo    = global_ubo;
+
+    u32 sponza_id          = geometry_system_get_sponza_id();
+    triangle.test_geometry = geometry_system_get_geometry_by_name("sponza.obj");
+
+    triangle.global_ubo = global_ubo;
 
     f64 start_time = 0;
     f64 end_time   = 0;
@@ -110,11 +113,9 @@ int main()
         if (b && a)
         {
 
-            geometry_config conf = geometry_system_generate_geometry_config(geometry_names[index]);
-
-            triangle.test_geometry = geometry_system_get_geometry(&conf);
-            index++;
-            index %= 6;
+            // triangle.test_geometry = geometry_system_get_geometry(&conf);
+            // index++;
+            // index %= 6;
         }
 
         clock_update(&clock);

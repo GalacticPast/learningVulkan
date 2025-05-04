@@ -197,14 +197,13 @@ geometry_config geometry_system_generate_plane_config(f32 width, f32 height, u32
     return config;
 }
 
-geometry_config geometry_system_generate_geometry_config(const char *file_name)
+geometry_config geometry_system_generate_cube_config()
 {
-    const char *file_path_prefix = "../assets/meshes/";
-
-    char file_full_path[GEOMETRY_NAME_MAX_LENGTH];
-    string_copy_format(file_full_path, "%s%s", 0, file_path_prefix, file_name);
+    const char *file_full_path = "../assets/meshes/cube.obj";
+    const char *file_name      = "cube.obj";
 
     geometry_config config{};
+
     geometry_system_parse_obj(file_full_path, &config.vertex_count, &config.vertices, &config.index_count,
                               &config.indices);
 
@@ -308,8 +307,8 @@ u32 get_number_of_occurences_of_substring(const char *string, const char *substr
 }
 
 // this will allocate and write size back, assumes the caller will call free once the data is processed
-void geometry_system_parse_obj(const char *obj_file_full_path, u32 *vertex_count, vertex **vertices, u32 *index_count,
-                               u32 **indices)
+void geometry_system_parse_obj(const char *obj_file_full_path, darray<darray<vertex>> &sponza_vertex,
+                               darray<darray<u32>> &sponza_indices)
 {
     u64 buffer_mem_requirements = INVALID_ID_64;
     file_open_and_read(obj_file_full_path, &buffer_mem_requirements, 0, 0);
@@ -322,6 +321,7 @@ void geometry_system_parse_obj(const char *obj_file_full_path, u32 *vertex_count
     file_open_and_read(obj_file_full_path, &buffer_mem_requirements, buffer, 0);
 
     // TODO: cleaup this piece of shit code
+
     u64   vertex_first_occurence = string_first_char_occurence(buffer, 'v');
     char *vertex                 = buffer + vertex_first_occurence;
 
@@ -425,4 +425,18 @@ void geometry_system_parse_obj(const char *obj_file_full_path, u32 *vertex_count
     dfree(textures, sizeof(vec2) * texture_count_obj, MEM_TAG_UNKNOWN);
     dfree(normals, sizeof(vec3) * normal_count_obj, MEM_TAG_UNKNOWN);
     dfree(vert_coords, sizeof(vec3) * vertex_count_obj, MEM_TAG_UNKNOWN);
+}
+
+u32 geometry_system_get_sponza_id()
+{
+    const char *file_name   = "sponza.obj";
+    const char *file_prefix = "../assets/meshses/";
+
+    char file_full_path[GEOMETRY_NAME_MAX_LENGTH];
+    string_copy_format(file_full_path, "%s%s", 0, file_prefix, file_name);
+
+    darray<darray<vertex>> sponza_vertex;
+    darray<darray<u32>>    sponza_indicies;
+
+    geometry_system_parse_obj();
 }
