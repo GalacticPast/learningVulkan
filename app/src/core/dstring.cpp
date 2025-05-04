@@ -11,7 +11,6 @@
 bool string_compare(const char *str0, const char *str1)
 {
     // INFO: stcmp returns 0 for sucess...wow...
-    DTRACE("%s %s", str0, str1);
     bool result = strcmp(str0, str1);
     return result == 0 ? 1 : 0;
 }

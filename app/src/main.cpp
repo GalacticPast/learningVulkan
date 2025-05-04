@@ -78,14 +78,14 @@ int main()
     global_ubo.view       = mat4_look_at({2, 2, 2}, {0, 0, 0}, {0, 0, 1.0f});
     global_ubo.projection = mat4_perspective(fov_rad, aspect_ratio, 0.01f, 1000.0f);
 
-    const char *texture_names[6] = {"DEFAULT_TEXTURE", "texture.jpg",     "paving.png",
-                                    "paving2.png",     "cobblestone.png", "orange_lines_512.png"};
+    const char *geometry_names[6] = {"cube.obj",   "torus.obj",    "ico_sphere.obj",
+                                     "sphere.obj", "cylinder.obj", "cone.obj"};
 
     geometry_config plane_config =
         geometry_system_generate_plane_config(10, 5, 5, 5, 5, 5, "its_a_plane", DEFAULT_MATERIAL_HANDLE);
 
     render_data triangle{};
-    triangle.test_geometry = geometry_system_get_geometry(&plane_config);
+    triangle.test_geometry = geometry_system_get_default_geometry();
     triangle.global_ubo    = global_ubo;
 
     f64 start_time = 0;
@@ -109,8 +109,10 @@ int main()
         bool b = input_was_key_down(KEY_T);
         if (b && a)
         {
-            triangle.test_geometry->material->map.diffuse_tex = nullptr;
-            triangle.test_geometry->material->map.diffuse_tex = texture_system_get_texture(texture_names[index]);
+
+            geometry_config conf = geometry_system_generate_geometry_config(geometry_names[index]);
+
+            triangle.test_geometry = geometry_system_get_geometry(&conf);
             index++;
             index %= 6;
         }
@@ -150,6 +152,7 @@ void update_camera(uniform_buffer_object *ubo, f64 start_time)
     z               += step;
     ubo->projection  = mat4_perspective(fov_rad, aspect_ratio, 0.01f, 1000.0f);
     ubo->model       = mat4_euler_y(z);
+    ubo->model       = mat4();
 
     static vec3 camera_pos   = vec3(0, 0, 6);
     static vec3 camera_euler = vec3(0, 0, 0);

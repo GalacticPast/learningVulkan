@@ -8,6 +8,7 @@
 #include "renderer/vulkan/vulkan_backend.hpp"
 #include "resources/material_system.hpp"
 #include "resources/resource_types.hpp"
+#include <stdio.h>
 
 struct geometry_system_state
 {
@@ -196,6 +197,22 @@ geometry_config geometry_system_generate_plane_config(f32 width, f32 height, u32
     return config;
 }
 
+geometry_config geometry_system_generate_geometry_config(const char *file_name)
+{
+    const char *file_path_prefix = "../assets/meshes/";
+
+    char file_full_path[GEOMETRY_NAME_MAX_LENGTH];
+    string_copy_format(file_full_path, "%s%s", 0, file_path_prefix, file_name);
+
+    geometry_config config{};
+    geometry_system_parse_obj(file_full_path, &config.vertex_count, &config.vertices, &config.index_count,
+                              &config.indices);
+
+    string_ncopy(config.name, file_name, GEOMETRY_NAME_MAX_LENGTH);
+
+    return config;
+}
+
 bool geometry_system_create_default_geometry()
 {
     geometry_config default_config{};
@@ -209,121 +226,10 @@ bool geometry_system_create_default_geometry()
 
     geometry_system_parse_obj("../assets/meshes/cube.obj", &vertex_count, &vertices, &index_count, &indices);
 
-    default_config.vertices = (vertex *)dallocate(sizeof(vertex) * 32, MEM_TAG_RENDERER);
-
-    u32 width  = 1.0f;
-    u32 height = 1.0f;
-    u32 depth  = 1.0f;
-    u32 tile_x = 1.0f;
-    u32 tile_y = 1.0f;
-
-    f32 half_width  = width * 0.5f;
-    f32 half_height = height * 0.5f;
-    f32 half_depth  = depth * 0.5f;
-    f32 min_x       = -half_width;
-    f32 min_y       = -half_height;
-    f32 min_z       = -half_depth;
-    f32 max_x       = half_width;
-    f32 max_y       = half_height;
-    f32 max_z       = half_depth;
-    f32 min_uvx     = 0.0f;
-    f32 min_uvy     = 0.0f;
-    f32 max_uvx     = tile_x;
-    f32 max_uvy     = tile_y;
-
-    default_config.vertices[(0 * 4) + 0].position  = (vec3){min_x, min_y, max_z};
-    default_config.vertices[(0 * 4) + 1].position  = (vec3){max_x, max_y, max_z};
-    default_config.vertices[(0 * 4) + 2].position  = (vec3){min_x, max_y, max_z};
-    default_config.vertices[(0 * 4) + 3].position  = (vec3){max_x, min_y, max_z};
-    default_config.vertices[(0 * 4) + 0].tex_coord = (vec2){min_uvx, min_uvy};
-    default_config.vertices[(0 * 4) + 1].tex_coord = (vec2){max_uvx, max_uvy};
-    default_config.vertices[(0 * 4) + 2].tex_coord = (vec2){min_uvx, max_uvy};
-    default_config.vertices[(0 * 4) + 3].tex_coord = (vec2){max_uvx, min_uvy};
-    default_config.vertices[(0 * 4) + 0].normal    = (vec3){0, 0, -1};
-    default_config.vertices[(0 * 4) + 1].normal    = (vec3){0, 0, -1};
-    default_config.vertices[(0 * 4) + 2].normal    = (vec3){0, 0, -1};
-    default_config.vertices[(0 * 4) + 3].normal    = (vec3){0, 0, -1};
-
-    // Back face default_config.vertices[(1 * 4) + 0].position = (vec3){max_x, min_y, min_z};
-    default_config.vertices[(1 * 4) + 1].position  = (vec3){min_x, max_y, min_z};
-    default_config.vertices[(1 * 4) + 2].position  = (vec3){max_x, max_y, min_z};
-    default_config.vertices[(1 * 4) + 3].position  = (vec3){min_x, min_y, min_z};
-    default_config.vertices[(1 * 4) + 0].tex_coord = (vec2){min_uvx, min_uvy};
-    default_config.vertices[(1 * 4) + 1].tex_coord = (vec2){max_uvx, max_uvy};
-    default_config.vertices[(1 * 4) + 2].tex_coord = (vec2){min_uvx, max_uvy};
-    default_config.vertices[(1 * 4) + 3].tex_coord = (vec2){max_uvx, min_uvy};
-    default_config.vertices[(1 * 4) + 0].normal    = (vec3){0, 0, 1};
-    default_config.vertices[(1 * 4) + 1].normal    = (vec3){0, 0, 1};
-    default_config.vertices[(1 * 4) + 2].normal    = (vec3){0, 0, 1};
-    default_config.vertices[(1 * 4) + 3].normal    = (vec3){0, 0, 1};
-
-    // Left default_config.vertices[(2 * 4) + 0].position = (vec3){min_x, min_y, min_z};
-    default_config.vertices[(2 * 4) + 1].position  = (vec3){min_x, max_y, max_z};
-    default_config.vertices[(2 * 4) + 2].position  = (vec3){min_x, max_y, min_z};
-    default_config.vertices[(2 * 4) + 3].position  = (vec3){min_x, min_y, max_z};
-    default_config.vertices[(2 * 4) + 0].tex_coord = (vec2){min_uvx, min_uvy};
-    default_config.vertices[(2 * 4) + 1].tex_coord = (vec2){max_uvx, max_uvy};
-    default_config.vertices[(2 * 4) + 2].tex_coord = (vec2){min_uvx, max_uvy};
-    default_config.vertices[(2 * 4) + 3].tex_coord = (vec2){max_uvx, min_uvy};
-    default_config.vertices[(2 * 4) + 0].normal    = (vec3){-1, 0, 0};
-    default_config.vertices[(2 * 4) + 1].normal    = (vec3){-1, 0, 0};
-    default_config.vertices[(2 * 4) + 2].normal    = (vec3){-1, 0, 0};
-    default_config.vertices[(2 * 4) + 3].normal    = (vec3){-1, 0, 0};
-
-    // Right face default_config.vertices[(3 * 4) + 0].position = (vec3){max_x, min_y, max_z};
-    default_config.vertices[(3 * 4) + 1].position  = (vec3){max_x, max_y, min_z};
-    default_config.vertices[(3 * 4) + 2].position  = (vec3){max_x, max_y, max_z};
-    default_config.vertices[(3 * 4) + 3].position  = (vec3){max_x, min_y, min_z};
-    default_config.vertices[(3 * 4) + 0].tex_coord = (vec2){min_uvx, min_uvy};
-    default_config.vertices[(3 * 4) + 1].tex_coord = (vec2){max_uvx, max_uvy};
-    default_config.vertices[(3 * 4) + 2].tex_coord = (vec2){min_uvx, max_uvy};
-    default_config.vertices[(3 * 4) + 3].tex_coord = (vec2){max_uvx, min_uvy};
-    default_config.vertices[(3 * 4) + 0].normal    = (vec3){0, 1, 0};
-    default_config.vertices[(3 * 4) + 1].normal    = (vec3){0, 1, 0};
-    default_config.vertices[(3 * 4) + 2].normal    = (vec3){0, 1, 0};
-    default_config.vertices[(3 * 4) + 3].normal    = (vec3){0, 1, 0};
-
-    // Bottom face default_config.vertices[(4 * 4) + 0].position = (vec3){max_x, min_y, max_z};
-    default_config.vertices[(4 * 4) + 1].position  = (vec3){min_x, min_y, min_z};
-    default_config.vertices[(4 * 4) + 2].position  = (vec3){max_x, min_y, min_z};
-    default_config.vertices[(4 * 4) + 3].position  = (vec3){min_x, min_y, max_z};
-    default_config.vertices[(4 * 4) + 0].tex_coord = (vec2){min_uvx, min_uvy};
-    default_config.vertices[(4 * 4) + 1].tex_coord = (vec2){max_uvx, max_uvy};
-    default_config.vertices[(4 * 4) + 2].tex_coord = (vec2){min_uvx, max_uvy};
-    default_config.vertices[(4 * 4) + 3].tex_coord = (vec2){max_uvx, min_uvy};
-    default_config.vertices[(4 * 4) + 0].normal    = (vec3){0, -1, 0};
-    default_config.vertices[(4 * 4) + 1].normal    = (vec3){0, -1, 0};
-    default_config.vertices[(4 * 4) + 2].normal    = (vec3){0, -1, 0};
-    default_config.vertices[(4 * 4) + 3].normal    = (vec3){0, -1, 0};
-
-    // Top face default_config.vertices[(5 * 4) + 0].position = (vec3){min_x, max_y, max_z};
-    default_config.vertices[(5 * 4) + 1].position  = (vec3){max_x, max_y, min_z};
-    default_config.vertices[(5 * 4) + 2].position  = (vec3){min_x, max_y, min_z};
-    default_config.vertices[(5 * 4) + 3].position  = (vec3){max_x, max_y, max_z};
-    default_config.vertices[(5 * 4) + 0].tex_coord = (vec2){min_uvx, min_uvy};
-    default_config.vertices[(5 * 4) + 1].tex_coord = (vec2){max_uvx, max_uvy};
-    default_config.vertices[(5 * 4) + 2].tex_coord = (vec2){min_uvx, max_uvy};
-    default_config.vertices[(5 * 4) + 3].tex_coord = (vec2){max_uvx, min_uvy};
-    default_config.vertices[(5 * 4) + 0].normal    = (vec3){0, 1, 0};
-    default_config.vertices[(5 * 4) + 1].normal    = (vec3){0, 1, 0};
-    default_config.vertices[(5 * 4) + 2].normal    = (vec3){0, 1, 0};
-    default_config.vertices[(5 * 4) + 3].normal    = (vec3){0, 1, 0};
-
-    default_config.index_count = 36;
-    default_config.indices     = (u32 *)dallocate(sizeof(u32) * 36, MEM_TAG_RENDERER);
-
-    for (u32 i = 0; i < 6; ++i)
-    {
-
-        u32 v_offset                         = i * 4;
-        u32 i_offset                         = i * 6;
-        default_config.indices[i_offset + 0] = v_offset + 0;
-        default_config.indices[i_offset + 1] = v_offset + 1;
-        default_config.indices[i_offset + 2] = v_offset + 2;
-        default_config.indices[i_offset + 3] = v_offset + 0;
-        default_config.indices[i_offset + 4] = v_offset + 3;
-        default_config.indices[i_offset + 5] = v_offset + 1;
-    }
+    default_config.vertices     = vertices;
+    default_config.vertex_count = vertex_count;
+    default_config.index_count  = index_count;
+    default_config.indices      = indices;
 
     const char *name = DEFAULT_GEOMETRY_HANDLE;
     u32         len  = strlen(name);
@@ -386,6 +292,21 @@ geometry *geometry_system_get_default_geometry()
     return geo;
 }
 
+u32 get_number_of_occurences_of_substring(const char *string, const char *substring)
+{
+    u32 ans = -1;
+
+    u32   f   = 0;
+    char *ptr = (char *)string;
+    while (f != -1)
+    {
+        f    = string_first_string_occurence(ptr, substring);
+        ptr += f + 1;
+        ans++;
+    }
+    return ans;
+}
+
 // this will allocate and write size back, assumes the caller will call free once the data is processed
 void geometry_system_parse_obj(const char *obj_file_full_path, u32 *vertex_count, vertex **vertices, u32 *index_count,
                                u32 **indices)
@@ -400,31 +321,108 @@ void geometry_system_parse_obj(const char *obj_file_full_path, u32 *vertex_count
     char *buffer = (char *)dallocate(buffer_mem_requirements, MEM_TAG_RENDERER);
     file_open_and_read(obj_file_full_path, &buffer_mem_requirements, buffer, 0);
 
-    u64 vertex_first_occurence         = string_first_char_occurence(buffer, 'v');
-    u64 vertex_normal_first_occurence  = string_first_string_occurence((const char *)buffer, "vn");
-    u64 vertex_texture_first_occurence = string_first_string_occurence(buffer, "vt");
+    // TODO: cleaup this piece of shit code
+    u64   vertex_first_occurence = string_first_char_occurence(buffer, 'v');
+    char *vertex                 = buffer + vertex_first_occurence;
 
-    u64   tris_count = -1;
-    u32   f          = 0;
-    char *ptr        = buffer;
-    while (f != -1)
+    u32 vertex_count_obj = get_number_of_occurences_of_substring(vertex, "v ");
+
+    char *ptr  = buffer;
+    u32   v    = string_first_char_occurence(ptr, 'v');
+    ptr       += v + 1;
+
+    vec3 *vert_coords = (vec3 *)dallocate(sizeof(vec3) * vertex_count_obj, MEM_TAG_UNKNOWN);
+
+    for (u32 i = 0; i < vertex_count_obj; i++)
     {
-        f    = string_first_char_occurence(ptr, 'f');
-        ptr += f + 1;
-        tris_count++;
+        sscanf_s(ptr, "%f %f %f", &vert_coords[i].x, &vert_coords[i].y, &vert_coords[i].z);
+        v    = string_first_char_occurence(ptr, 'v');
+        ptr += v + 1;
     }
 
-    *vertices = (vertex *)dallocate(sizeof(vertex) * tris_count, MEM_TAG_RENDERER);
-    *indices  = (u32 *)dallocate(sizeof(u32) * tris_count, MEM_TAG_RENDERER);
+    u64   vertex_normal_first_occurence = string_first_string_occurence((const char *)buffer, "vn");
+    char *normal                        = buffer + vertex_normal_first_occurence;
 
-    ptr = buffer;
-    f   = 0;
+    u32   normal_count_obj = get_number_of_occurences_of_substring(normal, "vn");
+    vec3 *normals          = (vec3 *)dallocate(sizeof(vec3) * normal_count_obj, MEM_TAG_UNKNOWN);
+
+    ptr     = buffer;
+    u32 vn  = string_first_string_occurence(ptr, "vn");
+    ptr    += vn + 2;
+
+    for (u32 i = 0; i < normal_count_obj; i++)
+    {
+        sscanf_s(ptr, "%f %f %f", &normals[i].x, &normals[i].y, &normals[i].z);
+        vn   = string_first_string_occurence(ptr, "vn");
+        ptr += vn + 2;
+    }
+
+    u64   vertex_texture_first_occurence = string_first_string_occurence(buffer, "vt");
+    char *texture                        = buffer + vertex_texture_first_occurence;
+
+    u64 texture_first_occurence = string_first_string_occurence((const char *)buffer, "vn");
+
+    u32   texture_count_obj = get_number_of_occurences_of_substring(texture, "vt");
+    vec2 *textures          = (vec2 *)dallocate(sizeof(vec2) * texture_count_obj, MEM_TAG_UNKNOWN);
+
+    ptr     = buffer;
+    u32 vt  = string_first_string_occurence(ptr, "vt");
+    ptr    += vt + 2;
+
+    for (u32 i = 0; i < texture_count_obj; i++)
+    {
+        sscanf_s(ptr, "%f %f", &textures[i].x, &textures[i].y);
+        vt   = string_first_string_occurence(ptr, "vt");
+        ptr += vt + 2;
+    }
+
+    u64 tris_count = get_number_of_occurences_of_substring(buffer, "f");
+
+    *vertices = (struct vertex *)dallocate(tris_count * 3 * sizeof(struct vertex), MEM_TAG_RENDERER);
+    *indices  = (u32 *)dallocate(sizeof(u32) * tris_count * 3, MEM_TAG_RENDERER);
+
+    ptr    = buffer;
+    u32 f  = string_first_char_occurence(ptr, 'f');
+    ptr   += f + 1;
+
     for (u32 i = 0; i < tris_count; i++)
     {
+        u32 offsets[9] = {0};
+        u32 j          = 0;
+        while (ptr[j] != '\n')
+        {
+            if (ptr[j] == '/')
+            {
+                ptr[j] = ' ';
+            }
+            j++;
+        }
+        sscanf_s(ptr, "%d %d %d %d %d %d %d %d %d", &offsets[0], &offsets[1], &offsets[2], &offsets[3], &offsets[4],
+                 &offsets[5], &offsets[6], &offsets[7], &offsets[8]);
+
+        u32 *ind_dum_ptr = (*indices) + (3 * i);
+
+        for (u32 k = 0; k < 9; k += 3)
+        {
+            struct vertex *dum = (*vertices) + (offsets[k] - 1);
+
+            dum->position  = vert_coords[offsets[k] - 1];
+            dum->normal    = normals[offsets[k + 1] - 1];
+            dum->tex_coord = textures[offsets[k + 2] - 1];
+        }
+
+        ind_dum_ptr[0] = offsets[0] - 1;
+        ind_dum_ptr[1] = offsets[3] - 1;
+        ind_dum_ptr[2] = offsets[6] - 1;
+
+        f    = string_first_char_occurence(ptr, 'f');
+        ptr += f + 1;
     }
 
-    DINFO("trianlge faces count %d", tris_count);
-    DINFO("buffer size %d", buffer_mem_requirements);
+    *vertex_count = tris_count * 3;
+    *index_count  = tris_count * 3;
 
-    DINFO("%s", buffer);
+    dfree(textures, sizeof(vec2) * texture_count_obj, MEM_TAG_UNKNOWN);
+    dfree(normals, sizeof(vec3) * normal_count_obj, MEM_TAG_UNKNOWN);
+    dfree(vert_coords, sizeof(vec3) * vertex_count_obj, MEM_TAG_UNKNOWN);
 }
