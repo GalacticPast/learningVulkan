@@ -94,27 +94,17 @@ s32 string_first_char_occurence(const char *string, const char ch)
 
 s32 string_num_of_substring_occurence(const char *string, const char *sub_str)
 {
-    u32 str_len     = strlen(string);
-    u32 sub_str_len = strlen(sub_str);
 
-    // im trollin :)
-    char *ptr  = (char *)string;
-    char  temp = ' ';
-    u32   ans  = 0;
+    char *found = nullptr;
+    char *ptr   = (char *)string;
+    u64   count = 0;
 
-    for (u32 i = 0; i < str_len - sub_str_len; i++)
+    while ((found = strstr(ptr, sub_str)) != NULL)
     {
-        temp             = ptr[sub_str_len];
-        ptr[sub_str_len] = '\0';
-        if (string_compare(ptr, sub_str))
-        {
-            ans++;
-        }
-        ptr[sub_str_len] = temp;
-        temp             = ' ';
-        ptr++;
+        count++;
+        ptr = found + 1; // or found + strlen(substring) to skip overlaps
     }
-    return ans;
+    return count;
 }
 
 s32 string_first_string_occurence(const char *string, const char *sub_str)

@@ -86,6 +86,8 @@ typedef double f64;
 #endif
 
 #define DCLAMP(value, min, max) (value <= min) ? min : (value >= max) ? max : value;
+#define DMAX(a, b) (a < b) ? b : a;
+#define DMIN(a, b) (a > b) ? b : a;
 
 // Inlining
 #if defined(__clang__) || defined(__gcc__)
