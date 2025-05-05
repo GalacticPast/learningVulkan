@@ -563,7 +563,7 @@ void geometry_system_parse_obj(const char *obj_file_full_path, u32 *num_of_objec
     dfree(buffer, buffer_mem_requirements, MEM_TAG_RENDERER);
 }
 
-u32 geometry_system_get_sponza_id()
+void geometry_system_get_sponza_geometries(geometry **sponza_geos, u32 *sponza_geometry_count)
 {
     const char *file_name   = "sponza.obj";
     const char *file_prefix = "../assets/meshes/";
@@ -581,16 +581,48 @@ u32 geometry_system_get_sponza_id()
     geometry_system_parse_obj(file_full_path, &sponza_objects, &sponza_vert_size, &sponza_vert, &sponza_ind_size,
                               &sponza_ind, &sponza_object_name);
 
+    *sponza_geos           = (geometry *)dallocate(sizeof(geometry) * (sponza_objects + 1), MEM_TAG_UNKNOWN);
+    *sponza_geometry_count = sponza_objects;
+
     for (u32 i = 0; i < sponza_objects; i++)
     {
-        geometry sponza{};
-        bool     result = vulkan_create_geometry(&sponza, sponza_vert_size[i], &(vertex &)sponza_vert[i],
-                                                 sponza_ind_size[i], &(u32 &)sponza_ind[i]);
+        (*sponza_geos)[i].id = i + 1;
     }
 
     for (u32 i = 0; i < sponza_objects; i++)
     {
-        DTRACE("%s", sponza_object_name[i]);
+        vertex *vertices = (vertex *)sponza_vert[i];
+        u32    *indices  = (u32 *)sponza_ind[i];
+
+        bool result =
+            vulkan_create_geometry(&(*sponza_geos)[i], sponza_vert_size[i], vertices, sponza_ind_size[i], indices);
     }
-    return 1;
+
+    for (u32 i = 0; i < sponza_objects; i++)
+    {
+        string_copy((*sponza_geos)[i].name.string, (char *)sponza_object_name[i], 0);
+    }
+
+    for (u32 i = 0; i < sponza_objects; i++)
+    {
+        DTRACE("%s ", (char *)sponza_object_name[i]);
+        u32     vertices_size = sponza_vert_size[i];
+        vertex *vertices      = (vertex *)sponza_vert[i];
+
+        for (u32 j = 0; j < vertices_size; j++)
+        {
+            DTRACE("position{ x: %f , y: %f, z: %f}, normals {x: %f, y: %f, z: %f}, texture{u: %f, v: %f}",
+                   vertices[i].position.x, vertices[i].position.y, vertices[i].position.z, vertices[i].normal.x,
+                   vertices[i].normal.y, vertices[i].normal.z, vertices[i].tex_coord.x, vertices[i].tex_coord.y);
+        }
+
+        u32  indices_size = sponza_ind_size[i];
+        u32 *indices      = (u32 *)sponza_ind[i];
+        for (u32 j = 0; j < indices_size - 3; j += 3)
+        {
+            DTRACE("%d %d %d", indices[j], indices[j + 1], indices[j + 2]);
+        }
+    }
+
+    return;
 }

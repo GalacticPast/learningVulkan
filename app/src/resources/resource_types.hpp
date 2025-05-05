@@ -69,6 +69,6 @@ struct geometry
     u32       id              = INVALID_ID;
     u32       reference_count = INVALID_ID;
     dstring   name;
-    material *material;
+    material *material              = nullptr;
     void     *vulkan_geometry_state = nullptr;
 };

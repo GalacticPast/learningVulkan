@@ -657,6 +657,37 @@ bool vulkan_destroy_geometry(geometry *geometry)
 
     return true;
 };
+// HACK: to draw sponza
+bool vulkan_draw_geometries(render_data *data, VkCommandBuffer *curr_command_buffer, u32 curr_frame_index)
+{
+
+    // vulkan_geometry_data *geo_data = (vulkan_geometry_data *)render_data->test_geometry->vulkan_geometry_state;
+    vkResetCommandBuffer(*curr_command_buffer, 0);
+    vulkan_begin_command_buffer_single_use(vk_context, *curr_command_buffer);
+    vulkan_begin_frame_renderpass(vk_context, *curr_command_buffer, curr_frame_index);
+
+    VkBuffer     vertex_buffers[] = {vk_context->vertex_buffer.handle};
+    VkDeviceSize offsets[]        = {0};
+
+    vkCmdBindVertexBuffers(*curr_command_buffer, 0, 1, vertex_buffers, offsets);
+    vkCmdBindIndexBuffer(*curr_command_buffer, vk_context->index_buffer.handle, 0, VK_INDEX_TYPE_UINT32);
+
+    vkCmdBindDescriptorSets(*curr_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                            vk_context->vk_graphics_pipeline.layout, 0, 1,
+                            &vk_context->descriptor_sets[curr_frame_index], 0, nullptr);
+
+    for (u32 i = 0; i < data->geometry_count; i++)
+    {
+        u32                   index_offset  = vulkan_calculate_index_offset(vk_context, data->test_geometry[i].id);
+        u32                   vertex_offset = vulkan_calculate_vertex_offset(vk_context, data->test_geometry[i].id);
+        vulkan_geometry_data *geo_data      = (vulkan_geometry_data *)data->test_geometry[i].vulkan_geometry_state;
+
+        vkCmdDrawIndexed(*curr_command_buffer, geo_data->indices_count, 1, index_offset, vertex_offset, 0);
+    }
+    vulkan_end_frame_renderpass(curr_command_buffer);
+    vulkan_end_command_buffer_single_use(vk_context, *curr_command_buffer);
+    return true;
+}
 
 bool vulkan_draw_frame(render_data *render_data)
 {
@@ -673,13 +704,13 @@ bool vulkan_draw_frame(render_data *render_data)
     if (render_data->test_geometry != nullptr)
     {
 
-        material **mat = &render_data->test_geometry->material;
+        material **mat = &render_data->test_geometry[0].material;
         if (!*mat)
         {
             *mat = material_system_get_default_material();
         }
         vulkan_texture *vk_texture       = nullptr;
-        texture        *instance_texture = (texture *)render_data->test_geometry->material->map.diffuse_tex;
+        texture        *instance_texture = (texture *)render_data->test_geometry[0].material->map.diffuse_tex;
 
         if (!instance_texture)
         {
@@ -711,12 +742,7 @@ bool vulkan_draw_frame(render_data *render_data)
 
     VkCommandBuffer &curr_command_buffer = vk_context->command_buffers[current_frame];
 
-    vulkan_geometry_data *geo_data = nullptr;
-    // vulkan_geometry_data *geo_data = (vulkan_geometry_data *)render_data->test_geometry->vulkan_geometry_state;
-    vkResetCommandBuffer(curr_command_buffer, 0);
-    vulkan_begin_command_buffer_single_use(vk_context, curr_command_buffer);
-    vulkan_begin_frame_renderpass(vk_context, curr_command_buffer, geo_data, image_index);
-    vulkan_end_command_buffer_single_use(vk_context, curr_command_buffer);
+    vulkan_draw_geometries(render_data, &curr_command_buffer, current_frame);
 
     VkSemaphore          wait_semaphores[]   = {vk_context->image_available_semaphores[current_frame]};
     VkSemaphore          signal_semaphores[] = {vk_context->render_finished_semaphores[current_frame]};
