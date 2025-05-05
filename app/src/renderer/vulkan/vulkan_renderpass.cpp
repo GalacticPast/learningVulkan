@@ -123,10 +123,11 @@ bool vulkan_begin_frame_renderpass(vulkan_context *vk_context, VkCommandBuffer c
     vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, vk_context->vk_graphics_pipeline.layout, 0,
                             1, &vk_context->descriptor_sets[image_index], 0, nullptr);
 
-    u32 index_offset  = vulkan_calculate_index_offset(vk_context, geo_data->id);
-    u32 vertex_offset = vulkan_calculate_vertex_offset(vk_context, geo_data->id);
+    // u32 index_offset  = vulkan_calculate_index_offset(vk_context, geo_data->id);
+    // u32 vertex_offset = vulkan_calculate_vertex_offset(vk_context, geo_data->id);
 
-    vkCmdDrawIndexed(command_buffer, geo_data->indices_count, 1, index_offset, vertex_offset, 0);
+    // vkCmdDrawIndexed(command_buffer, geo_data->indices_count, 1, index_offset, vertex_offset, 0);
+    vkCmdDrawIndexed(command_buffer, 1000000, 1, 0, 0, 0);
     vkCmdEndRenderPass(command_buffer);
 
     return true;

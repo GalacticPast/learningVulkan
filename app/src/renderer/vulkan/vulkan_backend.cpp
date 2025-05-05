@@ -669,26 +669,33 @@ bool vulkan_draw_frame(render_data *render_data)
 
     vulkan_update_global_uniform_buffer(&render_data->global_ubo, current_frame);
 
-    material **mat = &render_data->test_geometry->material;
-    if (!*mat)
+    // HACK:
+    if (render_data->test_geometry != nullptr)
     {
-        *mat = material_system_get_default_material();
-    }
-    vulkan_texture *vk_texture       = nullptr;
-    texture        *instance_texture = (texture *)render_data->test_geometry->material->map.diffuse_tex;
 
-    if (!instance_texture)
-    {
-        DDEBUG("No textures were provided using default texture");
-        instance_texture = texture_system_get_texture(DEFAULT_TEXTURE_HANDLE);
-        vk_texture       = (vulkan_texture *)instance_texture->vulkan_texture_state;
-    }
-    else
-    {
-        vk_texture = (vulkan_texture *)instance_texture->vulkan_texture_state;
-    }
+        material **mat = &render_data->test_geometry->material;
+        if (!*mat)
+        {
+            *mat = material_system_get_default_material();
+        }
+        vulkan_texture *vk_texture       = nullptr;
+        texture        *instance_texture = (texture *)render_data->test_geometry->material->map.diffuse_tex;
 
-    vulkan_update_descriptor_sets(vk_context, vk_texture);
+        if (!instance_texture)
+        {
+            DDEBUG("No textures were provided using default texture");
+            instance_texture = texture_system_get_texture(DEFAULT_TEXTURE_HANDLE);
+            vk_texture       = (vulkan_texture *)instance_texture->vulkan_texture_state;
+        }
+        else
+        {
+            vk_texture = (vulkan_texture *)instance_texture->vulkan_texture_state;
+        }
+    }
+    DDEBUG("No textures were provided using default texture");
+    texture        *instance_texture = texture_system_get_texture(DEFAULT_TEXTURE_HANDLE);
+    vulkan_texture *vk_tex           = (vulkan_texture *)instance_texture->vulkan_texture_state;
+    vulkan_update_descriptor_sets(vk_context, vk_tex);
 
     u32 image_index = INVALID_ID;
     result = vkAcquireNextImageKHR(vk_context->vk_device.logical, vk_context->vk_swapchain.handle, INVALID_ID_64,
@@ -704,7 +711,8 @@ bool vulkan_draw_frame(render_data *render_data)
 
     VkCommandBuffer &curr_command_buffer = vk_context->command_buffers[current_frame];
 
-    vulkan_geometry_data *geo_data = (vulkan_geometry_data *)render_data->test_geometry->vulkan_geometry_state;
+    vulkan_geometry_data *geo_data = nullptr;
+    // vulkan_geometry_data *geo_data = (vulkan_geometry_data *)render_data->test_geometry->vulkan_geometry_state;
     vkResetCommandBuffer(curr_command_buffer, 0);
     vulkan_begin_command_buffer_single_use(vk_context, curr_command_buffer);
     vulkan_begin_frame_renderpass(vk_context, curr_command_buffer, geo_data, image_index);

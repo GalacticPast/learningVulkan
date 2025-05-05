@@ -271,12 +271,6 @@ bool geometry_system_create_default_geometry()
 
     geometry_system_create_geometry(&default_config);
 
-    dfree(default_config.vertices, sizeof(vertex) * default_config.vertex_count, MEM_TAG_RENDERER);
-    dfree(default_config.indices, sizeof(u32) * default_config.index_count, MEM_TAG_RENDERER);
-    dfree(default_vert, num_of_objects * sizeof(void *), MEM_TAG_RENDERER);
-    dfree(default_ind, num_of_objects * sizeof(void *), MEM_TAG_RENDERER);
-    dfree(default_names, num_of_objects * sizeof(void *), MEM_TAG_RENDERER);
-
     return true;
 }
 
@@ -340,7 +334,7 @@ void geometry_system_parse_obj(const char *obj_file_full_path, u32 *num_of_objec
         return;
     }
 
-    char *buffer = (char *)dallocate(buffer_mem_requirements, MEM_TAG_RENDERER);
+    char *buffer = (char *)dallocate(buffer_mem_requirements + 1, MEM_TAG_RENDERER);
     file_open_and_read(obj_file_full_path, &buffer_mem_requirements, buffer, 0);
 
     // TODO: cleaup this piece of shit code
@@ -354,7 +348,7 @@ void geometry_system_parse_obj(const char *obj_file_full_path, u32 *num_of_objec
     u32 v  = string_first_string_occurence(ptr, "v ");
     ptr   += v + 1;
 
-    vec3 *vert_coords = (vec3 *)dallocate(sizeof(vec3) * vertex_count_obj, MEM_TAG_UNKNOWN);
+    vec3 *vert_coords = (vec3 *)dallocate(sizeof(vec3) * (vertex_count_obj + 1), MEM_TAG_UNKNOWN);
 
     u32 vert_processed = 0;
     for (u32 i = 0; i < vertex_count_obj; i++)
@@ -383,7 +377,7 @@ void geometry_system_parse_obj(const char *obj_file_full_path, u32 *num_of_objec
     char *normal                        = ptr + vertex_normal_first_occurence;
 
     u32   normal_count_obj = string_num_of_substring_occurence(normal, "vn");
-    vec3 *normals          = (vec3 *)dallocate(sizeof(vec3) * normal_count_obj, MEM_TAG_UNKNOWN);
+    vec3 *normals          = (vec3 *)dallocate(sizeof(vec3) * (normal_count_obj + 1), MEM_TAG_UNKNOWN);
 
     ptr                   = buffer;
     u32 vn                = string_first_string_occurence(ptr, "vn");
@@ -415,7 +409,7 @@ void geometry_system_parse_obj(const char *obj_file_full_path, u32 *num_of_objec
     char *texture                        = ptr + vertex_texture_first_occurence;
 
     u32   texture_count_obj = string_num_of_substring_occurence(texture, "vt");
-    vec2 *textures          = (vec2 *)dallocate(sizeof(vec2) * texture_count_obj, MEM_TAG_UNKNOWN);
+    vec2 *textures          = (vec2 *)dallocate(sizeof(vec2) * (texture_count_obj + 1), MEM_TAG_UNKNOWN);
 
     ptr     = buffer;
     u32 vt  = string_first_string_occurence(ptr, "vt");
@@ -444,6 +438,7 @@ void geometry_system_parse_obj(const char *obj_file_full_path, u32 *num_of_objec
     u32  objects = string_num_of_substring_occurence(buffer, "o ");
     char temp    = ' ';
 
+    objects++;
     *num_of_objects  = objects;
     *object_names    = (void **)dallocate(sizeof(void *) * objects, MEM_TAG_RENDERER);
     *object_vertices = (void **)dallocate(sizeof(void *) * objects, MEM_TAG_RENDERER);
@@ -465,7 +460,6 @@ void geometry_system_parse_obj(const char *obj_file_full_path, u32 *num_of_objec
             *name = (char *)dallocate(sizeof(char) * (new_line + 1), MEM_TAG_RENDERER);
             string_ncopy((char *)*name, object_ptr, new_line);
             ((char *)(*name))[new_line] = '\0';
-            DTRACE("%s ", *name);
         }
 
         object_first_occurence = string_first_string_occurence(object_ptr, "o ");
@@ -499,8 +493,9 @@ void geometry_system_parse_obj(const char *obj_file_full_path, u32 *num_of_objec
             char *a;
             for (u32 k = 0; k < 9; k++)
             {
-                offsets[k] = strtol(ptr, &a, 10);
+                offsets[k] = strtol(ptr2, &a, 10);
                 ptr2       = a;
+                a          = NULL;
             }
 
             max_vert_for_obj = DMAX(max_vert_for_obj, offsets[0]);
@@ -512,10 +507,10 @@ void geometry_system_parse_obj(const char *obj_file_full_path, u32 *num_of_objec
         }
 
         void **vert_arr = ((void **)(*object_vertices)) + object;
-        *vert_arr       = dallocate(max_vert_for_obj * sizeof(struct vertex), MEM_TAG_RENDERER);
+        *vert_arr       = dallocate((max_vert_for_obj + 1) * sizeof(struct vertex), MEM_TAG_RENDERER);
 
         void **ind_arr = ((void **)(*object_indices)) + object;
-        *ind_arr       = dallocate(tris_count * 3 * sizeof(u32), MEM_TAG_RENDERER);
+        *ind_arr       = dallocate((tris_count + 1) * 3 * sizeof(u32), MEM_TAG_RENDERER);
 
         ptr  = object_ptr;
         f    = string_first_string_occurence(ptr, "f ");
@@ -531,6 +526,7 @@ void geometry_system_parse_obj(const char *obj_file_full_path, u32 *num_of_objec
             {
                 offsets[k] = strtol(ptr2, &a, 10);
                 ptr2       = a;
+                a          = NULL;
             }
 
             u32 *ind_dum_ptr = ((u32 *)(*ind_arr)) + (3 * i);
@@ -561,9 +557,10 @@ void geometry_system_parse_obj(const char *obj_file_full_path, u32 *num_of_objec
             object_ptr                         += object_first_occurence + 1;
         }
     }
-    dfree(textures, sizeof(vec2) * texture_count_obj, MEM_TAG_UNKNOWN);
-    dfree(normals, sizeof(vec3) * normal_count_obj, MEM_TAG_UNKNOWN);
-    dfree(vert_coords, sizeof(vec3) * vertex_count_obj, MEM_TAG_UNKNOWN);
+    dfree(textures, sizeof(vec2) * (texture_count_obj + 1), MEM_TAG_UNKNOWN);
+    dfree(normals, sizeof(vec3) * (normal_count_obj + 1), MEM_TAG_UNKNOWN);
+    dfree(vert_coords, sizeof(vec3) * (vertex_count_obj + 1), MEM_TAG_UNKNOWN);
+    dfree(buffer, buffer_mem_requirements, MEM_TAG_RENDERER);
 }
 
 u32 geometry_system_get_sponza_id()
@@ -586,7 +583,14 @@ u32 geometry_system_get_sponza_id()
 
     for (u32 i = 0; i < sponza_objects; i++)
     {
+        geometry sponza{};
+        bool     result = vulkan_create_geometry(&sponza, sponza_vert_size[i], &(vertex &)sponza_vert[i],
+                                                 sponza_ind_size[i], &(u32 &)sponza_ind[i]);
+    }
+
+    for (u32 i = 0; i < sponza_objects; i++)
+    {
         DTRACE("%s", sponza_object_name[i]);
     }
-    return 0;
+    return 1;
 }

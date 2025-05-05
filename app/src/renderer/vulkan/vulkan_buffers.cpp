@@ -90,7 +90,7 @@ bool vulkan_copy_buffer(vulkan_context *vk_context, vulkan_buffer *dst_buffer, u
 bool vulkan_create_index_buffer(vulkan_context *vk_context)
 {
     // 32 mbs
-    u64 index_buffer_size = 1 * 1024 * 1024;
+    u64 index_buffer_size = 1024 * 1024 * 1024;
     vulkan_create_buffer(vk_context, &vk_context->index_buffer,
                          VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
                          VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, index_buffer_size);
@@ -101,7 +101,7 @@ bool vulkan_create_index_buffer(vulkan_context *vk_context)
 bool vulkan_create_vertex_buffer(vulkan_context *vk_context)
 {
     // 32 mbs
-    u64 vertex_buffer_size = 1 * 1024 * 1024;
+    u64 vertex_buffer_size = 1024 * 1024 * 1024;
     vulkan_create_buffer(vk_context, &vk_context->vertex_buffer,
                          VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
                          VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, vertex_buffer_size);
