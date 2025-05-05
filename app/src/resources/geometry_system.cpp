@@ -591,8 +591,8 @@ void geometry_system_get_sponza_geometries(geometry **sponza_geos, u32 *sponza_g
 
     for (u32 i = 0; i < sponza_objects; i++)
     {
-        vertex *vertices = (vertex *)sponza_vert[i];
-        u32    *indices  = (u32 *)sponza_ind[i];
+        vertex *vertices = (vertex *)((u8 *)(*sponza_vert) + (sizeof(void *) * i));
+        u32    *indices  = (u32 *)((u8 *)(*sponza_ind) + (sizeof(void *) * i));
 
         bool result =
             vulkan_create_geometry(&(*sponza_geos)[i], sponza_vert_size[i], vertices, sponza_ind_size[i], indices);
@@ -607,7 +607,7 @@ void geometry_system_get_sponza_geometries(geometry **sponza_geos, u32 *sponza_g
     {
         DTRACE("%s ", (char *)sponza_object_name[i]);
         u32     vertices_size = sponza_vert_size[i];
-        vertex *vertices      = (vertex *)sponza_vert[i];
+        vertex *vertices      = (vertex *)((u8 *)(*sponza_vert) + (sizeof(void *) * i));
 
         for (u32 j = 0; j < vertices_size; j++)
         {
@@ -617,7 +617,8 @@ void geometry_system_get_sponza_geometries(geometry **sponza_geos, u32 *sponza_g
         }
 
         u32  indices_size = sponza_ind_size[i];
-        u32 *indices      = (u32 *)sponza_ind[i];
+        u32 *indices      = (u32 *)((u8 *)(*sponza_ind) + (sizeof(void *) * i));
+
         for (u32 j = 0; j < indices_size - 3; j += 3)
         {
             DTRACE("%d %d %d", indices[j], indices[j + 1], indices[j + 2]);
