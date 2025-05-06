@@ -450,6 +450,7 @@ void geometry_system_parse_obj(const char *obj_file_full_path, u32 *num_of_objec
     char *object_ptr              = buffer;
     u32   object_first_occurence  = string_first_string_occurence(object_ptr, "o ");
     object_ptr                   += object_first_occurence + 1;
+
     for (u32 object = 0; object < objects; object++)
     {
 
@@ -472,6 +473,10 @@ void geometry_system_parse_obj(const char *obj_file_full_path, u32 *num_of_objec
         u64 tris_count       = string_num_of_substring_occurence(object_ptr, "f ");
         u32 max_vert_for_obj = 0;
         u32 min_vert_for_obj = INVALID_ID;
+        u32 max_norm_for_obj = 0;
+        u32 min_norm_for_obj = INVALID_ID;
+        u32 max_tex_for_obj  = 0;
+        u32 min_tex_for_obj  = INVALID_ID;
 
         char *ptr  = object_ptr;
         u32   f    = string_first_string_occurence(ptr, "f ");
@@ -499,13 +504,16 @@ void geometry_system_parse_obj(const char *obj_file_full_path, u32 *num_of_objec
                 a          = NULL;
             }
 
-            max_vert_for_obj = DMAX(max_vert_for_obj, offsets[0]);
-            max_vert_for_obj = DMAX(max_vert_for_obj, offsets[3]);
-            max_vert_for_obj = DMAX(max_vert_for_obj, offsets[6]);
+            for (u32 j = 0; j < 9; j += 3)
+            {
 
-            min_vert_for_obj = DMIN(min_vert_for_obj, offsets[0]);
-            min_vert_for_obj = DMIN(min_vert_for_obj, offsets[3]);
-            min_vert_for_obj = DMIN(min_vert_for_obj, offsets[6]);
+                max_vert_for_obj = DMAX(max_vert_for_obj, offsets[j]);
+                min_vert_for_obj = DMIN(min_vert_for_obj, offsets[j]);
+                max_norm_for_obj = DMAX(max_norm_for_obj, offsets[j + 2]);
+                min_norm_for_obj = DMIN(min_norm_for_obj, offsets[j + 2]);
+                max_tex_for_obj  = DMAX(max_tex_for_obj, offsets[j + 1]);
+                min_tex_for_obj  = DMIN(min_tex_for_obj, offsets[j + 1]);
+            }
 
             f    = string_first_string_occurence(ptr, "f ");
             ptr += f + 2;
@@ -541,9 +549,9 @@ void geometry_system_parse_obj(const char *obj_file_full_path, u32 *num_of_objec
                 u32            reassigned_index = offsets[k] - min_vert_for_obj;
                 struct vertex *dum =
                     (struct vertex *)((u8 *)(*vert_arr) + (sizeof(struct vertex) * (reassigned_index)));
-                dum->position  = vert_coords[offsets[k] - 1];
-                dum->tex_coord = textures[offsets[k + 1] - 1];
-                dum->normal    = normals[offsets[k + 2] - 1];
+                dum->position  = vert_coords[offsets[k]];
+                dum->tex_coord = textures[offsets[k + 1]];
+                dum->normal    = normals[offsets[k + 2]];
             }
 
             ind_dum_ptr[0] = offsets[0] - min_vert_for_obj;
@@ -554,7 +562,7 @@ void geometry_system_parse_obj(const char *obj_file_full_path, u32 *num_of_objec
             ptr += f + 2;
         }
 
-        (*object_vertices_size)[object] = max_vert_for_obj;
+        (*object_vertices_size)[object] = max_vert_for_obj + 1;
         (*object_indices_size)[object]  = tris_count * 3;
 
         if (object_first_occurence != INVALID_ID)
@@ -612,9 +620,8 @@ void geometry_system_get_sponza_geometries(geometry **sponza_geos, u32 *sponza_g
 
     for (u32 i = 0; i < sponza_objects; i++)
     {
-        DTRACE("%s ", (char *)sponza_object_name[i]);
-        u32     vertices_size = sponza_vert_size[i];
-        vertex *vertices      = (vertex *)((u8 *)(*sponza_vert) + (sizeof(void *) * i));
+        u32 vertices_size = sponza_vert_size[i];
+        // vertex *vertices      = (vertex *)((u8 *)(*sponza_vert) + (sizeof(void *) * i));
 
         // for (u32 j = 0; j < vertices_size; j++)
         //{
@@ -623,13 +630,15 @@ void geometry_system_get_sponza_geometries(geometry **sponza_geos, u32 *sponza_g
         //            vertices[i].normal.y, vertices[i].normal.z, vertices[i].tex_coord.x, vertices[i].tex_coord.y);
         // }
 
-        u32  indices_size = sponza_ind_size[i];
-        u32 *indices      = (u32 *)((u8 *)(*sponza_ind) + (sizeof(void *) * i));
+        u32 indices_size = sponza_ind_size[i];
+        DTRACE("%s vertices:%d indices:%d", (char *)sponza_object_name[i], vertices_size, indices_size);
+        //
+        // u32 *indices      = (u32 *)sponza_ind[i];
 
-        for (u32 j = 0; j < indices_size - 3; j += 3)
-        {
-            DTRACE("%d %d %d", indices[j], indices[j + 1], indices[j + 2]);
-        }
+        // for (u32 j = 0; j < indices_size - 3; j += 3)
+        //{
+        //     DTRACE("%d %d %d", indices[j], indices[j + 1], indices[j + 2]);
+        // }
     }
 
     return;
