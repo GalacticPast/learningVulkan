@@ -102,7 +102,7 @@ s32 string_num_of_substring_occurence(const char *string, const char *sub_str)
     while ((found = strstr(ptr, sub_str)) != NULL)
     {
         count++;
-        ptr = found + 1; // or found + strlen(substring) to skip overlaps
+        ptr = found + 1;
     }
     return count;
 }

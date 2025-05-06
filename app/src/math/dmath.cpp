@@ -1,5 +1,5 @@
 #include "dmath.hpp"
-
+#include "platform/platform.hpp"
 static bool rand_seeded = false;
 
 s32 drandom()

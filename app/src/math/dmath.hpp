@@ -1,11 +1,10 @@
-#include "core/logger.hpp"
-#include "platform/platform.hpp"
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Weverything"
 
 #pragma once
 #include "core/dmemory.hpp"
 #include "defines.hpp"
+#include "dmath_types.hpp"
 #include <cmath>
 
 #define D_PI 3.14159265358979323846f
@@ -32,74 +31,6 @@
 
 // Smallest positive number where 1.0 + FLOAT_EPSILON != 0
 #define D_FLOAT_EPSILON 1.192092896e-07f
-
-class vec2
-{
-  public:
-    union {
-        f32 elements[2];
-        struct
-        {
-            union {
-                // The first element.
-                f32 x, r, s, u;
-            };
-            union {
-                // The second element.
-                f32 y, g, t, v;
-            };
-        };
-    };
-    vec2() : x(0), y(0) {};
-    vec2(f32 x, f32 y) : x(x), y(y) {};
-
-    inline void operator+=(const vec2 &vec)
-    {
-        this->x += vec.x;
-        this->y += vec.y;
-    }
-    inline void operator-=(const vec2 &vec)
-    {
-        this->x -= vec.x;
-        this->y -= vec.y;
-    }
-    inline void operator*=(const f32 n)
-    {
-        this->x *= n;
-        this->y *= n;
-    }
-    inline void operator/=(const f32 n)
-    {
-        this->x /= n;
-        this->y /= n;
-    }
-    inline vec2 operator+(const vec2 &vec)
-    {
-        return vec2(this->x + vec.x, this->y + vec.y);
-    }
-    inline vec2 operator-(const vec2 &vec)
-    {
-        return vec2(this->x - vec.x, this->y - vec.y);
-    }
-    inline vec2 operator*(const f32 n)
-    {
-        return vec2(this->x * n, this->y * n);
-    }
-    inline vec2 operator/(const f32 n)
-    {
-        return vec2(this->x / n, this->y / n);
-    }
-    inline f32 magnitude()
-    {
-        return sqrtf(this->x * this->x + this->y * this->y);
-    }
-    inline void normalize()
-    {
-        const f32 length  = this->magnitude();
-        this->x          /= length;
-        this->y          /= length;
-    }
-};
 
 inline vec2 vec2_normalized(vec2 a)
 {
@@ -130,86 +61,6 @@ inline bool vec2_compare(vec2 vector_0, vec2 vector_1, f32 tolerance)
 
     return true;
 }
-
-class vec3
-{
-  public:
-    // An array of x, y, z
-    union {
-        f32 elements[3];
-        struct
-        {
-            union {
-                // The first element.
-                f32 x, r, s, u;
-            };
-            union {
-                // The second element.
-                f32 y, g, t, v;
-            };
-            union {
-                // The third element.
-                f32 z, b, p, w;
-            };
-        };
-    };
-
-    vec3() : x(0), y(0), z(0) {};
-    vec3(f32 x, f32 y, f32 z) : x(x), y(y), z(z) {};
-
-    inline vec3 operator+(const vec3 &vec)
-    {
-        return vec3(this->x + vec.x, this->y + vec.y, this->z + vec.z);
-    }
-    inline vec3 operator-(const vec3 &vec)
-    {
-        return vec3(this->x - vec.x, this->y - vec.y, this->z - vec.z);
-    }
-    inline vec3 operator*(const f32 n)
-    {
-        return vec3(this->x * n, this->y * n, this->z * n);
-    }
-    inline vec3 operator/(const f32 n)
-    {
-        return vec3(this->x / n, this->y / n, this->z / n);
-    }
-    inline void operator+=(const vec3 &vec)
-    {
-        this->x += vec.x;
-        this->y += vec.y;
-        this->z += vec.z;
-    }
-    inline void operator-=(const vec3 &vec)
-    {
-        this->x -= vec.x;
-        this->y -= vec.y;
-        this->z -= vec.z;
-    }
-    inline void operator*=(const f32 n)
-    {
-        this->x *= n;
-        this->y *= n;
-        this->z *= n;
-    }
-    inline void operator/=(const f32 n)
-    {
-        this->x /= n;
-        this->y /= n;
-        this->z /= n;
-    }
-    inline f32 magnitude()
-    {
-        return sqrtf(this->x * this->x + this->y * this->y + this->z * this->z);
-    }
-    inline void normalize()
-    {
-        const f32 length  = this->magnitude();
-        this->x          /= length;
-        this->y          /= length;
-        this->z          /= length;
-    }
-    // return true if 'this' vector is bigger
-};
 
 inline vec3 vec3_normalized(vec3 a)
 {
@@ -258,93 +109,6 @@ inline f32 vec3_distance(vec3 vector_0, vec3 vector_1)
     return d.magnitude();
 }
 
-class vec4
-{
-  public:
-    union {
-        // An array of x, y, z, w
-        f32 elements[4];
-        struct
-        {
-            union {
-                // The first element.
-                f32 x, r, s;
-            };
-            union {
-                // The second element.
-                f32 y, g, t;
-            };
-            union {
-                // The third element.
-                f32 z, b, p;
-            };
-            union {
-                // The fourth element.
-                f32 w, a, q;
-            };
-        };
-    };
-
-    vec4() : x(0), y(0), z(0), w(0) {};
-    vec4(f32 x, f32 y, f32 z, f32 w) : x(x), y(y), z(z), w(w) {};
-
-    inline vec4 operator+(const vec4 &vec)
-    {
-        return vec4(this->x + vec.x, this->y + vec.y, this->z + vec.z, this->w + vec.w);
-    }
-    inline vec4 operator-(const vec4 &vec)
-    {
-        return vec4(this->x - vec.x, this->y - vec.y, this->z - vec.z, this->w - vec.w);
-    }
-    inline vec4 operator*(const f32 n)
-    {
-        return vec4(this->x * n, this->y * n, this->z * n, this->w * n);
-    }
-    inline vec4 operator/(const f32 n)
-    {
-        return vec4(this->x / n, this->y / n, this->z / n, this->w / n);
-    }
-    inline void operator+=(const vec4 &vec)
-    {
-        this->x += vec.x;
-        this->y += vec.y;
-        this->z += vec.z;
-        this->w += vec.w;
-    }
-    inline void operator-=(const vec4 &vec)
-    {
-        this->x -= vec.x;
-        this->y -= vec.y;
-        this->z -= vec.z;
-        this->w -= vec.w;
-    }
-    inline void operator*=(const f32 n)
-    {
-        this->x *= n;
-        this->y *= n;
-        this->z *= n;
-        this->w *= n;
-    }
-    inline void operator/=(const f32 n)
-    {
-        this->x /= n;
-        this->y /= n;
-        this->z /= n;
-        this->w /= n;
-    }
-    inline f32 magnitude()
-    {
-        return sqrtf(this->x * this->x + this->y * this->y + this->z * this->z + this->w * this->w);
-    }
-    inline void normalize()
-    {
-        const f32 length  = this->magnitude();
-        this->x          /= length;
-        this->y          /= length;
-        this->z          /= length;
-        this->w          /= length;
-    }
-};
 inline vec4 vec4_normalized(vec4 a)
 {
     const f32 length = a.magnitude();
@@ -359,41 +123,6 @@ inline f32 vec4_dot_f32(vec4 a, vec4 b)
     f32 p = a.x * b.x + a.y * b.y + a.z * b.z + a.w * b.w;
     return p;
 }
-
-class mat4
-{
-  public:
-    f32 data[16];
-
-    mat4()
-    {
-        dzero_memory(this->data, sizeof(f32) * 16);
-        data[0]  = 1.0f;
-        data[5]  = 1.0f;
-        data[10] = 1.0f;
-        data[15] = 1.0f;
-    }
-    inline mat4 operator*(mat4 matrix_1)
-    {
-        mat4 out_matrix = mat4();
-
-        const f32 *m1_ptr  = this->data;
-        const f32 *m2_ptr  = matrix_1.data;
-        f32       *dst_ptr = out_matrix.data;
-
-        for (s32 i = 0; i < 4; ++i)
-        {
-            for (s32 j = 0; j < 4; ++j)
-            {
-                *dst_ptr = m1_ptr[0] * m2_ptr[0 + j] + m1_ptr[1] * m2_ptr[4 + j] + m1_ptr[2] * m2_ptr[8 + j] +
-                           m1_ptr[3] * m2_ptr[12 + j];
-                dst_ptr++;
-            }
-            m1_ptr += 4;
-        }
-        return out_matrix;
-    }
-};
 
 inline mat4 mat4_mul(mat4 matrix_0, mat4 matrix_1)
 {
@@ -950,12 +679,5 @@ s32 drandom_in_range(s32 min, s32 max);
 
 f32 fdrandom();
 f32 fdrandom_in_range(f32 min, f32 max);
-
-struct vertex
-{
-    vec3 position;
-    vec3 normal;
-    vec2 tex_coord;
-};
 
 #pragma clang diagnostic pop

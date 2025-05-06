@@ -1,6 +1,7 @@
 #include "json_parser.hpp"
 #include "core/dfile_system.hpp"
 #include "core/dstring.hpp"
+#include "core/logger.hpp"
 
 void json_parse_string(const char *ptr, char *out_string)
 {

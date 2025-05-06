@@ -2,7 +2,6 @@
 
 #include "containers/darray.hpp"
 #include "defines.hpp"
-#include "math/dmath.hpp"
 #include "memory/linear_allocator.hpp"
 #include "resources/resource_types.hpp"
 

@@ -1,7 +1,6 @@
 #pragma once
 #include "defines.hpp"
-#include "math/dmath.hpp"
-
+#include "math/dmath_types.hpp"
 // strings because I dont know c strings good enough :(
 //
 

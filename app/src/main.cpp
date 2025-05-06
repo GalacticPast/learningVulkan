@@ -1,4 +1,3 @@
-
 #include "core/application.hpp"
 #include "core/dclock.hpp"
 #include "core/dmemory.hpp"
@@ -86,10 +85,10 @@ int main()
 
     render_data triangle{};
 
-    geometry *sponza_geo     = nullptr;
+    geometry *sponza_geos    = nullptr;
     u32       geometry_count = INVALID_ID;
-    geometry_system_get_sponza_geometries(&sponza_geo, &geometry_count);
-    triangle.test_geometry  = sponza_geo;
+    geometry_system_get_sponza_geometries(&sponza_geos, &geometry_count);
+    triangle.test_geometry  = sponza_geos;
     triangle.geometry_count = geometry_count;
 
     triangle.global_ubo = global_ubo;
