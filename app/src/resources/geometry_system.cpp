@@ -471,6 +471,7 @@ void geometry_system_parse_obj(const char *obj_file_full_path, u32 *num_of_objec
 
         u64 tris_count       = string_num_of_substring_occurence(object_ptr, "f ");
         u32 max_vert_for_obj = 0;
+        u32 min_vert_for_obj = INVALID_ID;
 
         char *ptr  = object_ptr;
         u32   f    = string_first_string_occurence(ptr, "f ");
@@ -501,6 +502,10 @@ void geometry_system_parse_obj(const char *obj_file_full_path, u32 *num_of_objec
             max_vert_for_obj = DMAX(max_vert_for_obj, offsets[0]);
             max_vert_for_obj = DMAX(max_vert_for_obj, offsets[3]);
             max_vert_for_obj = DMAX(max_vert_for_obj, offsets[6]);
+
+            min_vert_for_obj = DMIN(min_vert_for_obj, offsets[0]);
+            min_vert_for_obj = DMIN(min_vert_for_obj, offsets[3]);
+            min_vert_for_obj = DMIN(min_vert_for_obj, offsets[6]);
 
             f    = string_first_string_occurence(ptr, "f ");
             ptr += f + 2;
@@ -533,15 +538,17 @@ void geometry_system_parse_obj(const char *obj_file_full_path, u32 *num_of_objec
 
             for (u32 k = 0; k < 9; k += 3)
             {
-                struct vertex *dum = (struct vertex *)((u8 *)(*vert_arr) + (sizeof(struct vertex) * (offsets[k] - 1)));
-                dum->position      = vert_coords[offsets[k] - 1];
-                dum->tex_coord     = textures[offsets[k + 1] - 1];
-                dum->normal        = normals[offsets[k + 2] - 1];
+                u32            reassigned_index = offsets[k] - min_vert_for_obj;
+                struct vertex *dum =
+                    (struct vertex *)((u8 *)(*vert_arr) + (sizeof(struct vertex) * (reassigned_index)));
+                dum->position  = vert_coords[offsets[k] - 1];
+                dum->tex_coord = textures[offsets[k + 1] - 1];
+                dum->normal    = normals[offsets[k + 2] - 1];
             }
 
-            ind_dum_ptr[0] = offsets[0] - 1;
-            ind_dum_ptr[1] = offsets[3] - 1;
-            ind_dum_ptr[2] = offsets[6] - 1;
+            ind_dum_ptr[0] = offsets[0] - min_vert_for_obj;
+            ind_dum_ptr[1] = offsets[3] - min_vert_for_obj;
+            ind_dum_ptr[2] = offsets[6] - min_vert_for_obj;
 
             f    = string_first_string_occurence(ptr, "f ");
             ptr += f + 2;
@@ -591,8 +598,8 @@ void geometry_system_get_sponza_geometries(geometry **sponza_geos, u32 *sponza_g
 
     for (u32 i = 0; i < sponza_objects; i++)
     {
-        vertex *vertices = (vertex *)((u8 *)(*sponza_vert) + (sizeof(void *) * i));
-        u32    *indices  = (u32 *)((u8 *)(*sponza_ind) + (sizeof(void *) * i));
+        vertex *vertices = (vertex *)sponza_vert[i];
+        u32    *indices  = (u32 *)sponza_ind[i];
 
         bool result =
             vulkan_create_geometry(&(*sponza_geos)[i], sponza_vert_size[i], vertices, sponza_ind_size[i], indices);
@@ -609,12 +616,12 @@ void geometry_system_get_sponza_geometries(geometry **sponza_geos, u32 *sponza_g
         u32     vertices_size = sponza_vert_size[i];
         vertex *vertices      = (vertex *)((u8 *)(*sponza_vert) + (sizeof(void *) * i));
 
-        for (u32 j = 0; j < vertices_size; j++)
-        {
-            DTRACE("position{ x: %f , y: %f, z: %f}, normals {x: %f, y: %f, z: %f}, texture{u: %f, v: %f}",
-                   vertices[i].position.x, vertices[i].position.y, vertices[i].position.z, vertices[i].normal.x,
-                   vertices[i].normal.y, vertices[i].normal.z, vertices[i].tex_coord.x, vertices[i].tex_coord.y);
-        }
+        // for (u32 j = 0; j < vertices_size; j++)
+        //{
+        //     DTRACE("position{ x: %f , y: %f, z: %f}, normals {x: %f, y: %f, z: %f}, texture{u: %f, v: %f}",
+        //            vertices[i].position.x, vertices[i].position.y, vertices[i].position.z, vertices[i].normal.x,
+        //            vertices[i].normal.y, vertices[i].normal.z, vertices[i].tex_coord.x, vertices[i].tex_coord.y);
+        // }
 
         u32  indices_size = sponza_ind_size[i];
         u32 *indices      = (u32 *)((u8 *)(*sponza_ind) + (sizeof(void *) * i));
