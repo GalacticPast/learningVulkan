@@ -682,6 +682,10 @@ bool vulkan_draw_geometries(render_data *data, VkCommandBuffer *curr_command_buf
         u32                   vertex_offset = vulkan_calculate_vertex_offset(vk_context, data->test_geometry[i].id);
         vulkan_geometry_data *geo_data      = (vulkan_geometry_data *)data->test_geometry[i].vulkan_geometry_state;
 
+        texture        *instance_texture = texture_system_get_texture(DEFAULT_TEXTURE_HANDLE);
+        vulkan_texture *vk_tex           = (vulkan_texture *)instance_texture->vulkan_texture_state;
+        vulkan_update_descriptor_sets(vk_context, vk_tex);
+
         vkCmdDrawIndexed(*curr_command_buffer, geo_data->indices_count, 1, index_offset, vertex_offset, 0);
     }
     vulkan_end_frame_renderpass(curr_command_buffer);
@@ -724,9 +728,6 @@ bool vulkan_draw_frame(render_data *render_data)
         }
     }
     DDEBUG("No textures were provided using default texture");
-    texture        *instance_texture = texture_system_get_texture(DEFAULT_TEXTURE_HANDLE);
-    vulkan_texture *vk_tex           = (vulkan_texture *)instance_texture->vulkan_texture_state;
-    vulkan_update_descriptor_sets(vk_context, vk_tex);
 
     u32 image_index = INVALID_ID;
     result = vkAcquireNextImageKHR(vk_context->vk_device.logical, vk_context->vk_swapchain.handle, INVALID_ID_64,

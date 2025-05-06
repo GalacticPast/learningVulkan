@@ -33,7 +33,7 @@ struct material_config
 {
     char mat_name[MATERIAL_NAME_MAX_LENGTH];        //        256
     char diffuse_tex_name[TEXTURE_NAME_MAX_LENGTH]; // 512
-    vec4 diffuse_color;                             //                 32 * 4 =    128
+    vec4 diffuse_color = {1.0f, 1.0f, 1.0f, 1.0f};  //                 32 * 4 =    128
     // TODO: add normal maps, heightmap etc..
 };
 

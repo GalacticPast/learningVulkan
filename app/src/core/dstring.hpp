@@ -30,7 +30,7 @@ u32 string_copy(char *dest, const char *src, u32 offset_to_dest);
 
 void string_ncopy(char *dest, const char *src, u32 length);
 
-void string_copy_length(char *dest, const char *src, u32 len);
+// void string_copy_length(char *dest, const char *src, u32 len);
 
 u32 string_copy_format(char *dest, const char *format, u32 offset_to_dest, ...);
 

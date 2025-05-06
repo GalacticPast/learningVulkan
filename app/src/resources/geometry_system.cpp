@@ -332,9 +332,9 @@ void geometry_system_parse_obj(const char *obj_file_full_path, u32 *num_of_objec
     // TODO: cleaup this piece of shit code
     char *ptr                    = buffer;
     u64   vertex_first_occurence = string_first_string_occurence(ptr, "v ");
-    char *vertex                 = ptr + vertex_first_occurence;
+    char *vert                   = ptr + vertex_first_occurence;
 
-    u32 vertex_count_obj = string_num_of_substring_occurence(vertex, "v ");
+    u32 vertex_count_obj = string_num_of_substring_occurence(vert, "v ");
 
     ptr    = buffer;
     u32 v  = string_first_string_occurence(ptr, "v ");
@@ -361,7 +361,7 @@ void geometry_system_parse_obj(const char *obj_file_full_path, u32 *num_of_objec
         {
             break;
         }
-        ptr += 1;
+        ptr += 2;
     }
 
     ptr                                 = buffer;
@@ -393,7 +393,7 @@ void geometry_system_parse_obj(const char *obj_file_full_path, u32 *num_of_objec
         {
             break;
         }
-        ptr += 1;
+        ptr += 2;
     }
 
     ptr                                  = buffer;
@@ -424,7 +424,7 @@ void geometry_system_parse_obj(const char *obj_file_full_path, u32 *num_of_objec
         {
             break;
         }
-        ptr += 1;
+        ptr += 2;
     }
 
     ptr               = buffer;
@@ -436,7 +436,7 @@ void geometry_system_parse_obj(const char *obj_file_full_path, u32 *num_of_objec
 
     objects++;
     *num_of_objects       = objects;
-    *object_vertices      = (struct vertex *)dallocate(sizeof(struct vertex) * vertex_count_obj, MEM_TAG_RENDERER);
+    *object_vertices      = (vertex *)dallocate(sizeof(vertex) * vertex_count_obj, MEM_TAG_RENDERER);
     *object_indices       = (u32 *)dallocate(sizeof(u32) * (indices_count * 3), MEM_TAG_RENDERER);
     *object_vertices_size = vertex_count_obj;
     *object_indices_size  = indices_count * 3;
@@ -499,11 +499,11 @@ void geometry_system_parse_obj(const char *obj_file_full_path, u32 *num_of_objec
 
         for (u32 k = 0; k < 9; k += 3)
         {
-            u32            reassigned_index = offsets_ptr[k] - min_vert_for_obj;
-            struct vertex *dum              = &(*object_vertices)[reassigned_index];
-            dum->position                   = vert_coords[offsets_ptr[k] - min_vert_for_obj];
-            dum->tex_coord                  = textures[offsets_ptr[k + 1] - min_tex_for_obj];
-            dum->normal                     = normals[offsets_ptr[k + 2] - min_norm_for_obj];
+            u32     reassigned_index = offsets_ptr[k] - min_vert_for_obj;
+            vertex *dum              = &(*object_vertices)[reassigned_index];
+            dum->position            = vert_coords[offsets_ptr[k] - min_vert_for_obj];
+            dum->normal              = normals[offsets_ptr[k + 2] - min_norm_for_obj];
+            dum->tex_coord           = textures[offsets_ptr[k + 1] - min_tex_for_obj];
         }
 
         ind_dum_ptr[0] = offsets_ptr[0] - min_vert_for_obj;
@@ -515,8 +515,10 @@ void geometry_system_parse_obj(const char *obj_file_full_path, u32 *num_of_objec
 }
 void geometry_system_get_sponza_geometries(geometry **sponza_geos, u32 *sponza_geometry_count)
 {
-    const char *file_name   = "sponza.obj";
-    const char *file_prefix = "../assets/meshes/";
+    const char *file_name       = "sponza.obj";
+    const char *file_prefix     = "../assets/meshes/";
+    const char *file_mtl_name   = "sponza.mtl";
+    const char *file_mtl_prefix = "../assets/materials/";
 
     char file_full_path[GEOMETRY_NAME_MAX_LENGTH];
     string_copy_format(file_full_path, "%s%s", 0, file_prefix, file_name);
@@ -528,6 +530,10 @@ void geometry_system_get_sponza_geometries(geometry **sponza_geos, u32 *sponza_g
     u32    *sponza_ind         = nullptr;
     char   *sponza_object_name = nullptr;
 
+    char file_mtl_full_path[GEOMETRY_NAME_MAX_LENGTH];
+    string_copy_format(file_mtl_full_path, "%s%s", 0, file_mtl_prefix, file_mtl_name);
+
+    material_system_parse_mtl_file(file_mtl_full_path);
     geometry_system_parse_obj(file_full_path, &sponza_objects, &sponza_vert_size, &sponza_vert, &sponza_ind_size,
                               &sponza_ind);
 

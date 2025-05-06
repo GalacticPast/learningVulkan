@@ -20,7 +20,7 @@ void json_parse_string(const char *ptr, char *out_string)
         return;
     }
     s32 var_length = occurence;
-    string_copy_length(out_string, ptr, var_length);
+    string_ncopy(out_string, ptr, var_length);
 };
 
 void json_parse_material(dstring *file_base_path, material_config *out_material_config)

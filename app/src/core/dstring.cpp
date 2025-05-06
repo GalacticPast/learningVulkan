@@ -112,6 +112,13 @@ s32 string_first_string_occurence(const char *string, const char *sub_str)
     u32 str_len     = strlen(string);
     u32 sub_str_len = strlen(sub_str);
 
+    if (str_len < sub_str_len)
+    {
+        DERROR("strlen:%d for string:%s is smaller than substring len: %d for substring:%s.", str_len, string,
+               sub_str_len, sub_str);
+        return 0;
+    }
+
     // im trollin :)
     char *ptr  = (char *)string;
     char  temp = ' ';

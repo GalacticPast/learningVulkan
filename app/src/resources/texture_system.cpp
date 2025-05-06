@@ -145,6 +145,11 @@ texture *texture_system_get_default_texture()
 }
 texture *texture_system_get_texture(const char *texture_name)
 {
+    if (texture_name == nullptr)
+    {
+        DWARN("Texuture name is nullptr retrunring default material");
+        return texture_system_get_default_texture();
+    }
     texture *texture = tex_sys_state_ptr->hashtable.find(texture_name);
     // TODO: increment the value for texture references
     if (texture == nullptr)
