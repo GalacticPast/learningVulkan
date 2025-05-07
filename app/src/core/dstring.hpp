@@ -10,10 +10,10 @@
 class dstring
 {
   private:
-    u64 capacity = 0;
-    u64 str_len  = 0;
+    u64 capacity = MAX_STRING_LENGTH;
 
   public:
+    u64  str_len     = 0;
     char string[512] = {0};
 
     dstring();

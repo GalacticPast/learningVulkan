@@ -11,6 +11,7 @@ enum memory_tags
     MEM_TAG_DARRAY,
     MEM_TAG_APPLICATION,
     MEM_TAG_RENDERER,
+    MEM_TAG_GEOMETRY,
     MEM_TAG_MAX_TAGS,
 };
 
