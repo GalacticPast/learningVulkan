@@ -177,7 +177,9 @@ bool material_system_parse_mtl_file(const char *mtl_file_name)
     char *file                         = nullptr;
     u64   file_buffer_mem_requirements = INVALID_ID_64;
     file_open_and_read(mtl_file_name, &file_buffer_mem_requirements, 0, 0);
-    file = (char *)dallocate(file_buffer_mem_requirements, MEM_TAG_RENDERER);
+
+    file = (char *)dallocate(file_buffer_mem_requirements + 1, MEM_TAG_RENDERER);
+
     file_open_and_read(mtl_file_name, &file_buffer_mem_requirements, file, 0);
 
     s32 num_materials = string_num_of_substring_occurence(file, "newmtl");

@@ -676,11 +676,35 @@ bool vulkan_draw_geometries(render_data *data, VkCommandBuffer *curr_command_buf
                             vk_context->vk_graphics_pipeline.layout, 0, 1,
                             &vk_context->descriptor_sets[curr_frame_index], 0, nullptr);
 
-    for (u32 i = 0; i < data->geometry_count; i++)
+    for (u32 i = 0; i < data->geometry_count - 1; i++)
     {
-        u32                   index_offset  = vulkan_calculate_index_offset(vk_context, data->test_geometry[i].id);
-        u32                   vertex_offset = vulkan_calculate_vertex_offset(vk_context, data->test_geometry[i].id);
-        vulkan_geometry_data *geo_data      = (vulkan_geometry_data *)data->test_geometry[i].vulkan_geometry_state;
+
+        material *mat = data->test_geometry[i]->material;
+        if (mat)
+        {
+            mat = material_system_get_default_material();
+        }
+
+        vulkan_texture *vk_texture       = nullptr;
+        texture        *instance_texture = (texture *)data->test_geometry[i]->material->map.diffuse_tex;
+
+        if (!instance_texture)
+        {
+            instance_texture = texture_system_get_texture(DEFAULT_TEXTURE_HANDLE);
+            vk_texture       = (vulkan_texture *)instance_texture->vulkan_texture_state;
+        }
+        else
+        {
+            vk_texture = (vulkan_texture *)instance_texture->vulkan_texture_state;
+        }
+
+        DDEBUG("No textures were provided using default texture");
+
+        vulkan_update_descriptor_sets(vk_context, vk_texture);
+
+        u32                   index_offset  = vulkan_calculate_index_offset(vk_context, data->test_geometry[i]->id);
+        u32                   vertex_offset = vulkan_calculate_vertex_offset(vk_context, data->test_geometry[i]->id);
+        vulkan_geometry_data *geo_data      = (vulkan_geometry_data *)data->test_geometry[i]->vulkan_geometry_state;
 
         vkCmdDrawIndexed(*curr_command_buffer, geo_data->indices_count, 1, index_offset, vertex_offset, 0);
     }
@@ -701,32 +725,6 @@ bool vulkan_draw_frame(render_data *render_data)
     vulkan_update_global_uniform_buffer(&render_data->global_ubo, current_frame);
 
     // HACK:
-    if (render_data->test_geometry != nullptr)
-    {
-
-        material **mat = &render_data->test_geometry[0].material;
-        if (!*mat)
-        {
-            *mat = material_system_get_default_material();
-        }
-        vulkan_texture *vk_texture       = nullptr;
-        texture        *instance_texture = (texture *)render_data->test_geometry[0].material->map.diffuse_tex;
-
-        if (!instance_texture)
-        {
-            DDEBUG("No textures were provided using default texture");
-            instance_texture = texture_system_get_texture(DEFAULT_TEXTURE_HANDLE);
-            vk_texture       = (vulkan_texture *)instance_texture->vulkan_texture_state;
-        }
-        else
-        {
-            vk_texture = (vulkan_texture *)instance_texture->vulkan_texture_state;
-        }
-    }
-    DDEBUG("No textures were provided using default texture");
-    texture        *instance_texture = texture_system_get_texture(DEFAULT_TEXTURE_HANDLE);
-    vulkan_texture *vk_tex           = (vulkan_texture *)instance_texture->vulkan_texture_state;
-    vulkan_update_descriptor_sets(vk_context, vk_tex);
 
     u32 image_index = INVALID_ID;
     result = vkAcquireNextImageKHR(vk_context->vk_device.logical, vk_context->vk_swapchain.handle, INVALID_ID_64,

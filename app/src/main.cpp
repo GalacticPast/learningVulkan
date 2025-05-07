@@ -86,8 +86,8 @@ int main()
 
     render_data triangle{};
 
-    geometry *sponza_geo     = nullptr;
-    u32       geometry_count = INVALID_ID;
+    geometry **sponza_geo     = nullptr;
+    u32        geometry_count = INVALID_ID;
     geometry_system_get_sponza_geometries(&sponza_geo, &geometry_count);
     triangle.test_geometry  = sponza_geo;
     triangle.geometry_count = geometry_count;

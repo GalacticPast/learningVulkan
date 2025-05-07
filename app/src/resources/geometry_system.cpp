@@ -449,7 +449,7 @@ void geometry_system_parse_obj(const char *obj_file_full_path, u32 *num_of_objec
     char temp    = ' ';
 
     *num_of_objects = objects;
-    *geo_configs    = (geometry_config *)dallocate(sizeof(geometry_config) * objects, MEM_TAG_GEOMETRY);
+    *geo_configs    = (geometry_config *)dallocate(sizeof(geometry_config) * (objects + 1), MEM_TAG_GEOMETRY);
 
     char *object_ptr              = buffer;
     u32   object_first_occurence  = string_first_string_occurence(object_ptr, "o ");
@@ -605,7 +605,7 @@ void geometry_system_parse_obj(const char *obj_file_full_path, u32 *num_of_objec
     dfree(buffer, buffer_mem_requirements, MEM_TAG_GEOMETRY);
 }
 
-void geometry_system_get_sponza_geometries(geometry **sponza_geos, u32 *sponza_geometry_count)
+void geometry_system_get_sponza_geometries(geometry ***sponza_geos, u32 *sponza_geometry_count)
 {
     const char *file_name       = "sponza.obj";
     const char *file_prefix     = "../assets/meshes/";
@@ -624,9 +624,12 @@ void geometry_system_get_sponza_geometries(geometry **sponza_geos, u32 *sponza_g
     material_system_parse_mtl_file((const char *)file_mtl_full_path);
     geometry_system_parse_obj(file_full_path, &sponza_objects, &sponza_geo_configs);
 
+    *sponza_geos = (geometry **)dallocate(sizeof(geometry *) * sponza_objects, MEM_TAG_GEOMETRY);
     for (u32 i = 0; i < sponza_objects; i++)
     {
         geometry_system_create_geometry(&sponza_geo_configs[i]);
+        dstring geo       = sponza_geo_configs[i].name;
+        (*sponza_geos)[i] = geometry_system_get_geometry_by_name(geo);
     }
     *sponza_geometry_count = sponza_objects;
 
