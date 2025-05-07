@@ -28,6 +28,7 @@ class dstring
 bool string_compare(const char *str0, const char *str1);
 
 u32 string_copy(char *dest, const char *src, u32 offset_to_dest);
+u32 string_length(const char *string);
 
 void string_ncopy(char *dest, const char *src, u32 length);
 

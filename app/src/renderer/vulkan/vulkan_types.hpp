@@ -17,7 +17,7 @@ struct vulkan_geometry_data
     u32 vertex_count  = INVALID_ID;
 };
 
-#define MAX_FRAMES_IN_FLIGHT 2
+#define MAX_FRAMES_IN_FLIGHT 3
 struct vulkan_device
 {
 

@@ -8,6 +8,15 @@
 #include <cstring>
 #include <stdarg.h>
 
+u32 string_length(const char *string)
+{
+    if (string == nullptr)
+    {
+        return 0;
+    }
+    return strlen(string);
+}
+
 bool string_compare(const char *str0, const char *str1)
 {
     // INFO: stcmp returns 0 for sucess...wow...

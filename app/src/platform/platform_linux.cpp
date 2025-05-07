@@ -16,6 +16,9 @@
 #include <unistd.h> // usleep
 #endif
 
+#include "core/event.hpp"
+#include "core/input.hpp"
+
 #ifdef DPLATFORM_LINUX_X11
 
 #include <X11/XKBlib.h>   // sudo apt-get install libx11-dev
@@ -25,8 +28,8 @@
 #include <xcb/xcb.h>
 
 #define VK_USE_PLATFORM_XCB_KHR
-#include "renderer/vulkan/vulkan_platform.h"
-#include "renderer/vulkan/vulkan_types.h"
+#include "renderer/vulkan/vulkan_platform.hpp"
+#include "renderer/vulkan/vulkan_types.hpp"
 #include <vulkan/vulkan.h>
 
 typedef struct platform_state
@@ -38,6 +41,8 @@ typedef struct platform_state
     xcb_atom_t        wm_protocols;
     xcb_atom_t        wm_delete_win;
 
+    VkSurfaceKHR surface;
+
     u32 width;
     u32 height;
 } platform_state;
@@ -47,15 +52,14 @@ static platform_state *platform_state_ptr;
 // Key translation
 keys translate_keycode(u32 wl_keycode);
 
-bool platform_startup(u64 *platform_mem_requirements, void *plat_state, const char *application_name, s32 x, s32 y,
-                      s32 width, s32 height)
+bool platform_system_startup(u64 *platform_mem_requirements, void *plat_state, struct application_config *config)
 {
     *platform_mem_requirements = sizeof(platform_state);
     if (plat_state == 0)
     {
         return true;
     }
-    platform_state_ptr = plat_state;
+    platform_state_ptr = (platform_state *)plat_state;
 
     // Connect to X
     platform_state_ptr->display = XOpenDisplay(NULL);
@@ -102,6 +106,14 @@ bool platform_startup(u64 *platform_mem_requirements, void *plat_state, const ch
     // Values to be sent over XCB (bg color, events)
     u32 value_list[] = {platform_state_ptr->screen->black_pixel, event_values};
 
+    u32 width  = config->width == INVALID_ID ? 1280 : config->width;
+    u32 height = config->height == INVALID_ID ? 720 : config->height;
+    u32 x      = config->x == INVALID_ID ? (width / 2) : config->x;
+    u32 y      = config->x == INVALID_ID ? (height / 2) : config->y;
+
+    platform_state_ptr->width  = width;
+    platform_state_ptr->height = height;
+
     // Create the window
     xcb_void_cookie_t cookie = xcb_create_window(platform_state_ptr->connection,
                                                  XCB_COPY_FROM_PARENT, // depth
@@ -119,7 +131,7 @@ bool platform_startup(u64 *platform_mem_requirements, void *plat_state, const ch
     xcb_change_property(platform_state_ptr->connection, XCB_PROP_MODE_REPLACE, platform_state_ptr->window,
                         XCB_ATOM_WM_NAME, XCB_ATOM_STRING,
                         8, // data should be viewed 8 bits at a time
-                        strlen(application_name), application_name);
+                        strlen(config->application_name), config->application_name);
 
     // Tell the server to notify when the window manager
     // attempts to destroy the window.
@@ -151,7 +163,7 @@ bool platform_startup(u64 *platform_mem_requirements, void *plat_state, const ch
     return true;
 }
 
-void platform_shutdown()
+void platform_system_shutdown(void *state)
 {
     // Simply cold-cast to the known type.
     // Turn key repeats back on since this is global for the OS... just... wow.
@@ -230,13 +242,19 @@ bool platform_pump_messages()
         }
         break;
         case XCB_CONFIGURE_NOTIFY: {
-            // Resizing - note that this is also triggered by moving the window, but should be
-            // passed anyway since a change in the x/y could mean an upper-left resize.
-            // The application layer can decide what to do with this.
             xcb_configure_notify_event_t *configure_event = (xcb_configure_notify_event_t *)event;
 
-            // Fire the event. The application layer should pick this up, but not handle it
-            // as it shouldn be visible to other parts of the application.
+            if (configure_event->width != 0 && configure_event->height != 0)
+            {
+                platform_state_ptr->width  = configure_event->width;
+                platform_state_ptr->height = configure_event->height;
+
+                event_context context{};
+                context.data.u32[0] = configure_event->width;
+                context.data.u32[1] = configure_event->height;
+
+                event_fire(EVENT_CODE_APPLICATION_RESIZED, context);
+            }
         }
         break;
 
@@ -267,6 +285,33 @@ void platform_get_window_dimensions(u32 *width, u32 *height)
         *width  = platform_state_ptr->width;
         *height = platform_state_ptr->height;
     }
+}
+
+// vulkan
+bool vulkan_platform_get_required_vulkan_extensions(darray<const char *> &extensions_array)
+{
+    const char *xcb_surface = VK_KHR_XCB_SURFACE_EXTENSION_NAME;
+    extensions_array.push_back(xcb_surface);
+    return true;
+}
+
+bool vulkan_platform_create_surface(vulkan_context *vk_context)
+{
+
+    VkXcbSurfaceCreateInfoKHR create_info = {VK_STRUCTURE_TYPE_XCB_SURFACE_CREATE_INFO_KHR};
+    create_info.connection                = platform_state_ptr->connection;
+    create_info.window                    = platform_state_ptr->window;
+
+    VkResult result = vkCreateXcbSurfaceKHR(vk_context->vk_instance, &create_info, vk_context->vk_allocator,
+                                            &platform_state_ptr->surface);
+    if (result != VK_SUCCESS)
+    {
+        DFATAL("Vulkan surface creation failed.");
+        return false;
+    }
+
+    vk_context->vk_surface = platform_state_ptr->surface;
+    return true;
 }
 
 // Key translation
@@ -437,7 +482,7 @@ keys translate_keycode(u32 xk_keycode)
         return KEY_RCONTROL;
     // case XK_Menu: return KEY_LMENU;
     case XK_Menu:
-        return KEY_RMENU;
+        return KEY_RALT;
 
     case XK_semicolon:
         return KEY_SEMICOLON;
@@ -534,7 +579,7 @@ keys translate_keycode(u32 xk_keycode)
         return KEY_Z;
 
     default:
-        return 0;
+        return KEYS_MAX_KEYS;
     }
 }
 
