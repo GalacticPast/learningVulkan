@@ -30,7 +30,7 @@ void json_parse_material(dstring *file_base_path, material_config *out_material_
     {
         DERROR("File: %s doesnt exist!!!", file_base_path->c_str());
     }
-    char *buffer = (char *)dallocate(buffer_size_requirements * sizeof(char), MEM_TAG_RENDERER);
+    char *buffer = (char *)dallocate((buffer_size_requirements + 1) * sizeof(char), MEM_TAG_RENDERER);
     file_open_and_read(file_base_path->c_str(), &buffer_size_requirements, buffer, 0);
 
     // INFO: this is horrible. I think :)
