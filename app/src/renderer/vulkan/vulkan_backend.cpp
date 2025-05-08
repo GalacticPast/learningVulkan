@@ -346,7 +346,12 @@ bool vulkan_create_texture(texture *in_texture, u8 *pixels)
 bool vulkan_destroy_texture(texture *in_texture)
 {
     vulkan_texture *vk_texture = (vulkan_texture *)in_texture->vulkan_texture_state;
-    vulkan_image   *image      = &vk_texture->image;
+    if (!vk_texture)
+    {
+        DWARN("Vk texture is nullptr, invalid texture.");
+        return false;
+    }
+    vulkan_image *image = &vk_texture->image;
 
     vulkan_destroy_image(vk_context, image);
     vkDestroySampler(vk_context->vk_device.logical, vk_texture->sampler, vk_context->vk_allocator);
@@ -434,7 +439,7 @@ void vulkan_backend_shutdown()
     dfree(vk_context->vk_swapchain.buffers, sizeof(VkFramebuffer) * vk_context->vk_swapchain.images_count,
           MEM_TAG_RENDERER);
 
-    for (u32 i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
+    for (u32 i = 0; i < VULKAN_MAX_DESCRIPTOR_SET_COUNT; i++)
     {
         vulkan_destroy_buffer(vk_context, &vk_context->global_uniform_buffers[i]);
     }
