@@ -14,10 +14,10 @@
 #include "resources/geometry_system.hpp"
 #include "resources/resource_types.hpp"
 
-//// #include "../tests/containers/hashtable_test.hpp"
-// #include "../tests/containers/dhashtable_test.hpp"
-// #include "../tests/events/event_system_test.hpp"
-// #include "../tests/linear_allocator/linear_allocator_test.hpp"
+#include "../tests/containers/darray_test.hpp"
+#include "../tests/containers/dhashtable_test.hpp"
+#include "../tests/events/event_system_test.hpp"
+#include "../tests/linear_allocator/linear_allocator_test.hpp"
 #include "../tests/test_manager.hpp"
 
 void update_camera(uniform_buffer_object *ubo, f64 start_time);
@@ -32,10 +32,10 @@ void run_tests()
     test_instance->tests = &test_array;
     test_manager_initialize(&test_manager_mem_requirements, test_instance);
 
-    // linear_allocator_register_tests();
-    // event_system_register_tests();
-    // darray_register_tests();
-    // dhashtable_register_tests();
+    linear_allocator_register_tests();
+    event_system_register_tests();
+    darray_register_tests();
+    dhashtable_register_tests();
 
     test_manager_run_tests();
     test_instance->tests = 0;
@@ -44,6 +44,7 @@ void run_tests()
 
 int main()
 {
+    run_tests();
     application_config app_config;
     app_config.width            = INVALID_ID;
     app_config.height           = INVALID_ID;

@@ -24,11 +24,11 @@ template <typename T> class dhashtable
     };
 
   public:
-    u64   capacity;
-    u64   element_size;
-    u64   max_length;
-    u64   num_elements_in_table;
-    void *table;
+    u64    capacity;
+    u64    element_size;
+    u64    max_length;
+    u64    num_elements_in_table;
+    entry *table;
 
     u64 hash_func(const char *key)
     {
@@ -50,7 +50,7 @@ template <typename T> class dhashtable
         capacity              = DEFAULT_HASH_TABLE_SIZE * element_size;
         max_length            = DEFAULT_HASH_TABLE_SIZE;
         num_elements_in_table = 0;
-        table                 = dallocate(capacity, MEM_TAG_DHASHTABLE);
+        table                 = (entry *)dallocate(capacity, MEM_TAG_DHASHTABLE);
         dzero_memory(table, capacity);
     }
     dhashtable(u64 table_size)
@@ -59,9 +59,10 @@ template <typename T> class dhashtable
         capacity              = table_size * element_size;
         max_length            = table_size;
         num_elements_in_table = 0;
-        table                 = dallocate(capacity, MEM_TAG_DHASHTABLE);
+        table                 = (entry *)dallocate(capacity, MEM_TAG_DHASHTABLE);
         dzero_memory(table, capacity);
     }
+
     ~dhashtable()
     {
         dfree(table, capacity, MEM_TAG_DHASHTABLE);
@@ -83,14 +84,14 @@ template <typename T> class dhashtable
         if (num_elements_in_table + 1 > max_length)
         {
             DWARN("Hashtable does not have enough capacity to insert element. Resizing");
-            u8 *new_table = (u8 *)dallocate(capacity * DEFAULT_HASH_TABLE_RESIZE_FACTOR, MEM_TAG_DHASHTABLE);
+            entry *new_table = (entry *)dallocate(capacity * DEFAULT_HASH_TABLE_RESIZE_FACTOR, MEM_TAG_DHASHTABLE);
             dcopy_memory(new_table, table, capacity);
             dfree(table, capacity, MEM_TAG_DHASHTABLE);
             capacity *= DEFAULT_HASH_TABLE_RESIZE_FACTOR;
             table     = new_table;
         }
 
-        entry *entry_ptr = (entry *)((u8 *)table + (hash_code * element_size));
+        entry *entry_ptr = &table[hash_code];
         if (entry_ptr->key[0] != '\0')
         {
             DWARN("Collison!!!. Overriding the entry: key%s", entry_ptr->key);
@@ -112,7 +113,7 @@ template <typename T> class dhashtable
         u64 hash_code  = hash_func(key);
         hash_code     %= max_length;
 
-        entry *entry_ptr = (entry *)((u8 *)table + (hash_code * element_size));
+        entry *entry_ptr = &table[hash_code];
 
         if (!string_compare(key, entry_ptr->key))
         {
@@ -128,7 +129,7 @@ template <typename T> class dhashtable
         u64 hash_code  = hash_func(key);
         hash_code     %= max_length;
 
-        entry *entry_ptr = (entry *)((u8 *)table + (hash_code * element_size));
+        entry *entry_ptr = &table[hash_code];
 
         if (!string_compare(key, entry_ptr->key))
         {

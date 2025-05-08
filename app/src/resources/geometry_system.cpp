@@ -35,11 +35,12 @@ bool geometry_system_initialize(u64 *geometry_system_mem_requirements, void *sta
     geo_sys_state_ptr = (geometry_system_state *)state;
 
     {
-        geo_sys_state_ptr->hashtable.table    = dallocate(sizeof(geometry) * MAX_GEOMETRIES_LOADED, MEM_TAG_DHASHTABLE);
-        geo_sys_state_ptr->hashtable.capacity = sizeof(geometry) * MAX_GEOMETRIES_LOADED;
-        geo_sys_state_ptr->hashtable.max_length            = MAX_GEOMETRIES_LOADED;
-        geo_sys_state_ptr->hashtable.element_size          = sizeof(geometry);
-        geo_sys_state_ptr->hashtable.num_elements_in_table = 0;
+        geo_sys_state_ptr->hashtable = dhashtable<geometry>(MAX_GEOMETRIES_LOADED);
+        // geo_sys_state_ptr->hashtable.table    = dallocate(sizeof(geometry) * MAX_GEOMETRIES_LOADED,
+        // MEM_TAG_DHASHTABLE); geo_sys_state_ptr->hashtable.capacity = sizeof(geometry) * MAX_GEOMETRIES_LOADED;
+        // geo_sys_state_ptr->hashtable.max_length            = MAX_GEOMETRIES_LOADED;
+        // geo_sys_state_ptr->hashtable.element_size          = sizeof(geometry);
+        // geo_sys_state_ptr->hashtable.num_elements_in_table = 0;
     }
     {
         geo_sys_state_ptr->loaded_geometry.data =
