@@ -21,4 +21,4 @@ geometry       *geometry_system_get_default_geometry();
 geometry_config geometry_system_generate_cube_config();
 
 // HACK:
-void geometry_system_get_sponza_geometries(geometry **sponza_geos, u32 *sponza_geometry_count);
+void geometry_system_get_sponza_geometries(geometry ***sponza_geos, u32 *sponza_geometry_count);

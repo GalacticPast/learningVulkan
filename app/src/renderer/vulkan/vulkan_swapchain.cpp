@@ -74,6 +74,8 @@ bool create_swapchain(vulkan_context *vk_context)
         image_count = vk_swapchain->surface_capabilities.minImageCount + 1;
         DWARN("Triple buffring requested but found %d buffering", image_count);
     }
+    image_count = DCLAMP(image_count, vk_swapchain->surface_capabilities.minImageCount,
+                         vk_swapchain->surface_capabilities.maxImageCount);
 
     u32 best_image_sharing_mode    = INVALID_ID;
     u32 enabled_queue_family_count = vk_context->vk_device.enabled_queue_family_count;

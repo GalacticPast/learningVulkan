@@ -1,6 +1,8 @@
 #include "texture_system.hpp"
 #include "containers/dhashtable.hpp"
+#include "core/dmemory.hpp"
 #include "renderer/vulkan/vulkan_backend.hpp"
+#include "resources/resource_types.hpp"
 
 #define STB_IMAGE_IMPLEMENTATION
 #include "vendor/stb_image.h"
@@ -33,8 +35,11 @@ bool texture_system_initialize(u64 *texture_system_mem_requirements, void *state
         tex_sys_state_ptr->hashtable.num_elements_in_table = 0;
     }
     {
-        darray<dstring> strings;
-        tex_sys_state_ptr->loaded_textures = strings;
+        tex_sys_state_ptr->loaded_textures.data =
+            (u64 *)dallocate(sizeof(dstring) * MAX_TEXTURES_LOADED, MEM_TAG_DARRAY);
+        tex_sys_state_ptr->loaded_textures.element_size = sizeof(dstring);
+        tex_sys_state_ptr->loaded_textures.capacity     = sizeof(dstring) * MAX_TEXTURES_LOADED;
+        tex_sys_state_ptr->loaded_textures.length       = 1;
     }
 
     stbi_set_flip_vertically_on_load(true);
@@ -71,7 +76,10 @@ bool create_texture(texture *texture, u8 *pixels)
     tex_sys_state_ptr->hashtable.insert(texture->name.c_str(), *texture);
     DDEBUG("Texture %s loaded in hastable.", file_base_name);
 
-    tex_sys_state_ptr->loaded_textures.push_back(texture->name);
+    u32 index                                      = tex_sys_state_ptr->loaded_textures.size();
+    tex_sys_state_ptr->loaded_textures[index - 1]  = texture->name;
+    tex_sys_state_ptr->loaded_textures.length     += 1;
+
     return true;
 }
 

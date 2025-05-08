@@ -1,6 +1,6 @@
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Weverything"
-
+// HACK:
 #pragma once
 #include "core/dmemory.hpp"
 #include "defines.hpp"
@@ -679,5 +679,7 @@ s32 drandom_in_range(s32 min, s32 max);
 
 f32 fdrandom();
 f32 fdrandom_in_range(f32 min, f32 max);
+
+void scale_geometries(const struct geometry_config *config, vec3 scaling_factor);
 
 #pragma clang diagnostic pop

@@ -2,11 +2,21 @@
 #include "core/dasserts.hpp"
 #include "core/dmemory.hpp"
 #include "core/logger.hpp"
+#include "math/dmath.hpp"
 
 // TODO: temporary
 #include <cstdio>
 #include <cstring>
 #include <stdarg.h>
+
+u32 string_length(const char *string)
+{
+    if (string == nullptr)
+    {
+        return 0;
+    }
+    return strlen(string);
+}
 
 bool string_compare(const char *str0, const char *str1)
 {
@@ -69,6 +79,12 @@ void dstring::operator=(const char *c_string)
     str_len     = len;
     string[len] = '\0';
 }
+
+void dstring::clear()
+{
+    dzero_memory(string, MAX_STRING_LENGTH);
+}
+
 const char *dstring::c_str()
 {
     return string;

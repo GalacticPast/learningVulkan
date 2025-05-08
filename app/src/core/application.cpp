@@ -135,6 +135,7 @@ void application_shutdown()
     event_system_shutdown(app_state_ptr->event_system_state);
     memory_system_shutdown(app_state_ptr->memory_system_state);
     linear_allocator_destroy(&app_state_ptr->application_system_linear_allocator);
+    DINFO("Appplication sucessfully shutdown.");
 }
 
 void application_run(render_data *data)

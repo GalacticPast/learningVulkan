@@ -3,6 +3,7 @@
 #include "defines.hpp"
 
 #include "core/dstring.hpp"
+#include "math/dmath_types.hpp"
 
 #define DEFAULT_TEXTURE_HANDLE "DEFAULT_TEXTURE"
 #define MAX_TEXTURES_LOADED 1024

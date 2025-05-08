@@ -1,6 +1,5 @@
 #include "core/application.hpp"
 #include "core/dclock.hpp"
-#include "core/dmemory.hpp"
 #include "core/input.hpp"
 #include "core/logger.hpp"
 
@@ -13,9 +12,7 @@
 #include "platform/platform.hpp"
 
 #include "resources/geometry_system.hpp"
-#include "resources/material_system.hpp"
 #include "resources/resource_types.hpp"
-#include "resources/texture_system.hpp"
 
 //// #include "../tests/containers/hashtable_test.hpp"
 // #include "../tests/containers/dhashtable_test.hpp"
@@ -85,10 +82,11 @@ int main()
 
     render_data triangle{};
 
-    geometry *sponza_geos    = nullptr;
-    u32       geometry_count = INVALID_ID;
-    geometry_system_get_sponza_geometries(&sponza_geos, &geometry_count);
-    triangle.test_geometry  = sponza_geos;
+    geometry **sponza_geo     = nullptr;
+    u32        geometry_count = INVALID_ID;
+    geometry_system_get_sponza_geometries(&sponza_geo, &geometry_count);
+    triangle.test_geometry = sponza_geo;
+
     triangle.geometry_count = geometry_count;
 
     triangle.global_ubo = global_ubo;

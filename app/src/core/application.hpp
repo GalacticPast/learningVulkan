@@ -32,7 +32,8 @@ struct render_data
 {
     uniform_buffer_object global_ubo;
     u32                   geometry_count = INVALID_ID;
-    geometry             *test_geometry  = nullptr;
+    // array of geometry pointers
+    geometry **test_geometry             = nullptr;
 };
 
 struct application_state

@@ -1,10 +1,10 @@
 #include "material_system.hpp"
 #include "core/dfile_system.hpp"
 #include "core/dmemory.hpp"
-#include "texture_system.hpp"
+#include "core/logger.hpp"
+#include "defines.hpp"
 
-#include "containers/darray.hpp"
-#include "containers/dhashtable.hpp"
+#include "texture_system.hpp"
 
 #include "core/dstring.hpp"
 
@@ -14,8 +14,7 @@
 
 struct material_system_state
 {
-    darray<dstring>      loaded_materials;
-    dhashtable<material> hashtable;
+    material material_table[MAX_MATERIALS_LOADED];
 };
 
 static material_system_state *mat_sys_state_ptr;
@@ -32,38 +31,55 @@ bool material_system_initialize(u64 *material_system_mem_requirements, void *sta
         return true;
     }
     DINFO("Initializing material system...");
+
     mat_sys_state_ptr = (material_system_state *)state;
 
+    // well i have to manually initialize it anyways;
+    for (u32 i = 0; i < MAX_MATERIALS_LOADED; i++)
     {
-        mat_sys_state_ptr->hashtable.table =
-            (u64 *)dallocate(sizeof(material) * (MAX_MATERIALS_LOADED + 1), MEM_TAG_DHASHTABLE);
-        mat_sys_state_ptr->hashtable.element_size          = sizeof(material);
-        mat_sys_state_ptr->hashtable.max_length            = MAX_MATERIALS_LOADED;
-        mat_sys_state_ptr->hashtable.num_elements_in_table = 0;
+        mat_sys_state_ptr->material_table[i].id = INVALID_ID;
     }
-    {
-        darray<dstring> strings;
-        mat_sys_state_ptr->loaded_materials = strings;
-    }
+
     material_system_create_default_material();
     return true;
 }
 bool material_system_shutdown(void *state)
 {
-    u64 loaded_materials_count = mat_sys_state_ptr->loaded_materials.size();
-    for (u64 i = 0; i < loaded_materials_count; i++)
-    {
-        dstring *mat_name = &mat_sys_state_ptr->loaded_materials[i];
-        // material_system_release_materials(tex_name);
-    }
+    u64 loaded_materials_count = MAX_MATERIALS_LOADED;
 
-    mat_sys_state_ptr->loaded_materials.~darray();
     mat_sys_state_ptr = nullptr;
-
     return true;
 }
+// this will return nullptr;
+material *_get_material(const char *material_name)
+{
+    material *out_mat = nullptr;
 
-material *material_system_acquire_from_file(dstring *file_base_name)
+    for (u32 i = 0; i < MAX_MATERIALS_LOADED; i++)
+    {
+        const char *mat_name = (const char *)mat_sys_state_ptr->material_table[i].name.c_str();
+        bool        result   = string_compare(material_name, mat_name);
+        if (result)
+        {
+            out_mat = &mat_sys_state_ptr->material_table[i];
+        }
+    }
+    return out_mat;
+}
+// this will return nullptr;
+u32 _get_empty_id()
+{
+    for (u32 i = 0; i < MAX_MATERIALS_LOADED; i++)
+    {
+        if (mat_sys_state_ptr->material_table[i].id == INVALID_ID)
+        {
+            return i;
+        }
+    }
+    return INVALID_ID;
+}
+
+material *material_system_acquire_from_config_file(dstring *file_base_name)
 {
     material_config base{};
     const char     *prefix = "../assets/materials/";
@@ -76,21 +92,22 @@ material *material_system_acquire_from_file(dstring *file_base_name)
     json_parse_material(&name, &base);
 
     material *out_mat = nullptr;
-    out_mat           = mat_sys_state_ptr->hashtable.find(base.mat_name);
+    out_mat           = _get_material(base.mat_name);
 
     if (out_mat == nullptr)
     {
         DTRACE("Material:%s not loaded yet. Loading it...", file_base_name->c_str());
         material_system_create_material(&base);
     }
-    out_mat = mat_sys_state_ptr->hashtable.find(base.mat_name);
+
+    out_mat = _get_material(base.mat_name);
     return out_mat;
 };
 
 material *material_system_acquire_from_config(material_config *config)
 {
 
-    material *out_mat = mat_sys_state_ptr->hashtable.find(config->mat_name);
+    material *out_mat = _get_material(config->mat_name);
     if (out_mat == nullptr)
     {
         DERROR("No Material by the name of %s. Maybe you havenet loaded it yet. Returning default Material",
@@ -105,13 +122,14 @@ bool material_system_create_material(material_config *config)
 
     material mat{};
     mat.name            = config->mat_name;
-    mat.id              = mat_sys_state_ptr->loaded_materials.size();
+    mat.id              = _get_empty_id();
     mat.reference_count = 0;
     mat.map.diffuse_tex = texture_system_get_texture(config->diffuse_tex_name);
     mat.diffuse_color   = config->diffuse_color;
 
-    mat_sys_state_ptr->hashtable.insert(config->mat_name, mat);
-    mat_sys_state_ptr->loaded_materials.push_back(mat.name);
+    mat_sys_state_ptr->material_table[mat.id] = mat;
+
+    DTRACE("Material %s created", config->mat_name);
 
     return true;
 }
@@ -125,14 +143,13 @@ bool material_system_create_default_material()
     default_mat.map.diffuse_tex = texture_system_get_default_texture();
     default_mat.diffuse_color   = {1.0f, 1.0f, 1.0f, 1.0f};
 
-    mat_sys_state_ptr->hashtable.insert(DEFAULT_MATERIAL_HANDLE, default_mat);
-    mat_sys_state_ptr->loaded_materials.push_back(default_mat.name);
+    mat_sys_state_ptr->material_table[0] = default_mat;
     return true;
 }
 
 material *material_system_get_default_material()
 {
-    material *default_mat = mat_sys_state_ptr->hashtable.find(DEFAULT_MATERIAL_HANDLE);
+    material *default_mat = &mat_sys_state_ptr->material_table[0];
     default_mat->reference_count++;
     return default_mat;
 }
@@ -140,13 +157,47 @@ material *material_system_get_default_material()
 bool material_system_create_release_materials(dstring *mat_name)
 {
     const char *material_name = mat_name->c_str();
-    bool        result        = mat_sys_state_ptr->hashtable.erase(material_name);
-    if (!result)
+
+    bool found = false;
+
+    for (u32 i = 0; i < MAX_MATERIALS_LOADED; i++)
     {
-        DERROR("Couldn't release material %s", material_name);
+        const char *mat_name = (const char *)mat_sys_state_ptr->material_table[i].name.c_str();
+        bool        result   = string_compare(material_name, mat_name);
+
+        if (result)
+        {
+            if (mat_sys_state_ptr->material_table[i].reference_count == 0)
+            {
+                mat_sys_state_ptr->material_table[i].id              = INVALID_ID;
+                mat_sys_state_ptr->material_table[i].reference_count = INVALID_ID;
+                mat_sys_state_ptr->material_table[i].diffuse_color   = {1.0f, 1.0f, 1.0f, 1.0f};
+                mat_sys_state_ptr->material_table[i].map.diffuse_tex = nullptr;
+                mat_sys_state_ptr->material_table[i].name.clear();
+            }
+            found = true;
+        }
+    }
+
+    if (!found)
+    {
+        DERROR("Couldn't find and release material %s. Have you made sure that you have loaded it correctly?",
+               material_name);
         return false;
     }
     return true;
+}
+material *material_system_acquire_from_name(dstring *material_name)
+{
+
+    material *out_mat = _get_material(material_name->c_str());
+    if (out_mat == nullptr)
+    {
+        DERROR("No Material by the name of %s. Maybe you havenet loaded it yet. Returning default Material",
+               material_name->c_str());
+        out_mat = material_system_get_default_material();
+    }
+    return out_mat;
 }
 
 bool material_system_parse_mtl_file(const char *mtl_file_name)
@@ -156,7 +207,7 @@ bool material_system_parse_mtl_file(const char *mtl_file_name)
     char *file                         = nullptr;
     u64   file_buffer_mem_requirements = INVALID_ID_64;
     file_open_and_read(mtl_file_name, &file_buffer_mem_requirements, 0, 0);
-    file = (char *)dallocate(file_buffer_mem_requirements, MEM_TAG_RENDERER);
+    file = (char *)dallocate(file_buffer_mem_requirements + 1, MEM_TAG_RENDERER);
     file_open_and_read(mtl_file_name, &file_buffer_mem_requirements, file, 0);
 
     s32 num_materials = string_num_of_substring_occurence(file, "newmtl");
