@@ -1,8 +1,6 @@
-#include "core/logger.hpp"
-#include "platform/platform.hpp"
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Weverything"
-
+// HACK:
 #pragma once
 #include "core/dmemory.hpp"
 #include "defines.hpp"
@@ -957,5 +955,7 @@ struct vertex
     vec3 normal;
     vec2 tex_coord;
 };
+
+void scale_geometries(const struct geometry_config *config, vec3 scaling_factor);
 
 #pragma clang diagnostic pop

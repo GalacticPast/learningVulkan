@@ -1,3 +1,4 @@
+#include "core/dclock.hpp"
 #include "core/dfile_system.hpp"
 #include "core/dmemory.hpp"
 
@@ -326,6 +327,9 @@ geometry *geometry_system_get_default_geometry()
 // this will allocate and write size back, assumes the caller will call free once the data is processed
 void geometry_system_parse_obj(const char *obj_file_full_path, u32 *num_of_objects, geometry_config **geo_configs)
 {
+    dclock telemetry;
+    clock_start(&telemetry);
+
     u64 buffer_mem_requirements = INVALID_ID_64;
     file_open_and_read(obj_file_full_path, &buffer_mem_requirements, 0, 0);
     if (buffer_mem_requirements == INVALID_ID_64)
@@ -603,6 +607,11 @@ void geometry_system_parse_obj(const char *obj_file_full_path, u32 *num_of_objec
     dfree(normals, sizeof(vec3) * (normal_count_obj + 1), MEM_TAG_UNKNOWN);
     dfree(vert_coords, sizeof(vec3) * (vertex_count_obj + 1), MEM_TAG_UNKNOWN);
     dfree(buffer, buffer_mem_requirements, MEM_TAG_GEOMETRY);
+
+    clock_update(&telemetry);
+    f64 elapsed = telemetry.time_elapsed;
+
+    DTRACE("Parse obj function took %fs : wtf so slow", elapsed);
 }
 
 void geometry_system_get_sponza_geometries(geometry ***sponza_geos, u32 *sponza_geometry_count)
@@ -625,8 +634,12 @@ void geometry_system_get_sponza_geometries(geometry ***sponza_geos, u32 *sponza_
     geometry_system_parse_obj(file_full_path, &sponza_objects, &sponza_geo_configs);
 
     *sponza_geos = (geometry **)dallocate(sizeof(geometry *) * sponza_objects, MEM_TAG_GEOMETRY);
+    vec3 scale   = {0.5, 0.5, 0.5};
+
     for (u32 i = 0; i < sponza_objects; i++)
     {
+
+        scale_geometries(&sponza_geo_configs[i], scale);
         geometry_system_create_geometry(&sponza_geo_configs[i]);
         dstring geo       = sponza_geo_configs[i].name;
         (*sponza_geos)[i] = geometry_system_get_geometry_by_name(geo);

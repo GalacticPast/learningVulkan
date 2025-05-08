@@ -54,6 +54,7 @@ struct vulkan_image
 
 struct vulkan_texture
 {
+    u32          descriptor_id = INVALID_ID;
     vulkan_image image;
     VkSampler    sampler;
 };
@@ -97,6 +98,7 @@ struct vulkan_buffer
     VkDeviceMemory memory;
 };
 
+#define VULKAN_MAX_DESCRIPTOR_SET_COUNT 4096
 struct vulkan_context
 {
     u32 current_frame_index;
@@ -123,7 +125,6 @@ struct vulkan_context
     VkDescriptorSetLayout descriptor_layout;
 
     darray<VkDescriptorSet> descriptor_sets;
-    u32                     descriptor_set_count;
 
     VkSemaphore *image_available_semaphores = nullptr;
     VkSemaphore *render_finished_semaphores = nullptr;

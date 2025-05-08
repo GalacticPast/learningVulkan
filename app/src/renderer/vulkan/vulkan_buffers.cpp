@@ -124,11 +124,11 @@ bool vulkan_create_global_uniform_buffers(vulkan_context *vk_context)
     u32 global_uniform_buffer_size = sizeof(uniform_buffer_object);
 
     vk_context->global_uniform_buffers =
-        (vulkan_buffer *)dallocate(sizeof(vulkan_buffer) * MAX_FRAMES_IN_FLIGHT, MEM_TAG_RENDERER);
+        (vulkan_buffer *)dallocate(sizeof(vulkan_buffer) * VULKAN_MAX_DESCRIPTOR_SET_COUNT, MEM_TAG_RENDERER);
 
     vulkan_buffer *buffers = vk_context->global_uniform_buffers;
 
-    for (u32 i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
+    for (u32 i = 0; i < VULKAN_MAX_DESCRIPTOR_SET_COUNT; i++)
     {
         vulkan_create_buffer(vk_context, &buffers[i], VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
                              VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,

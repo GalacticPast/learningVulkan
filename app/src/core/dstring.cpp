@@ -2,6 +2,7 @@
 #include "core/dasserts.hpp"
 #include "core/dmemory.hpp"
 #include "core/logger.hpp"
+#include "math/dmath.hpp"
 
 // TODO: temporary
 #include <cstdio>
@@ -78,6 +79,12 @@ void dstring::operator=(const char *c_string)
     str_len     = len;
     string[len] = '\0';
 }
+
+void dstring::clear()
+{
+    dzero_memory(string, MAX_STRING_LENGTH);
+}
+
 const char *dstring::c_str()
 {
     return string;
