@@ -722,9 +722,6 @@ bool vulkan_draw_geometries(render_data *data, VkCommandBuffer *curr_command_buf
                                 vk_context->vk_graphics_pipeline.layout, 0, 1,
                                 &vk_context->descriptor_sets[descriptor_set_index], 0, nullptr);
 
-        vulkan_texture *vk_tex = (vulkan_texture *)instance_texture->vulkan_texture_state;
-        vulkan_update_descriptor_sets(vk_context, vk_tex);
-
         vkCmdDrawIndexed(*curr_command_buffer, geo_data->indices_count, 1, index_offset, vertex_offset, 0);
     }
     vulkan_end_frame_renderpass(curr_command_buffer);

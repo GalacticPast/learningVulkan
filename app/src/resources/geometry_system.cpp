@@ -6,6 +6,7 @@
 #include "core/dstring.hpp"
 #include "defines.hpp"
 #include "geometry_system.hpp"
+#include "math/dmath.hpp"
 #include "renderer/vulkan/vulkan_backend.hpp"
 #include "resources/material_system.hpp"
 #include "resources/resource_types.hpp"
@@ -21,13 +22,8 @@ static geometry_system_state *geo_sys_state_ptr;
 bool                          geometry_system_create_default_geometry();
 
 // this will allocate and write size back, assumes the caller will call free once the data is processed
-<<<<<<< HEAD
-void geometry_system_parse_obj(const char *obj_file_full_path, u32 *num_of_objects, u32 *object_vertices_size,
-                               vertex **object_vertices, u32 *object_indices_size, u32 **object_indices);
-=======
 void geometry_system_parse_obj(const char *obj_file_full_path, u32 *num_of_objects, geometry_config **geo_configs);
 bool destroy_geometry_config(geometry_config *config);
->>>>>>> try
 
 bool geometry_system_initialize(u64 *geometry_system_mem_requirements, void *state)
 {
@@ -242,34 +238,6 @@ bool geometry_system_create_default_geometry()
     u32              num_of_objects      = INVALID_ID;
     geometry_config *default_geo_configs = nullptr;
 
-<<<<<<< HEAD
-    u32     num_of_objects    = INVALID_ID;
-    u32     default_vert_size = INVALID_ID;
-    u32     default_ind_size  = INVALID_ID;
-    vertex *default_vert      = nullptr;
-    u32    *default_ind       = nullptr;
-
-    geometry_system_parse_obj("../assets/meshes/cube.obj", &num_of_objects, &default_vert_size, &default_vert,
-                              &default_ind_size, &default_ind);
-
-    default_config.vertex_count = default_vert_size;
-    default_config.vertices     = default_vert;
-
-    default_config.index_count = default_ind_size;
-    default_config.indices     = default_ind;
-
-    for (u32 i = 0; i < default_vert_size; i++)
-    {
-        DTRACE("position{ x: %f , y: %f, z: %f}, normals {x: %f, y: %f, z: %f}, texture{u: %f, v: %f}",
-               default_config.vertices[i].position.x, default_config.vertices[i].position.y,
-               default_config.vertices[i].position.z, default_config.vertices[i].normal.x,
-               default_config.vertices[i].normal.y, default_config.vertices[i].normal.z,
-               default_config.vertices[i].tex_coord.x, default_config.vertices[i].tex_coord.y);
-    }
-    for (u32 i = 0; i < default_ind_size; i++)
-    {
-        DTRACE("%d ", default_config.indices[i]);
-=======
     geometry_system_parse_obj("../assets/meshes/cube.obj", &num_of_objects, &default_geo_configs);
 
     for (u32 i = 0; i < num_of_objects; i++)
@@ -303,7 +271,6 @@ bool geometry_system_create_default_geometry()
     for (u32 i = 0; i < num_of_objects; i++)
     {
         destroy_geometry_config(&default_geo_configs[i]);
->>>>>>> try
     }
 
     dfree(default_geo_configs, num_of_objects * sizeof(geometry_config), MEM_TAG_GEOMETRY);
@@ -359,12 +326,7 @@ geometry *geometry_system_get_default_geometry()
 }
 
 // this will allocate and write size back, assumes the caller will call free once the data is processed
-<<<<<<< HEAD
-void geometry_system_parse_obj(const char *obj_file_full_path, u32 *num_of_objects, u32 *object_vertices_size,
-                               vertex **object_vertices, u32 *object_indices_size, u32 **object_indices)
-=======
 void geometry_system_parse_obj(const char *obj_file_full_path, u32 *num_of_objects, geometry_config **geo_configs)
->>>>>>> try
 {
     dclock telemetry;
     clock_start(&telemetry);
@@ -381,13 +343,6 @@ void geometry_system_parse_obj(const char *obj_file_full_path, u32 *num_of_objec
     file_open_and_read(obj_file_full_path, &buffer_mem_requirements, buffer, 0);
 
     // TODO: cleaup this piece of shit code
-<<<<<<< HEAD
-    char *ptr                    = buffer;
-    u64   vertex_first_occurence = string_first_string_occurence(ptr, "v ");
-    char *vert                   = ptr + vertex_first_occurence;
-
-    u32 vertex_count_obj = string_num_of_substring_occurence(vert, "v ");
-=======
     char *ptr                 = buffer;
     char  vert_substring[3]   = "v ";
     u32   vert_substring_size = 3;
@@ -396,7 +351,6 @@ void geometry_system_parse_obj(const char *obj_file_full_path, u32 *num_of_objec
     char *vert_                  = ptr + vertex_first_occurence;
 
     u32 vertex_count_obj = string_num_of_substring_occurence(vert_, vert_substring);
->>>>>>> try
 
     ptr    = buffer;
     u32 v  = string_first_string_occurence(ptr, vert_substring);
@@ -423,11 +377,7 @@ void geometry_system_parse_obj(const char *obj_file_full_path, u32 *num_of_objec
         {
             break;
         }
-<<<<<<< HEAD
-        ptr += 2;
-=======
         ptr += vert_substring_size - 1;
->>>>>>> try
     }
 
     ptr                                 = buffer;
@@ -463,11 +413,7 @@ void geometry_system_parse_obj(const char *obj_file_full_path, u32 *num_of_objec
         {
             break;
         }
-<<<<<<< HEAD
-        ptr += 2;
-=======
         ptr += vert_normal_substring_size - 1;
->>>>>>> try
     }
 
     ptr                                  = buffer;
@@ -501,51 +447,12 @@ void geometry_system_parse_obj(const char *obj_file_full_path, u32 *num_of_objec
         {
             break;
         }
-<<<<<<< HEAD
-        ptr += 2;
-=======
         ptr += vert_texture_substring_size - 1;
->>>>>>> try
     }
-
-    ptr               = buffer;
-    u32 indices_count = string_num_of_substring_occurence(ptr, "f ");
-    ptr               = nullptr;
 
     u32  objects = string_num_of_substring_occurence(buffer, "o ");
     char temp    = ' ';
 
-<<<<<<< HEAD
-    objects++;
-    *num_of_objects       = objects;
-    *object_vertices      = (vertex *)dallocate(sizeof(vertex) * vertex_count_obj, MEM_TAG_RENDERER);
-    *object_indices       = (u32 *)dallocate(sizeof(u32) * (indices_count * 3), MEM_TAG_RENDERER);
-    *object_vertices_size = vertex_count_obj;
-    *object_indices_size  = indices_count * 3;
-
-    char *object_ptr = buffer;
-    char *found      = nullptr;
-
-    u32 max_vert_for_obj = 0;
-    u32 min_vert_for_obj = INVALID_ID;
-    u32 max_norm_for_obj = 0;
-    u32 min_norm_for_obj = INVALID_ID;
-    u32 max_tex_for_obj  = 0;
-    u32 min_tex_for_obj  = INVALID_ID;
-
-    u32  total_offsets_size = indices_count * 9;
-    u32 *offsets            = (u32 *)dallocate(sizeof(u32) * total_offsets_size, MEM_TAG_RENDERER);
-    u32 *offsets_ptr        = offsets;
-
-    while ((found = strstr(object_ptr, "f ")) != NULL)
-    {
-        object_ptr = found + 1;
-
-        u32 j = 0;
-        while (object_ptr[j] != '\n')
-        {
-            if (object_ptr[j] == '/')
-=======
     *num_of_objects = objects;
     *geo_configs    = (geometry_config *)dallocate(sizeof(geometry_config) * (objects + 1), MEM_TAG_GEOMETRY);
 
@@ -610,25 +517,13 @@ void geometry_system_parse_obj(const char *obj_file_full_path, u32 *num_of_objec
             u32 offsets[9] = {0};
             u32 j          = 0;
             while (ptr[j] != '\n')
->>>>>>> try
             {
-                object_ptr[j] = ' ';
+                if (ptr[j] == '/')
+                {
+                    ptr[j] = ' ';
+                }
+                j++;
             }
-<<<<<<< HEAD
-            j++;
-        }
-
-        char *ptr2 = object_ptr;
-        char *a;
-        for (u32 k = 0; k < 9; k++)
-        {
-            offsets_ptr[k] = strtol(ptr2, &a, 10);
-            ptr2           = a;
-            a              = NULL;
-        }
-
-        for (u32 k = 0; k < 9; k += 3)
-=======
 
             char *ptr2 = ptr;
             char *a;
@@ -703,44 +598,12 @@ void geometry_system_parse_obj(const char *obj_file_full_path, u32 *num_of_objec
         (*geo_configs)[object].index_count  = tris_count * 3;
 
         if (object_first_occurence != INVALID_ID)
->>>>>>> try
         {
-
-            max_vert_for_obj = DMAX(max_vert_for_obj, offsets_ptr[k]);
-            min_vert_for_obj = DMIN(min_vert_for_obj, offsets_ptr[k]);
-            max_norm_for_obj = DMAX(max_norm_for_obj, offsets_ptr[k + 2]);
-            min_norm_for_obj = DMIN(min_norm_for_obj, offsets_ptr[k + 2]);
-            max_tex_for_obj  = DMAX(max_tex_for_obj, offsets_ptr[k + 1]);
-            min_tex_for_obj  = DMIN(min_tex_for_obj, offsets_ptr[k + 1]);
+            object_ptr[object_first_occurence]  = temp;
+            temp                                = ' ';
+            object_ptr                         += object_first_occurence + 1;
         }
-        offsets_ptr += 9;
     }
-<<<<<<< HEAD
-
-    offsets_ptr = offsets;
-
-    for (u32 i = 0; i < indices_count; i++)
-    {
-        u32 *ind_dum_ptr = (*object_indices) + (3 * i);
-
-        for (u32 k = 0; k < 9; k += 3)
-        {
-            u32     reassigned_index = offsets_ptr[k] - min_vert_for_obj;
-            vertex *dum              = &(*object_vertices)[reassigned_index];
-            dum->position            = vert_coords[offsets_ptr[k] - min_vert_for_obj];
-            dum->normal              = normals[offsets_ptr[k + 2] - min_norm_for_obj];
-            dum->tex_coord           = textures[offsets_ptr[k + 1] - min_tex_for_obj];
-        }
-
-        ind_dum_ptr[0] = offsets_ptr[0] - min_vert_for_obj;
-        ind_dum_ptr[1] = offsets_ptr[3] - min_vert_for_obj;
-        ind_dum_ptr[2] = offsets_ptr[6] - min_vert_for_obj;
-
-        offsets_ptr += 9;
-    }
-}
-void geometry_system_get_sponza_geometries(geometry **sponza_geos, u32 *sponza_geometry_count)
-=======
     dfree(textures, sizeof(vec2) * (texture_count_obj + 1), MEM_TAG_UNKNOWN);
     dfree(normals, sizeof(vec3) * (normal_count_obj + 1), MEM_TAG_UNKNOWN);
     dfree(vert_coords, sizeof(vec3) * (vertex_count_obj + 1), MEM_TAG_UNKNOWN);
@@ -753,7 +616,6 @@ void geometry_system_get_sponza_geometries(geometry **sponza_geos, u32 *sponza_g
 }
 
 void geometry_system_get_sponza_geometries(geometry ***sponza_geos, u32 *sponza_geometry_count)
->>>>>>> try
 {
     const char *file_name       = "sponza.obj";
     const char *file_prefix     = "../assets/meshes/";
@@ -763,32 +625,6 @@ void geometry_system_get_sponza_geometries(geometry ***sponza_geos, u32 *sponza_
     char file_full_path[GEOMETRY_NAME_MAX_LENGTH];
     string_copy_format(file_full_path, "%s%s", 0, file_prefix, file_name);
 
-<<<<<<< HEAD
-    u32     sponza_objects     = INVALID_ID;
-    u32     sponza_vert_size   = INVALID_ID;
-    u32     sponza_ind_size    = INVALID_ID;
-    vertex *sponza_vert        = nullptr;
-    u32    *sponza_ind         = nullptr;
-    char   *sponza_object_name = nullptr;
-
-    char file_mtl_full_path[GEOMETRY_NAME_MAX_LENGTH];
-    string_copy_format(file_mtl_full_path, "%s%s", 0, file_mtl_prefix, file_mtl_name);
-
-    material_system_parse_mtl_file(file_mtl_full_path);
-    geometry_system_parse_obj(file_full_path, &sponza_objects, &sponza_vert_size, &sponza_vert, &sponza_ind_size,
-                              &sponza_ind);
-
-    *sponza_geos           = (geometry *)dallocate(sizeof(geometry), MEM_TAG_UNKNOWN);
-    *sponza_geometry_count = 1;
-
-    for (u32 i = 0; i < 1; i++)
-    {
-        (*sponza_geos)[i].id = i + 1;
-    }
-
-    bool result = vulkan_create_geometry(*sponza_geos, sponza_vert_size, sponza_vert, sponza_ind_size, sponza_ind);
-
-=======
     char file_mtl_full_path[GEOMETRY_NAME_MAX_LENGTH];
     string_copy_format(file_mtl_full_path, "%s%s", 0, file_mtl_prefix, file_mtl_name);
 
@@ -811,7 +647,6 @@ void geometry_system_get_sponza_geometries(geometry ***sponza_geos, u32 *sponza_
     }
     *sponza_geometry_count = sponza_objects;
 
->>>>>>> try
     return;
 }
 

@@ -146,14 +146,15 @@ void update_camera(uniform_buffer_object *ubo, f64 start_time)
     f32 aspect_ratio = (f32)s_width / s_height;
 
     vec3 velocity = vec3();
-    f32  step     = 0.005f;
+    f32  step     = 0.01f;
 
     // HACK:
-    static f32 z     = 0.01f;
-    z               += step;
-    ubo->projection  = mat4_perspective(fov_rad, aspect_ratio, 0.01f, 1000.0f);
-    ubo->model       = mat4_euler_y(z);
-    ubo->model       = mat4();
+    static f32 z  = 0.01f;
+    z            += step;
+
+    ubo->projection = mat4_perspective(fov_rad, aspect_ratio, 0.01f, 1000.0f);
+    ubo->model      = mat4_euler_y(z);
+    ubo->model      = mat4();
 
     static vec3 camera_pos   = vec3(0, 0, 6);
     static vec3 camera_euler = vec3(0, 0, 0);
@@ -191,7 +192,7 @@ void update_camera(uniform_buffer_object *ubo, f64 start_time)
     }
 
     vec3  z_axis          = vec3();
-    float temp_move_speed = step;
+    float temp_move_speed = step + 0.15;
     if (!vec3_compare(z_axis, velocity, 0.0002f))
     {
         // Be sure to normalize the velocity before applying speed.
