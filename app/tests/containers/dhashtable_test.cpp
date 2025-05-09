@@ -123,8 +123,9 @@ bool hashtable_erase_test()
     key = &keys[10];
     int_table.erase(key->c_str());
 
-    u64 value = INVALID_ID_64;
-    expect_should_be(value, *int_table.find(key->c_str()));
+    u64  value          = INVALID_ID_64;
+    u64 *returned_value = int_table.find(key->c_str());
+    expect_should_be(nullptr, returned_value);
 
     return true;
 }

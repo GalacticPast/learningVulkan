@@ -14,8 +14,8 @@
 
 struct geometry_system_state
 {
-    darray<dstring>      loaded_geometry;
-    dhashtable<geometry> hashtable;
+    darray<dstring>       loaded_geometry;
+    dhashtable<geometry> *hashtable = nullptr;
 };
 
 static geometry_system_state *geo_sys_state_ptr;
@@ -34,14 +34,8 @@ bool geometry_system_initialize(u64 *geometry_system_mem_requirements, void *sta
     }
     geo_sys_state_ptr = (geometry_system_state *)state;
 
-    {
-        geo_sys_state_ptr->hashtable = dhashtable<geometry>(MAX_GEOMETRIES_LOADED);
-        // geo_sys_state_ptr->hashtable.table    = dallocate(sizeof(geometry) * MAX_GEOMETRIES_LOADED,
-        // MEM_TAG_DHASHTABLE); geo_sys_state_ptr->hashtable.capacity = sizeof(geometry) * MAX_GEOMETRIES_LOADED;
-        // geo_sys_state_ptr->hashtable.max_length            = MAX_GEOMETRIES_LOADED;
-        // geo_sys_state_ptr->hashtable.element_size          = sizeof(geometry);
-        // geo_sys_state_ptr->hashtable.num_elements_in_table = 0;
-    }
+    geo_sys_state_ptr->hashtable = new dhashtable<geometry>(MAX_GEOMETRIES_LOADED);
+
     {
         geo_sys_state_ptr->loaded_geometry.data =
             (u64 *)dallocate(sizeof(dstring) * MAX_GEOMETRIES_LOADED, MEM_TAG_DARRAY);
@@ -62,15 +56,15 @@ bool geometry_system_shutdowm(void *state)
     for (int i = 0; i < loaded_geometry_count; i++)
     {
         const char *geo_name = geo_sys_state_ptr->loaded_geometry[i].c_str();
-        geo                  = geo_sys_state_ptr->hashtable.find(geo_name);
+        geo                  = geo_sys_state_ptr->hashtable->find(geo_name);
         result               = vulkan_destroy_geometry(geo);
         if (!result)
         {
             DERROR("Failed to destroy %s geometry", geo_name);
         }
     }
-    geo_sys_state_ptr->hashtable.clear();
-    geo_sys_state_ptr->hashtable.~dhashtable();
+    geo_sys_state_ptr->hashtable->clear();
+    delete geo_sys_state_ptr->hashtable;
     geo_sys_state_ptr->loaded_geometry.~darray();
     geo_sys_state_ptr = 0;
     return true;
@@ -93,7 +87,7 @@ bool geometry_system_create_geometry(geometry_config *config)
         return false;
     }
 
-    geo_sys_state_ptr->hashtable.insert(config->name, geo);
+    geo_sys_state_ptr->hashtable->insert(config->name, geo);
 
     u32 index                                      = geo_sys_state_ptr->loaded_geometry.size();
     geo_sys_state_ptr->loaded_geometry[index - 1]  = geo.name;
@@ -281,7 +275,7 @@ bool geometry_system_create_default_geometry()
 
 geometry *geometry_system_get_geometry(geometry_config *config)
 {
-    geometry *geo = geo_sys_state_ptr->hashtable.find(config->name);
+    geometry *geo = geo_sys_state_ptr->hashtable->find(config->name);
     if (!geo)
     {
         DTRACE("Geometry %s not loaded yet. Loading it...", config->name);
@@ -293,14 +287,14 @@ geometry *geometry_system_get_geometry(geometry_config *config)
         }
         DTRACE("Geometry %s loaded.", config->name);
     }
-    geo = geo_sys_state_ptr->hashtable.find(config->name);
+    geo = geo_sys_state_ptr->hashtable->find(config->name);
     geo->reference_count++;
     return geo;
 }
 geometry *geometry_system_get_geometry_by_name(dstring geometry_name)
 {
     const char *name = geometry_name.c_str();
-    geometry   *geo  = geo_sys_state_ptr->hashtable.find(name);
+    geometry   *geo  = geo_sys_state_ptr->hashtable->find(name);
     if (!geo)
     {
         DWARN("Geometry %s not loaded yet.Load it first by calling geometry_system_get_geometry. Returning "
@@ -308,14 +302,14 @@ geometry *geometry_system_get_geometry_by_name(dstring geometry_name)
               name);
         return geometry_system_get_default_geometry();
     }
-    geo = geo_sys_state_ptr->hashtable.find(name);
+    geo = geo_sys_state_ptr->hashtable->find(name);
     geo->reference_count++;
     return geo;
 }
 
 geometry *geometry_system_get_default_geometry()
 {
-    geometry *geo = geo_sys_state_ptr->hashtable.find(DEFAULT_GEOMETRY_HANDLE);
+    geometry *geo = geo_sys_state_ptr->hashtable->find(DEFAULT_GEOMETRY_HANDLE);
     if (!geo)
     {
         DERROR("Default geometry is not loaded yet. How is this possible?? Make sure that you have initialzed the "
