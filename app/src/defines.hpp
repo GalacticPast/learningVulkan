@@ -100,3 +100,7 @@ typedef double f64;
 #define DINLINE static inline
 #define DNOINLINE
 #endif
+
+#define GIGA(num) num * 1024 * 1024 * 1024
+#define MEGA(num) num * 1024 * 1024
+#define KILO(num) num * 1024
