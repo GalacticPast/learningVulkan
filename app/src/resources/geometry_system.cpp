@@ -330,11 +330,11 @@ void geometry_system_parse_obj(const char *obj_file_full_path, u32 *num_of_objec
     dclock telemetry;
     clock_start(&telemetry);
 
-    u64 buffer_mem_requirements = INVALID_ID_64;
+    u64 buffer_mem_requirements = -1;
     file_open_and_read(obj_file_full_path, &buffer_mem_requirements, 0, 0);
     if (buffer_mem_requirements == INVALID_ID_64)
     {
-        DERROR("Failed to get size requirements for %s", obj_file_full_path);
+        printf("Failed to get size requirements for %s\n", obj_file_full_path);
         return;
     }
 
@@ -342,20 +342,19 @@ void geometry_system_parse_obj(const char *obj_file_full_path, u32 *num_of_objec
     file_open_and_read(obj_file_full_path, &buffer_mem_requirements, buffer, 0);
 
     // TODO: cleaup this piece of shit code
-    char *ptr                 = buffer;
+    char *vert_ptr            = buffer;
     char  vert_substring[3]   = "v ";
-    u32   vert_substring_size = 3;
+    u32   vert_substring_size = 2;
 
-    u64   vertex_first_occurence = string_first_string_occurence(ptr, vert_substring);
-    char *vert_                  = ptr + vertex_first_occurence;
+    char *vert_ = strstr(vert_ptr, vert_substring) + vert_substring_size;
 
     u32 vertex_count_obj = string_num_of_substring_occurence(vert_, vert_substring);
 
-    ptr    = buffer;
-    u32 v  = string_first_string_occurence(ptr, vert_substring);
-    ptr   += v + vert_substring_size - 1;
+    vert_ptr  = buffer;
+    u32 v     = string_first_string_occurence(vert_ptr, vert_substring);
+    vert_ptr += v + vert_substring_size - 1;
 
-    vec3 *vert_coords = (vec3 *)dallocate(sizeof(vec3) * (vertex_count_obj + 1), MEM_TAG_UNKNOWN);
+    vec3 *vert_coords = (vec3 *)dallocate(sizeof(vec3) * (vertex_count_obj + 1), MEM_TAG_GEOMETRY);
 
     u32 vert_processed = 0;
     clock_update(&telemetry);
@@ -364,41 +363,42 @@ void geometry_system_parse_obj(const char *obj_file_full_path, u32 *num_of_objec
     for (u32 i = 0; i < vertex_count_obj; i++)
     {
         char *a;
-        vert_coords[i].x = strtof(ptr, &a);
+        vert_coords[i].x = strtof(vert_ptr, &a);
         char *b;
         vert_coords[i].y = strtof(a, &b);
         vert_coords[i].z = strtof(b, NULL);
 
-        ptr = strstr(ptr, "v ");
+        vert_ptr = strstr(vert_ptr, "v ");
         vert_processed++;
         // if (vert_processed % 1000 == 0)
         //{
-        //     DTRACE("Verts Processed: %d Remaining: %d", vert_processed, vertex_count_obj - vert_processed);
+        //     DTRACE("Verts Processed: %d Remaining: %d", vert_processed,
+        //     vertex_count_obj - vert_processed);
         // }
-        if (ptr == nullptr)
+        if (vert_ptr == nullptr)
         {
             break;
         }
-        ptr += vert_substring_size - 1;
+        vert_ptr += vert_substring_size - 1;
     }
     clock_update(&telemetry);
     f64 vert_proccesing_end_time = telemetry.time_elapsed;
     f64 total_vert_time          = vert_proccesing_end_time - vert_proccesing_start_time;
-    DTRACE("Vert proccesing took %f", total_vert_time);
+    printf("Vert proccesing took %fs.\n", total_vert_time);
 
-    ptr                                 = buffer;
-    u64   vertex_normal_first_occurence = string_first_string_occurence(ptr, "vn");
-    char *normal                        = ptr + vertex_normal_first_occurence;
+    char *norm_ptr                       = buffer;
+    u64   vertex_normal_first_occurence  = string_first_string_occurence(norm_ptr, "vn");
+    *norm_ptr                           += vertex_normal_first_occurence;
 
-    u32   normal_count_obj = string_num_of_substring_occurence(normal, "vn");
-    vec3 *normals          = (vec3 *)dallocate(sizeof(vec3) * (normal_count_obj + 1), MEM_TAG_UNKNOWN);
+    u32   normal_count_obj = string_num_of_substring_occurence(norm_ptr, "vn");
+    vec3 *normals          = (vec3 *)dallocate(sizeof(vec3) * (normal_count_obj + 1), MEM_TAG_GEOMETRY);
 
-    ptr                             = buffer;
+    norm_ptr                        = buffer;
     char vert_normal[3]             = "vn";
-    u32  vert_normal_substring_size = 3;
+    u32  vert_normal_substring_size = 2;
 
-    u32 vn  = string_first_string_occurence(ptr, vert_normal);
-    ptr    += vn + vert_normal_substring_size - 1;
+    u32 vn    = string_first_string_occurence(norm_ptr, vert_normal);
+    norm_ptr += vn + vert_normal_substring_size - 1;
 
     u32 normal_processed = 0;
     clock_update(&telemetry);
@@ -406,41 +406,42 @@ void geometry_system_parse_obj(const char *obj_file_full_path, u32 *num_of_objec
     for (u32 i = 0; i < normal_count_obj; i++)
     {
         char *a;
-        normals[i].x = strtof(ptr, &a);
+        normals[i].x = strtof(norm_ptr, &a);
         char *b;
         normals[i].y = strtof(a, &b);
         normals[i].z = strtof(b, NULL);
 
-        ptr = strstr(ptr, "vn");
+        norm_ptr = strstr(norm_ptr, "vn");
         // if (normal_processed % 1000 == 0)
         //{
-        //     DTRACE("normals Processed: %d Remaining: %d", normal_processed, normal_count_obj - normal_processed);
+        //     DTRACE("normals Processed: %d Remaining: %d", normal_processed,
+        //     normal_count_obj - normal_processed);
         // }
         normal_processed++;
-        if (ptr == nullptr)
+        if (norm_ptr == nullptr)
         {
             break;
         }
-        ptr += vert_normal_substring_size - 1;
+        norm_ptr += vert_normal_substring_size;
     }
     clock_update(&telemetry);
     f64 norm_proccesing_end_time = telemetry.time_elapsed;
     f64 total_norm_time          = norm_proccesing_end_time - norm_proccesing_start_time;
-    DTRACE("norm proccesing took %f", total_norm_time);
+    printf("norm proccesing took %fs.\n", total_norm_time);
 
-    ptr                                  = buffer;
-    u64   vertex_texture_first_occurence = string_first_string_occurence(ptr, "vt");
-    char *texture                        = ptr + vertex_texture_first_occurence;
+    char *tex_ptr                  = buffer;
+    u64   texture_first_occurence  = string_first_string_occurence(tex_ptr, "vt");
+    *tex_ptr                      += texture_first_occurence + 2;
 
-    u32   texture_count_obj = string_num_of_substring_occurence(texture, "vt");
-    vec2 *textures          = (vec2 *)dallocate(sizeof(vec2) * (texture_count_obj + 1), MEM_TAG_UNKNOWN);
+    u32   texture_count_obj = string_num_of_substring_occurence(tex_ptr, "vt");
+    vec2 *textures          = (vec2 *)dallocate(sizeof(vec2) * (texture_count_obj + 1), MEM_TAG_GEOMETRY);
 
-    ptr                              = buffer;
+    tex_ptr                          = buffer;
     char vert_texture[3]             = "vt";
     u32  vert_texture_substring_size = 3;
 
-    u32 vt  = string_first_string_occurence(ptr, vert_texture);
-    ptr    += vt + vert_texture_substring_size - 1;
+    u32 vt   = string_first_string_occurence(tex_ptr, vert_texture);
+    tex_ptr += vt + vert_texture_substring_size - 1;
 
     u32 texture_processed = 0;
     clock_update(&telemetry);
@@ -448,192 +449,200 @@ void geometry_system_parse_obj(const char *obj_file_full_path, u32 *num_of_objec
     for (u32 i = 0; i < texture_count_obj; i++)
     {
         char *a;
-        textures[i].x = strtof(ptr, &a);
+        textures[i].x = strtof(tex_ptr, &a);
         textures[i].y = strtof(a, NULL);
 
-        ptr = strstr(ptr, "vt");
+        tex_ptr = strstr(tex_ptr, "vt");
         // if (texture_processed % 1000 == 0)
         //{
-        //     DTRACE("textures Processed: %d Remaining: %d", texture_processed, texture_count_obj - texture_processed);
+        //     DTRACE("textures Processed: %d Remaining: %d", texture_processed,
+        //     texture_count_obj - texture_processed);
         // }
         texture_processed++;
-        if (ptr == nullptr)
+        if (tex_ptr == nullptr)
         {
             break;
         }
-        ptr += vert_texture_substring_size - 1;
+        tex_ptr += vert_texture_substring_size - 1;
     }
     clock_update(&telemetry);
     f64 textrue_proccesing_end_time = telemetry.time_elapsed;
     f64 total_texture_time          = textrue_proccesing_end_time - textrue_proccesing_start_time;
-    DTRACE("norm proccesing took %f", total_texture_time);
+    printf("norm proccesing took %fs.\n", total_texture_time);
 
     u32  objects = string_num_of_substring_occurence(buffer, "o ");
     char temp    = ' ';
 
     *num_of_objects = objects;
     *geo_configs    = (geometry_config *)dallocate(sizeof(geometry_config) * (objects + 1), MEM_TAG_GEOMETRY);
-    linear_allocator_create(allocator, MEGA(30));
 
-    char *object_ptr              = buffer;
-    u32   object_first_occurence  = string_first_string_occurence(object_ptr, "o ");
-    object_ptr                   += object_first_occurence + 1;
+    // INFO: Experimental get all the offsets
+    u32 offsets_count = string_num_of_substring_occurence(buffer, "f ");
+    // one f represents 3 vertices 3 nromals 3 texture coords which define a
+    // triangle. So we need to have enough space for have number of 'f ' * 9
+    // indicies.Furthermore, Each object will have its max offset and min offset for vertices, textures, and normals
+    // and number of vertices for that object stored in the first 7 index of its
+    // array (i.e) 0 , 1 and 2 .. 6 . From 7 till vertices count onwards are the actual
+    // global offsets for the object.
+    u32  offsets_size = (offsets_count * 9) + (7 * objects);
+    u32 *offsets      = (u32 *)dallocate(sizeof(u32) * (offsets_size), MEM_TAG_GEOMETRY);
 
-    const char *material_name      = "usemtl";
-    u32         material_name_size = 6;
+    u32   object_index = string_first_string_occurence(buffer, "o ");
+    char *object_ptr   = buffer + object_index + 2;
+
+    char *indices_ptr = object_ptr;
+
+    s32 object_next_index = string_first_string_occurence(object_ptr, "o ");
+    if (object_next_index == EOF)
+    {
+        object_ptr = buffer + buffer_mem_requirements;
+    }
+    else
+    {
+        object_ptr += object_next_index + 2;
+    }
+
+    // move the pointer to the next object's offsets
+    u32   object_indices_offset = 0;
+    char *found                 = nullptr;
+    u32  *offset_ptr_start      = offsets;
+    u32  *offset_ptr_walk       = &offset_ptr_start[7];
+
+    u32 max_vert_for_obj      = 0;
+    u32 min_vert_for_obj      = INVALID_ID;
+    u32 max_texture_for_obj   = 0;
+    u32 min_texture_for_obj   = INVALID_ID;
+    u32 max_normal_for_obj    = 0;
+    u32 min_normal_for_obj    = INVALID_ID;
+    u32 offsets_count_for_obj = 0;
+
+    u32 object_processed = 0;
+
+    clock_update(&telemetry);
+    f64 offsets_proccesing_start_time = telemetry.time_elapsed;
+    while ((found = strstr(indices_ptr, "f ")) != NULL || indices_ptr != NULL)
+    {
+        if (found == NULL || found > object_ptr)
+        {
+
+            offset_ptr_start[0] = min_vert_for_obj;
+            offset_ptr_start[1] = max_vert_for_obj;
+            offset_ptr_start[2] = min_texture_for_obj;
+            offset_ptr_start[3] = max_texture_for_obj;
+            offset_ptr_start[4] = min_normal_for_obj;
+            offset_ptr_start[5] = max_normal_for_obj;
+            offset_ptr_start[6] = offsets_count_for_obj;
+
+            offset_ptr_start = offset_ptr_walk;
+            offset_ptr_walk  = &offset_ptr_start[7];
+
+            max_vert_for_obj      = 0;
+            min_vert_for_obj      = INVALID_ID;
+            max_texture_for_obj   = 0;
+            min_texture_for_obj   = INVALID_ID;
+            max_normal_for_obj    = 0;
+            min_normal_for_obj    = INVALID_ID;
+            offsets_count_for_obj = 0;
+
+            s32 object_next_index = string_first_string_occurence(object_ptr, "o ");
+            if (object_next_index == EOF)
+            {
+                object_ptr = buffer + buffer_mem_requirements;
+            }
+            else
+            {
+                object_ptr += object_next_index + 2;
+            }
+            object_processed++;
+        }
+        char *f = found;
+        if (found == NULL)
+        {
+            f = indices_ptr;
+        }
+
+        u32   j    = 0;
+        u32   k    = 0;
+        char *ptr2 = f + 2;
+        char *a;
+
+        while (k < 9 && *ptr2 != '\n')
+        {
+            offset_ptr_walk[k++] = strtol(ptr2, &a, 10);
+
+            ptr2  = a;
+            *ptr2 = ' ';
+            a     = NULL;
+        }
+
+        for (u32 j = 0; j < 9; j += 3)
+        {
+            max_vert_for_obj    = DMAX(max_vert_for_obj, offset_ptr_walk[j]);
+            min_vert_for_obj    = DMIN(min_vert_for_obj, offset_ptr_walk[j]);
+            max_texture_for_obj = DMAX(max_texture_for_obj, offset_ptr_walk[j + 1]);
+            min_texture_for_obj = DMIN(min_texture_for_obj, offset_ptr_walk[j + 1]);
+            max_normal_for_obj  = DMAX(max_normal_for_obj, offset_ptr_walk[j + 2]);
+            min_normal_for_obj  = DMIN(min_normal_for_obj, offset_ptr_walk[j + 2]);
+        }
+
+        offsets_count_for_obj += 9;
+        offset_ptr_walk       += 9;
+
+        if (found != NULL)
+        {
+
+            found += 2;
+        }
+        indices_ptr = found;
+    }
+
+    clock_update(&telemetry);
+    f64 offsets_proccesing_end_time = telemetry.time_elapsed;
+    f64 total_offsets_time          = offsets_proccesing_end_time - offsets_proccesing_start_time;
+    printf("offsets proccesing took %fs.\n", total_offsets_time);
 
     clock_update(&telemetry);
     f64 object_proccesing_start_time = telemetry.time_elapsed;
 
+    linear_allocator_create(allocator, MEGA(30));
+
+    u32 size_till_now = 0;
     for (u32 object = 0; object < objects; object++)
     {
-        dclock per_object{};
-        clock_start(&per_object);
+        u32 *offset_ptr_walk = &offsets[size_till_now + 7];
+        u32  count           = offsets[(size_till_now) + 6];
+        u32  vert_min        = offsets[size_till_now + 0];
+        u32  vert_max        = offsets[size_till_now + 1];
+        u32  tex_min         = offsets[size_till_now + 2];
+        u32  norm_min        = offsets[size_till_now + 4];
 
-        // get object name
-        u32 new_line = string_first_char_occurence(object_ptr, '\n');
-        if (new_line != INVALID_ID)
+        size_till_now            += (count + 7);
+        u32 vertex_count_per_obj  = vert_max - vert_min + 1;
+
+        (*geo_configs)[object].vertices =
+            (vertex *)linear_allocator_allocate(allocator, sizeof(vertex) * vertex_count_per_obj);
+        (*geo_configs)[object].vertex_count = vertex_count_per_obj;
+
+        (*geo_configs)[object].indices     = (u32 *)linear_allocator_allocate(allocator, sizeof(u32) * (count / 3));
+        (*geo_configs)[object].index_count = count / 3;
+
+        u32 index_ind = 0;
+        for (u32 j = 0; j < count - 3; j += 3)
         {
-            string_ncopy((*geo_configs)[object].name, object_ptr, new_line);
-            (*geo_configs)[object].name[new_line] = '\0';
-        }
-        // parse object
-        object_first_occurence = string_first_string_occurence(object_ptr, "o ");
-        if (object_first_occurence != INVALID_ID)
-        {
-            temp                               = object_ptr[object_first_occurence];
-            object_ptr[object_first_occurence] = '\0';
-        }
+            u32 vert_ind                                       = offset_ptr_walk[j] - 1;
+            (*geo_configs)[object].vertices[vert_ind].position = vert_coords[vert_ind];
+            (*geo_configs)[object].indices[index_ind++]        = vert_ind;
 
-        // get material name for object
-        char *material_name_ptr = object_ptr;
-        u32   material_name_ind = string_first_string_occurence(material_name_ptr, material_name);
-        if (material_name_ind != INVALID_ID)
-        {
-            material_name_ptr        += material_name_ind + material_name_size + 1;
-            u32     usemtl_name_size  = string_first_char_occurence(material_name_ptr, '\n');
-            dstring usemtl_name;
-            dcopy_memory(usemtl_name.string, material_name_ptr, usemtl_name_size);
-            usemtl_name.str_len = usemtl_name_size;
-
-            (*geo_configs)[object].material = material_system_acquire_from_name(&usemtl_name);
-        }
-        if ((*geo_configs)[object].material == nullptr)
-        {
-            (*geo_configs)[object].material = material_system_get_default_material();
-        }
-
-        //
-
-        u64 tris_count          = string_num_of_substring_occurence(object_ptr, "f ");
-        u32 max_vert_for_obj    = 0;
-        u32 min_vert_for_obj    = INVALID_ID;
-        u32 max_texture_for_obj = 0;
-        u32 min_texture_for_obj = INVALID_ID;
-        u32 max_normal_for_obj  = 0;
-        u32 min_normal_for_obj  = INVALID_ID;
-
-        char *ptr  = object_ptr;
-        u32   f    = string_first_string_occurence(ptr, "f ");
-        ptr       += f + 2;
-
-        for (u32 i = 0; i < tris_count; i++)
-        {
-            u32 offsets[9] = {0};
-            u32 j          = 0;
-            while (ptr[j] != '\n')
-            {
-                if (ptr[j] == '/')
-                {
-                    ptr[j] = ' ';
-                }
-                j++;
-            }
-
-            char *ptr2 = ptr;
-            char *a;
-            for (u32 k = 0; k < 9; k++)
-            {
-                offsets[k] = strtol(ptr2, &a, 10);
-                ptr2       = a;
-                a          = NULL;
-            }
-
-            for (u32 k = 0; k < 9; k += 3)
-            {
-                max_vert_for_obj    = DMAX(max_vert_for_obj, offsets[k]);
-                min_vert_for_obj    = DMIN(min_vert_for_obj, offsets[k]);
-                max_texture_for_obj = DMAX(max_texture_for_obj, offsets[k + 1]);
-                min_texture_for_obj = DMIN(min_texture_for_obj, offsets[k + 1]);
-                max_normal_for_obj  = DMAX(max_normal_for_obj, offsets[k + 2]);
-                min_normal_for_obj  = DMIN(min_normal_for_obj, offsets[k + 2]);
-            }
-
-            f    = string_first_string_occurence(ptr, "f ");
-            ptr += f + 2;
-        }
-
-        vertex **vert_arr = (vertex **)(&((*geo_configs)[object].vertices));
-
-        u32 obj_vertices_count = max_vert_for_obj - min_vert_for_obj + 1;
-        *vert_arr              = (vertex *)linear_allocator_allocate(allocator, sizeof(vertex) * obj_vertices_count);
-
-        u32 **ind_arr            = (u32 **)(&((*geo_configs)[object].indices));
-        u32   obj_indicies_count = tris_count * 3;
-        *ind_arr                 = (u32 *)linear_allocator_allocate(allocator, sizeof(u32) * (obj_indicies_count));
-
-        ptr  = object_ptr;
-        f    = string_first_string_occurence(ptr, "f ");
-        ptr += f + 2;
-
-        for (u32 i = 0; i < tris_count; i++)
-        {
-            u32 offsets[9] = {0};
-
-            char *ptr2 = ptr;
-            char *a;
-            for (u32 k = 0; k < 9; k++)
-            {
-                offsets[k] = strtol(ptr2, &a, 10);
-                ptr2       = a;
-                a          = NULL;
-            }
-
-            u32 *ind_dum_ptr = ((*ind_arr)) + (3 * i);
-
-            for (u32 k = 0; k < 9; k += 3)
-            {
-                DASSERT(offsets[k] - min_vert_for_obj <= obj_vertices_count);
-                vertex *dum = &((*vert_arr)[offsets[k] - min_vert_for_obj]);
-
-                dum->position  = vert_coords[offsets[k] - 1];
-                dum->tex_coord = textures[offsets[k + 1] - 1];
-                dum->normal    = normals[offsets[k + 2] - 1];
-            }
-
-            ind_dum_ptr[0] = offsets[0] - min_vert_for_obj;
-            ind_dum_ptr[1] = offsets[3] - min_vert_for_obj;
-            ind_dum_ptr[2] = offsets[6] - min_vert_for_obj;
-
-            f    = string_first_string_occurence(ptr, "f ");
-            ptr += f + 1;
-        }
-
-        (*geo_configs)[object].vertex_count = obj_vertices_count;
-        (*geo_configs)[object].index_count  = tris_count * 3;
-
-        clock_update(&per_object);
-        f64 per_object_proccesing_end_time = per_object.time_elapsed;
-
-        DDEBUG("Object: %s, took %fs. No verts: %d No indices: %d", (*geo_configs)[object].name,
-               per_object_proccesing_end_time, (*geo_configs)[object].vertex_count, (*geo_configs)[object].index_count);
-        if (object_first_occurence != INVALID_ID)
-        {
-            object_ptr[object_first_occurence]  = temp;
-            temp                                = ' ';
-            object_ptr                         += object_first_occurence + 1;
+            u32 tex_ind                                         = offset_ptr_walk[j + 1] - 1;
+            (*geo_configs)[object].vertices[vert_ind].tex_coord = textures[tex_ind];
+            u32 norm_ind                                        = offset_ptr_walk[j + 2] - 1;
+            (*geo_configs)[object].vertices[vert_ind].normal    = normals[norm_ind];
         }
     }
+
+    const char *material_name      = "usemtl";
+    u32         material_name_size = 6;
+
     clock_update(&telemetry);
     f64 object_proccesing_end_time = telemetry.time_elapsed;
     f64 total_object_time          = object_proccesing_end_time - object_proccesing_start_time;
