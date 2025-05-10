@@ -697,7 +697,7 @@ bool vulkan_draw_geometries(render_data *data, VkCommandBuffer *curr_command_buf
         }
 
         vulkan_texture *vk_texture       = nullptr;
-        texture        *instance_texture = (texture *)data->test_geometry[i]->material->map.diffuse_tex;
+        texture        *instance_texture = (texture *)mat->map.diffuse_tex;
 
         if (!instance_texture)
         {

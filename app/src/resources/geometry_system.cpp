@@ -334,10 +334,10 @@ void geometry_system_parse_obj(const char *obj_file_full_path, u32 *num_of_objec
     file_open_and_read(obj_file_full_path, &buffer_mem_requirements, 0, 0);
     if (buffer_mem_requirements == INVALID_ID_64)
     {
-        printf("Failed to get size requirements for %s\n", obj_file_full_path);
+        DERROR("Failed to get size requirements for %s", obj_file_full_path);
         return;
     }
-
+    DASSERT(buffer_mem_requirements != INVALID_ID_64);
     char *buffer = (char *)dallocate(buffer_mem_requirements + 1, MEM_TAG_GEOMETRY);
     file_open_and_read(obj_file_full_path, &buffer_mem_requirements, buffer, 0);
 
@@ -346,13 +346,11 @@ void geometry_system_parse_obj(const char *obj_file_full_path, u32 *num_of_objec
     char  vert_substring[3]   = "v ";
     u32   vert_substring_size = 2;
 
-    char *vert_ = strstr(vert_ptr, vert_substring) + vert_substring_size;
+    char *vert_            = buffer;
+    u32   vertex_count_obj = string_num_of_substring_occurence(vert_, vert_substring) + 1;
 
-    u32 vertex_count_obj = string_num_of_substring_occurence(vert_, vert_substring) + 1;
-
-    vert_ptr  = buffer;
     u32 v     = string_first_string_occurence(vert_ptr, vert_substring);
-    vert_ptr += v + vert_substring_size - 1;
+    vert_ptr += v + vert_substring_size;
 
     vec3 *vert_coords = (vec3 *)dallocate(sizeof(vec3) * vertex_count_obj, MEM_TAG_GEOMETRY);
 
@@ -378,27 +376,24 @@ void geometry_system_parse_obj(const char *obj_file_full_path, u32 *num_of_objec
         vert_processed++;
         if (vert_ptr != nullptr)
         {
-            vert_ptr += vert_substring_size - 1;
+            vert_ptr += vert_substring_size;
         }
     }
     clock_update(&telemetry);
     f64 vert_proccesing_end_time = telemetry.time_elapsed;
     f64 total_vert_time          = vert_proccesing_end_time - vert_proccesing_start_time;
-    printf("Vert proccesing took %fs.\n", total_vert_time);
+    DTRACE("Vert proccesing took %fs.\n", total_vert_time);
 
-    char *norm_ptr                       = buffer;
-    u64   vertex_normal_first_occurence  = string_first_string_occurence(norm_ptr, "vn") + 1;
-    *norm_ptr                           += vertex_normal_first_occurence;
-
-    u32   normal_count_obj = string_num_of_substring_occurence(norm_ptr, "vn");
-    vec3 *normals          = (vec3 *)dallocate(sizeof(vec3) * normal_count_obj, MEM_TAG_GEOMETRY);
-
-    norm_ptr                        = buffer;
     char vert_normal[3]             = "vn";
     u32  vert_normal_substring_size = 2;
 
+    char *norm_ptr         = buffer;
+    u32   normal_count_obj = string_num_of_substring_occurence(norm_ptr, "vn");
+
+    vec3 *normals = (vec3 *)dallocate(sizeof(vec3) * normal_count_obj, MEM_TAG_GEOMETRY);
+
     u32 vn    = string_first_string_occurence(norm_ptr, vert_normal);
-    norm_ptr += vn + vert_normal_substring_size - 1;
+    norm_ptr += vn + vert_normal_substring_size;
 
     u32 normal_processed = 0;
     clock_update(&telemetry);
@@ -427,21 +422,18 @@ void geometry_system_parse_obj(const char *obj_file_full_path, u32 *num_of_objec
     clock_update(&telemetry);
     f64 norm_proccesing_end_time = telemetry.time_elapsed;
     f64 total_norm_time          = norm_proccesing_end_time - norm_proccesing_start_time;
-    printf("norm proccesing took %fs.\n", total_norm_time);
+    DTRACE("norm proccesing took %fs.\n", total_norm_time);
 
-    char *tex_ptr                  = buffer;
-    u64   texture_first_occurence  = string_first_string_occurence(tex_ptr, "vt") + 1;
-    *tex_ptr                      += texture_first_occurence + 2;
-
-    u32   texture_count_obj = string_num_of_substring_occurence(tex_ptr, "vt");
-    vec2 *textures          = (vec2 *)dallocate(sizeof(vec2) * texture_count_obj, MEM_TAG_GEOMETRY);
-
-    tex_ptr                          = buffer;
     char vert_texture[3]             = "vt";
-    u32  vert_texture_substring_size = 3;
+    u32  vert_texture_substring_size = 2;
+
+    char *tex_ptr           = buffer;
+    u32   texture_count_obj = string_num_of_substring_occurence(tex_ptr, "vt");
+
+    vec2 *textures = (vec2 *)dallocate(sizeof(vec2) * texture_count_obj, MEM_TAG_GEOMETRY);
 
     u32 vt   = string_first_string_occurence(tex_ptr, vert_texture);
-    tex_ptr += vt + vert_texture_substring_size - 1;
+    tex_ptr += vt + vert_texture_substring_size;
 
     u32 texture_processed = 0;
     clock_update(&telemetry);
@@ -463,12 +455,12 @@ void geometry_system_parse_obj(const char *obj_file_full_path, u32 *num_of_objec
         {
             break;
         }
-        tex_ptr += vert_texture_substring_size - 1;
+        tex_ptr += vert_texture_substring_size;
     }
     clock_update(&telemetry);
     f64 textrue_proccesing_end_time = telemetry.time_elapsed;
     f64 total_texture_time          = textrue_proccesing_end_time - textrue_proccesing_start_time;
-    printf("norm proccesing took %fs.\n", total_texture_time);
+    DTRACE("norm proccesing took %fs.\n", total_texture_time);
 
     u32  objects = string_num_of_substring_occurence(buffer, "o ");
     char temp    = ' ';
@@ -603,7 +595,7 @@ void geometry_system_parse_obj(const char *obj_file_full_path, u32 *num_of_objec
     clock_update(&telemetry);
     f64 offsets_proccesing_end_time = telemetry.time_elapsed;
     f64 total_offsets_time          = offsets_proccesing_end_time - offsets_proccesing_start_time;
-    printf("offsets proccesing took %fs.\n", total_offsets_time);
+    DTRACE("offsets proccesing took %fs.\n", total_offsets_time);
 
     clock_update(&telemetry);
     f64 object_proccesing_start_time = telemetry.time_elapsed;
