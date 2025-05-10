@@ -37,7 +37,7 @@ f32 fdrandom_in_range(f32 min, f32 max)
 // HACK:
 //  for scaling
 
-void scale_geometries(const geometry_config *config, vec3 scaling_factor)
+void scale_geometries(const geometry_config *config, math::vec3 scaling_factor)
 {
     u32 vertex_count = config->vertex_count;
 

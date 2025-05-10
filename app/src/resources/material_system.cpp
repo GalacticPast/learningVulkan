@@ -231,16 +231,25 @@ bool material_system_parse_mtl_file(const char *mtl_file_name)
         u32 next_material   = string_first_string_occurence(mtl_ptr, newmat_sub_string);
 
         u32 material_name_length = string_first_char_occurence(mtl_ptr, '\n');
+        while (*mtl_ptr == ' ')
+        {
+            mtl_ptr++;
+        }
         string_ncopy(configs[i].mat_name, mtl_ptr, material_name_length);
 
         u32 diffuse_tex_occurence = string_first_string_occurence(mtl_ptr, diffuse_map_sub_string);
 
         if (diffuse_tex_occurence < next_material)
         {
-            mtl_ptr                     += diffuse_tex_occurence + diffuse_map_substring_size;
-            u32   diffuse_map_name_size  = string_first_char_occurence(mtl_ptr, '\n');
-            char *diffuse_map_name       = mtl_ptr + diffuse_map_name_size - 1;
-            diffuse_map_name_size        = 0;
+            mtl_ptr += diffuse_tex_occurence + diffuse_map_substring_size;
+
+            while (*mtl_ptr == ' ')
+            {
+                mtl_ptr++;
+            }
+            u32   diffuse_map_name_size = string_first_char_occurence(mtl_ptr, '\n');
+            char *diffuse_map_name      = mtl_ptr + diffuse_map_name_size - 1;
+            diffuse_map_name_size       = 0;
             // TODO: will this suffice?
             while (*diffuse_map_name != '/' && *diffuse_map_name != ' ' && *diffuse_map_name != '\n')
             {

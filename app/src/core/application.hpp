@@ -16,16 +16,16 @@ struct application_config
 
 struct camera
 {
-    vec3 euler;
-    vec3 position;
-    vec3 up = vec3(0, 1, 0);
+    math::vec3 euler;
+    math::vec3 position;
+    math::vec3 up = math::vec3(0, 1, 0);
 };
 
 struct uniform_buffer_object
 {
-    mat4 model;
-    mat4 view;
-    mat4 projection;
+    math::mat4 model;
+    math::mat4 view;
+    math::mat4 projection;
 };
 
 struct render_data

@@ -1,5 +1,6 @@
 #include "core/application.hpp"
 #include "core/dclock.hpp"
+#include "core/dmemory.hpp"
 #include "core/input.hpp"
 #include "core/logger.hpp"
 
@@ -87,8 +88,7 @@ int main()
     geometry **sponza_geo     = nullptr;
     u32        geometry_count = INVALID_ID;
     geometry_system_get_sponza_geometries(&sponza_geo, &geometry_count);
-    triangle.test_geometry = sponza_geo;
-
+    triangle.test_geometry  = sponza_geo;
     triangle.geometry_count = geometry_count;
 
     triangle.global_ubo = global_ubo;
@@ -147,8 +147,8 @@ void update_camera(uniform_buffer_object *ubo, f64 start_time)
     f32 fov_rad      = 45 * D_DEG2RAD_MULTIPLIER;
     f32 aspect_ratio = (f32)s_width / s_height;
 
-    vec3 velocity = vec3();
-    f32  step     = 0.01f;
+    math::vec3 velocity = math::vec3();
+    f32        step     = 0.01f;
 
     // HACK:
     static f32 z  = 0.01f;
@@ -156,10 +156,10 @@ void update_camera(uniform_buffer_object *ubo, f64 start_time)
 
     ubo->projection = mat4_perspective(fov_rad, aspect_ratio, 0.01f, 1000.0f);
     ubo->model      = mat4_euler_y(z);
-    ubo->model      = mat4();
+    ubo->model      = math::mat4();
 
-    static vec3 camera_pos   = vec3(0, 0, 6);
-    static vec3 camera_euler = vec3(0, 0, 0);
+    static math::vec3 camera_pos   = math::vec3(0, 0, 6);
+    static math::vec3 camera_euler = math::vec3(0, 0, 0);
 
     if (input_is_key_down(KEY_A) || input_is_key_down(KEY_LEFT))
     {
@@ -183,18 +183,18 @@ void update_camera(uniform_buffer_object *ubo, f64 start_time)
 
     if (input_is_key_down(KEY_W))
     {
-        vec3 forward  = mat4_forward(ubo->view);
-        velocity     += forward;
+        math::vec3 forward  = mat4_forward(ubo->view);
+        velocity           += forward;
     }
     if (input_is_key_down(KEY_S))
     {
 
-        vec3 backward  = mat4_backward(ubo->view);
-        velocity      += backward;
+        math::vec3 backward  = mat4_backward(ubo->view);
+        velocity            += backward;
     }
 
-    vec3  z_axis          = vec3();
-    float temp_move_speed = step + 0.15;
+    math::vec3 z_axis          = math::vec3();
+    float      temp_move_speed = step + 0.15;
     if (!vec3_compare(z_axis, velocity, 0.0002f))
     {
         // Be sure to normalize the velocity before applying speed.
@@ -204,8 +204,8 @@ void update_camera(uniform_buffer_object *ubo, f64 start_time)
         camera_pos.z += velocity.z * temp_move_speed * start_time;
     }
 
-    mat4 rotation    = mat4_euler_xyz(camera_euler.x, camera_euler.y, camera_euler.z);
-    mat4 translation = mat4_translation(camera_pos);
+    math::mat4 rotation    = mat4_euler_xyz(camera_euler.x, camera_euler.y, camera_euler.z);
+    math::mat4 translation = mat4_translation(camera_pos);
 
     ubo->view = rotation * translation;
     ubo->view = mat4_inverse(ubo->view);

@@ -74,7 +74,11 @@ bool geometry_system_shutdowm(void *state)
 
 bool geometry_system_create_geometry(geometry_config *config)
 {
-
+    if (config->name[0] == '\0')
+    {
+        DERROR("Provided goemetry config doesnt have a valid geometry name .");
+        return false;
+    }
     geometry geo{};
     u32      tris_count    = config->vertex_count;
     u32      indices_count = config->index_count;
@@ -88,7 +92,6 @@ bool geometry_system_create_geometry(geometry_config *config)
         DERROR("Couldnt create geometry %s.", config->name);
         return false;
     }
-
     geo_sys_state_ptr->hashtable->insert(config->name, geo);
 
     u32 index                                      = geo_sys_state_ptr->loaded_geometry.size();
@@ -262,7 +265,7 @@ bool geometry_system_create_default_geometry()
             DTRACE("%d %d %d", default_geo_configs[i].indices[j], default_geo_configs[i].indices[j + 1],
                    default_geo_configs[i].indices[j + 2]);
         }
-
+        string_ncopy(default_geo_configs[i].name, DEFAULT_GEOMETRY_HANDLE, sizeof(DEFAULT_GEOMETRY_HANDLE));
         geometry_system_create_geometry(&default_geo_configs[i]);
     }
 
@@ -327,6 +330,7 @@ geometry *geometry_system_get_default_geometry()
 void geometry_system_parse_obj(const char *obj_file_full_path, u32 *num_of_objects, geometry_config **geo_configs,
                                linear_allocator *allocator)
 {
+    DTRACE("parsing file %s.", obj_file_full_path);
     dclock telemetry;
     clock_start(&telemetry);
 
@@ -342,6 +346,55 @@ void geometry_system_parse_obj(const char *obj_file_full_path, u32 *num_of_objec
     file_open_and_read(obj_file_full_path, &buffer_mem_requirements, buffer, 0);
 
     // TODO: cleaup this piece of shit code
+    u32 objects     = string_num_of_substring_occurence(buffer, "o ");
+    *num_of_objects = objects;
+    *geo_configs    = (geometry_config *)dallocate(sizeof(geometry_config) * objects, MEM_TAG_GEOMETRY);
+
+    clock_update(&telemetry);
+    f64 names_proccesing_start_time = telemetry.time_elapsed;
+    {
+        char *object_name_ptr      = buffer;
+        char *next_object_name_ptr = nullptr;
+        char *object_usemtl_name   = nullptr;
+
+        for (u32 i = 0; i < objects; i++)
+        {
+            object_name_ptr = strstr(object_name_ptr, "o ");
+            if (object_name_ptr == nullptr)
+            {
+                break;
+            }
+            object_name_ptr        += 2;
+            u32 object_name_length  = string_first_char_occurence(object_name_ptr, '\n');
+            string_ncopy((*geo_configs)[i].name, object_name_ptr, object_name_length);
+
+            next_object_name_ptr = strstr(object_name_ptr, "o ");
+            if (next_object_name_ptr == nullptr)
+            {
+                next_object_name_ptr = buffer + buffer_mem_requirements;
+            }
+
+            object_usemtl_name = strstr(object_name_ptr, "usemtl");
+            if (object_usemtl_name != nullptr && object_usemtl_name < next_object_name_ptr)
+            {
+                dstring material_name  = {};
+                object_usemtl_name    += 6;
+                while (*object_usemtl_name == ' ')
+                {
+                    object_usemtl_name++;
+                }
+
+                u32 object_usemtl_name_length = string_first_char_occurence(object_usemtl_name, '\n');
+                string_ncopy(material_name.string, object_usemtl_name, object_usemtl_name_length);
+                material_name.str_len      = object_usemtl_name_length;
+                (*geo_configs)[i].material = material_system_acquire_from_name(&material_name);
+            }
+        }
+    }
+    clock_update(&telemetry);
+    f64 names_proccesing_end_time = telemetry.time_elapsed - names_proccesing_start_time;
+    DTRACE("names proccesing took %fs.\n", names_proccesing_end_time);
+
     char *vert_ptr            = buffer;
     char  vert_substring[3]   = "v ";
     u32   vert_substring_size = 2;
@@ -352,7 +405,7 @@ void geometry_system_parse_obj(const char *obj_file_full_path, u32 *num_of_objec
     u32 v     = string_first_string_occurence(vert_ptr, vert_substring);
     vert_ptr += v + vert_substring_size;
 
-    vec3 *vert_coords = (vec3 *)dallocate(sizeof(vec3) * vertex_count_obj, MEM_TAG_GEOMETRY);
+    math::vec3 *vert_coords = (math::vec3 *)dallocate(sizeof(math::vec3) * vertex_count_obj, MEM_TAG_GEOMETRY);
 
     u32 vert_processed = 0;
     clock_update(&telemetry);
@@ -390,7 +443,7 @@ void geometry_system_parse_obj(const char *obj_file_full_path, u32 *num_of_objec
     char *norm_ptr         = buffer;
     u32   normal_count_obj = string_num_of_substring_occurence(norm_ptr, "vn");
 
-    vec3 *normals = (vec3 *)dallocate(sizeof(vec3) * normal_count_obj, MEM_TAG_GEOMETRY);
+    math::vec3 *normals = (math::vec3 *)dallocate(sizeof(math::vec3) * normal_count_obj, MEM_TAG_GEOMETRY);
 
     u32 vn    = string_first_string_occurence(norm_ptr, vert_normal);
     norm_ptr += vn + vert_normal_substring_size;
@@ -430,7 +483,7 @@ void geometry_system_parse_obj(const char *obj_file_full_path, u32 *num_of_objec
     char *tex_ptr           = buffer;
     u32   texture_count_obj = string_num_of_substring_occurence(tex_ptr, "vt");
 
-    vec2 *textures = (vec2 *)dallocate(sizeof(vec2) * texture_count_obj, MEM_TAG_GEOMETRY);
+    math::vec_2d *textures = (math::vec_2d *)dallocate(sizeof(math::vec_2d) * texture_count_obj, MEM_TAG_GEOMETRY);
 
     u32 vt   = string_first_string_occurence(tex_ptr, vert_texture);
     tex_ptr += vt + vert_texture_substring_size;
@@ -457,16 +510,11 @@ void geometry_system_parse_obj(const char *obj_file_full_path, u32 *num_of_objec
         }
         tex_ptr += vert_texture_substring_size;
     }
+
     clock_update(&telemetry);
     f64 textrue_proccesing_end_time = telemetry.time_elapsed;
     f64 total_texture_time          = textrue_proccesing_end_time - textrue_proccesing_start_time;
     DTRACE("norm proccesing took %fs.\n", total_texture_time);
-
-    u32  objects = string_num_of_substring_occurence(buffer, "o ");
-    char temp    = ' ';
-
-    *num_of_objects = objects;
-    *geo_configs    = (geometry_config *)dallocate(sizeof(geometry_config) * objects, MEM_TAG_GEOMETRY);
 
     // INFO: Experimental get all the offsets
     u32 offsets_count = string_num_of_substring_occurence(buffer, "f ");
@@ -600,7 +648,7 @@ void geometry_system_parse_obj(const char *obj_file_full_path, u32 *num_of_objec
     clock_update(&telemetry);
     f64 object_proccesing_start_time = telemetry.time_elapsed;
 
-    linear_allocator_create(allocator, MEGA(30));
+    linear_allocator_create(allocator, GIGA(1));
 
     u32 size_till_now = 0;
     for (u32 object = 0; object < objects; object++)
@@ -615,25 +663,25 @@ void geometry_system_parse_obj(const char *obj_file_full_path, u32 *num_of_objec
         size_till_now            += (count + 7);
         u32 vertex_count_per_obj  = vert_max - vert_min + 1;
 
-        (*geo_configs)[object].vertices =
-            (vertex *)linear_allocator_allocate(allocator, sizeof(vertex) * vertex_count_per_obj);
-        (*geo_configs)[object].vertex_count = vertex_count_per_obj;
-
-        (*geo_configs)[object].indices     = (u32 *)linear_allocator_allocate(allocator, sizeof(u32) * (count / 3));
-        (*geo_configs)[object].index_count = count / 3;
+        (*geo_configs)[object].vertices = (vertex *)linear_allocator_allocate(allocator, sizeof(vertex) * (count / 3));
+        (*geo_configs)[object].vertex_count = count / 3;
+        (*geo_configs)[object].indices      = (u32 *)linear_allocator_allocate(allocator, sizeof(u32) * (count / 3));
+        (*geo_configs)[object].index_count  = count / 3;
 
         u32 index_ind = 0;
         for (u32 j = 0; j <= count - 3; j += 3)
         {
-            u32 vert_ind                                       = offset_ptr_walk[j] - 1;
-            (*geo_configs)[object].vertices[vert_ind].position = vert_coords[vert_ind];
-            (*geo_configs)[object].indices[index_ind++]        = vert_ind;
+            u32 vert_ind = offset_ptr_walk[j] - 1;
+            u32 tex_ind  = offset_ptr_walk[j + 1] - 1;
+            u32 norm_ind = offset_ptr_walk[j + 2] - 1;
 
-            u32 tex_ind                                         = offset_ptr_walk[j + 1] - 1;
-            (*geo_configs)[object].vertices[vert_ind].tex_coord = textures[tex_ind];
-            u32 norm_ind                                        = offset_ptr_walk[j + 2] - 1;
-            (*geo_configs)[object].vertices[vert_ind].normal    = normals[norm_ind];
+            (*geo_configs)[object].vertices[index_ind].position  = vert_coords[vert_ind];
+            (*geo_configs)[object].vertices[index_ind].tex_coord = textures[tex_ind];
+            (*geo_configs)[object].vertices[index_ind].normal    = normals[norm_ind];
+            (*geo_configs)[object].indices[index_ind]            = index_ind;
+            index_ind++;
         }
+        DASSERT(index_ind == (*geo_configs)[object].index_count);
     }
 
     const char *material_name      = "usemtl";
@@ -644,9 +692,9 @@ void geometry_system_parse_obj(const char *obj_file_full_path, u32 *num_of_objec
     f64 total_object_time          = object_proccesing_end_time - object_proccesing_start_time;
     DTRACE("objects proccesing took %f", total_object_time);
 
-    dfree(textures, sizeof(vec2) * texture_count_obj, MEM_TAG_UNKNOWN);
-    dfree(normals, sizeof(vec3) * normal_count_obj, MEM_TAG_UNKNOWN);
-    dfree(vert_coords, sizeof(vec3) * vertex_count_obj, MEM_TAG_UNKNOWN);
+    dfree(textures, sizeof(math::vec3) * texture_count_obj, MEM_TAG_UNKNOWN);
+    dfree(normals, sizeof(math::vec3) * normal_count_obj, MEM_TAG_UNKNOWN);
+    dfree(vert_coords, sizeof(math::vec3) * vertex_count_obj, MEM_TAG_UNKNOWN);
     dfree(buffer, buffer_mem_requirements, MEM_TAG_GEOMETRY);
 
     clock_update(&telemetry);
@@ -676,8 +724,8 @@ void geometry_system_get_sponza_geometries(geometry ***sponza_geos, u32 *sponza_
     material_system_parse_mtl_file((const char *)file_mtl_full_path);
     geometry_system_parse_obj(file_full_path, &sponza_objects, &sponza_geo_configs, &sponza_allocator);
 
-    *sponza_geos = (geometry **)dallocate(sizeof(geometry *) * sponza_objects, MEM_TAG_GEOMETRY);
-    vec3 scale   = {0.5, 0.5, 0.5};
+    *sponza_geos     = (geometry **)dallocate(sizeof(geometry *) * sponza_objects, MEM_TAG_GEOMETRY);
+    math::vec3 scale = {0.5, 0.5, 0.5};
 
     for (u32 i = 0; i < sponza_objects; i++)
     {

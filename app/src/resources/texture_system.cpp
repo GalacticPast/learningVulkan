@@ -141,6 +141,7 @@ bool texture_system_create_default_texture()
 
     bool result = create_texture(&default_texture, pixels);
     tex_sys_state_ptr->hashtable->set_default_value(default_texture);
+
     return result;
 }
 

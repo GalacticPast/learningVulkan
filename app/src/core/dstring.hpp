@@ -1,5 +1,6 @@
 #pragma once
 #include "defines.hpp"
+#include "math/dmath_types.hpp"
 //
 // strings because I dont know c strings good enough :(
 //
@@ -41,4 +42,4 @@ s32 string_first_string_occurence(const char *string, const char *str);
 s32 string_num_of_substring_occurence(const char *string, const char *str);
 
 // @param: ch-> keep searching till the first occurecne of the character
-bool string_to_vec4(const char *string, class vec4 *vector, const char ch);
+bool string_to_vec4(const char *string, math::vec4 *vector, const char ch);

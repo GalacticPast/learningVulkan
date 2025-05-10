@@ -32,12 +32,12 @@
 // Smallest positive number where 1.0 + FLOAT_EPSILON != 0
 #define D_FLOAT_EPSILON 1.192092896e-07f
 
-inline vec2 vec2_normalized(vec2 a)
+inline math::vec_2d vec2_normalized(math::vec_2d a)
 {
     const f32 length = a.magnitude();
     f32       x      = a.x / length;
     f32       y      = a.y / length;
-    return vec2(x, y);
+    return math::vec_2d(x, y);
 }
 /**
  * @brief Compares all elements of vector_0 and vector_1 and ensures the difference
@@ -47,7 +47,7 @@ inline vec2 vec2_normalized(vec2 a)
  * @param vector_1 The second vector.
  * @param tolerance The difference tolerance. Typically K_FLOAT_EPSILON or similar. @return True if within tolerance;
  * otherwise false. */
-inline bool vec2_compare(vec2 vector_0, vec2 vector_1, f32 tolerance)
+inline bool vec2_compare(math::vec_2d vector_0, math::vec_2d vector_1, f32 tolerance)
 {
     if (fabs(vector_0.x - vector_1.x) > tolerance)
     {
@@ -62,15 +62,15 @@ inline bool vec2_compare(vec2 vector_0, vec2 vector_1, f32 tolerance)
     return true;
 }
 
-inline vec3 vec3_normalized(vec3 a)
+inline math::vec3 vec3_normalized(math::vec3 a)
 {
     const f32 length = a.magnitude();
     f32       x      = a.x / length;
     f32       y      = a.y / length;
     f32       z      = a.z / length;
-    return vec3(x, y, z);
+    return math::vec3(x, y, z);
 }
-inline f32 vec3_dot(vec3 vector_0, vec3 vector_1)
+inline f32 vec3_dot(math::vec3 vector_0, math::vec3 vector_1)
 {
     f32 p  = 0;
     p     += vector_0.x * vector_1.x;
@@ -78,13 +78,14 @@ inline f32 vec3_dot(vec3 vector_0, vec3 vector_1)
     p     += vector_0.z * vector_1.z;
     return p;
 }
-inline vec3 vec3_cross(vec3 vector_0, vec3 vector_1)
+inline math::vec3 vec3_cross(math::vec3 vector_0, math::vec3 vector_1)
 {
-    return (vec3){vector_0.y * vector_1.z - vector_0.z * vector_1.y, vector_0.z * vector_1.x - vector_0.x * vector_1.z,
-                  vector_0.x * vector_1.y - vector_0.y * vector_1.x};
+    return (math::vec3){vector_0.y * vector_1.z - vector_0.z * vector_1.y,
+                        vector_0.z * vector_1.x - vector_0.x * vector_1.z,
+                        vector_0.x * vector_1.y - vector_0.y * vector_1.x};
 }
 
-inline const bool vec3_compare(vec3 vector_0, vec3 vector_1, f32 tolerance)
+inline const bool vec3_compare(math::vec3 vector_0, math::vec3 vector_1, f32 tolerance)
 {
     if (fabs(vector_0.x - vector_1.x) > tolerance)
     {
@@ -103,30 +104,30 @@ inline const bool vec3_compare(vec3 vector_0, vec3 vector_1, f32 tolerance)
 
     return true;
 }
-inline f32 vec3_distance(vec3 vector_0, vec3 vector_1)
+inline f32 vec3_distance(math::vec3 vector_0, math::vec3 vector_1)
 {
-    vec3 d = (vec3){vector_0.x - vector_1.x, vector_0.y - vector_1.y, vector_0.z - vector_1.z};
+    math::vec3 d = (math::vec3){vector_0.x - vector_1.x, vector_0.y - vector_1.y, vector_0.z - vector_1.z};
     return d.magnitude();
 }
 
-inline vec4 vec4_normalized(vec4 a)
+inline math::vec4 vec4_normalized(math::vec4 a)
 {
     const f32 length = a.magnitude();
     f32       x      = a.x / length;
     f32       y      = a.y / length;
     f32       z      = a.z / length;
     f32       w      = a.w / length;
-    return vec4(x, y, z, w);
+    return math::vec4(x, y, z, w);
 }
-inline f32 vec4_dot_f32(vec4 a, vec4 b)
+inline f32 vec4_dot_f32(math::vec4 a, math::vec4 b)
 {
     f32 p = a.x * b.x + a.y * b.y + a.z * b.z + a.w * b.w;
     return p;
 }
 
-inline mat4 mat4_mul(mat4 matrix_0, mat4 matrix_1)
+inline math::mat4 mat4_mul(math::mat4 matrix_0, math::mat4 matrix_1)
 {
-    mat4 out_matrix = mat4();
+    math::mat4 out_matrix = math::mat4();
 
     const f32 *m1_ptr  = matrix_0.data;
     const f32 *m2_ptr  = matrix_1.data;
@@ -145,9 +146,9 @@ inline mat4 mat4_mul(mat4 matrix_0, mat4 matrix_1)
     return out_matrix;
 }
 
-inline mat4 mat4_orthographic(f32 left, f32 right, f32 bottom, f32 top, f32 near_clip, f32 far_clip)
+inline math::mat4 mat4_orthographic(f32 left, f32 right, f32 bottom, f32 top, f32 near_clip, f32 far_clip)
 {
-    mat4 out_matrix = mat4();
+    math::mat4 out_matrix = math::mat4();
 
     f32 lr = 1.0f / (left - right);
     f32 bt = 1.0f / (bottom - top);
@@ -172,10 +173,10 @@ inline mat4 mat4_orthographic(f32 left, f32 right, f32 bottom, f32 top, f32 near
  * @param far_clip The far clipping plane distance.
  * @return A new perspective matrix.
  */
-inline mat4 mat4_perspective(f32 fov_radians, f32 aspect_ratio, f32 near_clip, f32 far_clip)
+inline math::mat4 mat4_perspective(f32 fov_radians, f32 aspect_ratio, f32 near_clip, f32 far_clip)
 {
-    f32  half_tan_fov = tanf(fov_radians * 0.5f);
-    mat4 out_matrix;
+    f32        half_tan_fov = tanf(fov_radians * 0.5f);
+    math::mat4 out_matrix;
     dzero_memory(out_matrix.data, sizeof(f32) * 16);
     out_matrix.data[0]  = 1.0f / (aspect_ratio * half_tan_fov);
     out_matrix.data[5]  = -(1.0f / half_tan_fov);
@@ -194,17 +195,17 @@ inline mat4 mat4_perspective(f32 fov_radians, f32 aspect_ratio, f32 near_clip, f
  * @param up The up vector.
  * @return A matrix looking at target from the perspective of position.
  */
-inline mat4 mat4_look_at(vec3 position, vec3 target, vec3 up)
+inline math::mat4 mat4_look_at(math::vec3 position, math::vec3 target, math::vec3 up)
 {
-    mat4 out_matrix;
-    vec3 z_axis;
+    math::mat4 out_matrix;
+    math::vec3 z_axis;
     z_axis.x = target.x - position.x;
     z_axis.y = target.y - position.y;
     z_axis.z = target.z - position.z;
 
     z_axis.normalize();
-    vec3 x_axis = vec3_normalized(vec3_cross(z_axis, up));
-    vec3 y_axis = vec3_cross(x_axis, z_axis);
+    math::vec3 x_axis = vec3_normalized(vec3_cross(z_axis, up));
+    math::vec3 y_axis = vec3_cross(x_axis, z_axis);
 
     out_matrix.data[0]  = x_axis.x;
     out_matrix.data[1]  = y_axis.x;
@@ -232,25 +233,25 @@ inline mat4 mat4_look_at(vec3 position, vec3 target, vec3 up)
  * @param matrix The matrix to be transposed.
  * @return A transposed copy of of the provided matrix.
  */
-inline mat4 mat4_transposed(mat4 matrix)
+inline math::mat4 mat4_transposed(math::mat4 matrix)
 {
-    mat4 out_matrix     = mat4();
-    out_matrix.data[0]  = matrix.data[0];
-    out_matrix.data[1]  = matrix.data[4];
-    out_matrix.data[2]  = matrix.data[8];
-    out_matrix.data[3]  = matrix.data[12];
-    out_matrix.data[4]  = matrix.data[1];
-    out_matrix.data[5]  = matrix.data[5];
-    out_matrix.data[6]  = matrix.data[9];
-    out_matrix.data[7]  = matrix.data[13];
-    out_matrix.data[8]  = matrix.data[2];
-    out_matrix.data[9]  = matrix.data[6];
-    out_matrix.data[10] = matrix.data[10];
-    out_matrix.data[11] = matrix.data[14];
-    out_matrix.data[12] = matrix.data[3];
-    out_matrix.data[13] = matrix.data[7];
-    out_matrix.data[14] = matrix.data[11];
-    out_matrix.data[15] = matrix.data[15];
+    math::mat4 out_matrix = math::mat4();
+    out_matrix.data[0]    = matrix.data[0];
+    out_matrix.data[1]    = matrix.data[4];
+    out_matrix.data[2]    = matrix.data[8];
+    out_matrix.data[3]    = matrix.data[12];
+    out_matrix.data[4]    = matrix.data[1];
+    out_matrix.data[5]    = matrix.data[5];
+    out_matrix.data[6]    = matrix.data[9];
+    out_matrix.data[7]    = matrix.data[13];
+    out_matrix.data[8]    = matrix.data[2];
+    out_matrix.data[9]    = matrix.data[6];
+    out_matrix.data[10]   = matrix.data[10];
+    out_matrix.data[11]   = matrix.data[14];
+    out_matrix.data[12]   = matrix.data[3];
+    out_matrix.data[13]   = matrix.data[7];
+    out_matrix.data[14]   = matrix.data[11];
+    out_matrix.data[15]   = matrix.data[15];
     return out_matrix;
 }
 
@@ -260,7 +261,7 @@ inline mat4 mat4_transposed(mat4 matrix)
  * @param matrix The matrix to be inverted.
  * @return A inverted copy of the provided matrix.
  */
-inline mat4 mat4_inverse(mat4 matrix)
+inline math::mat4 mat4_inverse(math::mat4 matrix)
 {
     const f32 *m = matrix.data;
 
@@ -289,8 +290,8 @@ inline mat4 mat4_inverse(mat4 matrix)
     f32 t22 = m[0] * m[5];
     f32 t23 = m[4] * m[1];
 
-    mat4 out_matrix;
-    f32 *o = out_matrix.data;
+    math::mat4 out_matrix;
+    f32       *o = out_matrix.data;
 
     o[0] = (t0 * m[5] + t3 * m[9] + t4 * m[13]) - (t1 * m[5] + t2 * m[9] + t5 * m[13]);
     o[1] = (t1 * m[1] + t6 * m[9] + t9 * m[13]) - (t0 * m[1] + t7 * m[9] + t8 * m[13]);
@@ -319,12 +320,12 @@ inline mat4 mat4_inverse(mat4 matrix)
     return out_matrix;
 }
 
-inline mat4 mat4_translation(vec3 position)
+inline math::mat4 mat4_translation(math::vec3 position)
 {
-    mat4 out_matrix     = mat4();
-    out_matrix.data[12] = position.x;
-    out_matrix.data[13] = position.y;
-    out_matrix.data[14] = position.z;
+    math::mat4 out_matrix = math::mat4();
+    out_matrix.data[12]   = position.x;
+    out_matrix.data[13]   = position.y;
+    out_matrix.data[14]   = position.z;
     return out_matrix;
 }
 
@@ -334,20 +335,20 @@ inline mat4 mat4_translation(vec3 position)
  * @param scale The 3-component scale.
  * @return A scale matrix.
  */
-inline mat4 mat4_scale(vec3 scale)
+inline math::mat4 mat4_scale(math::vec3 scale)
 {
-    mat4 out_matrix     = mat4();
-    out_matrix.data[0]  = scale.x;
-    out_matrix.data[5]  = scale.y;
-    out_matrix.data[10] = scale.z;
+    math::mat4 out_matrix = math::mat4();
+    out_matrix.data[0]    = scale.x;
+    out_matrix.data[5]    = scale.y;
+    out_matrix.data[10]   = scale.z;
     return out_matrix;
 }
 
-inline mat4 mat4_euler_x(f32 angle_radians)
+inline math::mat4 mat4_euler_x(f32 angle_radians)
 {
-    mat4 out_matrix = mat4();
-    f32  c          = cosf(angle_radians);
-    f32  s          = sinf(angle_radians);
+    math::mat4 out_matrix = math::mat4();
+    f32        c          = cosf(angle_radians);
+    f32        s          = sinf(angle_radians);
 
     out_matrix.data[5]  = c;
     out_matrix.data[6]  = s;
@@ -355,11 +356,11 @@ inline mat4 mat4_euler_x(f32 angle_radians)
     out_matrix.data[10] = c;
     return out_matrix;
 }
-inline mat4 mat4_euler_y(f32 angle_radians)
+inline math::mat4 mat4_euler_y(f32 angle_radians)
 {
-    mat4 out_matrix = mat4();
-    f32  c          = cosf(angle_radians);
-    f32  s          = sinf(angle_radians);
+    math::mat4 out_matrix = math::mat4();
+    f32        c          = cosf(angle_radians);
+    f32        s          = sinf(angle_radians);
 
     out_matrix.data[0]  = c;
     out_matrix.data[2]  = -s;
@@ -367,9 +368,9 @@ inline mat4 mat4_euler_y(f32 angle_radians)
     out_matrix.data[10] = c;
     return out_matrix;
 }
-inline mat4 mat4_euler_z(f32 angle_radians)
+inline math::mat4 mat4_euler_z(f32 angle_radians)
 {
-    mat4 out_matrix = mat4();
+    math::mat4 out_matrix = math::mat4();
 
     f32 c = cosf(angle_radians);
     f32 s = sinf(angle_radians);
@@ -380,19 +381,19 @@ inline mat4 mat4_euler_z(f32 angle_radians)
     out_matrix.data[5] = c;
     return out_matrix;
 }
-inline mat4 mat4_euler_xyz(f32 x_radians, f32 y_radians, f32 z_radians)
+inline math::mat4 mat4_euler_xyz(f32 x_radians, f32 y_radians, f32 z_radians)
 {
-    mat4 rx         = mat4_euler_x(x_radians);
-    mat4 ry         = mat4_euler_y(y_radians);
-    mat4 rz         = mat4_euler_z(z_radians);
-    mat4 out_matrix = mat4_mul(rx, ry);
-    out_matrix      = mat4_mul(out_matrix, rz);
+    math::mat4 rx         = mat4_euler_x(x_radians);
+    math::mat4 ry         = mat4_euler_y(y_radians);
+    math::mat4 rz         = mat4_euler_z(z_radians);
+    math::mat4 out_matrix = mat4_mul(rx, ry);
+    out_matrix            = mat4_mul(out_matrix, rz);
     return out_matrix;
 }
 
-inline vec3 mat4_forward(mat4 matrix)
+inline math::vec3 mat4_forward(math::mat4 matrix)
 {
-    vec3 forward;
+    math::vec3 forward;
     forward.x = -matrix.data[2];
     forward.y = -matrix.data[6];
     forward.z = -matrix.data[10];
@@ -406,9 +407,9 @@ inline vec3 mat4_forward(mat4 matrix)
  * @param matrix The matrix from which to base the vector.
  * @return A 3-component directional vector.
  */
-inline vec3 mat4_backward(mat4 matrix)
+inline math::vec3 mat4_backward(math::mat4 matrix)
 {
-    vec3 backward;
+    math::vec3 backward;
     backward.x = matrix.data[2];
     backward.y = matrix.data[6];
     backward.z = matrix.data[10];
@@ -422,9 +423,9 @@ inline vec3 mat4_backward(mat4 matrix)
  * @param matrix The matrix from which to base the vector.
  * @return A 3-component directional vector.
  */
-inline vec3 mat4_up(mat4 matrix)
+inline math::vec3 mat4_up(math::mat4 matrix)
 {
-    vec3 up;
+    math::vec3 up;
     up.x = matrix.data[1];
     up.y = matrix.data[5];
     up.z = matrix.data[9];
@@ -438,9 +439,9 @@ inline vec3 mat4_up(mat4 matrix)
  * @param matrix The matrix from which to base the vector.
  * @return A 3-component directional vector.
  */
-inline vec3 mat4_down(mat4 matrix)
+inline math::vec3 mat4_down(math::mat4 matrix)
 {
-    vec3 down;
+    math::vec3 down;
     down.x = -matrix.data[1];
     down.y = -matrix.data[5];
     down.z = -matrix.data[9];
@@ -454,9 +455,9 @@ inline vec3 mat4_down(mat4 matrix)
  * @param matrix The matrix from which to base the vector.
  * @return A 3-component directional vector.
  */
-inline vec3 mat4_left(mat4 matrix)
+inline math::vec3 mat4_left(math::mat4 matrix)
 {
-    vec3 right;
+    math::vec3 right;
     right.x = -matrix.data[0];
     right.y = -matrix.data[4];
     right.z = -matrix.data[8];
@@ -470,9 +471,9 @@ inline vec3 mat4_left(mat4 matrix)
  * @param matrix The matrix from which to base the vector.
  * @return A 3-component directional vector.
  */
-inline vec3 mat4_right(mat4 matrix)
+inline math::vec3 mat4_right(math::mat4 matrix)
 {
-    vec3 left;
+    math::vec3 left;
     left.x = matrix.data[0];
     left.y = matrix.data[4];
     left.z = matrix.data[8];
@@ -484,7 +485,7 @@ inline vec3 mat4_right(mat4 matrix)
 // Quaternion
 // ------------------------------------------
 
-typedef vec4 quat;
+typedef math::vec4 quat;
 
 inline quat quat_identity()
 {
@@ -532,9 +533,9 @@ inline f32 quat_dot(quat q_0, quat q_1)
     return q_0.x * q_1.x + q_0.y * q_1.y + q_0.z * q_1.z + q_0.w * q_1.w;
 }
 
-inline mat4 quat_to_mat4(quat q)
+inline math::mat4 quat_to_mat4(quat q)
 {
-    mat4 out_matrix = mat4();
+    math::mat4 out_matrix = math::mat4();
 
     // https://stackoverflow.com/questions/1556260/convert-quaternion-rotation-to-rotation-matrix
 
@@ -556,9 +557,9 @@ inline mat4 quat_to_mat4(quat q)
 }
 
 // Calculates a rotation matrix based on the quaternion and the passed in center point.
-inline mat4 quat_to_rotation_matrix(quat q, vec3 center)
+inline math::mat4 quat_to_rotation_matrix(quat q, math::vec3 center)
 {
-    mat4 out_matrix;
+    math::mat4 out_matrix;
 
     f32 *o = out_matrix.data;
     o[0]   = (q.x * q.x) - (q.y * q.y) - (q.z * q.z) + (q.w * q.w);
@@ -583,7 +584,7 @@ inline mat4 quat_to_rotation_matrix(quat q, vec3 center)
     return out_matrix;
 }
 
-inline quat quat_from_axis_angle(vec3 axis, f32 angle, bool normalize)
+inline quat quat_from_axis_angle(math::vec3 axis, f32 angle, bool normalize)
 {
     const f32 half_angle = 0.5f * angle;
     f32       s          = sinf(half_angle);
@@ -680,6 +681,6 @@ s32 drandom_in_range(s32 min, s32 max);
 f32 fdrandom();
 f32 fdrandom_in_range(f32 min, f32 max);
 
-void scale_geometries(const struct geometry_config *config, vec3 scaling_factor);
+void scale_geometries(const struct geometry_config *config, math::vec3 scaling_factor);
 
 #pragma clang diagnostic pop

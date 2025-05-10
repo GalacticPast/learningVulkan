@@ -101,13 +101,13 @@ bool vulkan_create_graphics_pipeline(vulkan_context *vk_context)
     vertex_input_attribute_descriptions[1].location = 1;
     vertex_input_attribute_descriptions[1].binding  = 0;
     vertex_input_attribute_descriptions[1].format   = vertex_input_attribute_formats[1];
-    vertex_input_attribute_descriptions[1].offset   = sizeof(vec3) * 1;
+    vertex_input_attribute_descriptions[1].offset   = sizeof(math::vec3) * 1;
 
     // texture coordinates
     vertex_input_attribute_descriptions[2].location = 2;
     vertex_input_attribute_descriptions[2].binding  = 0;
     vertex_input_attribute_descriptions[2].format   = vertex_input_attribute_formats[2];
-    vertex_input_attribute_descriptions[2].offset   = sizeof(vec3) * 2;
+    vertex_input_attribute_descriptions[2].offset   = sizeof(math::vec3) * 2;
 
     VkPipelineVertexInputStateCreateInfo vertex_input_state_create_info{};
 

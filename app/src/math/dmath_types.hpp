@@ -2,10 +2,10 @@
 #include "core/dmemory.hpp"
 #include "defines.hpp"
 #include <cmath>
-
-struct vec2
+namespace math
 {
-  public:
+struct vec_2d
+{
     union {
         f32 elements[2];
         struct
@@ -20,15 +20,16 @@ struct vec2
             };
         };
     };
-    vec2() : x(0), y(0) {};
-    vec2(f32 x, f32 y) : x(x), y(y) {};
 
-    inline void operator+=(const vec2 &vec)
+    vec_2d() : x(0), y(0) {};
+    vec_2d(f32 x, f32 y) : x(x), y(y) {};
+
+    inline void operator+=(const vec_2d &vec)
     {
         this->x += vec.x;
         this->y += vec.y;
     }
-    inline void operator-=(const vec2 &vec)
+    inline void operator-=(const vec_2d &vec)
     {
         this->x -= vec.x;
         this->y -= vec.y;
@@ -43,21 +44,21 @@ struct vec2
         this->x /= n;
         this->y /= n;
     }
-    inline vec2 operator+(const vec2 &vec)
+    inline vec_2d operator+(const vec_2d &vec)
     {
-        return vec2(this->x + vec.x, this->y + vec.y);
+        return vec_2d(this->x + vec.x, this->y + vec.y);
     }
-    inline vec2 operator-(const vec2 &vec)
+    inline vec_2d operator-(const vec_2d &vec)
     {
-        return vec2(this->x - vec.x, this->y - vec.y);
+        return vec_2d(this->x - vec.x, this->y - vec.y);
     }
-    inline vec2 operator*(const f32 n)
+    inline vec_2d operator*(const f32 n)
     {
-        return vec2(this->x * n, this->y * n);
+        return vec_2d(this->x * n, this->y * n);
     }
-    inline vec2 operator/(const f32 n)
+    inline vec_2d operator/(const f32 n)
     {
-        return vec2(this->x / n, this->y / n);
+        return vec_2d(this->x / n, this->y / n);
     }
     inline f32 magnitude()
     {
@@ -73,7 +74,6 @@ struct vec2
 
 struct vec3
 {
-  public:
     // An array of x, y, z
     union {
         f32 elements[3];
@@ -153,7 +153,6 @@ struct vec3
 
 struct vec4
 {
-  public:
     union {
         // An array of x, y, z, w
         f32 elements[4];
@@ -240,7 +239,6 @@ struct vec4
 };
 struct mat4
 {
-  public:
     f32 data[16];
 
     mat4()
@@ -272,10 +270,11 @@ struct mat4
         return out_matrix;
     }
 };
+} // namespace math
 
 struct vertex
 {
-    vec3 position;
-    vec3 normal;
-    vec2 tex_coord;
+    math::vec3   position;
+    math::vec3   normal;
+    math::vec_2d tex_coord;
 };

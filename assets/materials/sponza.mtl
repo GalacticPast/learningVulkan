@@ -9,7 +9,7 @@ Ke 0.000000 0.000000 0.000000
 Ni 1.000000
 d 0.000000
 illum 1
-map_Kd /home/galacticpast/Documents/projects/Sponza/textures/lion.tga
+map_Kd D:/projects/Sponza/textures/lion.tga
 
 newmtl Material__298
 Ns 7.843135
@@ -19,7 +19,7 @@ Ke 0.000000 0.000000 0.000000
 Ni 1.000000
 d 0.000000
 illum 1
-map_Kd /home/galacticpast/Documents/projects/Sponza/textures/background.tga
+map_Kd D:/projects/Sponza/textures/background.tga
 
 newmtl Material__47
 Ns 7.843135
@@ -38,8 +38,8 @@ Ks 0.000000 0.000000 0.000000
 Ke 0.000000 0.000000 0.000000
 Ni 1.000000
 illum 1
-map_Kd /home/galacticpast/Documents/projects/Sponza/textures/vase_plant.tga
-map_d /home/galacticpast/Documents/projects/Sponza/textures/vase_plant_mask.tga
+map_Kd D:/projects/Sponza/textures/vase_plant.tga
+map_d D:/projects/Sponza/textures/vase_plant_mask.tga
 
 newmtl arch
 Ns 7.843135
@@ -49,7 +49,7 @@ Ke 0.000000 0.000000 0.000000
 Ni 1.000000
 d 0.000000
 illum 1
-map_Kd /home/galacticpast/Documents/projects/Sponza/textures/sponza_arch_diff.tga
+map_Kd D:/projects/Sponza/textures/sponza_arch_diff.tga
 
 newmtl bricks
 Ns 7.843135
@@ -59,7 +59,7 @@ Ke 0.000000 0.000000 0.000000
 Ni 1.000000
 d 0.000000
 illum 1
-map_Kd /home/galacticpast/Documents/projects/Sponza/textures/spnza_bricks_a_diff.tga
+map_Kd D:/projects/Sponza/textures/spnza_bricks_a_diff.tga
 
 newmtl ceiling
 Ns 7.843135
@@ -69,7 +69,7 @@ Ke 0.000000 0.000000 0.000000
 Ni 1.000000
 d 0.000000
 illum 1
-map_Kd /home/galacticpast/Documents/projects/Sponza/textures/sponza_ceiling_a_diff.tga
+map_Kd D:/projects/Sponza/textures/sponza_ceiling_a_diff.tga
 
 newmtl chain
 Ns 7.843135
@@ -78,8 +78,8 @@ Ks 0.000000 0.000000 0.000000
 Ke 0.000000 0.000000 0.000000
 Ni 1.000000
 illum 1
-map_Kd /home/galacticpast/Documents/projects/Sponza/textures/chain_texture.tga
-map_d /home/galacticpast/Documents/projects/Sponza/textures/chain_texture_mask.tga
+map_Kd D:/projects/Sponza/textures/chain_texture.tga
+map_d D:/projects/Sponza/textures/chain_texture_mask.tga
 
 newmtl column_a
 Ns 7.843135
@@ -89,7 +89,7 @@ Ke 0.000000 0.000000 0.000000
 Ni 1.000000
 d 0.000000
 illum 1
-map_Kd /home/galacticpast/Documents/projects/Sponza/textures/sponza_column_a_diff.tga
+map_Kd D:/projects/Sponza/textures/sponza_column_a_diff.tga
 
 newmtl column_b
 Ns 7.843135
@@ -99,7 +99,7 @@ Ke 0.000000 0.000000 0.000000
 Ni 1.000000
 d 0.000000
 illum 1
-map_Kd /home/galacticpast/Documents/projects/Sponza/textures/sponza_column_b_diff.tga
+map_Kd D:/projects/Sponza/textures/sponza_column_b_diff.tga
 
 newmtl column_c
 Ns 7.843135
@@ -109,7 +109,7 @@ Ke 0.000000 0.000000 0.000000
 Ni 1.000000
 d 0.000000
 illum 1
-map_Kd /home/galacticpast/Documents/projects/Sponza/textures/sponza_column_c_diff.tga
+map_Kd D:/projects/Sponza/textures/sponza_column_c_diff.tga
 
 newmtl details
 Ns 7.843135
@@ -119,7 +119,7 @@ Ke 0.000000 0.000000 0.000000
 Ni 1.000000
 d 0.000000
 illum 1
-map_Kd /home/galacticpast/Documents/projects/Sponza/textures/sponza_details_diff.tga
+map_Kd D:/projects/Sponza/textures/sponza_details_diff.tga
 
 newmtl fabric_a
 Ns 7.843135
@@ -129,7 +129,7 @@ Ke 0.000000 0.000000 0.000000
 Ni 1.000000
 d 0.000000
 illum 1
-map_Kd /home/galacticpast/Documents/projects/Sponza/textures/sponza_fabric_diff.tga
+map_Kd D:/projects/Sponza/textures/sponza_fabric_diff.tga
 
 newmtl fabric_c
 Ns 7.843135
@@ -139,7 +139,7 @@ Ke 0.000000 0.000000 0.000000
 Ni 1.000000
 d 0.000000
 illum 1
-map_Kd /home/galacticpast/Documents/projects/Sponza/textures/sponza_curtain_diff.tga
+map_Kd D:/projects/Sponza/textures/sponza_curtain_diff.tga
 
 newmtl fabric_d
 Ns 7.843135
@@ -149,7 +149,7 @@ Ke 0.000000 0.000000 0.000000
 Ni 1.000000
 d 0.000000
 illum 1
-map_Kd /home/galacticpast/Documents/projects/Sponza/textures/sponza_fabric_blue_diff.tga
+map_Kd D:/projects/Sponza/textures/sponza_fabric_blue_diff.tga
 
 newmtl fabric_e
 Ns 7.843135
@@ -159,7 +159,7 @@ Ke 0.000000 0.000000 0.000000
 Ni 1.000000
 d 0.000000
 illum 1
-map_Kd /home/galacticpast/Documents/projects/Sponza/textures/sponza_fabric_green_diff.tga
+map_Kd D:/projects/Sponza/textures/sponza_fabric_green_diff.tga
 
 newmtl fabric_f
 Ns 7.843135
@@ -169,7 +169,7 @@ Ke 0.000000 0.000000 0.000000
 Ni 1.000000
 d 0.000000
 illum 1
-map_Kd /home/galacticpast/Documents/projects/Sponza/textures/sponza_curtain_green_diff.tga
+map_Kd D:/projects/Sponza/textures/sponza_curtain_green_diff.tga
 
 newmtl fabric_g
 Ns 7.843135
@@ -179,7 +179,7 @@ Ke 0.000000 0.000000 0.000000
 Ni 1.000000
 d 0.000000
 illum 1
-map_Kd /home/galacticpast/Documents/projects/Sponza/textures/sponza_curtain_blue_diff.tga
+map_Kd D:/projects/Sponza/textures/sponza_curtain_blue_diff.tga
 
 newmtl flagpole
 Ns 7.843135
@@ -189,7 +189,7 @@ Ke 0.000000 0.000000 0.000000
 Ni 1.000000
 d 0.000000
 illum 1
-map_Kd /home/galacticpast/Documents/projects/Sponza/textures/sponza_flagpole_diff.tga
+map_Kd D:/projects/Sponza/textures/sponza_flagpole_diff.tga
 
 newmtl floor
 Ns 7.843135
@@ -199,7 +199,7 @@ Ke 0.000000 0.000000 0.000000
 Ni 1.000000
 d 0.000000
 illum 1
-map_Kd /home/galacticpast/Documents/projects/Sponza/textures/sponza_floor_a_diff.tga
+map_Kd D:/projects/Sponza/textures/sponza_floor_a_diff.tga
 
 newmtl leaf
 Ns 7.843135
@@ -208,8 +208,8 @@ Ks 0.000000 0.000000 0.000000
 Ke 0.000000 0.000000 0.000000
 Ni 1.000000
 illum 1
-map_Kd /home/galacticpast/Documents/projects/Sponza/textures/sponza_thorn_diff.tga
-map_d /home/galacticpast/Documents/projects/Sponza/textures/sponza_thorn_mask.tga
+map_Kd D:/projects/Sponza/textures/sponza_thorn_diff.tga
+map_d D:/projects/Sponza/textures/sponza_thorn_mask.tga
 
 newmtl roof
 Ns 7.843135
@@ -219,7 +219,7 @@ Ke 0.000000 0.000000 0.000000
 Ni 1.000000
 d 0.000000
 illum 1
-map_Kd /home/galacticpast/Documents/projects/Sponza/textures/sponza_roof_diff.tga
+map_Kd D:/projects/Sponza/textures/sponza_roof_diff.tga
 
 newmtl vase
 Ns 7.843135
@@ -229,7 +229,7 @@ Ke 0.000000 0.000000 0.000000
 Ni 1.000000
 d 0.000000
 illum 1
-map_Kd /home/galacticpast/Documents/projects/Sponza/textures/vase_dif.tga
+map_Kd D:/projects/Sponza/textures/vase_dif.tga
 
 newmtl vase_hanging
 Ns 7.843135
@@ -239,7 +239,7 @@ Ke 0.000000 0.000000 0.000000
 Ni 1.000000
 d 0.000000
 illum 1
-map_Kd /home/galacticpast/Documents/projects/Sponza/textures/vase_hanging.tga
+map_Kd D:/projects/Sponza/textures/vase_hanging.tga
 
 newmtl vase_round
 Ns 7.843135
@@ -249,4 +249,4 @@ Ke 0.000000 0.000000 0.000000
 Ni 1.000000
 d 0.000000
 illum 1
-map_Kd /home/galacticpast/Documents/projects/Sponza/textures/vase_round.tga
+map_Kd D:/projects/Sponza/textures/vase_round.tga

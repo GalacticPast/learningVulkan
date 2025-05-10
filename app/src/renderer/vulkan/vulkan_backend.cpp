@@ -687,7 +687,7 @@ bool vulkan_draw_geometries(render_data *data, VkCommandBuffer *curr_command_buf
     vkCmdBindVertexBuffers(*curr_command_buffer, 0, 1, vertex_buffers, offsets);
     vkCmdBindIndexBuffer(*curr_command_buffer, vk_context->index_buffer.handle, 0, VK_INDEX_TYPE_UINT32);
 
-    for (u32 i = 0; i < data->geometry_count - 1; i++)
+    for (u32 i = 0; i < data->geometry_count; i++)
     {
 
         material *mat = data->test_geometry[i]->material;
