@@ -519,9 +519,15 @@ void geometry_system_parse_obj(const char *obj_file_full_path, u32 *num_of_objec
     u32 object_processed = 0;
 
     clock_update(&telemetry);
-    f64 offsets_proccesing_start_time = telemetry.time_elapsed;
-    while ((found = strstr(indices_ptr, "f ")) != NULL || indices_ptr != NULL)
+    f64  offsets_proccesing_start_time = telemetry.time_elapsed;
+    bool process_final_line            = false;
+    while (process_final_line || indices_ptr != NULL || found != NULL)
     {
+        if (indices_ptr)
+        {
+            found = strstr(indices_ptr, "f ");
+        }
+
         if (found == NULL || found > object_ptr)
         {
 
@@ -553,12 +559,16 @@ void geometry_system_parse_obj(const char *obj_file_full_path, u32 *num_of_objec
             {
                 object_ptr += object_next_index + 2;
             }
+            if (indices_ptr == NULL)
+            {
+                break;
+            }
             object_processed++;
         }
         char *f = found;
         if (found == NULL)
         {
-            f = indices_ptr;
+            f = indices_ptr - 2;
         }
 
         u32   j    = 0;
@@ -590,8 +600,11 @@ void geometry_system_parse_obj(const char *obj_file_full_path, u32 *num_of_objec
 
         if (found != NULL)
         {
-
             found += 2;
+        }
+        else
+        {
+            process_final_line = true;
         }
         indices_ptr = found;
     }
