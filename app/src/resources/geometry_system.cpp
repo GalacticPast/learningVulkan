@@ -257,7 +257,7 @@ bool geometry_system_create_default_geometry()
         }
         u32 default_ind_size = default_geo_configs[i].index_count;
 
-        for (u32 j = 0; j < default_ind_size - 3; j += 3)
+        for (u32 j = 0; j <= default_ind_size - 3; j += 3)
         {
             DTRACE("%d %d %d", default_geo_configs[i].indices[j], default_geo_configs[i].indices[j + 1],
                    default_geo_configs[i].indices[j + 2]);
@@ -348,19 +348,19 @@ void geometry_system_parse_obj(const char *obj_file_full_path, u32 *num_of_objec
 
     char *vert_ = strstr(vert_ptr, vert_substring) + vert_substring_size;
 
-    u32 vertex_count_obj = string_num_of_substring_occurence(vert_, vert_substring);
+    u32 vertex_count_obj = string_num_of_substring_occurence(vert_, vert_substring) + 1;
 
     vert_ptr  = buffer;
     u32 v     = string_first_string_occurence(vert_ptr, vert_substring);
     vert_ptr += v + vert_substring_size - 1;
 
-    vec3 *vert_coords = (vec3 *)dallocate(sizeof(vec3) * (vertex_count_obj + 1), MEM_TAG_GEOMETRY);
+    vec3 *vert_coords = (vec3 *)dallocate(sizeof(vec3) * vertex_count_obj, MEM_TAG_GEOMETRY);
 
     u32 vert_processed = 0;
     clock_update(&telemetry);
     f64 vert_proccesing_start_time = telemetry.time_elapsed;
 
-    for (u32 i = 0; i < vertex_count_obj; i++)
+    for (u32 i = 0; i < vertex_count_obj && vert_ptr != nullptr; i++)
     {
         char *a;
         vert_coords[i].x = strtof(vert_ptr, &a);
@@ -369,17 +369,17 @@ void geometry_system_parse_obj(const char *obj_file_full_path, u32 *num_of_objec
         vert_coords[i].z = strtof(b, NULL);
 
         vert_ptr = strstr(vert_ptr, "v ");
-        vert_processed++;
+
         // if (vert_processed % 1000 == 0)
         //{
         //     DTRACE("Verts Processed: %d Remaining: %d", vert_processed,
         //     vertex_count_obj - vert_processed);
         // }
-        if (vert_ptr == nullptr)
+        vert_processed++;
+        if (vert_ptr != nullptr)
         {
-            break;
+            vert_ptr += vert_substring_size - 1;
         }
-        vert_ptr += vert_substring_size - 1;
     }
     clock_update(&telemetry);
     f64 vert_proccesing_end_time = telemetry.time_elapsed;
@@ -387,11 +387,11 @@ void geometry_system_parse_obj(const char *obj_file_full_path, u32 *num_of_objec
     printf("Vert proccesing took %fs.\n", total_vert_time);
 
     char *norm_ptr                       = buffer;
-    u64   vertex_normal_first_occurence  = string_first_string_occurence(norm_ptr, "vn");
+    u64   vertex_normal_first_occurence  = string_first_string_occurence(norm_ptr, "vn") + 1;
     *norm_ptr                           += vertex_normal_first_occurence;
 
     u32   normal_count_obj = string_num_of_substring_occurence(norm_ptr, "vn");
-    vec3 *normals          = (vec3 *)dallocate(sizeof(vec3) * (normal_count_obj + 1), MEM_TAG_GEOMETRY);
+    vec3 *normals          = (vec3 *)dallocate(sizeof(vec3) * normal_count_obj, MEM_TAG_GEOMETRY);
 
     norm_ptr                        = buffer;
     char vert_normal[3]             = "vn";
@@ -430,11 +430,11 @@ void geometry_system_parse_obj(const char *obj_file_full_path, u32 *num_of_objec
     printf("norm proccesing took %fs.\n", total_norm_time);
 
     char *tex_ptr                  = buffer;
-    u64   texture_first_occurence  = string_first_string_occurence(tex_ptr, "vt");
+    u64   texture_first_occurence  = string_first_string_occurence(tex_ptr, "vt") + 1;
     *tex_ptr                      += texture_first_occurence + 2;
 
     u32   texture_count_obj = string_num_of_substring_occurence(tex_ptr, "vt");
-    vec2 *textures          = (vec2 *)dallocate(sizeof(vec2) * (texture_count_obj + 1), MEM_TAG_GEOMETRY);
+    vec2 *textures          = (vec2 *)dallocate(sizeof(vec2) * texture_count_obj, MEM_TAG_GEOMETRY);
 
     tex_ptr                          = buffer;
     char vert_texture[3]             = "vt";
@@ -474,7 +474,7 @@ void geometry_system_parse_obj(const char *obj_file_full_path, u32 *num_of_objec
     char temp    = ' ';
 
     *num_of_objects = objects;
-    *geo_configs    = (geometry_config *)dallocate(sizeof(geometry_config) * (objects + 1), MEM_TAG_GEOMETRY);
+    *geo_configs    = (geometry_config *)dallocate(sizeof(geometry_config) * objects, MEM_TAG_GEOMETRY);
 
     // INFO: Experimental get all the offsets
     u32 offsets_count = string_num_of_substring_occurence(buffer, "f ");
@@ -504,7 +504,7 @@ void geometry_system_parse_obj(const char *obj_file_full_path, u32 *num_of_objec
 
     // move the pointer to the next object's offsets
     u32   object_indices_offset = 0;
-    char *found                 = nullptr;
+    char *found                 = indices_ptr;
     u32  *offset_ptr_start      = offsets;
     u32  *offset_ptr_walk       = &offset_ptr_start[7];
 
@@ -523,11 +523,7 @@ void geometry_system_parse_obj(const char *obj_file_full_path, u32 *num_of_objec
     bool process_final_line            = false;
     while (process_final_line || indices_ptr != NULL || found != NULL)
     {
-        if (indices_ptr)
-        {
-            found = strstr(indices_ptr, "f ");
-        }
-
+        found = strstr(found, "f ");
         if (found == NULL || found > object_ptr)
         {
 
@@ -559,17 +555,13 @@ void geometry_system_parse_obj(const char *obj_file_full_path, u32 *num_of_objec
             {
                 object_ptr += object_next_index + 2;
             }
-            if (indices_ptr == NULL)
+            object_processed++;
+            if (found == NULL)
             {
                 break;
             }
-            object_processed++;
         }
         char *f = found;
-        if (found == NULL)
-        {
-            f = indices_ptr - 2;
-        }
 
         u32   j    = 0;
         u32   k    = 0;
@@ -606,7 +598,6 @@ void geometry_system_parse_obj(const char *obj_file_full_path, u32 *num_of_objec
         {
             process_final_line = true;
         }
-        indices_ptr = found;
     }
 
     clock_update(&telemetry);
@@ -640,7 +631,7 @@ void geometry_system_parse_obj(const char *obj_file_full_path, u32 *num_of_objec
         (*geo_configs)[object].index_count = count / 3;
 
         u32 index_ind = 0;
-        for (u32 j = 0; j < count - 3; j += 3)
+        for (u32 j = 0; j <= count - 3; j += 3)
         {
             u32 vert_ind                                       = offset_ptr_walk[j] - 1;
             (*geo_configs)[object].vertices[vert_ind].position = vert_coords[vert_ind];
@@ -661,9 +652,9 @@ void geometry_system_parse_obj(const char *obj_file_full_path, u32 *num_of_objec
     f64 total_object_time          = object_proccesing_end_time - object_proccesing_start_time;
     DTRACE("objects proccesing took %f", total_object_time);
 
-    dfree(textures, sizeof(vec2) * (texture_count_obj + 1), MEM_TAG_UNKNOWN);
-    dfree(normals, sizeof(vec3) * (normal_count_obj + 1), MEM_TAG_UNKNOWN);
-    dfree(vert_coords, sizeof(vec3) * (vertex_count_obj + 1), MEM_TAG_UNKNOWN);
+    dfree(textures, sizeof(vec2) * texture_count_obj, MEM_TAG_UNKNOWN);
+    dfree(normals, sizeof(vec3) * normal_count_obj, MEM_TAG_UNKNOWN);
+    dfree(vert_coords, sizeof(vec3) * vertex_count_obj, MEM_TAG_UNKNOWN);
     dfree(buffer, buffer_mem_requirements, MEM_TAG_GEOMETRY);
 
     clock_update(&telemetry);
