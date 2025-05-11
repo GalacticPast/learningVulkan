@@ -71,13 +71,7 @@ bool texture_system_initialize(u64 *texture_system_mem_requirements, void *state
         }
     }
 
-    {
-        tex_sys_state_ptr->loaded_textures.data =
-            (u64 *)dallocate(sizeof(dstring) * MAX_TEXTURES_LOADED, MEM_TAG_DARRAY);
-        tex_sys_state_ptr->loaded_textures.element_size = sizeof(dstring);
-        tex_sys_state_ptr->loaded_textures.capacity     = sizeof(dstring) * MAX_TEXTURES_LOADED;
-        tex_sys_state_ptr->loaded_textures.length       = 1;
-    }
+    tex_sys_state_ptr->loaded_textures.c_init(MAX_TEXTURES_LOADED);
 
     stbi_set_flip_vertically_on_load(true);
     texture_system_create_default_texture();

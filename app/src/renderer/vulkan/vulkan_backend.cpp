@@ -41,27 +41,16 @@ bool vulkan_backend_initialize(u64 *vulkan_backend_memory_requirements, applicat
     DDEBUG("Initializing Vulkan backend...");
     vk_context               = (vulkan_context *)state;
     vk_context->vk_allocator = nullptr;
-    {
-        vk_context->global_ubo_data.data =
-            dallocate(sizeof(uniform_buffer_object) * VULKAN_MAX_DESCRIPTOR_SET_COUNT, MEM_TAG_RENDERER);
-        vk_context->global_ubo_data.capacity     = sizeof(uniform_buffer_object) * VULKAN_MAX_DESCRIPTOR_SET_COUNT;
-        vk_context->global_ubo_data.element_size = sizeof(uniform_buffer_object);
-        vk_context->global_ubo_data.length       = VULKAN_MAX_DESCRIPTOR_SET_COUNT;
-    }
-    {
-        vk_context->descriptor_sets.data =
-            dallocate(sizeof(VkDescriptorSet) * VULKAN_MAX_DESCRIPTOR_SET_COUNT, MEM_TAG_RENDERER);
-        vk_context->descriptor_sets.capacity     = sizeof(VkDescriptorSet) * VULKAN_MAX_DESCRIPTOR_SET_COUNT;
-        vk_context->descriptor_sets.element_size = sizeof(VkDescriptorSet);
-        vk_context->descriptor_sets.length       = VULKAN_MAX_DESCRIPTOR_SET_COUNT;
-    }
-    {
-        vk_context->command_buffers.data = dallocate(sizeof(VkCommandBuffer) * MAX_FRAMES_IN_FLIGHT, MEM_TAG_RENDERER);
-        vk_context->command_buffers.capacity     = sizeof(VkCommandBuffer) * MAX_FRAMES_IN_FLIGHT;
-        vk_context->command_buffers.element_size = sizeof(VkCommandBuffer);
-        vk_context->command_buffers.length       = MAX_FRAMES_IN_FLIGHT;
-    }
 
+    {
+        vk_context->global_ubo_data.c_init(VULKAN_MAX_DESCRIPTOR_SET_COUNT);
+    }
+    {
+        vk_context->descriptor_sets.c_init(VULKAN_MAX_DESCRIPTOR_SET_COUNT);
+    }
+    {
+        vk_context->command_buffers.c_init(MAX_FRAMES_IN_FLIGHT);
+    }
     DDEBUG("Creating vulkan instance...");
 
     VkApplicationInfo app_info{};
@@ -241,8 +230,7 @@ bool vulkan_backend_initialize(u64 *vulkan_backend_memory_requirements, applicat
     }
 
     if (!vulkan_allocate_command_buffers(vk_context, &vk_context->graphics_command_pool,
-                                         (VkCommandBuffer *)vk_context->command_buffers.data, MAX_FRAMES_IN_FLIGHT,
-                                         false))
+                                         vk_context->command_buffers.data, MAX_FRAMES_IN_FLIGHT, false))
     {
         DERROR("Vulkan command buffer creation failed.");
         return false;

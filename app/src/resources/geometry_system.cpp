@@ -73,13 +73,7 @@ bool geometry_system_initialize(u64 *geometry_system_mem_requirements, void *sta
         }
     }
 
-    {
-        geo_sys_state_ptr->loaded_geometry.data =
-            (u64 *)dallocate(sizeof(dstring) * MAX_GEOMETRIES_LOADED, MEM_TAG_DARRAY);
-        geo_sys_state_ptr->loaded_geometry.element_size = sizeof(dstring);
-        geo_sys_state_ptr->loaded_geometry.capacity     = sizeof(dstring) * MAX_TEXTURES_LOADED;
-        geo_sys_state_ptr->loaded_geometry.length       = 1;
-    }
+    geo_sys_state_ptr->loaded_geometry.c_init(MAX_GEOMETRIES_LOADED);
 
     geometry_system_create_default_geometry();
 
