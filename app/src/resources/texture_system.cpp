@@ -107,11 +107,7 @@ bool create_texture(texture *texture, u8 *pixels)
     tex_sys_state_ptr->textures_table[tex_ind] = *texture;
 
     DDEBUG("Texture %s loaded in hastable.", file_base_name);
-
-    u32 index                                      = tex_sys_state_ptr->loaded_textures.size();
-    tex_sys_state_ptr->loaded_textures[index - 1]  = texture->name;
-    tex_sys_state_ptr->loaded_textures.length     += 1;
-    tex_sys_state_ptr->loaded_textures_count      += 1;
+    tex_sys_state_ptr->loaded_textures.push_back(texture->name);
 
     return true;
 }

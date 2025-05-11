@@ -124,11 +124,7 @@ bool geometry_system_create_geometry(geometry_config *config)
     }
     geo_sys_state_ptr->geometry_table[geo_sys_state_ptr->geometry_count] = geo;
 
-    u32 index                                      = geo_sys_state_ptr->loaded_geometry.size();
-    geo_sys_state_ptr->loaded_geometry[index - 1]  = geo.name;
-    geo_sys_state_ptr->loaded_geometry.length     += 1;
-    geo_sys_state_ptr->geometry_count             += 1;
-
+    geo_sys_state_ptr->loaded_geometry.push_back(geo.name);
     return true;
 }
 
