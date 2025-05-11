@@ -137,6 +137,7 @@ struct vulkan_context
 
     VkInstance vk_instance;
 
+    u32                  loaded_geometries_count = 0;
     vulkan_geometry_data internal_geometries[MAX_GEOMETRIES_LOADED];
 
     u32         enabled_layer_count = INVALID_ID;

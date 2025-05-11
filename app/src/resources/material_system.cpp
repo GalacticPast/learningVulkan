@@ -154,7 +154,7 @@ material *material_system_get_default_material()
     return default_mat;
 }
 
-bool material_system_create_release_materials(dstring *mat_name)
+bool material_system_release_materials(dstring *mat_name)
 {
     const char *material_name = mat_name->c_str();
 

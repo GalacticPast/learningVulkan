@@ -260,7 +260,8 @@ bool vulkan_backend_initialize(u64 *vulkan_backend_memory_requirements, applicat
         vk_context->internal_geometries[i].indices_count = INVALID_ID;
     }
 
-    vk_context->current_frame_index = 0;
+    vk_context->current_frame_index     = 0;
+    vk_context->loaded_geometries_count = 0;
 
     return true;
 }
@@ -656,6 +657,7 @@ bool vulkan_create_geometry(geometry *out_geometry, u32 vertex_count, vertex *ve
         return false;
     }
     out_geometry->id = geo_data->id;
+    vk_context->loaded_geometries_count++;
     return true;
 };
 bool vulkan_destroy_geometry(geometry *geometry)
@@ -687,6 +689,11 @@ bool vulkan_draw_geometries(render_data *data, VkCommandBuffer *curr_command_buf
     vkCmdBindVertexBuffers(*curr_command_buffer, 0, 1, vertex_buffers, offsets);
     vkCmdBindIndexBuffer(*curr_command_buffer, vk_context->index_buffer.handle, 0, VK_INDEX_TYPE_UINT32);
 
+    vulkan_update_global_uniform_buffer(&data->global_ubo, 0);
+
+    vkCmdBindDescriptorSets(*curr_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                            vk_context->vk_graphics_pipeline.layout, 0, 1, &vk_context->descriptor_sets[0], 0, nullptr);
+
     for (u32 i = 0; i < data->geometry_count; i++)
     {
 
@@ -703,13 +710,17 @@ bool vulkan_draw_geometries(render_data *data, VkCommandBuffer *curr_command_buf
         {
             instance_texture = texture_system_get_texture(DEFAULT_TEXTURE_HANDLE);
             vk_texture       = (vulkan_texture *)instance_texture->vulkan_texture_state;
-            DDEBUG("No textures were provided using default texture");
         }
         else
         {
             vk_texture = (vulkan_texture *)instance_texture->vulkan_texture_state;
         }
 
+        if (!vk_texture)
+        {
+            instance_texture = texture_system_get_texture(DEFAULT_TEXTURE_HANDLE);
+            vk_texture       = (vulkan_texture *)instance_texture->vulkan_texture_state;
+        }
         u32                   index_offset  = vulkan_calculate_index_offset(vk_context, data->test_geometry[i]->id);
         u32                   vertex_offset = vulkan_calculate_vertex_offset(vk_context, data->test_geometry[i]->id);
         vulkan_geometry_data *geo_data      = (vulkan_geometry_data *)data->test_geometry[i]->vulkan_geometry_state;

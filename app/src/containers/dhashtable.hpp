@@ -20,7 +20,7 @@ template <typename T> class dhashtable
   private:
     struct entry
     {
-        bool   is_intialized = false;
+        bool   is_initialized = false;
         char   key[MAX_KEY_LENGTH];
         T      type;
         entry *next = nullptr;
@@ -30,7 +30,7 @@ template <typename T> class dhashtable
     {
         for (u64 i = 0; i < max_length; i++)
         {
-            if (table[i].is_intialized == false && table[i].key[0] == '\0' && !table[i].next && !table[i].prev)
+            if (table[i].is_initialized == false && table[i].key[0] == '\0' && !table[i].next && !table[i].prev)
             {
                 return i;
             }
@@ -67,15 +67,18 @@ template <typename T> class dhashtable
             dzero_memory(&table[i], sizeof(entry));
         }
     }
+
+  public:
     void _print_hashtable()
     {
         for (u64 i = 0; i < max_length; i++)
         {
-            DTRACE("%s", table[i].key);
+            if (table[i].is_initialized)
+            {
+                DTRACE("%s", table[i].key);
+            }
         }
     }
-
-  public:
     u64    capacity;
     u64    element_size;
     u64    max_length;
@@ -152,8 +155,7 @@ template <typename T> class dhashtable
         }
 
         entry *entry_ptr = &table[hash_code];
-        if (table[hash_code].is_intialized && table[hash_code].key[0] == '\0' && !table[hash_code].next &&
-            !table[hash_code].prev)
+        if (table[hash_code].is_initialized && table[hash_code].key[0] == '\0')
         {
             DWARN("Collison!!!. Provided key%s and key%s have the same hash %d", key, entry_ptr->key, hash_code);
 
@@ -172,9 +174,9 @@ template <typename T> class dhashtable
             num_elements_in_table--;
         }
         dcopy_memory(entry_ptr->key, (void *)key, strlen(key));
-        entry_ptr->type          = type;
-        entry_ptr->next          = nullptr;
-        entry_ptr->is_intialized = true;
+        entry_ptr->type           = type;
+        entry_ptr->next           = nullptr;
+        entry_ptr->is_initialized = true;
 
         num_elements_in_table++;
         return;
@@ -194,6 +196,7 @@ template <typename T> class dhashtable
         {
             if (string_compare(key, entry_ptr->key))
             {
+                DTRACE("Key found %s %s", key, entry_ptr->key);
                 break;
             }
             entry_ptr = entry_ptr->next;

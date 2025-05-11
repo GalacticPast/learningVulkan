@@ -1,6 +1,5 @@
 #include "core/application.hpp"
 #include "core/dclock.hpp"
-#include "core/dmemory.hpp"
 #include "core/input.hpp"
 #include "core/logger.hpp"
 
@@ -90,6 +89,20 @@ int main()
     geometry_system_get_sponza_geometries(&sponza_geo, &geometry_count);
     triangle.test_geometry  = sponza_geo;
     triangle.geometry_count = geometry_count;
+
+    // for (u32 i = 0; i < geometry_count; i++)
+    //{
+    //     for (u32 j = 0; j < geometry_count; j++)
+    //     {
+    //         if (i == j)
+    //             continue;
+    //         bool result = string_compare(sponza_geo[i]->name.c_str(), sponza_geo[j]->name.c_str());
+    //         if (result)
+    //         {
+    //             DERROR("ith_ind %d has the same object name as jth_ind:%d %s", i, j, sponza_geo[i]->name.c_str());
+    //         }
+    //     }
+    // }
 
     triangle.global_ubo = global_ubo;
 
