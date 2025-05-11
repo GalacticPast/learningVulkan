@@ -399,9 +399,21 @@ void geometry_system_parse_obj(const char *obj_file_full_path, u32 *num_of_objec
             {
                 break;
             }
-            object_name_ptr        += 2;
-            u32 object_name_length  = string_first_char_occurence(object_name_ptr, '\n');
-            string_ncopy((*geo_configs)[i].name, object_name_ptr, object_name_length);
+            auto extract_name = [](char *dest, const char *src) {
+                u32 j = 0;
+                while (*src != '\n')
+                {
+                    if (*src == ' ')
+                    {
+                        src++;
+                        continue;
+                    }
+                    dest[j++] = *src;
+                    src++;
+                }
+            };
+            object_name_ptr += 2;
+            extract_name((*geo_configs)[i].name, object_name_ptr);
 
             next_object_name_ptr = strstr(object_name_ptr, "o ");
             if (next_object_name_ptr == nullptr)
@@ -414,14 +426,7 @@ void geometry_system_parse_obj(const char *obj_file_full_path, u32 *num_of_objec
             {
                 dstring material_name  = {};
                 object_usemtl_name    += 6;
-                while (*object_usemtl_name == ' ')
-                {
-                    object_usemtl_name++;
-                }
-
-                u32 object_usemtl_name_length = string_first_char_occurence(object_usemtl_name, '\n');
-                string_ncopy(material_name.string, object_usemtl_name, object_usemtl_name_length);
-                material_name.str_len      = object_usemtl_name_length;
+                extract_name(material_name.string, object_usemtl_name);
                 (*geo_configs)[i].material = material_system_acquire_from_name(&material_name);
             }
         }
