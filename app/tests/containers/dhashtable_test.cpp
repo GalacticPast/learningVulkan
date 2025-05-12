@@ -13,8 +13,8 @@ static const char ascii_chars[95] = {'X', 'r', 'F', 'm', 'S', '{', 'K',  '5', 'T
 
 struct test_struct
 {
-    char *key;
-    u32   value;
+    dstring key;
+    u32     value;
 };
 
 bool hashtable_create_and_destroy()
@@ -47,6 +47,44 @@ void get_random_string(dstring *out_string)
     *out_string = key;
 
     return;
+}
+bool hashtable_insert_rehash_and_find()
+{
+    u64                     size     = 4096;
+    u64                     capacity = size * sizeof(u64);
+    dhashtable<test_struct> int_table(size);
+
+    // lol
+    u64                 double_size = size * 10;
+    darray<test_struct> keys(double_size);
+
+    for (u64 i = 0; i < double_size; i++)
+    {
+        test_struct *test = &keys[i];
+        get_random_string(&test->key);
+        test->value = drandom_in_range(0, 2147483646);
+    }
+
+    for (u64 i = 0; i < double_size; i++)
+    {
+        test_struct key = keys[i];
+        int_table.insert(key.key.c_str(), key);
+    }
+
+    u64 values_not_found = 0;
+    for (u64 i = 0; i < double_size; i++)
+    {
+        test_struct key   = keys[i];
+        test_struct value = *int_table.find(key.key.c_str());
+        if (key.value != value.value)
+        {
+            DTRACE("hello");
+        }
+        expect_should_be(key.value, value.value);
+    }
+    DERROR("Num of lost values %d", values_not_found);
+
+    return true;
 }
 
 bool hashtable_insert_and_find()
@@ -106,20 +144,17 @@ bool hashtable_erase_test()
         key = &keys[i];
         int_table.insert(key->c_str(), i);
     }
-
+    u64 values_not_found = 0;
     for (u64 i = 0; i < size; i++)
     {
         key       = &keys[i];
         u64 value = *int_table.find(key->c_str());
-        if (i == value)
+        if (i != value)
         {
-            DDEBUG("Found original value. %d at index %d", value, i);
-        }
-        else
-        {
-            DDEBUG("Found overriwten value. %d at index %d", value, i);
+            values_not_found++;
         }
     }
+    DERROR("Num of lost values %d", values_not_found);
     key = &keys[10];
     int_table.erase(key->c_str());
 
@@ -135,4 +170,5 @@ void dhashtable_register_tests()
     test_manager_register_tests(hashtable_create_and_destroy, "hashtable create and destroy");
     test_manager_register_tests(hashtable_insert_and_find, "hashtable insert and findtest");
     test_manager_register_tests(hashtable_erase_test, "hashtable erase test");
+    test_manager_register_tests(hashtable_insert_rehash_and_find, "hashtable over insert,rehash and findtest");
 }

@@ -63,7 +63,9 @@ template <typename T> class dhashtable
 
 template <typename T> u64 dhashtable<T>::_find_empty_spot(u64 hash_code)
 {
-    u64 i = hash_code + 1;
+    u64 i  = hash_code + 1;
+    i     %= max_length;
+
     while (i != hash_code)
     {
         if (!table[i].is_initialized)
@@ -81,19 +83,25 @@ template <typename T> void dhashtable<T>::_resize_and_rehash()
     DWARN("Hashtable does not have enough capacity to insert element. Resizing and rehashing");
 
     // get the pointer to the old table
-    entry *old_table    = table;
-    u64    old_capacity = capacity;
+    entry *old_table      = table;
+    u64    old_capacity   = capacity;
+    u64    old_max_length = max_length;
 
     entry *new_table  = (entry *)dallocate(capacity * DEFAULT_HASH_TABLE_RESIZE_FACTOR, MEM_TAG_DHASHTABLE);
     table             = new_table;
     capacity         *= DEFAULT_HASH_TABLE_RESIZE_FACTOR;
     max_length        = capacity / element_size;
+    DTRACE("Num_elements_in_table before resize and rehash %d", num_elements_in_table);
+    num_elements_in_table = 0;
 
-    for (u64 i = 0; i < max_length; i++)
+    for (u64 i = 0; i < old_max_length; i++)
     {
-        if (old_table[i].key[0] != '\0')
+        if (old_table[i].is_initialized)
         {
-            insert(old_table[i].key, old_table->type);
+            old_table[i].next           = nullptr;
+            old_table[i].prev           = nullptr;
+            old_table[i].is_initialized = false;
+            insert(old_table[i].key, old_table[i].type);
         }
     }
     dfree(old_table, old_capacity, MEM_TAG_DHASHTABLE);
@@ -190,7 +198,6 @@ template <typename T> void dhashtable<T>::insert(const char *key, T type)
     entry *entry_ptr = &table[hash_code];
     if (table[hash_code].is_initialized)
     {
-        DWARN("Collison!!!. Provided key%s and key%s have the same hash %d", key, entry_ptr->key, hash_code);
 
         entry *prev = nullptr;
         while (entry_ptr->next)
@@ -199,12 +206,15 @@ template <typename T> void dhashtable<T>::insert(const char *key, T type)
             entry_ptr = entry_ptr->next;
         }
         u64 get_empty_id = _find_empty_spot(hash_code);
+        if (get_empty_id == INVALID_ID_64)
+        {
+            DFATAL("Table size: %d, elements_in_table: %d", max_length, num_elements_in_table);
+        }
         DASSERT(get_empty_id != INVALID_ID_64);
 
         entry_ptr->next = &table[get_empty_id];
         entry_ptr->prev = prev;
         entry_ptr       = entry_ptr->next;
-        num_elements_in_table--;
     }
     dcopy_memory(entry_ptr->key, (void *)key, strlen(key));
     entry_ptr->type           = type;
@@ -221,6 +231,7 @@ template <typename T> T *dhashtable<T>::find(const char *key)
     {
         DFATAL("Key is nullptr");
     }
+
     u64 hash_code  = hash_func(key);
     hash_code     %= max_length;
 
@@ -230,7 +241,6 @@ template <typename T> T *dhashtable<T>::find(const char *key)
     {
         if (string_compare(key, entry_ptr->key))
         {
-            DTRACE("Key found %s %s", key, entry_ptr->key);
             break;
         }
         entry_ptr = entry_ptr->next;
