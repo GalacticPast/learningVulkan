@@ -1,23 +1,30 @@
+#include "defines.hpp"
+
+#include "containers/dhashtable.hpp"
+
 #include "core/dclock.hpp"
 #include "core/dfile_system.hpp"
 #include "core/dmemory.hpp"
 
 #include "core/dstring.hpp"
-#include "defines.hpp"
+
 #include "geometry_system.hpp"
+
 #include "math/dmath.hpp"
+
 #include "memory/linear_allocator.hpp"
+
 #include "renderer/vulkan/vulkan_backend.hpp"
 #include "resources/material_system.hpp"
 #include "resources/resource_types.hpp"
+
 #include <cstring>
 #include <stdio.h>
 
 struct geometry_system_state
 {
-    darray<dstring> loaded_geometry;
-    u32             geometry_count;
-    geometry        geometry_table[MAX_GEOMETRIES_LOADED];
+    darray<dstring>      loaded_geometry;
+    dhashtable<geometry> hashtable;
 };
 
 static geometry_system_state *geo_sys_state_ptr;
@@ -28,33 +35,6 @@ void geometry_system_parse_obj(const char *obj_file_full_path, u32 *num_of_objec
                                linear_allocator *allocator);
 bool destroy_geometry_config(geometry_config *config);
 
-geometry *_get_goemetry(const char *goemetry_name)
-{
-    geometry *out_geo = nullptr;
-
-    for (u32 i = 0; i < MAX_MATERIALS_LOADED; i++)
-    {
-        const char *geo_name = (const char *)geo_sys_state_ptr->geometry_table[i].name.c_str();
-        bool        result   = string_compare(goemetry_name, geo_name);
-        if (result)
-        {
-            out_geo = &geo_sys_state_ptr->geometry_table[i];
-        }
-    }
-    return out_geo;
-}
-u32 _get_geometry_empty_id()
-{
-    for (u32 i = 0; i < MAX_GEOMETRIES_LOADED; i++)
-    {
-        if (geo_sys_state_ptr->geometry_table[i].id == INVALID_ID)
-        {
-            return i;
-        }
-    }
-    return INVALID_ID;
-}
-
 bool geometry_system_initialize(u64 *geometry_system_mem_requirements, void *state)
 {
     *geometry_system_mem_requirements = sizeof(geometry_system_state);
@@ -64,16 +44,8 @@ bool geometry_system_initialize(u64 *geometry_system_mem_requirements, void *sta
     }
     geo_sys_state_ptr = (geometry_system_state *)state;
 
-    // geo_sys_state_ptr->hashtable = new dhashtable<geometry>(MAX_GEOMETRIES_LOADED);
-    {
-        geo_sys_state_ptr->geometry_count = 0;
-        for (u32 i = 0; i < MAX_MATERIALS_LOADED; i++)
-        {
-            geo_sys_state_ptr->geometry_table[i].id = INVALID_ID;
-        }
-    }
-
-    geo_sys_state_ptr->loaded_geometry.c_init(MAX_GEOMETRIES_LOADED);
+    geo_sys_state_ptr->hashtable.c_init(MAX_GEOMETRIES_LOADED);
+    geo_sys_state_ptr->loaded_geometry.c_init();
 
     geometry_system_create_default_geometry();
 
@@ -88,7 +60,7 @@ bool geometry_system_shutdowm(void *state)
     for (int i = 0; i < loaded_geometry_count; i++)
     {
         const char *geo_name = geo_sys_state_ptr->loaded_geometry[i].c_str();
-        geo                  = _get_goemetry(geo_name);
+        geo                  = geo_sys_state_ptr->hashtable.find(geo_name);
 
         result = vulkan_destroy_geometry(geo);
         if (!result)
@@ -122,10 +94,10 @@ bool geometry_system_create_geometry(geometry_config *config)
         DERROR("Couldnt create geometry %s.", config->name);
         return false;
     }
-    geo_sys_state_ptr->geometry_table[geo_sys_state_ptr->geometry_count]  = geo;
-    geo_sys_state_ptr->geometry_count                                    += 1;
 
+    geo_sys_state_ptr->hashtable.insert(config->name, geo);
     geo_sys_state_ptr->loaded_geometry.push_back(geo.name);
+
     return true;
 }
 
@@ -309,7 +281,7 @@ bool geometry_system_create_default_geometry()
 
 geometry *geometry_system_get_geometry(geometry_config *config)
 {
-    geometry *geo = _get_goemetry(config->name);
+    geometry *geo = geo_sys_state_ptr->hashtable.find(config->name);
     if (!geo)
     {
         DTRACE("Geometry %s not loaded yet. Loading it...", config->name);
@@ -327,7 +299,7 @@ geometry *geometry_system_get_geometry(geometry_config *config)
 geometry *geometry_system_get_geometry_by_name(dstring geometry_name)
 {
     const char *name = geometry_name.c_str();
-    geometry   *geo  = _get_goemetry(name);
+    geometry   *geo  = geo_sys_state_ptr->hashtable.find(name);
     if (!geo)
     {
         DWARN("Geometry %s not loaded yet.Load it first by calling geometry_system_get_geometry. Returning "
@@ -341,7 +313,8 @@ geometry *geometry_system_get_geometry_by_name(dstring geometry_name)
 
 geometry *geometry_system_get_default_geometry()
 {
-    geometry *geo = _get_goemetry(DEFAULT_GEOMETRY_HANDLE);
+
+    geometry *geo = geo_sys_state_ptr->hashtable.find(DEFAULT_GEOMETRY_HANDLE);
     if (!geo)
     {
         DERROR("Default geometry is not loaded yet. How is this possible?? Make sure that you have initialzed the "
@@ -790,6 +763,20 @@ void geometry_system_get_sponza_geometries(geometry ***sponza_geos, u32 *sponza_
         (*sponza_geos)[i] = geometry_system_get_geometry_by_name(geo);
     }
     *sponza_geometry_count = sponza_objects;
+
+    // for (u32 i = 0; i < sponza_objects; i++)
+    //{
+    //     for (u32 j = 0; j < sponza_objects; j++)
+    //     {
+    //         if (i == j)
+    //             continue;
+    //         if ((*sponza_geos)[i] == (*sponza_geos)[j])
+    //         {
+    //             DERROR("ith_ind %d and jth_ind:%d point to the same address %s", i, j,
+    //             (*sponza_geos)[i]->name.c_str());
+    //         }
+    //     }
+    // }
 
     linear_allocator_destroy(&sponza_allocator);
 

@@ -44,8 +44,6 @@ void run_tests()
 
 int main()
 {
-    run_tests();
-    return 0;
     application_config app_config;
     app_config.width            = INVALID_ID;
     app_config.height           = INVALID_ID;
@@ -89,20 +87,6 @@ int main()
     geometry_system_get_sponza_geometries(&sponza_geo, &geometry_count);
     triangle.test_geometry  = sponza_geo;
     triangle.geometry_count = geometry_count;
-
-    // for (u32 i = 0; i < geometry_count; i++)
-    //{
-    //     for (u32 j = 0; j < geometry_count; j++)
-    //     {
-    //         if (i == j)
-    //             continue;
-    //         bool result = string_compare(sponza_geo[i]->name.c_str(), sponza_geo[j]->name.c_str());
-    //         if (result)
-    //         {
-    //             DERROR("ith_ind %d has the same object name as jth_ind:%d %s", i, j, sponza_geo[i]->name.c_str());
-    //         }
-    //     }
-    // }
 
     triangle.global_ubo = global_ubo;
 
@@ -167,7 +151,7 @@ void update_camera(uniform_buffer_object *ubo, f64 start_time)
     static f32 z  = 0.01f;
     z            += step;
 
-    ubo->projection = mat4_perspective(fov_rad, aspect_ratio, 0.01f, 1000.0f);
+    ubo->projection = mat4_perspective(fov_rad, aspect_ratio, 0.01f, 5000.0f);
     ubo->model      = mat4_euler_y(z);
     ubo->model      = math::mat4();
 

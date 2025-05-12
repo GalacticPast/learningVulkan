@@ -10,44 +10,14 @@
 
 struct texture_system_state
 {
-    darray<dstring> loaded_textures;
-    // dhashtable<texture> *hashtable;
-    u32     loaded_textures_count;
-    texture textures_table[MAX_TEXTURES_LOADED];
+    darray<dstring>     loaded_textures;
+    dhashtable<texture> hashtable;
 };
 
 static texture_system_state *tex_sys_state_ptr;
 bool                         texture_system_create_default_texture();
 
 static bool texture_system_release_textures(dstring *texture_name);
-
-texture *_get_texture(const char *texture_name)
-{
-    texture *out_tex = nullptr;
-
-    for (u32 i = 0; i < MAX_TEXTURES_LOADED; i++)
-    {
-        const char *tex_name = (const char *)tex_sys_state_ptr->textures_table[i].name.c_str();
-        bool        result   = string_compare(texture_name, tex_name);
-        if (result)
-        {
-            out_tex = &tex_sys_state_ptr->textures_table[i];
-            break;
-        }
-    }
-    return out_tex;
-}
-u32 _get_texture_empty_id()
-{
-    for (u32 i = 0; i < MAX_GEOMETRIES_LOADED; i++)
-    {
-        if (tex_sys_state_ptr->textures_table[i].id == INVALID_ID)
-        {
-            return i;
-        }
-    }
-    return INVALID_ID;
-}
 
 bool texture_system_initialize(u64 *texture_system_mem_requirements, void *state)
 {
@@ -59,18 +29,7 @@ bool texture_system_initialize(u64 *texture_system_mem_requirements, void *state
     DINFO("Initializing texture system...");
     tex_sys_state_ptr = (texture_system_state *)state;
 
-    {
-        for (u32 i = 0; i < MAX_TEXTURES_LOADED; i++)
-        {
-            tex_sys_state_ptr->textures_table[i].id                   = INVALID_ID;
-            tex_sys_state_ptr->textures_table[i].tex_width            = INVALID_ID;
-            tex_sys_state_ptr->textures_table[i].tex_height           = INVALID_ID;
-            tex_sys_state_ptr->textures_table[i].num_channels         = INVALID_ID;
-            tex_sys_state_ptr->textures_table[i].vulkan_texture_state = nullptr;
-        }
-    }
-
-    tex_sys_state_ptr->loaded_textures_count = 0;
+    tex_sys_state_ptr->hashtable.c_init(MAX_TEXTURES_LOADED);
     tex_sys_state_ptr->loaded_textures.c_init();
 
     stbi_set_flip_vertically_on_load(true);
@@ -103,12 +62,9 @@ bool create_texture(texture *texture, u8 *pixels)
 
     const char *file_base_name = texture->name.c_str();
 
-    u32 tex_ind                                 = tex_sys_state_ptr->loaded_textures_count;
-    tex_sys_state_ptr->textures_table[tex_ind]  = *texture;
-    tex_sys_state_ptr->loaded_textures_count   += 1;
-
-    DDEBUG("Texture %s loaded in hastable.", file_base_name);
+    tex_sys_state_ptr->hashtable.insert(file_base_name, *texture);
     tex_sys_state_ptr->loaded_textures.push_back(texture->name);
+    DDEBUG("Texture %s loaded in hastable.", file_base_name);
 
     return true;
 }
@@ -177,7 +133,7 @@ bool texture_system_create_default_texture()
 
 texture *texture_system_get_default_texture()
 {
-    texture *texture = _get_texture(DEFAULT_TEXTURE_HANDLE);
+    texture *texture = tex_sys_state_ptr->hashtable.find(DEFAULT_TEXTURE_HANDLE);
     // TODO: increment the value for texture references
 
     return texture;
@@ -189,7 +145,7 @@ texture *texture_system_get_texture(const char *texture_name)
         DWARN("Texuture name is nullptr retrunring default material");
         return texture_system_get_default_texture();
     }
-    texture *texture = _get_texture(texture_name);
+    texture *texture = tex_sys_state_ptr->hashtable.find(texture_name);
     // TODO: increment the value for texture references
 
     if (texture == nullptr)
@@ -197,7 +153,7 @@ texture *texture_system_get_texture(const char *texture_name)
         DTRACE("Texture: %s not loaded in yet, loading it...", texture_name);
         dstring name = texture_name;
         texture_system_create_texture(&name);
-        texture = _get_texture(texture_name);
+        texture = tex_sys_state_ptr->hashtable.find(texture_name);
     }
 
     return texture;
@@ -206,7 +162,7 @@ texture *texture_system_get_texture(const char *texture_name)
 bool texture_system_release_textures(dstring *tex_name)
 {
     const char *texture_name = tex_name->c_str();
-    texture    *texture      = _get_texture(texture_name);
+    texture    *texture      = tex_sys_state_ptr->hashtable.find(texture_name);
     bool        result       = vulkan_destroy_texture(texture);
     if (!result)
     {

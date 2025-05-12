@@ -42,8 +42,11 @@ template <typename T> class dhashtable
 
   public:
     dhashtable();
-
     dhashtable(u64 table_size);
+
+    void c_init();
+    void c_init(u64 size);
+
     ~dhashtable();
 
     void _print_hashtable();
@@ -149,6 +152,25 @@ template <typename T> dhashtable<T>::dhashtable()
 }
 
 template <typename T> dhashtable<T>::dhashtable(u64 table_size)
+{
+    element_size          = sizeof(entry);
+    capacity              = table_size * element_size;
+    max_length            = table_size;
+    num_elements_in_table = 0;
+    table                 = (entry *)dallocate(capacity, MEM_TAG_DHASHTABLE);
+    default_entry         = nullptr;
+}
+
+template <typename T> void dhashtable<T>::c_init()
+{
+    element_size          = sizeof(entry);
+    capacity              = DEFAULT_HASH_TABLE_SIZE * element_size;
+    max_length            = DEFAULT_HASH_TABLE_SIZE;
+    num_elements_in_table = 0;
+    default_entry         = nullptr;
+    table                 = (entry *)dallocate(capacity, MEM_TAG_DHASHTABLE);
+}
+template <typename T> void dhashtable<T>::c_init(u64 table_size)
 {
     element_size          = sizeof(entry);
     capacity              = table_size * element_size;
