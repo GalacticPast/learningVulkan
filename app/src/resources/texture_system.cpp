@@ -67,11 +67,11 @@ bool texture_system_initialize(u64 *texture_system_mem_requirements, void *state
             tex_sys_state_ptr->textures_table[i].tex_height           = INVALID_ID;
             tex_sys_state_ptr->textures_table[i].num_channels         = INVALID_ID;
             tex_sys_state_ptr->textures_table[i].vulkan_texture_state = nullptr;
-            tex_sys_state_ptr->loaded_textures_count                  = 0;
         }
     }
 
-    tex_sys_state_ptr->loaded_textures.c_init(MAX_TEXTURES_LOADED);
+    tex_sys_state_ptr->loaded_textures_count = 0;
+    tex_sys_state_ptr->loaded_textures.c_init();
 
     stbi_set_flip_vertically_on_load(true);
     texture_system_create_default_texture();
@@ -103,8 +103,9 @@ bool create_texture(texture *texture, u8 *pixels)
 
     const char *file_base_name = texture->name.c_str();
 
-    u32 tex_ind                                = tex_sys_state_ptr->loaded_textures_count;
-    tex_sys_state_ptr->textures_table[tex_ind] = *texture;
+    u32 tex_ind                                 = tex_sys_state_ptr->loaded_textures_count;
+    tex_sys_state_ptr->textures_table[tex_ind]  = *texture;
+    tex_sys_state_ptr->loaded_textures_count   += 1;
 
     DDEBUG("Texture %s loaded in hastable.", file_base_name);
     tex_sys_state_ptr->loaded_textures.push_back(texture->name);

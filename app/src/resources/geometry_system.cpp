@@ -122,7 +122,8 @@ bool geometry_system_create_geometry(geometry_config *config)
         DERROR("Couldnt create geometry %s.", config->name);
         return false;
     }
-    geo_sys_state_ptr->geometry_table[geo_sys_state_ptr->geometry_count] = geo;
+    geo_sys_state_ptr->geometry_table[geo_sys_state_ptr->geometry_count]  = geo;
+    geo_sys_state_ptr->geometry_count                                    += 1;
 
     geo_sys_state_ptr->loaded_geometry.push_back(geo.name);
     return true;
@@ -789,20 +790,6 @@ void geometry_system_get_sponza_geometries(geometry ***sponza_geos, u32 *sponza_
         (*sponza_geos)[i] = geometry_system_get_geometry_by_name(geo);
     }
     *sponza_geometry_count = sponza_objects;
-
-    // for (u32 i = 0; i < sponza_objects; i++)
-    //{
-    //     for (u32 j = 0; j < sponza_objects; j++)
-    //     {
-    //         if (i == j)
-    //             continue;
-    //         if ((*sponza_geos)[i] == (*sponza_geos)[j])
-    //         {
-    //             DERROR("ith_ind %d and jth_ind:%d point to the same address %s", i, j,
-    //             (*sponza_geos)[i]->name.c_str());
-    //         }
-    //     }
-    // }
 
     linear_allocator_destroy(&sponza_allocator);
 

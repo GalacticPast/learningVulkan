@@ -679,9 +679,6 @@ bool vulkan_draw_geometries(render_data *data, VkCommandBuffer *curr_command_buf
 
     vulkan_update_global_uniform_buffer(&data->global_ubo, 0);
 
-    vkCmdBindDescriptorSets(*curr_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                            vk_context->vk_graphics_pipeline.layout, 0, 1, &vk_context->descriptor_sets[0], 0, nullptr);
-
     for (u32 i = 0; i < data->geometry_count; i++)
     {
 
