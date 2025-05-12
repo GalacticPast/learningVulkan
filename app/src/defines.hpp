@@ -101,6 +101,6 @@ typedef double f64;
 #define DNOINLINE
 #endif
 
-#define GIGA(num) num * 1024 * 1024 * 1024
-#define MEGA(num) num * 1024 * 1024
-#define KILO(num) num * 1024
+#define GIGA(num) (((u64)num) * 1024 * 1024 * 1024ULL)
+#define MEGA(num) ((u64)(num) * 1024 * 1024ULL)
+#define KILO(num) ((u64)(num) * 1024ULL)

@@ -5,6 +5,7 @@
 #include "core/input.hpp"
 #include "core/logger.hpp"
 
+#include "defines.hpp"
 #include "platform/platform.hpp"
 
 #include "renderer/renderer.hpp"
@@ -39,20 +40,18 @@ bool application_initialize(application_state *state, application_config *config
     app_state_ptr->is_running         = true;
     app_state_ptr->is_minimized       = false;
 
-    bool result                                                            = false;
+    u64 memory_system_memory_requirements = INVALID_ID_64;
+    memory_system_startup(&memory_system_memory_requirements, 0);
+    app_state_ptr->memory_system_state = platform_allocate(memory_system_memory_requirements, false);
+    bool result = memory_system_startup(&memory_system_memory_requirements, app_state_ptr->memory_system_state);
+    DASSERT(result == true);
+    app_state_ptr->memory_system_memory_requirements = memory_system_memory_requirements;
+
+    result                                                                 = false;
     app_state_ptr->application_system_linear_allocator_memory_requirements = 10 * 1024 * 1024; // 1 mega bytes
     result = linear_allocator_create(&app_state_ptr->application_system_linear_allocator,
                                      app_state_ptr->application_system_linear_allocator_memory_requirements);
     DASSERT(result == true);
-
-    memory_system_startup(&app_state_ptr->memory_system_memory_requirements, 0);
-    app_state_ptr->memory_system_state = linear_allocator_allocate(&app_state_ptr->application_system_linear_allocator,
-                                                                   app_state_ptr->memory_system_memory_requirements);
-    result =
-        memory_system_startup(&app_state_ptr->memory_system_memory_requirements, app_state_ptr->memory_system_state);
-    DASSERT(result == true);
-    set_memory_stats_for_tag(app_state_ptr->application_system_linear_allocator_memory_requirements,
-                             MEM_TAG_LINEAR_ALLOCATOR);
 
     event_system_startup(&app_state_ptr->event_system_memory_requirements, 0);
     app_state_ptr->event_system_state = linear_allocator_allocate(&app_state_ptr->application_system_linear_allocator,
