@@ -15,6 +15,7 @@
 #include "resources/resource_types.hpp"
 
 #include "../tests/containers/darray_test.hpp"
+#include "../tests/containers/dfreelist_test.hpp"
 #include "../tests/containers/dhashtable_test.hpp"
 #include "../tests/events/event_system_test.hpp"
 #include "../tests/linear_allocator/linear_allocator_test.hpp"
@@ -36,6 +37,7 @@ void run_tests()
     event_system_register_tests();
     darray_register_tests();
     dhashtable_register_tests();
+    dfreelist_register_tests();
 
     test_manager_run_tests();
     test_instance->tests = 0;
@@ -44,6 +46,9 @@ void run_tests()
 
 int main()
 {
+    run_tests();
+    return 0;
+
     application_config app_config;
     app_config.width            = INVALID_ID;
     app_config.height           = INVALID_ID;

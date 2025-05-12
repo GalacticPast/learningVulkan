@@ -8,24 +8,29 @@
 //        | memory that you want to manage  |
 //        |--------------------------------|
 
-struct freelist_node
+// block header should be the same size as freelist_node
+struct dfreelist_allocated_memory_header
 {
-    bool           initialized = false;
-    freelist_node *next        = nullptr;
-    freelist_node *prev        = nullptr;
-    void          *block       = nullptr;
-    u64            block_size  = INVALID_ID;
+    u64 padding[2];
+    u64 block_size = INVALID_ID;
 };
 
-struct freelist
+struct dfreelist_node
 {
-    freelist_node *head        = nullptr;
-    void          *memory      = nullptr;
-    u64            memory_size = INVALID_ID;
+    dfreelist_node *next       = nullptr;
+    void           *block      = nullptr;
+    u64             block_size = INVALID_ID;
 };
 
-freelist *dfreelist_create(u64 *freelist_mem_requirements, u64 memory_size, void *memory);
-bool      dfreelist_destroy(freelist *freelist);
+struct dfreelist
+{
+    dfreelist_node *head        = nullptr;
+    void           *memory      = nullptr;
+    u64             memory_size = INVALID_ID;
+};
 
-void *dfreelist_allocate(freelist *free_list, u64 mem_size);
-bool  dfreelist_dealocate(freelist *free_list, void *ptr, u64 mem_size);
+dfreelist *dfreelist_create(u64 *dfreelist_mem_requirements, u64 memory_size, void *memory);
+bool       dfreelist_destroy(dfreelist *freelist);
+
+void *dfreelist_allocate(dfreelist *dfree_list, u64 mem_size);
+bool  dfreelist_dealocate(dfreelist *dfree_list, void *ptr);

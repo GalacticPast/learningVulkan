@@ -25,7 +25,7 @@ struct memory_system_stats
 
 struct memory_system
 {
-    freelist           *freelist = nullptr;
+    dfreelist          *dfreelist = nullptr;
     memory_system_stats stats;
 };
 

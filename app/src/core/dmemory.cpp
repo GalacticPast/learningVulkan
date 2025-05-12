@@ -37,7 +37,7 @@ bool memory_system_startup(u64 *memory_system_memory_requirements, void *state)
     dzero_memory(memory_system_ptr, *memory_system_memory_requirements);
 
     void* freelist_mem = (u8 *)state + sizeof(memory_system);
-    memory_system_ptr->freelist = dfreelist_create(&freelist_mem_requirements, GIGA(2),freelist_mem);
+    memory_system_ptr->dfreelist = dfreelist_create(&freelist_mem_requirements, GIGA(2),freelist_mem);
 
 
     return true;
