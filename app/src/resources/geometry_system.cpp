@@ -12,8 +12,6 @@
 
 #include "math/dmath.hpp"
 
-#include "memory/linear_allocator.hpp"
-
 #include "renderer/vulkan/vulkan_backend.hpp"
 #include "resources/material_system.hpp"
 #include "resources/resource_types.hpp"
@@ -31,8 +29,7 @@ static geometry_system_state *geo_sys_state_ptr;
 bool                          geometry_system_create_default_geometry();
 
 // this will allocate and write size back, assumes the caller will call free once the data is processed
-void geometry_system_parse_obj(const char *obj_file_full_path, u32 *num_of_objects, geometry_config **geo_configs,
-                               linear_allocator *allocator);
+void geometry_system_parse_obj(const char *obj_file_full_path, u32 *num_of_objects, geometry_config **geo_configs);
 bool destroy_geometry_config(geometry_config *config);
 
 bool geometry_system_initialize(u64 *geometry_system_mem_requirements, void *state)
@@ -237,9 +234,8 @@ bool geometry_system_create_default_geometry()
 
     u32              num_of_objects      = INVALID_ID;
     geometry_config *default_geo_configs = nullptr;
-    linear_allocator allocator{};
 
-    geometry_system_parse_obj("../assets/meshes/cube.obj", &num_of_objects, &default_geo_configs, &allocator);
+    geometry_system_parse_obj("../assets/meshes/cube.obj", &num_of_objects, &default_geo_configs);
 
     for (u32 i = 0; i < num_of_objects; i++)
     {
@@ -326,8 +322,7 @@ geometry *geometry_system_get_default_geometry()
 }
 
 // this will allocate and write size back, assumes the caller will call free once the data is processed
-void geometry_system_parse_obj(const char *obj_file_full_path, u32 *num_of_objects, geometry_config **geo_configs,
-                               linear_allocator *allocator)
+void geometry_system_parse_obj(const char *obj_file_full_path, u32 *num_of_objects, geometry_config **geo_configs)
 {
     DTRACE("parsing file %s.", obj_file_full_path);
     dclock telemetry;
@@ -653,8 +648,6 @@ void geometry_system_parse_obj(const char *obj_file_full_path, u32 *num_of_objec
     clock_update(&telemetry);
     f64 object_proccesing_start_time = telemetry.time_elapsed;
 
-    linear_allocator_create(allocator, GIGA(1));
-
     u32 size_till_now = 0;
     for (u32 object = 0; object < objects; object++)
     {
@@ -668,9 +661,9 @@ void geometry_system_parse_obj(const char *obj_file_full_path, u32 *num_of_objec
         size_till_now            += (count + 7);
         u32 vertex_count_per_obj  = vert_max - vert_min + 1;
 
-        (*geo_configs)[object].vertices = (vertex *)linear_allocator_allocate(allocator, sizeof(vertex) * (count / 3));
+        (*geo_configs)[object].vertices     = (vertex *)dallocate(sizeof(vertex) * (count / 3), MEM_TAG_GEOMETRY);
         (*geo_configs)[object].vertex_count = count / 3;
-        (*geo_configs)[object].indices      = (u32 *)linear_allocator_allocate(allocator, sizeof(u32) * (count / 3));
+        (*geo_configs)[object].indices      = (u32 *)dallocate(sizeof(u32) * (count / 3), MEM_TAG_GEOMETRY);
         (*geo_configs)[object].index_count  = count / 3;
 
         u32 index_ind = 0;
@@ -724,10 +717,8 @@ void geometry_system_get_sponza_geometries(geometry ***sponza_geos, u32 *sponza_
     u32              sponza_objects     = INVALID_ID;
     geometry_config *sponza_geo_configs = nullptr;
 
-    linear_allocator sponza_allocator{};
-
     material_system_parse_mtl_file((const char *)file_mtl_full_path);
-    geometry_system_parse_obj(file_full_path, &sponza_objects, &sponza_geo_configs, &sponza_allocator);
+    geometry_system_parse_obj(file_full_path, &sponza_objects, &sponza_geo_configs);
 
     // for (u32 i = 0; i < sponza_objects; i++)
     //{
@@ -777,8 +768,6 @@ void geometry_system_get_sponza_geometries(geometry ***sponza_geos, u32 *sponza_
     //         }
     //     }
     // }
-
-    linear_allocator_destroy(&sponza_allocator);
 
     return;
 }

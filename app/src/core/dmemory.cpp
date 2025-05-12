@@ -1,4 +1,5 @@
 #include "dmemory.hpp"
+#include "containers/dfreelist.hpp"
 #include "core/logger.hpp"
 
 #include "defines.hpp"
@@ -60,7 +61,8 @@ void *dallocate(u64 mem_size, memory_tags tag)
         memory_system_ptr->stats.tagged_allocations[tag] += mem_size;
         memory_system_ptr->stats.total_allocated++;
     }
-    void *block = platform_allocate(mem_size, false);
+    //void *block = platform_allocate(mem_size, false);
+    void *block = dfreelist_allocate(memory_system_ptr->dfreelist, mem_size);
     dzero_memory(block, mem_size);
     return block;
 }
@@ -75,7 +77,12 @@ void dfree(void *block, u64 mem_size, memory_tags tag)
         memory_system_ptr->stats.tagged_allocations[tag] -= mem_size;
         memory_system_ptr->stats.total_allocated--;
     }
-    return platform_free(block, false);
+    bool result = dfreelist_dealocate(memory_system_ptr->dfreelist, block);
+    if(!result)
+    {
+        DERROR("dfreelist_dealocate failded!!!");
+    }
+    return;
 }
 void dset_memory_value(void *block, u64 value, u64 size)
 {
