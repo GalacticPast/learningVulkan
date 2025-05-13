@@ -36,7 +36,7 @@ ifeq ($(is_linux),Linux)
 assembly := learningVulkan
 extension := 
 includes := -Iapp/src -I$(VULKAN_SDK)/include
-compiler_flags := -Wall -Wextra -g -Wconversion -Wdouble-promotion -Wno-unused-parameter -Wno-unused-function -Wno-sign-conversion -fsanitize=undefined -fsanitize-trap
+compiler_flags := -Wall -Wextra -g -O0 -Wconversion -Wdouble-promotion -Wno-unused-parameter -Wno-unused-function -Wno-sign-conversion -fsanitize=undefined  -fsanitize-trap
 defines := -DDEBUG 
 linker_flags := -lvulkan -lm
 

@@ -104,3 +104,5 @@ typedef double f64;
 #define GIGA(num) (((u64)num) * 1024 * 1024 * 1024ULL)
 #define MEGA(num) ((u64)(num) * 1024 * 1024ULL)
 #define KILO(num) ((u64)(num) * 1024ULL)
+
+#define DALIGN_UP(p, align) (((uintptr_t)(p) + ((align) - 1)) & ~((align) - 1))

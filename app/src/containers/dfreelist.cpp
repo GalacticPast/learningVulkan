@@ -3,6 +3,7 @@
 #include "core/dasserts.hpp"
 #include "core/dmemory.hpp"
 #include "core/logger.hpp"
+#include "defines.hpp"
 
 dfreelist *dfreelist_create(u64 *freelist_mem_requirements, u64 memory_size, void *memory)
 {
@@ -13,20 +14,22 @@ dfreelist *dfreelist_create(u64 *freelist_mem_requirements, u64 memory_size, voi
         return nullptr;
     }
     DASSERT(memory_size != 0);
-    dfreelist *free_list   = (dfreelist *)memory;
-    free_list->memory      = ((u8 *)memory + sizeof(dfreelist));
-    free_list->head        = (dfreelist_node *)free_list->memory;
+    dfreelist *free_list = (dfreelist *)memory;
+    free_list->memory    = ((u8 *)memory + sizeof(dfreelist));
+
+    void *raw_head         = free_list->memory;
+    free_list->head        = (dfreelist_node *)DALIGN_UP(raw_head, 8);
     free_list->memory_size = memory_size;
 
     free_list->head->block_size = sizeof(dfreelist_node);
     free_list->head->block      = ((u8 *)memory + sizeof(dfreelist) + sizeof(dfreelist_node));
 
     // allocte the next free node because we dont want to pollute the head node
-    dfreelist_node *head = free_list->head;
-
-    head->next             = (dfreelist_node *)((u8 *)head->block + sizeof(dfreelist_node));
-    head->next->block      = ((u8 *)head->block + (sizeof(dfreelist_node) * 2));
-    head->next->block_size = memory_size - sizeof(dfreelist) - (sizeof(dfreelist_node) * 2);
+    dfreelist_node *head     = free_list->head;
+    void           *raw_next = ((u8 *)head->block + sizeof(dfreelist_node));
+    head->next               = (dfreelist_node *)DALIGN_UP(raw_next, 8);
+    head->next->block        = ((u8 *)head->block + (sizeof(dfreelist_node) * 2));
+    head->next->block_size   = memory_size - sizeof(dfreelist) - (sizeof(dfreelist_node) * 2);
 
     return free_list;
 }
@@ -61,10 +64,12 @@ void *dfreelist_allocate(dfreelist *free_list, u64 mem_size)
         }
         else if (node->block_size > mem_size)
         {
-            dfreelist_node *new_node = (dfreelist_node *)((u8 *)node->block + (sizeof(dfreelist_node) + mem_size));
-            new_node->block_size     = node->block_size - (mem_size + sizeof(dfreelist_node));
-            new_node->block          = ((u8 *)new_node + sizeof(dfreelist_node));
-            previous->next           = new_node;
+            void           *raw_ptr  = (dfreelist_node *)((u8 *)node->block + (sizeof(dfreelist_node) + mem_size));
+            dfreelist_node *new_node = (dfreelist_node *)DALIGN_UP(raw_ptr, 8);
+
+            new_node->block_size = node->block_size - (mem_size + sizeof(dfreelist_node));
+            new_node->block      = ((u8 *)new_node + sizeof(dfreelist_node));
+            previous->next       = new_node;
 
             node->block_size = mem_size;
             break;
@@ -105,9 +110,15 @@ bool dfreelist_dealocate(dfreelist *free_list, void *ptr)
         DERROR("How is this possible!!!");
         return false;
     }
-    // TODO: coalese previous and curr ? we're only coealesing previous
-    previous->block_size += header->block_size + sizeof(dfreelist_allocated_memory_header);
-    dzero_memory(ptr, header->block_size);
+    // TODO: coalese previous and next freeblocks ?
+    u64 block_size = header->block_size;
+
+    dfreelist_node *new_node = (dfreelist_node *)header;
+    new_node->block_size     = block_size;
+    new_node->next           = curr;
+    new_node->block          = ptr;
+    dzero_memory(new_node->block, new_node->block_size);
+
     previous->next = curr;
 
     return true;

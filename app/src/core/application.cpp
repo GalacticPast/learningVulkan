@@ -43,8 +43,10 @@ bool application_initialize(application_state *state, application_config *config
     u64 memory_system_memory_requirements = INVALID_ID_64;
     memory_system_startup(&memory_system_memory_requirements, 0);
     app_state_ptr->memory_system_state = platform_allocate(memory_system_memory_requirements, false);
+    DDEBUG("Allocated %dbytes", memory_system_memory_requirements);
     bool result = memory_system_startup(&memory_system_memory_requirements, app_state_ptr->memory_system_state);
     DASSERT(result == true);
+
     app_state_ptr->memory_system_memory_requirements = memory_system_memory_requirements;
 
     result                                                                 = false;
