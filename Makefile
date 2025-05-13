@@ -1,7 +1,8 @@
 obj_dir := obj
 src_dir := app
 bin_dir := bin
-cc := clang++
+ccplus := clang++
+cc := clang 
 
 ifeq ($(OS),Windows_NT)
 
@@ -13,7 +14,7 @@ extension := .exe
 defines := -DDEBUG -DDPLATFORM_WINDOWS
 includes := -Iapp/tests -I$(src_dir)/src -I$(vulkan_sdk)/Include
 linker_flags := -lgdi32 -luser32 -lvulkan-1 -L$(vulkan_sdk)/Lib 
-compiler_flags := -Wall -Wextra -g -Wconversion -Wdouble-promotion -Wno-unused-parameter -Wno-unused-function -Wno-sign-conversion -fsanitize=undefined -fsanitize-trap
+compiler_flags := -Wall -Wextra -g -O0 -Wconversion -Wdouble-promotion -Wno-unused-parameter -Wno-unused-function -Wno-sign-conversion -fsanitize=undefined -fsanitize-trap
 build_platform := windows
 
 rwildcard=$(wildcard $1$2) $(foreach d,$(wildcard $1*),$(call rwildcard,$d/,$2))
@@ -35,7 +36,7 @@ ifeq ($(is_linux),Linux)
 assembly := learningVulkan
 extension := 
 includes := -Iapp/src -I$(VULKAN_SDK)/include
-compiler_flags := -Wall -Wextra -g -Wconversion -Wdouble-promotion -Wno-unused-parameter -Wno-unused-function -Wno-sign-conversion -fsanitize=undefined -fsanitize-trap
+compiler_flags := -Wall -Wextra -g -O0 -Wconversion -Wdouble-promotion -Wno-unused-parameter -Wno-unused-function -Wno-sign-conversion -fsanitize=undefined  -fsanitize-trap
 defines := -DDEBUG 
 linker_flags := -lvulkan -lm
 
@@ -80,13 +81,13 @@ endif
 
 $(obj_dir)/%.cpp.o : %.cpp
 	@echo $<...
-	@$(cc) $< $(compiler_flags) -c  -o $@ $(defines) $(includes) 
+	@$(ccplus) $< $(compiler_flags) -c  -o $@ $(defines) $(includes) 
 
 $(obj_dir)/%.c.o : %.c
 	@echo $<...
-	@clang $< $(compiler_flags) -c -o $@ $(defines) $(includes)
+	@$(cc)$< $(compiler_flags) -c -o $@ $(defines) $(includes)
 
 
 link: $(obj_files_c) $(obj_files_cpp)
 	@echo Linking 
-	@$(cc) $(compiler_flags) $^ -o $(bin_dir)/$(assembly)$(extension) $(includes) $(defines) $(linker_flags) 
+	@$(ccplus) $(compiler_flags) $^ -o $(bin_dir)/$(assembly)$(extension) $(includes) $(defines) $(linker_flags) 

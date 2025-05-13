@@ -172,7 +172,7 @@ dstring::dstring(const char *c_string)
 }
 
 // @param: ch-> keep searching till the first occurecne of the character
-bool string_to_vec4(const char *string, vec4 *vector, const char ch)
+bool string_to_vec4(const char *string, math::vec4 *vector, const char ch)
 {
     char  floats[64] = {};
     char *ptr        = (char *)string;
@@ -202,7 +202,7 @@ bool string_to_vec4(const char *string, vec4 *vector, const char ch)
         }
     }
 
-    vec4 result = vec4();
+    math::vec4 result = math::vec4();
 #ifdef DPLATFORM_WINDOWS
     sscanf_s(floats, "%f %f %f %f", &result.r, &result.g, &result.b, &result.a);
 #elif DPLATFORM_LINUX

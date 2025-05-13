@@ -1,6 +1,7 @@
 #include "texture_system.hpp"
 #include "containers/dhashtable.hpp"
 #include "core/dmemory.hpp"
+#include "defines.hpp"
 #include "renderer/vulkan/vulkan_backend.hpp"
 #include "resources/resource_types.hpp"
 
@@ -16,7 +17,7 @@ struct texture_system_state
 static texture_system_state *tex_sys_state_ptr;
 bool                         texture_system_create_default_texture();
 
-static bool texture_system_create_release_textures(dstring *texture_name);
+static bool texture_system_release_textures(dstring *texture_name);
 
 bool texture_system_initialize(u64 *texture_system_mem_requirements, void *state)
 {
@@ -27,20 +28,9 @@ bool texture_system_initialize(u64 *texture_system_mem_requirements, void *state
     }
     DINFO("Initializing texture system...");
     tex_sys_state_ptr = (texture_system_state *)state;
-    {
-        tex_sys_state_ptr->hashtable.table =
-            (u64 *)dallocate(MAX_TEXTURES_LOADED * sizeof(texture), MEM_TAG_DHASHTABLE);
-        tex_sys_state_ptr->hashtable.element_size          = sizeof(texture);
-        tex_sys_state_ptr->hashtable.max_length            = MAX_TEXTURES_LOADED;
-        tex_sys_state_ptr->hashtable.num_elements_in_table = 0;
-    }
-    {
-        tex_sys_state_ptr->loaded_textures.data =
-            (u64 *)dallocate(sizeof(dstring) * MAX_TEXTURES_LOADED, MEM_TAG_DARRAY);
-        tex_sys_state_ptr->loaded_textures.element_size = sizeof(dstring);
-        tex_sys_state_ptr->loaded_textures.capacity     = sizeof(dstring) * MAX_TEXTURES_LOADED;
-        tex_sys_state_ptr->loaded_textures.length       = 1;
-    }
+
+    tex_sys_state_ptr->hashtable.c_init(MAX_TEXTURES_LOADED);
+    tex_sys_state_ptr->loaded_textures.c_init();
 
     stbi_set_flip_vertically_on_load(true);
     texture_system_create_default_texture();
@@ -53,11 +43,10 @@ bool texture_system_shutdown(void *state)
     for (u64 i = 0; i < loaded_textures_count; i++)
     {
         dstring *tex_name = &tex_sys_state_ptr->loaded_textures[i];
-        texture_system_create_release_textures(tex_name);
+        texture_system_release_textures(tex_name);
     }
 
     tex_sys_state_ptr->loaded_textures.~darray();
-    tex_sys_state_ptr->hashtable.~dhashtable();
     tex_sys_state_ptr = nullptr;
     return true;
 }
@@ -73,12 +62,9 @@ bool create_texture(texture *texture, u8 *pixels)
 
     const char *file_base_name = texture->name.c_str();
 
-    tex_sys_state_ptr->hashtable.insert(texture->name.c_str(), *texture);
+    tex_sys_state_ptr->hashtable.insert(file_base_name, *texture);
+    tex_sys_state_ptr->loaded_textures.push_back(texture->name);
     DDEBUG("Texture %s loaded in hastable.", file_base_name);
-
-    u32 index                                      = tex_sys_state_ptr->loaded_textures.size();
-    tex_sys_state_ptr->loaded_textures[index - 1]  = texture->name;
-    tex_sys_state_ptr->loaded_textures.length     += 1;
 
     return true;
 }
@@ -141,6 +127,7 @@ bool texture_system_create_default_texture()
     }
 
     bool result = create_texture(&default_texture, pixels);
+
     return result;
 }
 
@@ -160,18 +147,19 @@ texture *texture_system_get_texture(const char *texture_name)
     }
     texture *texture = tex_sys_state_ptr->hashtable.find(texture_name);
     // TODO: increment the value for texture references
+
     if (texture == nullptr)
     {
         DTRACE("Texture: %s not loaded in yet, loading it...", texture_name);
         dstring name = texture_name;
         texture_system_create_texture(&name);
+        texture = tex_sys_state_ptr->hashtable.find(texture_name);
     }
-    texture = tex_sys_state_ptr->hashtable.find(texture_name);
 
     return texture;
 }
 
-bool texture_system_create_release_textures(dstring *tex_name)
+bool texture_system_release_textures(dstring *tex_name)
 {
     const char *texture_name = tex_name->c_str();
     texture    *texture      = tex_sys_state_ptr->hashtable.find(texture_name);
@@ -181,6 +169,7 @@ bool texture_system_create_release_textures(dstring *tex_name)
         DERROR("Couldn't release texture %s", texture_name);
         return false;
     }
-    tex_sys_state_ptr->hashtable.erase(texture_name);
+    // TODO: erase
+    // tex_sys_state_ptr->hashtable->erase(texture_name);
     return true;
 }

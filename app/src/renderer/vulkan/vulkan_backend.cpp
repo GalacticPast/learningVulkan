@@ -41,27 +41,16 @@ bool vulkan_backend_initialize(u64 *vulkan_backend_memory_requirements, applicat
     DDEBUG("Initializing Vulkan backend...");
     vk_context               = (vulkan_context *)state;
     vk_context->vk_allocator = nullptr;
-    {
-        vk_context->global_ubo_data.data =
-            dallocate(sizeof(uniform_buffer_object) * VULKAN_MAX_DESCRIPTOR_SET_COUNT, MEM_TAG_RENDERER);
-        vk_context->global_ubo_data.capacity     = sizeof(uniform_buffer_object) * VULKAN_MAX_DESCRIPTOR_SET_COUNT;
-        vk_context->global_ubo_data.element_size = sizeof(uniform_buffer_object);
-        vk_context->global_ubo_data.length       = VULKAN_MAX_DESCRIPTOR_SET_COUNT;
-    }
-    {
-        vk_context->descriptor_sets.data =
-            dallocate(sizeof(VkDescriptorSet) * VULKAN_MAX_DESCRIPTOR_SET_COUNT, MEM_TAG_RENDERER);
-        vk_context->descriptor_sets.capacity     = sizeof(VkDescriptorSet) * VULKAN_MAX_DESCRIPTOR_SET_COUNT;
-        vk_context->descriptor_sets.element_size = sizeof(VkDescriptorSet);
-        vk_context->descriptor_sets.length       = VULKAN_MAX_DESCRIPTOR_SET_COUNT;
-    }
-    {
-        vk_context->command_buffers.data = dallocate(sizeof(VkCommandBuffer) * MAX_FRAMES_IN_FLIGHT, MEM_TAG_RENDERER);
-        vk_context->command_buffers.capacity     = sizeof(VkCommandBuffer) * MAX_FRAMES_IN_FLIGHT;
-        vk_context->command_buffers.element_size = sizeof(VkCommandBuffer);
-        vk_context->command_buffers.length       = MAX_FRAMES_IN_FLIGHT;
-    }
 
+    {
+        vk_context->global_ubo_data.c_init(VULKAN_MAX_DESCRIPTOR_SET_COUNT);
+    }
+    {
+        vk_context->descriptor_sets.c_init(VULKAN_MAX_DESCRIPTOR_SET_COUNT);
+    }
+    {
+        vk_context->command_buffers.c_init(MAX_FRAMES_IN_FLIGHT);
+    }
     DDEBUG("Creating vulkan instance...");
 
     VkApplicationInfo app_info{};
@@ -241,8 +230,7 @@ bool vulkan_backend_initialize(u64 *vulkan_backend_memory_requirements, applicat
     }
 
     if (!vulkan_allocate_command_buffers(vk_context, &vk_context->graphics_command_pool,
-                                         (VkCommandBuffer *)vk_context->command_buffers.data, MAX_FRAMES_IN_FLIGHT,
-                                         false))
+                                         vk_context->command_buffers.data, MAX_FRAMES_IN_FLIGHT, false))
     {
         DERROR("Vulkan command buffer creation failed.");
         return false;
@@ -260,7 +248,8 @@ bool vulkan_backend_initialize(u64 *vulkan_backend_memory_requirements, applicat
         vk_context->internal_geometries[i].indices_count = INVALID_ID;
     }
 
-    vk_context->current_frame_index = 0;
+    vk_context->current_frame_index     = 0;
+    vk_context->loaded_geometries_count = 0;
 
     return true;
 }
@@ -656,6 +645,7 @@ bool vulkan_create_geometry(geometry *out_geometry, u32 vertex_count, vertex *ve
         return false;
     }
     out_geometry->id = geo_data->id;
+    vk_context->loaded_geometries_count++;
     return true;
 };
 bool vulkan_destroy_geometry(geometry *geometry)
@@ -687,7 +677,9 @@ bool vulkan_draw_geometries(render_data *data, VkCommandBuffer *curr_command_buf
     vkCmdBindVertexBuffers(*curr_command_buffer, 0, 1, vertex_buffers, offsets);
     vkCmdBindIndexBuffer(*curr_command_buffer, vk_context->index_buffer.handle, 0, VK_INDEX_TYPE_UINT32);
 
-    for (u32 i = 0; i < data->geometry_count - 1; i++)
+    vulkan_update_global_uniform_buffer(&data->global_ubo, 0);
+
+    for (u32 i = 0; i < data->geometry_count; i++)
     {
 
         material *mat = data->test_geometry[i]->material;
@@ -697,19 +689,23 @@ bool vulkan_draw_geometries(render_data *data, VkCommandBuffer *curr_command_buf
         }
 
         vulkan_texture *vk_texture       = nullptr;
-        texture        *instance_texture = (texture *)data->test_geometry[i]->material->map.diffuse_tex;
+        texture        *instance_texture = (texture *)mat->map.diffuse_tex;
 
         if (!instance_texture)
         {
             instance_texture = texture_system_get_texture(DEFAULT_TEXTURE_HANDLE);
             vk_texture       = (vulkan_texture *)instance_texture->vulkan_texture_state;
-            DDEBUG("No textures were provided using default texture");
         }
         else
         {
             vk_texture = (vulkan_texture *)instance_texture->vulkan_texture_state;
         }
 
+        if (!vk_texture)
+        {
+            instance_texture = texture_system_get_texture(DEFAULT_TEXTURE_HANDLE);
+            vk_texture       = (vulkan_texture *)instance_texture->vulkan_texture_state;
+        }
         u32                   index_offset  = vulkan_calculate_index_offset(vk_context, data->test_geometry[i]->id);
         u32                   vertex_offset = vulkan_calculate_vertex_offset(vk_context, data->test_geometry[i]->id);
         vulkan_geometry_data *geo_data      = (vulkan_geometry_data *)data->test_geometry[i]->vulkan_geometry_state;

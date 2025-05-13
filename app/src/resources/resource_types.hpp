@@ -32,9 +32,9 @@ struct texture_map
 
 struct material_config
 {
-    char mat_name[MATERIAL_NAME_MAX_LENGTH];        //        256
-    char diffuse_tex_name[TEXTURE_NAME_MAX_LENGTH]; // 512
-    vec4 diffuse_color = {1.0f, 1.0f, 1.0f, 1.0f};  //                 32 * 4 =    128
+    char       mat_name[MATERIAL_NAME_MAX_LENGTH];        //        256
+    char       diffuse_tex_name[TEXTURE_NAME_MAX_LENGTH]; // 512
+    math::vec4 diffuse_color = {1.0f, 1.0f, 1.0f, 1.0f};  //                 32 * 4 =    128
     // TODO: add normal maps, heightmap etc..
 };
 
@@ -45,10 +45,10 @@ struct material
     u32         id              = INVALID_ID;
     u32         reference_count = INVALID_ID;
     texture_map map;
-    vec4        diffuse_color = {1.0f, 1.0f, 1.0f, 1.0f};
+    math::vec4  diffuse_color = {1.0f, 1.0f, 1.0f, 1.0f};
 };
 
-#define DEFAULT_GEOMETRY_HANDLE "default_material"
+#define DEFAULT_GEOMETRY_HANDLE "DEFAULT_GEOMETRY"
 #define MAX_GEOMETRIES_LOADED 1024
 #define GEOMETRY_NAME_MAX_LENGTH 256
 

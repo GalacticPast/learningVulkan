@@ -1,4 +1,6 @@
 #include "material_system.hpp"
+#include "containers/darray.hpp"
+#include "containers/dhashtable.hpp"
 #include "core/dfile_system.hpp"
 #include "core/dmemory.hpp"
 #include "core/logger.hpp"
@@ -14,7 +16,9 @@
 
 struct material_system_state
 {
-    material material_table[MAX_MATERIALS_LOADED];
+    darray<dstring>      loaded_materials;
+    dhashtable<material> hashtable;
+    // material material_table[MAX_MATERIALS_LOADED];
 };
 
 static material_system_state *mat_sys_state_ptr;
@@ -34,13 +38,11 @@ bool material_system_initialize(u64 *material_system_mem_requirements, void *sta
 
     mat_sys_state_ptr = (material_system_state *)state;
 
-    // well i have to manually initialize it anyways;
-    for (u32 i = 0; i < MAX_MATERIALS_LOADED; i++)
-    {
-        mat_sys_state_ptr->material_table[i].id = INVALID_ID;
-    }
+    mat_sys_state_ptr->loaded_materials.c_init();
+    mat_sys_state_ptr->hashtable.c_init(MAX_MATERIALS_LOADED);
 
     material_system_create_default_material();
+
     return true;
 }
 bool material_system_shutdown(void *state)
@@ -50,34 +52,36 @@ bool material_system_shutdown(void *state)
     mat_sys_state_ptr = nullptr;
     return true;
 }
-// this will return nullptr;
-material *_get_material(const char *material_name)
-{
-    material *out_mat = nullptr;
 
-    for (u32 i = 0; i < MAX_MATERIALS_LOADED; i++)
-    {
-        const char *mat_name = (const char *)mat_sys_state_ptr->material_table[i].name.c_str();
-        bool        result   = string_compare(material_name, mat_name);
-        if (result)
-        {
-            out_mat = &mat_sys_state_ptr->material_table[i];
-        }
-    }
-    return out_mat;
-}
-// this will return nullptr;
-u32 _get_empty_id()
-{
-    for (u32 i = 0; i < MAX_MATERIALS_LOADED; i++)
-    {
-        if (mat_sys_state_ptr->material_table[i].id == INVALID_ID)
-        {
-            return i;
-        }
-    }
-    return INVALID_ID;
-}
+//// this will return nullptr;
+// material *_get_material(const char *material_name)
+//{
+//     material *out_mat = nullptr;
+//
+//     for (u32 i = 0; i < MAX_MATERIALS_LOADED; i++)
+//     {
+//         const char *mat_name = (const char *)mat_sys_state_ptr->material_table[i].name.c_str();
+//         bool        result   = string_compare(material_name, mat_name);
+//         if (result)
+//         {
+//             out_mat = &mat_sys_state_ptr->material_table[i];
+//         }
+//     }
+//     return out_mat;
+// }
+//  this will return nullptr;
+
+// u32 _get_empty_id()
+//{
+//     for (u32 i = 0; i < MAX_MATERIALS_LOADED; i++)
+//     {
+//         if (mat_sys_state_ptr->material_table[i].id == INVALID_ID)
+//         {
+//             return i;
+//         }
+//     }
+//     return INVALID_ID;
+// }
 
 material *material_system_acquire_from_config_file(dstring *file_base_name)
 {
@@ -92,7 +96,7 @@ material *material_system_acquire_from_config_file(dstring *file_base_name)
     json_parse_material(&name, &base);
 
     material *out_mat = nullptr;
-    out_mat           = _get_material(base.mat_name);
+    out_mat           = mat_sys_state_ptr->hashtable.find(base.mat_name);
 
     if (out_mat == nullptr)
     {
@@ -100,14 +104,14 @@ material *material_system_acquire_from_config_file(dstring *file_base_name)
         material_system_create_material(&base);
     }
 
-    out_mat = _get_material(base.mat_name);
+    out_mat = mat_sys_state_ptr->hashtable.find(base.mat_name);
     return out_mat;
 };
 
 material *material_system_acquire_from_config(material_config *config)
 {
 
-    material *out_mat = _get_material(config->mat_name);
+    material *out_mat = mat_sys_state_ptr->hashtable.find(config->mat_name);
     if (out_mat == nullptr)
     {
         DERROR("No Material by the name of %s. Maybe you havenet loaded it yet. Returning default Material",
@@ -122,12 +126,13 @@ bool material_system_create_material(material_config *config)
 
     material mat{};
     mat.name            = config->mat_name;
-    mat.id              = _get_empty_id();
+    mat.id              = mat_sys_state_ptr->hashtable.size();
     mat.reference_count = 0;
     mat.map.diffuse_tex = texture_system_get_texture(config->diffuse_tex_name);
     mat.diffuse_color   = config->diffuse_color;
 
-    mat_sys_state_ptr->material_table[mat.id] = mat;
+    mat_sys_state_ptr->hashtable.insert(config->mat_name, mat);
+    mat_sys_state_ptr->loaded_materials.push_back(config->mat_name);
 
     DTRACE("Material %s created", config->mat_name);
 
@@ -143,41 +148,24 @@ bool material_system_create_default_material()
     default_mat.map.diffuse_tex = texture_system_get_default_texture();
     default_mat.diffuse_color   = {1.0f, 1.0f, 1.0f, 1.0f};
 
-    mat_sys_state_ptr->material_table[0] = default_mat;
+    mat_sys_state_ptr->hashtable.insert(DEFAULT_MATERIAL_HANDLE, default_mat);
+    mat_sys_state_ptr->loaded_materials.push_back(DEFAULT_MATERIAL_HANDLE);
+
     return true;
 }
 
 material *material_system_get_default_material()
 {
-    material *default_mat = &mat_sys_state_ptr->material_table[0];
+    material *default_mat = mat_sys_state_ptr->hashtable.find(DEFAULT_MATERIAL_HANDLE);
     default_mat->reference_count++;
     return default_mat;
 }
 
-bool material_system_create_release_materials(dstring *mat_name)
+bool material_system_release_materials(dstring *mat_name)
 {
     const char *material_name = mat_name->c_str();
 
-    bool found = false;
-
-    for (u32 i = 0; i < MAX_MATERIALS_LOADED; i++)
-    {
-        const char *mat_name = (const char *)mat_sys_state_ptr->material_table[i].name.c_str();
-        bool        result   = string_compare(material_name, mat_name);
-
-        if (result)
-        {
-            if (mat_sys_state_ptr->material_table[i].reference_count == 0)
-            {
-                mat_sys_state_ptr->material_table[i].id              = INVALID_ID;
-                mat_sys_state_ptr->material_table[i].reference_count = INVALID_ID;
-                mat_sys_state_ptr->material_table[i].diffuse_color   = {1.0f, 1.0f, 1.0f, 1.0f};
-                mat_sys_state_ptr->material_table[i].map.diffuse_tex = nullptr;
-                mat_sys_state_ptr->material_table[i].name.clear();
-            }
-            found = true;
-        }
-    }
+    bool found = mat_sys_state_ptr->hashtable.erase(material_name);
 
     if (!found)
     {
@@ -190,7 +178,7 @@ bool material_system_create_release_materials(dstring *mat_name)
 material *material_system_acquire_from_name(dstring *material_name)
 {
 
-    material *out_mat = _get_material(material_name->c_str());
+    material *out_mat = mat_sys_state_ptr->hashtable.find(material_name->c_str());
     if (out_mat == nullptr)
     {
         DERROR("No Material by the name of %s. Maybe you havenet loaded it yet. Returning default Material",
@@ -231,16 +219,25 @@ bool material_system_parse_mtl_file(const char *mtl_file_name)
         u32 next_material   = string_first_string_occurence(mtl_ptr, newmat_sub_string);
 
         u32 material_name_length = string_first_char_occurence(mtl_ptr, '\n');
+        while (*mtl_ptr == ' ')
+        {
+            mtl_ptr++;
+        }
         string_ncopy(configs[i].mat_name, mtl_ptr, material_name_length);
 
         u32 diffuse_tex_occurence = string_first_string_occurence(mtl_ptr, diffuse_map_sub_string);
 
         if (diffuse_tex_occurence < next_material)
         {
-            mtl_ptr                     += diffuse_tex_occurence + diffuse_map_substring_size;
-            u32   diffuse_map_name_size  = string_first_char_occurence(mtl_ptr, '\n');
-            char *diffuse_map_name       = mtl_ptr + diffuse_map_name_size - 1;
-            diffuse_map_name_size        = 0;
+            mtl_ptr += diffuse_tex_occurence + diffuse_map_substring_size;
+
+            while (*mtl_ptr == ' ')
+            {
+                mtl_ptr++;
+            }
+            u32   diffuse_map_name_size = string_first_char_occurence(mtl_ptr, '\n');
+            char *diffuse_map_name      = mtl_ptr + diffuse_map_name_size - 1;
+            diffuse_map_name_size       = 0;
             // TODO: will this suffice?
             while (*diffuse_map_name != '/' && *diffuse_map_name != ' ' && *diffuse_map_name != '\n')
             {

@@ -2,6 +2,8 @@
 
 #include "defines.hpp"
 
+#include "containers/dfreelist.hpp"
+
 enum memory_tags
 {
     MEM_TAG_UNKNOWN,
@@ -23,6 +25,7 @@ struct memory_system_stats
 
 struct memory_system
 {
+    dfreelist          *dfreelist = nullptr;
     memory_system_stats stats;
 };
 

@@ -4,6 +4,7 @@
 // algorithm (now favored by bernstein) uses xor: hash(i) = hash(i - 1) * 33 ^ str[i]; the magic of number 33 (why it
 // works better than many other constants, prime or not) has never been adequately explained.
 
+#include "core/dasserts.hpp"
 #include "core/dmemory.hpp"
 #include "core/dstring.hpp"
 #include "core/logger.hpp"
@@ -19,142 +20,307 @@ template <typename T> class dhashtable
   private:
     struct entry
     {
-        char key[MAX_KEY_LENGTH];
-        T    type;
+        bool   is_initialized = false;
+        char   key[MAX_KEY_LENGTH];
+        T      type;
+        entry *next = nullptr;
+        entry *prev = nullptr;
     };
+    entry *table;
+
+    entry *default_entry = nullptr;
+
+    u64  hash_func(const char *key);
+    u64  _find_empty_spot(u64 hash_code);
+    void _im_paranoid();
+    void _resize_and_rehash();
+
+    u64 capacity;
+    u64 element_size;
+    u64 max_length;
+    u64 num_elements_in_table;
 
   public:
-    u64   capacity;
-    u64   element_size;
-    u64   max_length;
-    u64   num_elements_in_table;
-    void *table;
+    dhashtable();
+    dhashtable(u64 table_size);
 
-    u64 hash_func(const char *key)
+    void c_init();
+    void c_init(u64 size);
+
+    ~dhashtable();
+
+    void _print_hashtable();
+
+    u64 max_capacity();
+    u64 num_elements();
+    u64 size();
+
+    void clear();
+
+    bool erase(const char *key);
+    T   *find(const char *key);
+    void insert(const char *key, T type);
+
+    void set_default_value(T default_val);
+};
+
+template <typename T> u64 dhashtable<T>::_find_empty_spot(u64 hash_code)
+{
+    u64 i  = hash_code + 1;
+    i     %= max_length;
+
+    while (i != hash_code)
     {
-        u64 hash = 5381;
-        u32 c;
-
-        while ((c = *key++))
+        if (!table[i].is_initialized)
         {
-            hash = ((hash << 5) + hash) + c; /* hash * 33 + c */
+            return i;
         }
-        return hash;
+        i++;
+        i %= max_length;
+    }
+    DERROR("Couldn't find empty spot");
+    return INVALID_ID_64;
+}
+template <typename T> void dhashtable<T>::_resize_and_rehash()
+{
+    DWARN("Hashtable does not have enough capacity to insert element. Resizing and rehashing");
 
-        return hash;
-    }
+    // get the pointer to the old table
+    entry *old_table      = table;
+    u64    old_capacity   = capacity;
+    u64    old_max_length = max_length;
 
-    dhashtable()
-    {
-        element_size          = sizeof(entry);
-        capacity              = DEFAULT_HASH_TABLE_SIZE * element_size;
-        max_length            = DEFAULT_HASH_TABLE_SIZE;
-        num_elements_in_table = 0;
-        table                 = dallocate(capacity, MEM_TAG_DHASHTABLE);
-        dzero_memory(table, capacity);
-    }
-    dhashtable(u64 table_size)
-    {
-        element_size          = sizeof(entry);
-        capacity              = table_size * element_size;
-        max_length            = table_size;
-        num_elements_in_table = 0;
-        table                 = dallocate(capacity, MEM_TAG_DHASHTABLE);
-        dzero_memory(table, capacity);
-    }
-    ~dhashtable()
-    {
-        dfree(table, capacity, MEM_TAG_DHASHTABLE);
-        element_size          = 0;
-        capacity              = 0;
-        max_length            = 0;
-        num_elements_in_table = 0;
-    }
+    entry *new_table  = (entry *)dallocate(capacity * DEFAULT_HASH_TABLE_RESIZE_FACTOR, MEM_TAG_DHASHTABLE);
+    table             = new_table;
+    capacity         *= DEFAULT_HASH_TABLE_RESIZE_FACTOR;
+    max_length        = capacity / element_size;
+    DTRACE("Num_elements_in_table before resize and rehash %d", num_elements_in_table);
+    num_elements_in_table = 0;
 
-    void insert(const char *key, T type)
+    for (u64 i = 0; i < old_max_length; i++)
     {
-        if (key == nullptr)
+        if (old_table[i].is_initialized)
         {
-            DERROR("Key is nullptr. must have a key.");
-            return;
+            old_table[i].next           = nullptr;
+            old_table[i].prev           = nullptr;
+            old_table[i].is_initialized = false;
+            insert(old_table[i].key, old_table[i].type);
         }
-        u64 hash_code  = hash_func(key);
-        hash_code     %= max_length;
-        if (num_elements_in_table + 1 > max_length)
+    }
+    dfree(old_table, old_capacity, MEM_TAG_DHASHTABLE);
+}
+template <typename T> void dhashtable<T>::_im_paranoid()
+{
+    for (u64 i = 0; i < max_length; i++)
+    {
+        dzero_memory(&table[i], sizeof(entry));
+    }
+}
+template <typename T> void dhashtable<T>::_print_hashtable()
+{
+    for (u64 i = 0; i < max_length; i++)
+    {
+        if (table[i].is_initialized)
         {
-            DWARN("Hashtable does not have enough capacity to insert element. Resizing");
-            u8 *new_table = (u8 *)dallocate(capacity * DEFAULT_HASH_TABLE_RESIZE_FACTOR, MEM_TAG_DHASHTABLE);
-            dcopy_memory(new_table, table, capacity);
-            dfree(table, capacity, MEM_TAG_DHASHTABLE);
-            capacity *= DEFAULT_HASH_TABLE_RESIZE_FACTOR;
-            table     = new_table;
+            DTRACE("%s", table[i].key);
         }
+    }
+}
 
-        entry *entry_ptr = (entry *)((u8 *)table + (hash_code * element_size));
-        if (entry_ptr->key[0] != '\0')
-        {
-            DWARN("Collison!!!. Overriding the entry: key%s", entry_ptr->key);
-            num_elements_in_table--;
-        }
-        entry insert{};
-        dcopy_memory(entry_ptr->key, (void *)key, strlen(key));
-        entry_ptr->type = type;
+template <typename T> u64 dhashtable<T>::hash_func(const char *key)
+{
+    u64 hash = 5381;
+    u32 c;
 
-        num_elements_in_table++;
+    while ((c = *key++))
+    {
+        hash = ((hash << 5) + hash) + c; /* hash * 33 + c */
+    }
+    return hash;
+
+    return hash;
+}
+
+template <typename T> dhashtable<T>::dhashtable()
+{
+    element_size          = sizeof(entry);
+    capacity              = DEFAULT_HASH_TABLE_SIZE * element_size;
+    max_length            = DEFAULT_HASH_TABLE_SIZE;
+    num_elements_in_table = 0;
+    default_entry         = nullptr;
+    table                 = (entry *)dallocate(capacity, MEM_TAG_DHASHTABLE);
+}
+
+template <typename T> dhashtable<T>::dhashtable(u64 table_size)
+{
+    element_size          = sizeof(entry);
+    capacity              = table_size * element_size;
+    max_length            = table_size;
+    num_elements_in_table = 0;
+    table                 = (entry *)dallocate(capacity, MEM_TAG_DHASHTABLE);
+    default_entry         = nullptr;
+}
+
+template <typename T> void dhashtable<T>::c_init()
+{
+    element_size          = sizeof(entry);
+    capacity              = DEFAULT_HASH_TABLE_SIZE * element_size;
+    max_length            = DEFAULT_HASH_TABLE_SIZE;
+    num_elements_in_table = 0;
+    default_entry         = nullptr;
+    table                 = (entry *)dallocate(capacity, MEM_TAG_DHASHTABLE);
+}
+template <typename T> void dhashtable<T>::c_init(u64 table_size)
+{
+    element_size          = sizeof(entry);
+    capacity              = table_size * element_size;
+    max_length            = table_size;
+    num_elements_in_table = 0;
+    table                 = (entry *)dallocate(capacity, MEM_TAG_DHASHTABLE);
+    default_entry         = nullptr;
+}
+
+template <typename T> dhashtable<T>::~dhashtable()
+{
+    dfree(table, capacity, MEM_TAG_DHASHTABLE);
+    element_size          = 0;
+    capacity              = 0;
+    max_length            = 0;
+    num_elements_in_table = 0;
+}
+
+template <typename T> void dhashtable<T>::set_default_value(T default_val)
+{
+    if (!default_entry)
+    {
+        default_entry = (entry *)dallocate(sizeof(entry), MEM_TAG_DHASHTABLE);
+    }
+    default_entry->type = default_val;
+}
+
+template <typename T> void dhashtable<T>::insert(const char *key, T type)
+{
+    if (key == nullptr)
+    {
+        DERROR("Key is nullptr. must have a key.");
         return;
     }
-    T *find(const char *key)
+    u64 hash_code  = hash_func(key);
+    hash_code     %= max_length;
+    if (num_elements_in_table + 1 > max_length)
     {
-        if (!key)
+
+        DTRACE("Max capacity reached. Resizing and rehashing hahstable entries");
+        _resize_and_rehash();
+
+        hash_code  = hash_func(key);
+        hash_code %= max_length;
+    }
+
+    entry *entry_ptr = &table[hash_code];
+    if (table[hash_code].is_initialized)
+    {
+
+        entry *prev = nullptr;
+        while (entry_ptr->next)
         {
-            DFATAL("Key is nullptr");
+            prev      = entry_ptr;
+            entry_ptr = entry_ptr->next;
         }
-        u64 hash_code  = hash_func(key);
-        hash_code     %= max_length;
-
-        entry *entry_ptr = (entry *)((u8 *)table + (hash_code * element_size));
-
-        if (!string_compare(key, entry_ptr->key))
+        u64 get_empty_id = _find_empty_spot(hash_code);
+        if (get_empty_id == INVALID_ID_64)
         {
-            DWARN("There is a no entry for key:%s Returning nullptr", key);
-            return nullptr;
+            DFATAL("Table size: %d, elements_in_table: %d", max_length, num_elements_in_table);
         }
-        T *type_ref = &entry_ptr->type;
-        return type_ref;
+        DASSERT(get_empty_id != INVALID_ID_64);
+
+        entry_ptr->next = &table[get_empty_id];
+        entry_ptr->prev = prev;
+        entry_ptr       = entry_ptr->next;
+    }
+    dcopy_memory(entry_ptr->key, (void *)key, strlen(key));
+    entry_ptr->type           = type;
+    entry_ptr->next           = nullptr;
+    entry_ptr->is_initialized = true;
+
+    num_elements_in_table++;
+    return;
+}
+
+template <typename T> T *dhashtable<T>::find(const char *key)
+{
+    if (!key)
+    {
+        DFATAL("Key is nullptr");
     }
 
-    bool erase(const char *key)
+    u64 hash_code  = hash_func(key);
+    hash_code     %= max_length;
+
+    entry *entry_ptr = &table[hash_code];
+
+    while (entry_ptr)
     {
-        u64 hash_code  = hash_func(key);
-        hash_code     %= max_length;
-
-        entry *entry_ptr = (entry *)((u8 *)table + (hash_code * element_size));
-
-        if (!string_compare(key, entry_ptr->key))
+        if (string_compare(key, entry_ptr->key))
         {
-            DWARN("There is a no entry for key:%s not erasing anything", key);
-            return false;
+            break;
         }
-        dset_memory_value(entry_ptr, 0, element_size);
-        num_elements_in_table--;
-        return true;
+        entry_ptr = entry_ptr->next;
     }
+    if (!entry_ptr)
+    {
+        if (default_entry)
+        {
+            DWARN("Couldnt find key: %s. It doesnt exist in the hashtable, returning default_val", key);
+            return &default_entry->type;
+        }
+        DWARN("Couldnt find key: %s. It doesnt exist in the hashtable, returning nullptr", key);
+        return nullptr;
+    }
+    T *type_ref = &entry_ptr->type;
+    return type_ref;
+}
 
-    void clear()
+template <typename T> bool dhashtable<T>::erase(const char *key)
+{
+    u64 hash_code  = hash_func(key);
+    hash_code     %= max_length;
+
+    entry *entry_ptr = &table[hash_code];
+    bool   found     = string_compare(key, entry_ptr->key);
+
+    if (!found && entry_ptr->next)
     {
-        DWARN("Clearing everything!!!");
-        dzero_memory(table, capacity);
+        entry *prev = entry_ptr;
+        while (entry_ptr)
+        {
+            if (string_compare(key, entry_ptr->key))
+            {
+                dset_memory_value(entry_ptr, 0, element_size);
+            }
+            prev      = entry_ptr;
+            entry_ptr = entry_ptr->next;
+        }
     }
-    u64 size()
-    {
-        return max_length;
-    }
-    u64 num_elements()
-    {
-        return num_elements_in_table;
-    }
-    u64 max_capacity()
-    {
-        return capacity;
-    }
-};
+    dset_memory_value(entry_ptr, 0, element_size);
+    num_elements_in_table--;
+    return true;
+}
+
+template <typename T> void dhashtable<T>::clear()
+{
+    DWARN("Clearing everything!!!");
+    dzero_memory(table, capacity);
+}
+template <typename T> u64 dhashtable<T>::size()
+{
+    return max_length;
+}
+template <typename T> u64 dhashtable<T>::num_elements()
+{
+    return num_elements_in_table;
+}
+template <typename T> u64 dhashtable<T>::max_capacity()
+{
+    return capacity;
+}

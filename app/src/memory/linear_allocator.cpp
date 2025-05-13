@@ -44,9 +44,9 @@ void *linear_allocator_allocate(linear_allocator *allocator, u64 size_in_bytes)
         return nullptr;
     }
 
-    void *block                     = allocator->current_free_mem_ptr;
-    allocator->current_free_mem_ptr = (u8 *)allocator->current_free_mem_ptr + size_in_bytes;
-    allocator->total_allocated += size_in_bytes;
+    void *block                      = allocator->current_free_mem_ptr;
+    allocator->current_free_mem_ptr  = (u8 *)allocator->current_free_mem_ptr + size_in_bytes;
+    allocator->total_allocated      += size_in_bytes;
     allocator->num_allocations++;
 
     return block;
