@@ -134,8 +134,8 @@ void application_shutdown()
     platform_system_shutdown(app_state_ptr->platform_system_state);
     input_system_shutdown(app_state_ptr->input_system_state);
     event_system_shutdown(app_state_ptr->event_system_state);
-    memory_system_shutdown(app_state_ptr->memory_system_state);
     linear_allocator_destroy(&app_state_ptr->application_system_linear_allocator);
+    memory_system_shutdown(app_state_ptr->memory_system_state);
     DINFO("Appplication sucessfully shutdown.");
 }
 
