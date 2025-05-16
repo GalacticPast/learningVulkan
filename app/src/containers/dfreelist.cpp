@@ -51,9 +51,9 @@ void *dfreelist_allocate(dfreelist *free_list, u64 mem_size)
         DERROR("No freelists were provied for allocation. Returning nullptr");
         return nullptr;
     }
-    dfreelist_node *node     = free_list->head->next;
+    dfreelist_node *node     = free_list->head;
     dfreelist_node *next     = node->next;
-    dfreelist_node *previous = free_list->head;
+    dfreelist_node *previous = nullptr;
 
     while (node)
     {
@@ -64,14 +64,18 @@ void *dfreelist_allocate(dfreelist *free_list, u64 mem_size)
         }
         else if (node->block_size > mem_size)
         {
-            void           *raw_ptr  = (dfreelist_node *)((u8 *)node->block + (sizeof(dfreelist_node) + mem_size));
+            void           *raw_ptr  = (dfreelist_node *)((u8 *)node->block + mem_size);
             dfreelist_node *new_node = (dfreelist_node *)DALIGN_UP(raw_ptr, 8);
 
             new_node->block_size = node->block_size - (mem_size + sizeof(dfreelist_node));
             new_node->block      = ((u8 *)new_node + sizeof(dfreelist_node));
-            previous->next       = new_node;
 
-            node->block_size = mem_size;
+            new_node->next = node->next;
+            if (previous)
+            {
+                previous->next = new_node;
+            }
+
             break;
         }
         previous = node;
@@ -84,9 +88,10 @@ void *dfreelist_allocate(dfreelist *free_list, u64 mem_size)
     }
     node->next                                         = nullptr;
     void                              *allocated_block = node->block;
-    u64                                block_size      = node->block_size;
     dfreelist_allocated_memory_header *header          = (dfreelist_allocated_memory_header *)node;
-    header->block_size                                 = block_size;
+    header->block_size                                 = mem_size;
+
+    free_list->memory_commited += mem_size;
 
     return allocated_block;
 }
@@ -105,6 +110,8 @@ bool dfreelist_dealocate(dfreelist *free_list, void *ptr)
         curr     = curr->next;
     }
 
+    dfreelist_node *next = curr;
+
     if (!previous)
     {
         DERROR("How is this possible!!!");
@@ -113,13 +120,68 @@ bool dfreelist_dealocate(dfreelist *free_list, void *ptr)
     // TODO: coalese previous and next freeblocks ?
     u64 block_size = header->block_size;
 
+    DASSERT(next != nullptr);
+
     dfreelist_node *new_node = (dfreelist_node *)header;
     new_node->block_size     = block_size;
-    new_node->next           = curr;
+    new_node->next           = next;
     new_node->block          = ptr;
     dzero_memory(new_node->block, new_node->block_size);
 
-    previous->next = curr;
+    auto add_node = [](dfreelist_node *prev, dfreelist_node *curr, dfreelist_node *next) {
+        if (!prev || !curr)
+        {
+            DERROR("Provided freelist node is nullptr for dfreelist_add_node");
+            return;
+        }
+        prev->next = curr;
+        curr->next = next;
+    };
 
+    DASSERT(new_node != next);
+    add_node(previous, new_node, next);
+
+    auto remove_node = [](dfreelist_node *prev, dfreelist_node *curr, dfreelist_node *next) {
+        if (!prev || !curr)
+        {
+            DERROR("Provided freelist node is nullptr for dfreelist_remove_node");
+            return;
+        }
+        prev->next = next;
+
+        curr->next       = 0;
+        curr->block_size = 0;
+        curr->block      = 0;
+    };
+
+    void *raw_ptr     = (u8 *)previous->block + previous->block_size;
+    void *aligned_ptr = (void *)DALIGN_UP(raw_ptr, 8);
+
+    void *raw_next_ptr     = (void *)((u8 *)new_node->block + new_node->block_size);
+    void *aligned_next_ptr = (void *)DALIGN_UP(raw_next_ptr, 8);
+
+    if (aligned_ptr == (void *)new_node)
+    {
+        previous->block_size += new_node->block_size;
+        DASSERT(new_node != next);
+        remove_node(previous, new_node, next);
+
+        raw_ptr     = (void *)((u8 *)previous->block + previous->block_size);
+        aligned_ptr = (void *)DALIGN_UP(raw_ptr, 8);
+
+        if (aligned_ptr == (void *)next)
+        {
+            previous->block_size += next->block_size;
+            DASSERT(previous != next);
+            remove_node(previous, next, next->next);
+        }
+    }
+    else if (aligned_next_ptr == (void *)next)
+    {
+        new_node->block_size += next->block_size;
+        DASSERT(new_node != next);
+        remove_node(new_node, next, next->next);
+    }
+    free_list->memory_commited = (new_node->block_size - free_list->memory_commited);
     return true;
 }

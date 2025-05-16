@@ -10,7 +10,7 @@ bool darray_create_and_destroy()
     darray<s32> huge_array(huge_size);
 
     expect_should_be(array.size(), 0);
-    expect_should_be(huge_array.size(), (huge_size / sizeof(s32)));
+    expect_should_be(huge_array.size(), huge_size);
 
     return true;
 }

@@ -24,9 +24,10 @@ struct dfreelist_node
 
 struct dfreelist
 {
-    dfreelist_node *head        = nullptr;
-    void           *memory      = nullptr;
-    u64             memory_size = INVALID_ID;
+    dfreelist_node *head            = nullptr;
+    void           *memory          = nullptr;
+    u64             memory_size     = INVALID_ID;
+    u64             memory_commited = 0;
 };
 
 dfreelist *dfreelist_create(u64 *dfreelist_mem_requirements, u64 memory_size, void *memory);

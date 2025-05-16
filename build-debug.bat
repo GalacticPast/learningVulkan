@@ -5,7 +5,7 @@ REM Capture start time
 set "startTime=%TIME%"
 
 REM Run your command
-make all
+make -j all 
 
 REM wow thanks a lot chat gpt :)
 REM Capture end time

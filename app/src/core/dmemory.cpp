@@ -1,5 +1,6 @@
 #include "dmemory.hpp"
 #include "containers/dfreelist.hpp"
+#include "core/dasserts.hpp"
 #include "core/logger.hpp"
 
 #include "defines.hpp"
@@ -52,15 +53,18 @@ void memory_system_shutdown(void *state)
 
 void *dallocate(u64 mem_size, memory_tags tag)
 {
+    if (!memory_system_ptr)
+    {
+        DFATAL("Memory subsystem hasnt been initialized yet. Initialize it");
+        debugBreak();
+        return nullptr;
+    }
     if (tag == MEM_TAG_UNKNOWN)
     {
         DWARN("dallocate() called with MEM_TAG_UNKNOWN. Classify the allocation.");
     }
-    if (memory_system_ptr)
-    {
-        memory_system_ptr->stats.tagged_allocations[tag] += mem_size;
-        memory_system_ptr->stats.total_allocated++;
-    }
+    memory_system_ptr->stats.tagged_allocations[tag] += mem_size;
+    memory_system_ptr->stats.total_allocated++;
     //void *block = platform_allocate(mem_size, false);
     void *block = dfreelist_allocate(memory_system_ptr->dfreelist, mem_size);
     dzero_memory(block, mem_size);
