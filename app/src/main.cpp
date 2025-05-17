@@ -1,5 +1,6 @@
 #include "core/application.hpp"
 #include "core/dclock.hpp"
+#include "core/dmemory.hpp"
 #include "core/input.hpp"
 #include "core/logger.hpp"
 
@@ -26,6 +27,11 @@ void update_camera(uniform_buffer_object *ubo, f64 start_time);
 void run_tests()
 {
     u64 test_manager_mem_requirements = 0;
+    u64 memory_mem_requirements       = 0;
+
+    memory_system_startup(&memory_mem_requirements, 0);
+    void *block = platform_allocate(memory_mem_requirements, false);
+    memory_system_startup(&memory_mem_requirements, block);
 
     test_manager_initialize(&test_manager_mem_requirements, nullptr);
     test_manager *test_instance = (test_manager *)malloc(test_manager_mem_requirements);

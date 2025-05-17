@@ -21,7 +21,7 @@ bool hashtable_create_and_destroy()
 {
     dhashtable<u32> num_table;
 
-    u64             size     = 64 * 1024 * 1024;
+    u64             size     = 64000;
     u64             capacity = size * sizeof(u64);
     dhashtable<u64> int_table(size);
 
@@ -156,6 +156,8 @@ bool hashtable_erase_test()
     }
     DERROR("Num of lost values %d", values_not_found);
     key = &keys[10];
+
+    DERROR("Intentional error for dhashtable.")
     int_table.erase(key->c_str());
 
     u64  value          = INVALID_ID_64;

@@ -11,22 +11,23 @@
 // block header should be the same size as freelist_node
 struct dfreelist_allocated_memory_header
 {
-    u64 padding[2];
-    u64 block_size = INVALID_ID;
+    s64 padding[2];
+    s64 block_size = INVALID_ID;
 };
 
 struct dfreelist_node
 {
     dfreelist_node *next       = nullptr;
     void           *block      = nullptr;
-    u64             block_size = INVALID_ID;
+    s64             block_size = INVALID_ID;
 };
 
 struct dfreelist
 {
-    dfreelist_node *head        = nullptr;
-    void           *memory      = nullptr;
-    u64             memory_size = INVALID_ID;
+    dfreelist_node *head            = nullptr;
+    void           *memory          = nullptr;
+    s64             memory_size     = INVALID_ID;
+    s64             memory_commited = INVALID_ID;
 };
 
 dfreelist *dfreelist_create(u64 *dfreelist_mem_requirements, u64 memory_size, void *memory);

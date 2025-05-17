@@ -137,6 +137,10 @@ template <typename T> void darray<T>::resize(u64 out_size)
             DERROR("Resizing array from %ldbytes to smaller %ldBytes", capacity, out_size);
         }
         void *buffer = dallocate(element_size * out_size, MEM_TAG_DARRAY);
+        if (!buffer)
+        {
+            DFATAL("Darray coulnd't allocate block for ::resize()");
+        }
         dcopy_memory(buffer, data, capacity);
         dfree(data, capacity, MEM_TAG_DARRAY);
         data     = (T *)buffer;
@@ -161,6 +165,10 @@ template <typename T> void darray<T>::push_back(T element)
     {
         DWARN("Array size is not large enough to accomadate another element. Resizing....");
         void *buffer = dallocate(DEFAULT_DARRAY_RESIZE_FACTOR * capacity, MEM_TAG_DARRAY);
+        if (!buffer)
+        {
+            DFATAL("Darray coulnd't allocate block for ::push_back()");
+        }
 
         dcopy_memory(buffer, data, capacity);
         dfree(data, capacity, MEM_TAG_DARRAY);
@@ -193,8 +201,8 @@ template <typename T> T darray<T>::pop_at(u32 index)
     {
         DASSERT_MSG(index > length, "Index is out of bounds....");
     }
-    void *return_element      = ((u8 *)data + ((index)*element_size));
-    T     return_element_copy = *(T *)return_element;
+    T *return_element      = &data[index];
+    T  return_element_copy = *return_element;
     if (index == length - 1)
     {
         length--;
@@ -202,16 +210,20 @@ template <typename T> T darray<T>::pop_at(u32 index)
     }
     if (index == 0)
     {
-        dcopy_memory(data, (u8 *)return_element + element_size, (length - 1) * element_size);
+        dcopy_memory(data, &return_element[1], (length - 1) * element_size);
         length--;
         return return_element_copy;
     }
 
     T *next_element = &data[index + 1];
 
-    void *new_array = dallocate(capacity, MEM_TAG_DARRAY);
+    T *new_array = (T *)dallocate(capacity, MEM_TAG_DARRAY);
+    if (!new_array)
+    {
+        DFATAL("Darray coulnd't allocate block for ::pop_at()");
+    }
     dcopy_memory(new_array, data, index * element_size);
-    dcopy_memory(((u8 *)new_array + (index * element_size)), next_element, (length - index) * element_size);
+    dcopy_memory(&new_array[index], next_element, (length - index) * element_size);
 
     dfree(data, capacity, MEM_TAG_RENDERER);
     data = (T *)new_array;
