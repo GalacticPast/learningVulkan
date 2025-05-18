@@ -11,10 +11,10 @@ bool dfreelist_create_and_destroy_test()
     u64 freelist_mem_requirements = INVALID_ID_64;
     dfreelist_create(&freelist_mem_requirements, 0, 0);
 
-    void      *mem      = platform_allocate(GIGA(1), false);
-    dfreelist *freelist = dfreelist_create(&freelist_mem_requirements, GIGA(1), mem);
+    void      *mem      = platform_allocate(GB(1), false);
+    dfreelist *freelist = dfreelist_create(&freelist_mem_requirements, GB(1), mem);
 
-    u64 one_gib = GIGA(1);
+    u64 one_gib = GB(1);
     expect_should_be(one_gib, freelist->memory_size);
 
     dfreelist_destroy(freelist);
@@ -34,8 +34,8 @@ bool dfreelist_allocate_and_deallocate_test()
     u64 freelist_mem_requirements = INVALID_ID_64;
     dfreelist_create(&freelist_mem_requirements, 0, 0);
 
-    void      *mem      = platform_allocate(GIGA(1), false);
-    dfreelist *freelist = dfreelist_create(&freelist_mem_requirements, GIGA(1), mem);
+    void      *mem      = platform_allocate(GB(1), false);
+    dfreelist *freelist = dfreelist_create(&freelist_mem_requirements, GB(1), mem);
 
     darray<u32 *> blocks;
     blocks.c_init();
@@ -43,7 +43,7 @@ bool dfreelist_allocate_and_deallocate_test()
     u32 array_size      = 10000;
     u32 array_byte_size = array_size * sizeof(u32);
 
-    u32 count = GIGA(1) / array_byte_size - 10000;
+    u32 count = GB(1) / array_byte_size - 10000;
 
     u32 *fib_sec = (u32 *)dfreelist_allocate(freelist, array_byte_size);
 
@@ -65,7 +65,7 @@ bool dfreelist_allocate_and_deallocate_test()
         blocks.push_back(array);
     }
 
-    count = GIGA(1) / array_byte_size - 10000;
+    count = GB(1) / array_byte_size - 10000;
     while (count--)
     {
         u32                               *array = blocks[count];
@@ -79,7 +79,7 @@ bool dfreelist_allocate_and_deallocate_test()
         }
     }
 
-    count = GIGA(1) / array_byte_size - 10000;
+    count = GB(1) / array_byte_size - 10000;
     while (count--)
     {
         u32 *block = blocks[count];

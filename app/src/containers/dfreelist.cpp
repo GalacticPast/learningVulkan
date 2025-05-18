@@ -6,6 +6,7 @@
 #include "defines.hpp"
 
 #define DFREELIST_PADDING 8
+#define DFREELIST_MINIMUM_ALLOCATION_BLOCK_SIZE 24
 
 static void dfreelist_add_node(dfreelist_node *previous, dfreelist_node *node, dfreelist_node *next)
 {
@@ -39,14 +40,21 @@ dfreelist *dfreelist_create(u64 *freelist_mem_requirements, u64 memory_size, voi
         return nullptr;
     }
     DASSERT(memory_size != 0);
-    dfreelist *free_list = (dfreelist *)memory;
-    free_list->memory    = ((u8 *)memory + sizeof(dfreelist));
-
-    void *raw_head             = free_list->memory;
-    free_list->head            = (dfreelist_node *)DALIGN_UP(raw_head, DFREELIST_PADDING);
-    free_list->head->block     = (char *)free_list->head + sizeof(dfreelist_node);
-    free_list->memory_size     = memory_size;
+    dfreelist *free_list       = (dfreelist *)memory;
     free_list->memory_commited = 0;
+
+    void *raw_freelist_memory_ptr = (char *)free_list + sizeof(dfreelist);
+    free_list->memory             = (void *)DALIGN_UP((uintptr_t)raw_freelist_memory_ptr, DFREELIST_PADDING);
+    u32 free_list_memory_offset   = (uintptr_t)free_list->memory - (uintptr_t)raw_freelist_memory_ptr;
+
+    free_list->memory_size = memory_size - (sizeof(dfreelist) + free_list_memory_offset);
+
+    // HACK:
+    DASSERT(free_list->memory_size >= GB(1));
+
+    void *raw_head         = free_list->memory;
+    free_list->head        = (dfreelist_node *)DALIGN_UP(raw_head, DFREELIST_PADDING);
+    free_list->head->block = (char *)free_list->head + sizeof(dfreelist_node);
 
     dfreelist_node *head = free_list->head;
 
@@ -84,7 +92,11 @@ void *dfreelist_allocate(dfreelist *free_list, u64 mem_size)
 
     dfreelist_allocated_memory_header *header          = nullptr;
     void                              *allocated_block = nullptr;
-    u64                                block_size      = INVALID_ID;
+
+    if (mem_size < DFREELIST_MINIMUM_ALLOCATION_BLOCK_SIZE)
+    {
+        mem_size = DFREELIST_MINIMUM_ALLOCATION_BLOCK_SIZE;
+    }
 
     s64 required_size = mem_size + sizeof(dfreelist_allocated_memory_header);
     DASSERT((s64)(free_list->memory_commited + required_size) < free_list->memory_size);
@@ -94,7 +106,6 @@ void *dfreelist_allocate(dfreelist *free_list, u64 mem_size)
         DASSERT(node->block_size < free_list->memory_size);
         if (node->block_size == required_size)
         {
-            block_size      = mem_size;
             allocated_block = node->block;
             header          = (dfreelist_allocated_memory_header *)node;
 
@@ -112,7 +123,6 @@ void *dfreelist_allocate(dfreelist *free_list, u64 mem_size)
 
             dfreelist_add_node(previous, new_node, node->next);
 
-            block_size      = mem_size;
             allocated_block = node->block;
             header          = (dfreelist_allocated_memory_header *)node;
 
@@ -122,8 +132,16 @@ void *dfreelist_allocate(dfreelist *free_list, u64 mem_size)
         node     = node->next;
     }
 
-    header->block_size          = block_size;
+    dzero_memory(header, sizeof(dfreelist_allocated_memory_header));
+
+    // check for overrides
+    header->padding[0] = INVALID_ID_64;
+    header->padding[1] = INVALID_ID_64;
+    //
+
+    header->block_size          = mem_size;
     free_list->memory_commited += mem_size;
+
     return allocated_block;
 }
 
@@ -132,10 +150,14 @@ bool dfreelist_dealocate(dfreelist *free_list, void *ptr)
     dfreelist_allocated_memory_header *header =
         (dfreelist_allocated_memory_header *)((u8 *)ptr - sizeof(dfreelist_allocated_memory_header));
 
-    u64 block_size = header->block_size;
+    DASSERT(header->padding[0] == INVALID_ID_64);
+    DASSERT(header->padding[1] == INVALID_ID_64);
 
-    DASSERT(block_size < GIGA(1));
+    u64 block_size = header->block_size;
+    DASSERT(block_size < GB(1));
     DASSERT(block_size > 0);
+
+    dzero_memory(header, sizeof(dfreelist_allocated_memory_header));
 
     dfreelist_node *new_node = (dfreelist_node *)header;
     new_node->block_size     = block_size;
@@ -164,25 +186,25 @@ bool dfreelist_dealocate(dfreelist *free_list, void *ptr)
     {
         // coalese prev and next blocks
 
-        // void *prev_ptr = (void *)((u8 *)previous->block + previous->block_size);
-        // void *next_ptr = (void *)((u8 *)new_node->block + new_node->block_size);
+        void *prev_ptr = (void *)((u8 *)previous->block + previous->block_size + sizeof(dfreelist_node));
+        void *next_ptr = (void *)((u8 *)new_node->block + new_node->block_size + sizeof(dfreelist_node));
 
-        // if (prev_ptr == new_node)
-        //{
-        //     previous->block_size += new_node->block_size + sizeof(dfreelist_node);
-        //     prev_ptr              = (void *)((u8 *)previous->block + previous->block_size);
-        //     if (prev_ptr == new_node->next)
-        //     {
-        //         previous->block_size += new_node->next->block_size + sizeof(dfreelist_node);
-        //         dfreelist_remove_node(new_node, node, node->next);
-        //     }
-        //     dfreelist_remove_node(previous, new_node, node);
-        // }
-        // else if (next_ptr == node)
-        //{
-        //     new_node->block_size += node->block_size + sizeof(dfreelist_node);
-        //     dfreelist_remove_node(new_node, node, node->next);
-        // }
+        if (prev_ptr == new_node)
+        {
+            previous->block_size += new_node->block_size + sizeof(dfreelist_node);
+            prev_ptr              = (void *)((u8 *)previous->block + previous->block_size);
+            if (prev_ptr == new_node->next)
+            {
+                previous->block_size += new_node->next->block_size + sizeof(dfreelist_node);
+                dfreelist_remove_node(new_node, node, node->next);
+            }
+            dfreelist_remove_node(previous, new_node, node);
+        }
+        else if (next_ptr == node)
+        {
+            new_node->block_size += node->block_size + sizeof(dfreelist_node);
+            dfreelist_remove_node(new_node, node, node->next);
+        }
     }
 
     return true;
