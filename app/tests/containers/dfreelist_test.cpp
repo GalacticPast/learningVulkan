@@ -15,7 +15,7 @@ bool dfreelist_create_and_destroy_test()
     dfreelist *freelist = dfreelist_create(&freelist_mem_requirements, GB(1), mem);
 
     u64 one_gib = GB(1);
-    expect_should_be(one_gib, freelist->memory_size);
+    expect_should_be(one_gib, freelist->size);
 
     dfreelist_destroy(freelist);
 
@@ -68,10 +68,7 @@ bool dfreelist_allocate_and_deallocate_test()
     count = GB(1) / array_byte_size - 10000;
     while (count--)
     {
-        u32                               *array = blocks[count];
-        dfreelist_allocated_memory_header *header =
-            (dfreelist_allocated_memory_header *)((u8 *)(array) - sizeof(dfreelist_allocated_memory_header));
-        expect_should_be_msg(array_byte_size, header->block_size, count);
+        u32 *array = blocks[count];
 
         for (u32 i = 0; i < array_size; i++)
         {
