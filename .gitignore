@@ -4,4 +4,4 @@
 /.vscode
 compile_flags.txt
 /obj
-
+/.cache
