@@ -53,6 +53,9 @@ void run_tests()
 int main()
 {
 
+    // run_tests();
+    // return 0;
+
     application_config app_config;
     app_config.width            = INVALID_ID;
     app_config.height           = INVALID_ID;

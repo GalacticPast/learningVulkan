@@ -5,6 +5,8 @@
 #include "core/logger.hpp"
 #include "defines.hpp"
 
+#define DFREELIST_PADDING 8
+
 static void dfreelist_add_node(dfreelist_node *previous, dfreelist_node *node, dfreelist_node *next)
 {
     if (!previous || !node)
@@ -84,45 +86,62 @@ void *dfreelist_allocate(dfreelist *free_list, u64 mem_size)
     void                              *allocated_block = nullptr;
     u64                                block_size      = INVALID_ID;
 
+    u64 required_size = mem_size + sizeof(dfreelist_allocated_memory_header);
+
     while (node)
     {
-        if (node->block_size == mem_size)
+
+        if (node->block_size == required_size)
         {
             allocated_block = node->block;
-            block_size      = node->block_size;
+            block_size      = mem_size;
             header          = (dfreelist_allocated_memory_header *)node;
 
             dfreelist_remove_node(previous, node, node->next);
+            node = nullptr;
 
             break;
         }
-        else if (node->block_size > (mem_size + sizeof(dfreelist_node)))
+        else if (node->block_size > required_size)
         {
-            void           *raw_ptr  = (dfreelist_node *)((u8 *)node->block + mem_size);
-            dfreelist_node *new_node = (dfreelist_node *)DALIGN_UP(raw_ptr, 8);
+            void           *raw_ptr          = (char *)node->block + required_size;
+            dfreelist_node *new_node         = (dfreelist_node *)DALIGN_UP(raw_ptr, 8);
+            u64             alignment_offset = (char *)new_node - (char *)raw_ptr;
+            u64             new_node_size    = node->block_size - required_size - alignment_offset;
 
-            new_node->block_size = node->block_size - (mem_size + sizeof(dfreelist_node));
-            new_node->block      = ((u8 *)new_node + sizeof(dfreelist_node));
+            if (new_node_size < sizeof(dfreelist_node))
+            {
+                previous = node;
+                node     = node->next;
+                continue;
+            }
 
-            header = (dfreelist_allocated_memory_header *)node;
+            new_node->block_size = new_node_size;
+            new_node->block      = (char *)new_node + sizeof(dfreelist_node);
 
-            dfreelist_add_node(previous, new_node, node->next);
-
+            header =
+                (dfreelist_allocated_memory_header *)((char *)node->block - sizeof(dfreelist_allocated_memory_header));
             allocated_block = node->block;
             block_size      = mem_size;
-            node            = nullptr;
+
+            dfreelist_node *next = node->next;
+            if (!previous)
+                free_list->head = new_node;
+            else
+                previous->next = new_node;
+            new_node->next = next;
 
             break;
         }
         previous = node;
         node     = node->next;
     }
-    if (block_size == INVALID_ID || !allocated_block || !header)
+    if (block_size == INVALID_ID && !allocated_block && !header)
     {
         DERROR("No block of size %lld was found returning nullptr", mem_size);
     }
 
-    header->block_size          = block_size;
+    header->block_size          = mem_size;
     free_list->memory_commited += mem_size;
 
     return allocated_block;
@@ -160,25 +179,25 @@ bool dfreelist_dealocate(dfreelist *free_list, void *ptr)
     {
         // coalese prev and next blocks
 
-        void *prev_ptr = (void *)((u8 *)previous->block + previous->block_size);
-        void *next_ptr = (void *)((u8 *)new_node->block + new_node->block_size);
+        // void *prev_ptr = (void *)((u8 *)previous->block + previous->block_size);
+        // void *next_ptr = (void *)((u8 *)new_node->block + new_node->block_size);
 
-        if (prev_ptr == new_node)
-        {
-            previous->block_size += new_node->block_size + sizeof(dfreelist_node);
-            prev_ptr              = (void *)((u8 *)previous->block + previous->block_size);
-            if (prev_ptr == new_node->next)
-            {
-                previous->block_size += new_node->next->block_size + sizeof(dfreelist_node);
-                dfreelist_remove_node(new_node, node, node->next);
-            }
-            dfreelist_remove_node(previous, new_node, node);
-        }
-        else if (next_ptr == node)
-        {
-            new_node->block_size += node->block_size + sizeof(dfreelist_node);
-            dfreelist_remove_node(new_node, node, node->next);
-        }
+        // if (prev_ptr == new_node)
+        //{
+        //     previous->block_size += new_node->block_size + sizeof(dfreelist_node);
+        //     prev_ptr              = (void *)((u8 *)previous->block + previous->block_size);
+        //     if (prev_ptr == new_node->next)
+        //     {
+        //         previous->block_size += new_node->next->block_size + sizeof(dfreelist_node);
+        //         dfreelist_remove_node(new_node, node, node->next);
+        //     }
+        //     dfreelist_remove_node(previous, new_node, node);
+        // }
+        // else if (next_ptr == node)
+        //{
+        //     new_node->block_size += node->block_size + sizeof(dfreelist_node);
+        //     dfreelist_remove_node(new_node, node, node->next);
+        // }
     }
 
     return true;
