@@ -39,6 +39,6 @@ if [[ $platform == "wayland" ]]; then
 
 fi
 
-time make all
+time make -j all
 
 #./post_build.sh

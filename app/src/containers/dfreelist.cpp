@@ -9,13 +9,11 @@
 
 static void dfreelist_add_node(dfreelist_node *previous, dfreelist_node *node, dfreelist_node *next)
 {
-    if (!previous || !node)
+    if (previous)
     {
-        DERROR("Provided node is nullptr dfreelist_add_node");
-        return;
+        previous->next = node;
     }
-    previous->next = node;
-    node->next     = next;
+    node->next = next;
 }
 
 static void dfreelist_remove_node(dfreelist_node *previous, dfreelist_node *node, dfreelist_node *next)
@@ -45,19 +43,20 @@ dfreelist *dfreelist_create(u64 *freelist_mem_requirements, u64 memory_size, voi
     free_list->memory    = ((u8 *)memory + sizeof(dfreelist));
 
     void *raw_head             = free_list->memory;
-    free_list->head            = (dfreelist_node *)DALIGN_UP(raw_head, 8);
+    free_list->head            = (dfreelist_node *)DALIGN_UP(raw_head, DFREELIST_PADDING);
+    free_list->head->block     = (char *)free_list->head + sizeof(dfreelist_node);
     free_list->memory_size     = memory_size;
     free_list->memory_commited = 0;
 
-    free_list->head->block_size = sizeof(dfreelist_node);
-    free_list->head->block      = ((u8 *)memory + sizeof(dfreelist) + sizeof(dfreelist_node));
+    dfreelist_node *head = free_list->head;
 
-    // allocte the next free node because we dont want to pollute the head node
-    dfreelist_node *head     = free_list->head;
-    void           *raw_next = ((u8 *)head->block + sizeof(dfreelist_node));
-    head->next               = (dfreelist_node *)DALIGN_UP(raw_next, 8);
-    head->next->block        = ((u8 *)head->block + (sizeof(dfreelist_node)));
-    head->next->block_size   = memory_size - sizeof(dfreelist) - (sizeof(dfreelist_node) * 2);
+    head->next       = (dfreelist_node *)((char *)head->block + sizeof(dfreelist_node));
+    head->block_size = sizeof(dfreelist_node);
+
+    dfreelist_node *next = free_list->head->next;
+    next->next           = nullptr;
+    next->block          = (char *)next + sizeof(dfreelist_node);
+    next->block_size     = memory_size - (head->block_size + (sizeof(dfreelist_node) * 2));
 
     return free_list;
 }
@@ -79,6 +78,7 @@ void *dfreelist_allocate(dfreelist *free_list, u64 mem_size)
         DERROR("No freelists were provied for allocation. Returning nullptr");
         return nullptr;
     }
+
     dfreelist_node *node     = free_list->head;
     dfreelist_node *previous = nullptr;
 
@@ -86,64 +86,44 @@ void *dfreelist_allocate(dfreelist *free_list, u64 mem_size)
     void                              *allocated_block = nullptr;
     u64                                block_size      = INVALID_ID;
 
-    u64 required_size = mem_size + sizeof(dfreelist_allocated_memory_header);
+    s64 required_size = mem_size + sizeof(dfreelist_allocated_memory_header);
+    DASSERT((s64)(free_list->memory_commited + required_size) < free_list->memory_size);
 
     while (node)
     {
-
+        DASSERT(node->block_size < free_list->memory_size);
         if (node->block_size == required_size)
         {
-            allocated_block = node->block;
             block_size      = mem_size;
+            allocated_block = node->block;
             header          = (dfreelist_allocated_memory_header *)node;
 
             dfreelist_remove_node(previous, node, node->next);
-            node = nullptr;
-
             break;
         }
         else if (node->block_size > required_size)
         {
-            void           *raw_ptr          = (char *)node->block + required_size;
-            dfreelist_node *new_node         = (dfreelist_node *)DALIGN_UP(raw_ptr, 8);
-            u64             alignment_offset = (char *)new_node - (char *)raw_ptr;
-            u64             new_node_size    = node->block_size - required_size - alignment_offset;
+            void           *raw_node_ptr = (char *)node->block + required_size;
+            dfreelist_node *new_node     = (dfreelist_node *)DALIGN_UP((uintptr_t)raw_node_ptr, DFREELIST_PADDING);
 
-            if (new_node_size < sizeof(dfreelist_node))
-            {
-                previous = node;
-                node     = node->next;
-                continue;
-            }
-
-            new_node->block_size = new_node_size;
+            u64 ptr_offset       = (uintptr_t)new_node - (uintptr_t)raw_node_ptr;
+            new_node->block_size = node->block_size - (required_size + ptr_offset);
             new_node->block      = (char *)new_node + sizeof(dfreelist_node);
 
-            header =
-                (dfreelist_allocated_memory_header *)((char *)node->block - sizeof(dfreelist_allocated_memory_header));
-            allocated_block = node->block;
-            block_size      = mem_size;
+            dfreelist_add_node(previous, new_node, node->next);
 
-            dfreelist_node *next = node->next;
-            if (!previous)
-                free_list->head = new_node;
-            else
-                previous->next = new_node;
-            new_node->next = next;
+            block_size      = mem_size;
+            allocated_block = node->block;
+            header          = (dfreelist_allocated_memory_header *)node;
 
             break;
         }
         previous = node;
         node     = node->next;
     }
-    if (block_size == INVALID_ID && !allocated_block && !header)
-    {
-        DERROR("No block of size %lld was found returning nullptr", mem_size);
-    }
 
-    header->block_size          = mem_size;
+    header->block_size          = block_size;
     free_list->memory_commited += mem_size;
-
     return allocated_block;
 }
 
@@ -153,6 +133,9 @@ bool dfreelist_dealocate(dfreelist *free_list, void *ptr)
         (dfreelist_allocated_memory_header *)((u8 *)ptr - sizeof(dfreelist_allocated_memory_header));
 
     u64 block_size = header->block_size;
+
+    DASSERT(block_size < GIGA(1));
+    DASSERT(block_size > 0);
 
     dfreelist_node *new_node = (dfreelist_node *)header;
     new_node->block_size     = block_size;
@@ -175,6 +158,8 @@ bool dfreelist_dealocate(dfreelist *free_list, void *ptr)
     }
 
     free_list->memory_commited -= new_node->block_size;
+
+    DASSERT(free_list->memory_commited >= 0);
 
     {
         // coalese prev and next blocks
