@@ -57,7 +57,7 @@ void json_parse_material(dstring *file_base_path, material_config *out_material_
         else if (string_compare(var, "diffuse_map_name"))
         {
             ptr += string_first_char_occurence(ptr, ':');
-            json_parse_string(ptr, out_material_config->diffuse_tex_name);
+            json_parse_string(ptr, out_material_config->albedo_map);
         }
         u32 occurence = string_first_char_occurence(ptr, '\n');
         if (*ptr == '}')

@@ -10,6 +10,9 @@ void vulkan_backend_shutdown();
 bool vulkan_backend_resize();
 bool vulkan_draw_frame(render_data *data);
 
+bool vulkan_create_material(material *in_material);
+bool vulkan_destroy_material(material *in_material);
+
 bool vulkan_create_texture(texture *in_texture, u8 *pixels);
 bool vulkan_destroy_texture(texture *in_texture);
 

@@ -1,5 +1,9 @@
 #include "core/application.hpp"
-#include "vulkan_buffers.hpp"
+#include "renderer/vulkan/vulkan_types.hpp"
+#include "resources/material_system.hpp"
+#include "resources/resource_types.hpp"
+
+#include "resources/material_system.hpp"
 
 bool vulkan_create_graphics_command_pool(vulkan_context *vk_context)
 {
@@ -17,69 +21,165 @@ bool vulkan_create_graphics_command_pool(vulkan_context *vk_context)
     return true;
 }
 
-bool vulkan_create_descriptor_command_pool(vulkan_context *vk_context)
+bool vulkan_create_descriptor_command_pools(vulkan_context *vk_context)
 {
-    VkDescriptorPoolSize pool_sizes[2]{};
-
-    pool_sizes[0].type            = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    pool_sizes[0].descriptorCount = VULKAN_MAX_DESCRIPTOR_SET_COUNT;
-
-    pool_sizes[1].type            = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    pool_sizes[1].descriptorCount = VULKAN_MAX_DESCRIPTOR_SET_COUNT;
-
-    VkDescriptorPoolCreateInfo pool_create_info{};
-    pool_create_info.sType         = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-    pool_create_info.pNext         = 0;
-    pool_create_info.flags         = 0;
-    pool_create_info.maxSets       = VULKAN_MAX_DESCRIPTOR_SET_COUNT;
-    pool_create_info.poolSizeCount = 2;
-    pool_create_info.pPoolSizes    = pool_sizes;
-
-    VkResult result = vkCreateDescriptorPool(vk_context->vk_device.logical, &pool_create_info, vk_context->vk_allocator,
-                                             &vk_context->descriptor_command_pool);
-    VK_CHECK(result);
-
-    darray<VkDescriptorSetLayout> desc_set_layout(VULKAN_MAX_DESCRIPTOR_SET_COUNT);
-    for (u32 i = 0; i < VULKAN_MAX_DESCRIPTOR_SET_COUNT; i++)
     {
-        desc_set_layout[i] = vk_context->descriptor_layout;
+        // global descriptor command pool
+        VkDescriptorPoolSize global_pool_sizes[1]{};
+
+        global_pool_sizes[0].type            = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        global_pool_sizes[0].descriptorCount = MAX_FRAMES_IN_FLIGHT;
+
+        VkDescriptorPoolCreateInfo global_descriptor_pool_create_info{};
+        global_descriptor_pool_create_info.sType         = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+        global_descriptor_pool_create_info.pNext         = 0;
+        global_descriptor_pool_create_info.flags         = 0;
+        global_descriptor_pool_create_info.maxSets       = MAX_FRAMES_IN_FLIGHT;
+        global_descriptor_pool_create_info.poolSizeCount = 1;
+        global_descriptor_pool_create_info.pPoolSizes    = global_pool_sizes;
+
+        VkResult result = vkCreateDescriptorPool(vk_context->vk_device.logical, &global_descriptor_pool_create_info,
+                                                 vk_context->vk_allocator, &vk_context->global_descriptor_command_pool);
+        VK_CHECK(result);
+
+        darray<VkDescriptorSetLayout> global_desc_set_layout(MAX_FRAMES_IN_FLIGHT);
+        for (u32 i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
+        {
+            global_desc_set_layout[i] = vk_context->global_descriptor_layout;
+        }
+
+        VkDescriptorSetAllocateInfo global_desc_set_alloc_info{};
+        global_desc_set_alloc_info.sType              = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+        global_desc_set_alloc_info.pNext              = 0;
+        global_desc_set_alloc_info.descriptorPool     = vk_context->global_descriptor_command_pool;
+        global_desc_set_alloc_info.descriptorSetCount = MAX_FRAMES_IN_FLIGHT;
+        global_desc_set_alloc_info.pSetLayouts        = (const VkDescriptorSetLayout *)global_desc_set_layout.data;
+
+        result = vkAllocateDescriptorSets(vk_context->vk_device.logical, &global_desc_set_alloc_info,
+                                          (VkDescriptorSet *)vk_context->global_descriptor_sets.data);
+        VK_CHECK(result);
     }
+    {
+        // material
+        VkDescriptorPoolSize material_pool_sizes[1]{};
 
-    VkDescriptorSetAllocateInfo desc_set_alloc_info{};
-    desc_set_alloc_info.sType              = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-    desc_set_alloc_info.pNext              = 0;
-    desc_set_alloc_info.descriptorPool     = vk_context->descriptor_command_pool;
-    desc_set_alloc_info.descriptorSetCount = VULKAN_MAX_DESCRIPTOR_SET_COUNT;
-    desc_set_alloc_info.pSetLayouts        = (const VkDescriptorSetLayout *)desc_set_layout.data;
+        material_pool_sizes[0].type            = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        material_pool_sizes[0].descriptorCount = VULKAN_MAX_DESCRIPTOR_SET_COUNT;
 
-    result = vkAllocateDescriptorSets(vk_context->vk_device.logical, &desc_set_alloc_info,
-                                      (VkDescriptorSet *)vk_context->descriptor_sets.data);
-    VK_CHECK(result);
+        VkDescriptorPoolCreateInfo material_descriptor_pool_create_info{};
+        material_descriptor_pool_create_info.sType         = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+        material_descriptor_pool_create_info.pNext         = 0;
+        material_descriptor_pool_create_info.flags         = 0;
+        material_descriptor_pool_create_info.maxSets       = VULKAN_MAX_DESCRIPTOR_SET_COUNT;
+        material_descriptor_pool_create_info.poolSizeCount = 1;
+        material_descriptor_pool_create_info.pPoolSizes    = material_pool_sizes;
 
+        VkResult result =
+            vkCreateDescriptorPool(vk_context->vk_device.logical, &material_descriptor_pool_create_info,
+                                   vk_context->vk_allocator, &vk_context->material_descriptor_command_pool);
+        VK_CHECK(result);
+
+        darray<VkDescriptorSetLayout> material_desc_set_layout(VULKAN_MAX_DESCRIPTOR_SET_COUNT);
+        for (u32 i = 0; i < VULKAN_MAX_DESCRIPTOR_SET_COUNT; i++)
+        {
+            material_desc_set_layout[i] = vk_context->material_descriptor_layout;
+        }
+
+        VkDescriptorSetAllocateInfo material_desc_set_alloc_info{};
+        material_desc_set_alloc_info.sType              = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+        material_desc_set_alloc_info.pNext              = 0;
+        material_desc_set_alloc_info.descriptorPool     = vk_context->material_descriptor_command_pool;
+        material_desc_set_alloc_info.descriptorSetCount = VULKAN_MAX_DESCRIPTOR_SET_COUNT;
+        material_desc_set_alloc_info.pSetLayouts        = (const VkDescriptorSetLayout *)material_desc_set_layout.data;
+
+        result = vkAllocateDescriptorSets(vk_context->vk_device.logical, &material_desc_set_alloc_info,
+                                          (VkDescriptorSet *)vk_context->material_descriptor_sets.data);
+        VK_CHECK(result);
+    }
     return true;
 }
 
-bool vulkan_update_descriptor_sets(vulkan_context *vk_context, vulkan_texture *texture)
+bool vulkan_update_materials_descriptor_set(vulkan_context *vk_context, material *material)
 {
     VkDescriptorBufferInfo desc_buffer_info{};
 
-    u32 descriptor_set_index = texture->descriptor_id;
+    u32 descriptor_set_index = material->internal_id;
     DTRACE("Updataing descriptor_set_index: %d", descriptor_set_index);
 
-    desc_buffer_info.buffer = vk_context->global_uniform_buffers[descriptor_set_index].handle;
-    desc_buffer_info.offset = 0;
-    desc_buffer_info.range  = sizeof(uniform_buffer_object);
+    // for now we only have 2
+    VkDescriptorImageInfo image_infos[2] = {};
 
-    VkDescriptorImageInfo desc_image_info{};
-    desc_image_info.sampler     = texture->sampler;
-    desc_image_info.imageView   = texture->image.view;
-    desc_image_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    // INFO: in case
+    struct material *default_mat = material_system_get_default_material();
+
+    // albedo
+    {
+        vulkan_texture *tex_state = nullptr;
+
+        if (material->map.albedo)
+        {
+            tex_state = (vulkan_texture *)material->map.albedo->vulkan_texture_state;
+        }
+        if (!tex_state)
+        {
+            tex_state = (vulkan_texture *)default_mat->map.albedo->vulkan_texture_state;
+        }
+
+        image_infos[0].sampler     = tex_state->sampler;
+        image_infos[0].imageView   = tex_state->image.view;
+        image_infos[0].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    }
+    // alpha
+    {
+        vulkan_texture *tex_state = nullptr;
+
+        if (material->map.alpha)
+        {
+            tex_state = (vulkan_texture *)material->map.alpha->vulkan_texture_state;
+        }
+        if (!tex_state)
+        {
+            tex_state = (vulkan_texture *)default_mat->map.alpha->vulkan_texture_state;
+        }
+
+        image_infos[1].sampler     = tex_state->sampler;
+        image_infos[1].imageView   = tex_state->image.view;
+        image_infos[1].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    }
 
     VkWriteDescriptorSet desc_writes[2]{};
+    // albdeo
+    for (u32 i = 0; i < 2; i++)
+    {
+        desc_writes[i].sType            = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        desc_writes[i].pNext            = 0;
+        desc_writes[i].dstSet           = vk_context->material_descriptor_sets[descriptor_set_index];
+        desc_writes[i].dstBinding       = 0;
+        desc_writes[i].dstArrayElement  = 0;
+        desc_writes[i].descriptorCount  = 1;
+        desc_writes[i].descriptorType   = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        desc_writes[i].pBufferInfo      = 0;
+        desc_writes[i].pImageInfo       = &image_infos[i];
+        desc_writes[i].pTexelBufferView = 0;
+    }
+
+    vkUpdateDescriptorSets(vk_context->vk_device.logical, 2, desc_writes, 0, nullptr);
+    return true;
+}
+
+bool vulkan_update_global_descriptor_sets(vulkan_context *vk_context, u32 frame_index)
+{
+    VkDescriptorBufferInfo desc_buffer_info{};
+
+    desc_buffer_info.buffer = vk_context->global_uniform_buffers[frame_index].handle;
+    desc_buffer_info.offset = 0;
+    desc_buffer_info.range  = sizeof(global_uniform_buffer_object);
+
+    VkWriteDescriptorSet desc_writes[1]{};
 
     desc_writes[0].sType            = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
     desc_writes[0].pNext            = 0;
-    desc_writes[0].dstSet           = vk_context->descriptor_sets[descriptor_set_index];
+    desc_writes[0].dstSet           = vk_context->global_descriptor_sets[frame_index];
     desc_writes[0].dstBinding       = 0;
     desc_writes[0].dstArrayElement  = 0;
     desc_writes[0].descriptorCount  = 1;
@@ -88,17 +188,6 @@ bool vulkan_update_descriptor_sets(vulkan_context *vk_context, vulkan_texture *t
     desc_writes[0].pImageInfo       = 0;
     desc_writes[0].pTexelBufferView = 0;
 
-    desc_writes[1].sType            = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    desc_writes[1].pNext            = 0;
-    desc_writes[1].dstSet           = vk_context->descriptor_sets[descriptor_set_index];
-    desc_writes[1].dstBinding       = 1;
-    desc_writes[1].dstArrayElement  = 0;
-    desc_writes[1].descriptorCount  = 1;
-    desc_writes[1].descriptorType   = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    desc_writes[1].pBufferInfo      = 0;
-    desc_writes[1].pImageInfo       = &desc_image_info;
-    desc_writes[1].pTexelBufferView = 0;
-
-    vkUpdateDescriptorSets(vk_context->vk_device.logical, 2, desc_writes, 0, nullptr);
+    vkUpdateDescriptorSets(vk_context->vk_device.logical, 1, desc_writes, 0, nullptr);
     return true;
 }

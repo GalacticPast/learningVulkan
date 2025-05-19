@@ -211,44 +211,72 @@ bool vulkan_create_graphics_pipeline(vulkan_context *vk_context)
     depth_stencil_state_create_info.front                 = {};
     depth_stencil_state_create_info.back                  = {};
 
-    VkDescriptorSetLayoutBinding descriptor_set_ubo_layout_binding{};
-    descriptor_set_ubo_layout_binding.binding            = 0;
-    descriptor_set_ubo_layout_binding.descriptorType     = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    descriptor_set_ubo_layout_binding.descriptorCount    = 1;
-    descriptor_set_ubo_layout_binding.stageFlags         = VK_SHADER_STAGE_VERTEX_BIT;
-    descriptor_set_ubo_layout_binding.pImmutableSamplers = 0;
+    // global global_descriptor_set_ubo_layout_binding
+    VkDescriptorSetLayoutBinding global_descriptor_set_ubo_layout_binding{};
+    global_descriptor_set_ubo_layout_binding.binding            = 0;
+    global_descriptor_set_ubo_layout_binding.descriptorType     = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    global_descriptor_set_ubo_layout_binding.descriptorCount    = 1;
+    global_descriptor_set_ubo_layout_binding.stageFlags         = VK_SHADER_STAGE_VERTEX_BIT;
+    global_descriptor_set_ubo_layout_binding.pImmutableSamplers = 0;
 
-    VkDescriptorSetLayoutBinding descriptor_set_sampler_layout_binding{};
-    descriptor_set_sampler_layout_binding.binding            = 1;
-    descriptor_set_sampler_layout_binding.descriptorCount    = 1;
-    descriptor_set_sampler_layout_binding.descriptorType     = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    descriptor_set_sampler_layout_binding.stageFlags         = VK_SHADER_STAGE_FRAGMENT_BIT;
-    descriptor_set_sampler_layout_binding.pImmutableSamplers = 0;
+    VkDescriptorSetLayoutBinding global_descriptor_set_layout_bindings[1]{};
+    global_descriptor_set_layout_bindings[0] = global_descriptor_set_ubo_layout_binding;
 
-    VkDescriptorSetLayoutBinding descriptor_set_layout_bindings[2]{};
-    descriptor_set_layout_bindings[0] = descriptor_set_ubo_layout_binding;
-    descriptor_set_layout_bindings[1] = descriptor_set_sampler_layout_binding;
+    VkDescriptorSetLayoutCreateInfo global_descriptor_set_layout_create_info{};
+    global_descriptor_set_layout_create_info.sType        = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+    global_descriptor_set_layout_create_info.pNext        = 0;
+    global_descriptor_set_layout_create_info.flags        = 0;
+    global_descriptor_set_layout_create_info.bindingCount = 1;
+    global_descriptor_set_layout_create_info.pBindings    = global_descriptor_set_layout_bindings;
 
-    VkDescriptorSetLayoutCreateInfo descriptor_set_layout_create_info{};
-    descriptor_set_layout_create_info.sType        = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-    descriptor_set_layout_create_info.pNext        = 0;
-    descriptor_set_layout_create_info.flags        = 0;
-    descriptor_set_layout_create_info.bindingCount = 2;
-    descriptor_set_layout_create_info.pBindings    = descriptor_set_layout_bindings;
-
-    VkResult result = vkCreateDescriptorSetLayout(vk_context->vk_device.logical, &descriptor_set_layout_create_info,
-                                                  vk_context->vk_allocator, &vk_context->descriptor_layout);
+    VkResult result =
+        vkCreateDescriptorSetLayout(vk_context->vk_device.logical, &global_descriptor_set_layout_create_info,
+                                    vk_context->vk_allocator, &vk_context->global_descriptor_layout);
     VK_CHECK(result);
+
+    // material_descriptor_set_layout_binding
+    VkDescriptorSetLayoutBinding material_descriptor_set_layout_bindings[2]{};
+
+    for (u32 i = 0; i < 2; i++)
+    {
+        material_descriptor_set_layout_bindings[i].binding            = i;
+        material_descriptor_set_layout_bindings[i].descriptorCount    = 1;
+        material_descriptor_set_layout_bindings[i].descriptorType     = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        material_descriptor_set_layout_bindings[i].stageFlags         = VK_SHADER_STAGE_FRAGMENT_BIT;
+        material_descriptor_set_layout_bindings[i].pImmutableSamplers = nullptr;
+    }
+
+    VkDescriptorSetLayoutCreateInfo material_descriptor_set_layout_create_info{};
+    material_descriptor_set_layout_create_info.sType        = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+    material_descriptor_set_layout_create_info.pNext        = 0;
+    material_descriptor_set_layout_create_info.flags        = 0;
+    material_descriptor_set_layout_create_info.bindingCount = 2;
+    material_descriptor_set_layout_create_info.pBindings    = material_descriptor_set_layout_bindings;
+
+    result = vkCreateDescriptorSetLayout(vk_context->vk_device.logical, &material_descriptor_set_layout_create_info,
+                                         vk_context->vk_allocator, &vk_context->material_descriptor_layout);
+    VK_CHECK(result);
+
+    VkDescriptorSetLayout set_layouts[2] = {vk_context->global_descriptor_layout,
+                                            vk_context->material_descriptor_layout};
+
+    // object specific push constants
+    VkPushConstantRange object_push_constant_range{};
+    object_push_constant_range.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+    object_push_constant_range.offset     = 0;
+
+    DASSERT_MSG(sizeof(object_uniform_buffer_object) == 128, "Object uniform buffer must be 128 bytes wide.");
+    object_push_constant_range.size = sizeof(object_uniform_buffer_object);
 
     VkPipelineLayoutCreateInfo pipeline_layout_create_info{};
 
     pipeline_layout_create_info.sType                  = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
     pipeline_layout_create_info.pNext                  = 0;
     pipeline_layout_create_info.flags                  = 0;
-    pipeline_layout_create_info.setLayoutCount         = 1;
-    pipeline_layout_create_info.pSetLayouts            = &vk_context->descriptor_layout;
-    pipeline_layout_create_info.pushConstantRangeCount = 0;
-    pipeline_layout_create_info.pPushConstantRanges    = nullptr;
+    pipeline_layout_create_info.setLayoutCount         = 2;
+    pipeline_layout_create_info.pSetLayouts            = set_layouts;
+    pipeline_layout_create_info.pushConstantRangeCount = 1;
+    pipeline_layout_create_info.pPushConstantRanges    = &object_push_constant_range;
 
     result = vkCreatePipelineLayout(vk_context->vk_device.logical, &pipeline_layout_create_info,
                                     vk_context->vk_allocator, &vk_context->vk_graphics_pipeline.layout);

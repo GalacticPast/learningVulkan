@@ -43,10 +43,13 @@ bool vulkan_backend_initialize(u64 *vulkan_backend_memory_requirements, applicat
     vk_context->vk_allocator = nullptr;
 
     {
-        vk_context->global_ubo_data.c_init(VULKAN_MAX_DESCRIPTOR_SET_COUNT);
+        vk_context->global_ubo_data.c_init(MAX_FRAMES_IN_FLIGHT);
     }
     {
-        vk_context->descriptor_sets.c_init(VULKAN_MAX_DESCRIPTOR_SET_COUNT);
+        vk_context->global_descriptor_sets.c_init(MAX_FRAMES_IN_FLIGHT);
+    }
+    {
+        vk_context->material_descriptor_sets.c_init(VULKAN_MAX_DESCRIPTOR_SET_COUNT);
     }
     {
         vk_context->command_buffers.c_init(MAX_FRAMES_IN_FLIGHT);
@@ -223,7 +226,7 @@ bool vulkan_backend_initialize(u64 *vulkan_backend_memory_requirements, applicat
         DERROR("Vulkan global uniform buffer creation failed.");
         return false;
     }
-    if (!vulkan_create_descriptor_command_pool(vk_context))
+    if (!vulkan_create_descriptor_command_pools(vk_context))
     {
         DERROR("Vulkan descriptor command pool and sets creation failed.");
         return false;
@@ -254,15 +257,24 @@ bool vulkan_backend_initialize(u64 *vulkan_backend_memory_requirements, applicat
     return true;
 }
 
+bool vulkan_create_material(material *in_mat)
+{
+    // HACK: FIX THIS
+    static u32 id       = 0;
+    in_mat->internal_id = id;
+    id++;
+
+    bool result = vulkan_update_materials_descriptor_set(vk_context, in_mat);
+
+    DASSERT(result == true);
+
+    return true;
+}
+
 bool vulkan_create_texture(texture *in_texture, u8 *pixels)
 {
     in_texture->vulkan_texture_state = (vulkan_texture *)dallocate(sizeof(vulkan_texture), MEM_TAG_RENDERER);
     vulkan_texture *vk_texture       = (vulkan_texture *)in_texture->vulkan_texture_state;
-
-    // HACK: FIX THIS
-    static u32 id             = 0;
-    vk_texture->descriptor_id = id;
-    id++;
 
     u32 tex_width    = in_texture->tex_width;
     u32 tex_height   = in_texture->tex_height;
@@ -324,8 +336,6 @@ bool vulkan_create_texture(texture *in_texture, u8 *pixels)
 
     VkResult res = vkCreateSampler(vk_context->vk_device.logical, &texture_sampler_create_info,
                                    vk_context->vk_allocator, &vk_texture->sampler);
-
-    vulkan_update_descriptor_sets(vk_context, vk_texture);
 
     VK_CHECK(res);
 
@@ -410,11 +420,15 @@ void vulkan_backend_shutdown()
     vulkan_destroy_buffer(vk_context, &vk_context->vertex_buffer);
     vulkan_destroy_buffer(vk_context, &vk_context->index_buffer);
 
-    vkDestroyDescriptorPool(device, vk_context->descriptor_command_pool, allocator);
-    vkDestroyDescriptorSetLayout(device, vk_context->descriptor_layout, allocator);
-    vk_context->descriptor_sets.~darray();
+    vkDestroyDescriptorPool(device, vk_context->global_descriptor_command_pool, allocator);
+    vkDestroyDescriptorSetLayout(device, vk_context->global_descriptor_layout, allocator);
+    vk_context->global_descriptor_sets.~darray();
 
     vk_context->global_ubo_data.~darray();
+
+    vkDestroyDescriptorPool(device, vk_context->material_descriptor_command_pool, allocator);
+    vkDestroyDescriptorSetLayout(device, vk_context->material_descriptor_layout, allocator);
+    vk_context->material_descriptor_sets.~darray();
 
     vulkan_free_command_buffers(vk_context, &vk_context->graphics_command_pool,
                                 (VkCommandBuffer *)vk_context->command_buffers.data, MAX_FRAMES_IN_FLIGHT);
@@ -428,7 +442,7 @@ void vulkan_backend_shutdown()
     dfree(vk_context->vk_swapchain.buffers, sizeof(VkFramebuffer) * vk_context->vk_swapchain.images_count,
           MEM_TAG_RENDERER);
 
-    for (u32 i = 0; i < VULKAN_MAX_DESCRIPTOR_SET_COUNT; i++)
+    for (u32 i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
     {
         vulkan_destroy_buffer(vk_context, &vk_context->global_uniform_buffers[i]);
     }
@@ -552,9 +566,9 @@ VkBool32 vulkan_dbg_msg_rprt_callback(VkDebugUtilsMessageSeverityFlagBitsEXT    
     return VK_FALSE;
 }
 
-void vulkan_update_global_uniform_buffer(uniform_buffer_object *global_ubo, u32 current_frame_index)
+void vulkan_update_global_uniform_buffer(global_uniform_buffer_object *global_ubo, u32 current_frame_index)
 {
-    dcopy_memory(vk_context->global_ubo_data[current_frame_index], global_ubo, sizeof(uniform_buffer_object));
+    dcopy_memory(vk_context->global_ubo_data[current_frame_index], global_ubo, sizeof(global_uniform_buffer_object));
 }
 
 u32 vulkan_calculate_vertex_offset(vulkan_context *vk_context, u32 geometry_id)
@@ -662,7 +676,7 @@ bool vulkan_destroy_geometry(geometry *geometry)
 
     return true;
 };
-// HACK: to draw sponza
+
 bool vulkan_draw_geometries(render_data *data, VkCommandBuffer *curr_command_buffer, u32 curr_frame_index)
 {
 
@@ -671,13 +685,16 @@ bool vulkan_draw_geometries(render_data *data, VkCommandBuffer *curr_command_buf
     vulkan_begin_command_buffer_single_use(vk_context, *curr_command_buffer);
     vulkan_begin_frame_renderpass(vk_context, *curr_command_buffer, curr_frame_index);
 
+    // bind the globals
+    vkCmdBindDescriptorSets(*curr_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                            vk_context->vk_graphics_pipeline.layout, 0, 1,
+                            &vk_context->global_descriptor_sets[curr_frame_index], 0, nullptr);
+
     VkBuffer     vertex_buffers[] = {vk_context->vertex_buffer.handle};
     VkDeviceSize offsets[]        = {0};
 
     vkCmdBindVertexBuffers(*curr_command_buffer, 0, 1, vertex_buffers, offsets);
     vkCmdBindIndexBuffer(*curr_command_buffer, vk_context->index_buffer.handle, 0, VK_INDEX_TYPE_UINT32);
-
-    vulkan_update_global_uniform_buffer(&data->global_ubo, 0);
 
     for (u32 i = 0; i < data->geometry_count; i++)
     {
@@ -689,7 +706,7 @@ bool vulkan_draw_geometries(render_data *data, VkCommandBuffer *curr_command_buf
         }
 
         vulkan_texture *vk_texture       = nullptr;
-        texture        *instance_texture = (texture *)mat->map.diffuse_tex;
+        texture        *instance_texture = (texture *)mat->map.albedo;
 
         if (!instance_texture)
         {
@@ -712,11 +729,9 @@ bool vulkan_draw_geometries(render_data *data, VkCommandBuffer *curr_command_buf
 
         u32 descriptor_set_index = vk_texture->descriptor_id;
 
-        vulkan_update_global_uniform_buffer(&data->global_ubo, descriptor_set_index);
-
         vkCmdBindDescriptorSets(*curr_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                                vk_context->vk_graphics_pipeline.layout, 0, 1,
-                                &vk_context->descriptor_sets[descriptor_set_index], 0, nullptr);
+                                vk_context->vk_graphics_pipeline.layout, 1, 1,
+                                &vk_context->material_descriptor_sets[descriptor_set_index], 0, nullptr);
 
         vkCmdDrawIndexed(*curr_command_buffer, geo_data->indices_count, 1, index_offset, vertex_offset, 0);
     }
@@ -749,6 +764,10 @@ bool vulkan_draw_frame(render_data *render_data)
     VK_CHECK(result);
 
     VkCommandBuffer &curr_command_buffer = vk_context->command_buffers[current_frame];
+
+    // update global frame
+    vulkan_update_global_uniform_buffer(&render_data->global_ubo, current_frame);
+    vulkan_update_global_descriptor_sets(vk_context, current_frame);
 
     vulkan_draw_geometries(render_data, &curr_command_buffer, current_frame);
 

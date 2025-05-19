@@ -22,7 +22,7 @@
 #include "../tests/linear_allocator/linear_allocator_test.hpp"
 #include "../tests/test_manager.hpp"
 
-void update_camera(uniform_buffer_object *ubo, f64 start_time);
+void update_camera(global_uniform_buffer_object *ubo, f64 start_time);
 
 void run_tests()
 {
@@ -79,7 +79,7 @@ int main()
     f32 fov_rad      = 45 * D_DEG2RAD_MULTIPLIER;
     f32 aspect_ratio = (f32)s_width / s_height;
 
-    uniform_buffer_object global_ubo{};
+    global_uniform_buffer_object global_ubo{};
     global_ubo.view       = mat4_look_at({2, 2, 2}, {0, 0, 0}, {0, 0, 1.0f});
     global_ubo.projection = mat4_perspective(fov_rad, aspect_ratio, 0.01f, 1000.0f);
 
@@ -143,7 +143,7 @@ int main()
     application_shutdown();
 }
 
-void update_camera(uniform_buffer_object *ubo, f64 start_time)
+void update_camera(global_uniform_buffer_object *ubo, f64 start_time)
 {
     // ubo->model = mat4_euler_z((start_time * (90.0f * D_DEG2RAD_MULTIPLIER)));
     u32 s_width;
@@ -161,8 +161,6 @@ void update_camera(uniform_buffer_object *ubo, f64 start_time)
     z            += step;
 
     ubo->projection = mat4_perspective(fov_rad, aspect_ratio, 0.01f, 5000.0f);
-    ubo->model      = mat4_euler_y(z);
-    ubo->model      = math::mat4();
 
     static math::vec3 camera_pos   = math::vec3(0, 0, 6);
     static math::vec3 camera_euler = math::vec3(0, 0, 0);

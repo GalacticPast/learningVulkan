@@ -119,12 +119,15 @@ struct vulkan_context
     vulkan_buffer vertex_buffer;
     vulkan_buffer index_buffer;
 
-    VkCommandPool    graphics_command_pool;
-    VkDescriptorPool descriptor_command_pool;
+    VkCommandPool graphics_command_pool;
 
-    VkDescriptorSetLayout descriptor_layout;
+    VkDescriptorSetLayout   global_descriptor_layout;
+    VkDescriptorPool        global_descriptor_command_pool;
+    darray<VkDescriptorSet> global_descriptor_sets;
 
-    darray<VkDescriptorSet> descriptor_sets;
+    VkDescriptorSetLayout   material_descriptor_layout;
+    VkDescriptorPool        material_descriptor_command_pool;
+    darray<VkDescriptorSet> material_descriptor_sets;
 
     VkSemaphore *image_available_semaphores = nullptr;
     VkSemaphore *render_finished_semaphores = nullptr;

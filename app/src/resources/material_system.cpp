@@ -6,6 +6,7 @@
 #include "core/logger.hpp"
 #include "defines.hpp"
 
+#include "renderer/vulkan/vulkan_backend.hpp"
 #include "texture_system.hpp"
 
 #include "core/dstring.hpp"
@@ -128,8 +129,11 @@ bool material_system_create_material(material_config *config)
     mat.name            = config->mat_name;
     mat.id              = mat_sys_state_ptr->hashtable.size();
     mat.reference_count = 0;
-    mat.map.diffuse_tex = texture_system_get_texture(config->diffuse_tex_name);
+    mat.map.albedo      = texture_system_get_texture(config->albedo_map);
+    mat.map.alpha       = texture_system_get_texture(config->alpha_map);
     mat.diffuse_color   = config->diffuse_color;
+
+    bool result = vulkan_create_material(&mat);
 
     mat_sys_state_ptr->hashtable.insert(config->mat_name, mat);
     mat_sys_state_ptr->loaded_materials.push_back(config->mat_name);
@@ -145,7 +149,8 @@ bool material_system_create_default_material()
     default_mat.name            = DEFAULT_MATERIAL_HANDLE;
     default_mat.id              = 0;
     default_mat.reference_count = 0;
-    default_mat.map.diffuse_tex = texture_system_get_default_texture();
+    default_mat.map.albedo      = texture_system_get_default_texture();
+    default_mat.map.alpha       = texture_system_get_default_texture();
     default_mat.diffuse_color   = {1.0f, 1.0f, 1.0f, 1.0f};
 
     mat_sys_state_ptr->hashtable.insert(DEFAULT_MATERIAL_HANDLE, default_mat);
@@ -206,11 +211,15 @@ bool material_system_parse_mtl_file(const char *mtl_file_name)
     }
     configs = (material_config *)dallocate(sizeof(material_config) * (num_materials + 1), MEM_TAG_RENDERER);
 
-    char *mtl_ptr                    = file;
-    char  newmat_sub_string[7]       = "newmtl";
-    u32   newmat_substring_size      = 7;
-    char  diffuse_map_sub_string[7]  = "map_Kd";
-    u32   diffuse_map_substring_size = 7;
+    char *mtl_ptr               = file;
+    char  newmat_sub_string[7]  = "newmtl";
+    u32   newmat_substring_size = 7;
+
+    const char *albedo_map_sub_string     = "map_Kd";
+    u32         albedo_map_substring_size = strlen(albedo_map_sub_string);
+
+    const char *alpha_map_sub_string     = "map_d";
+    u32         alpha_map_substring_size = strlen(alpha_map_sub_string);
 
     for (s32 i = 0; i < num_materials; i++)
     {
@@ -225,18 +234,19 @@ bool material_system_parse_mtl_file(const char *mtl_file_name)
         }
         string_ncopy(configs[i].mat_name, mtl_ptr, material_name_length);
 
-        u32 diffuse_tex_occurence = string_first_string_occurence(mtl_ptr, diffuse_map_sub_string);
-
-        if (diffuse_tex_occurence < next_material)
+        u32   albedo_map_occurence = string_first_string_occurence(mtl_ptr, albedo_map_sub_string);
+        u32   alpha_map_occurence  = string_first_string_occurence(mtl_ptr, alpha_map_sub_string);
+        char *albedo_map           = mtl_ptr;
+        if (albedo_map_occurence < next_material)
         {
-            mtl_ptr += diffuse_tex_occurence + diffuse_map_substring_size;
+            albedo_map += albedo_map_occurence + albedo_map_substring_size;
 
-            while (*mtl_ptr == ' ')
+            while (*albedo_map == ' ')
             {
-                mtl_ptr++;
+                albedo_map++;
             }
-            u32   diffuse_map_name_size = string_first_char_occurence(mtl_ptr, '\n');
-            char *diffuse_map_name      = mtl_ptr + diffuse_map_name_size - 1;
+            u32   diffuse_map_name_size = string_first_char_occurence(albedo_map, '\n');
+            char *diffuse_map_name      = albedo_map + diffuse_map_name_size - 1;
             diffuse_map_name_size       = 0;
             // TODO: will this suffice?
             while (*diffuse_map_name != '/' && *diffuse_map_name != ' ' && *diffuse_map_name != '\n')
@@ -253,8 +263,38 @@ bool material_system_parse_mtl_file(const char *mtl_file_name)
                 DERROR("Coulndt get diffuse map name for material %s. Using default", configs[i].mat_name);
                 continue;
             }
-            string_ncopy(configs[i].diffuse_tex_name, diffuse_map_name, diffuse_map_name_size);
+            string_ncopy(configs[i].albedo_map, diffuse_map_name, diffuse_map_name_size);
         }
+        char *alpha_map = mtl_ptr;
+        if (alpha_map_occurence < next_material)
+        {
+            alpha_map += alpha_map_occurence + alpha_map_substring_size;
+
+            while (*alpha_map == ' ')
+            {
+                alpha_map++;
+            }
+            u32   alpha_map_name_size = string_first_char_occurence(alpha_map, '\n');
+            char *alpha_map_name      = alpha_map + alpha_map_name_size - 1;
+            alpha_map_name_size       = 0;
+            // TODO: will this suffice?
+            while (*alpha_map_name != '/' && *alpha_map_name != ' ' && *alpha_map_name != '\n')
+            {
+                alpha_map_name--;
+                alpha_map_name_size++;
+            }
+            // it will break when its encouters a '/', ' ', or '\n'. So to not copy this part we increment the pointer
+            // by one;
+            alpha_map_name++;
+
+            if (alpha_map_name_size == INVALID_ID)
+            {
+                DERROR("Coulndt get alpha map name for material %s. Using default", configs[i].mat_name);
+                continue;
+            }
+            string_ncopy(configs[i].alpha_map, alpha_map_name, alpha_map_name_size);
+        }
+
         // TODO: Diffuse color and everything else
     }
 

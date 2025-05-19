@@ -27,22 +27,27 @@ struct texture
 
 struct texture_map
 {
-    texture *diffuse_tex = nullptr;
+    texture *albedo = nullptr;
+    texture *alpha  = nullptr;
 };
 
 struct material_config
 {
-    char       mat_name[MATERIAL_NAME_MAX_LENGTH];        //        256
-    char       diffuse_tex_name[TEXTURE_NAME_MAX_LENGTH]; // 512
-    math::vec4 diffuse_color = {1.0f, 1.0f, 1.0f, 1.0f};  //                 32 * 4 =    128
+    char       mat_name[MATERIAL_NAME_MAX_LENGTH];       //        256
+    char       albedo_map[TEXTURE_NAME_MAX_LENGTH];      // 512
+    char       alpha_map[TEXTURE_NAME_MAX_LENGTH];       // 512
+    math::vec4 diffuse_color = {1.0f, 1.0f, 1.0f, 1.0f}; //                 32 * 4 =    128
     // TODO: add normal maps, heightmap etc..
 };
 
 struct material
 {
 
-    dstring     name;
-    u32         id              = INVALID_ID;
+    dstring name;
+    u32     id                  = INVALID_ID;
+    // WARN: should never change this
+    u32 internal_id             = INVALID_ID;
+    //
     u32         reference_count = INVALID_ID;
     texture_map map;
     math::vec4  diffuse_color = {1.0f, 1.0f, 1.0f, 1.0f};
