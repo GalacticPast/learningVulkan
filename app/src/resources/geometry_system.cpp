@@ -337,7 +337,9 @@ void geometry_system_parse_obj(const char *obj_file_full_path, u32 *num_of_objec
     }
     DASSERT(buffer_mem_requirements != INVALID_ID_64);
     char *buffer = (char *)dallocate(buffer_mem_requirements + 1, MEM_TAG_GEOMETRY);
-    file_open_and_read(obj_file_full_path, &buffer_mem_requirements, buffer, 0);
+    char *start  = buffer;
+
+    file_open_and_read(obj_file_full_path, &buffer_mem_requirements, (char *)buffer, 0);
 
     // TODO: cleaup this piece of shit code
     u32 objects     = string_num_of_substring_occurence(buffer, "o ");

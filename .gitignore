@@ -2,6 +2,6 @@
 /bin
 /src/platform/wayland
 /.vscode
-compile_flags.txt
+compile_flags.json
 /obj
-
+/.cache

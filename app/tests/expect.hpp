@@ -4,6 +4,13 @@
 #include "core/logger.hpp"
 #include <math.h>
 
+#define expect_should_be_msg(expected, actual, message)                                                                \
+    if (actual != expected)                                                                                            \
+    {                                                                                                                  \
+        DERROR("--> Expected %lld, but got: %lld. Message: %d File: %s:%d.", expected, actual, message, __FILE__,      \
+               __LINE__);                                                                                              \
+        return false;                                                                                                  \
+    }
 /**
  * @brief Expects expected to be equal to actual.
  */

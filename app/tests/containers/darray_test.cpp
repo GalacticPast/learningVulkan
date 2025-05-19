@@ -2,6 +2,18 @@
 #include "../expect.hpp"
 #include "../src/containers/darray.hpp"
 
+static void print_array(darray<s32> &array)
+{
+    s32 length = (s32)array.size();
+
+    for (s32 i = 0; i < length; i++)
+    {
+        printf("%d  ", array[i]);
+    }
+    printf("\n");
+    printf("-------------------------------------------\n");
+}
+
 bool darray_create_and_destroy()
 {
     darray<s32> array;
@@ -51,16 +63,6 @@ bool darray_pop_back_test()
     return true;
 }
 
-void print_array(darray<s32> &array)
-{
-    s32 length = (s32)array.size();
-
-    for (s32 i = 0; i < length; i++)
-    {
-        DDEBUG("%d", array[i]);
-    }
-}
-
 bool darray_pop_at_test()
 {
     darray<s32> array(10);
@@ -73,32 +75,43 @@ bool darray_pop_at_test()
     s32 i = array.pop_at(5);
     expect_should_be(5, i);
 
+    print_array(array);
+
     i = array.pop_at(8);
     expect_should_be(9, i);
+    print_array(array);
 
     i = array.pop_at(7);
     expect_should_be(8, i);
+    print_array(array);
 
     i = array.pop_at(3);
     expect_should_be(3, i);
+    print_array(array);
 
     i = array.pop_at(3);
     expect_should_be(4, i);
+    print_array(array);
 
     i = array.pop_at(3);
     expect_should_be(6, i);
+    print_array(array);
 
     i = array.pop_at(3);
     expect_should_be(7, i);
+    print_array(array);
 
     i = array.pop_at(1);
     expect_should_be(1, i);
+    print_array(array);
 
     i = array.pop_at(0);
     expect_should_be(0, i);
+    print_array(array);
 
     i = array.pop_at(0);
     expect_should_be(2, i);
+    print_array(array);
 
     return true;
 }
