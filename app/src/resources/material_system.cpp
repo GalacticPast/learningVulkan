@@ -54,36 +54,6 @@ bool material_system_shutdown(void *state)
     return true;
 }
 
-//// this will return nullptr;
-// material *_get_material(const char *material_name)
-//{
-//     material *out_mat = nullptr;
-//
-//     for (u32 i = 0; i < MAX_MATERIALS_LOADED; i++)
-//     {
-//         const char *mat_name = (const char *)mat_sys_state_ptr->material_table[i].name.c_str();
-//         bool        result   = string_compare(material_name, mat_name);
-//         if (result)
-//         {
-//             out_mat = &mat_sys_state_ptr->material_table[i];
-//         }
-//     }
-//     return out_mat;
-// }
-//  this will return nullptr;
-
-// u32 _get_empty_id()
-//{
-//     for (u32 i = 0; i < MAX_MATERIALS_LOADED; i++)
-//     {
-//         if (mat_sys_state_ptr->material_table[i].id == INVALID_ID)
-//         {
-//             return i;
-//         }
-//     }
-//     return INVALID_ID;
-// }
-
 material *material_system_acquire_from_config_file(dstring *file_base_name)
 {
     material_config base{};

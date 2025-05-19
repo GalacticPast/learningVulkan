@@ -700,34 +700,14 @@ bool vulkan_draw_geometries(render_data *data, VkCommandBuffer *curr_command_buf
     {
 
         material *mat = data->test_geometry[i]->material;
-        if (!mat)
-        {
-            mat = material_system_get_default_material();
-        }
 
-        vulkan_texture *vk_texture       = nullptr;
-        texture        *instance_texture = (texture *)mat->map.albedo;
+        texture *instance_texture = (texture *)mat->map.albedo;
 
-        if (!instance_texture)
-        {
-            instance_texture = texture_system_get_texture(DEFAULT_TEXTURE_HANDLE);
-            vk_texture       = (vulkan_texture *)instance_texture->vulkan_texture_state;
-        }
-        else
-        {
-            vk_texture = (vulkan_texture *)instance_texture->vulkan_texture_state;
-        }
-
-        if (!vk_texture)
-        {
-            instance_texture = texture_system_get_texture(DEFAULT_TEXTURE_HANDLE);
-            vk_texture       = (vulkan_texture *)instance_texture->vulkan_texture_state;
-        }
         u32                   index_offset  = vulkan_calculate_index_offset(vk_context, data->test_geometry[i]->id);
         u32                   vertex_offset = vulkan_calculate_vertex_offset(vk_context, data->test_geometry[i]->id);
         vulkan_geometry_data *geo_data      = (vulkan_geometry_data *)data->test_geometry[i]->vulkan_geometry_state;
 
-        u32 descriptor_set_index = vk_texture->descriptor_id;
+        u32 descriptor_set_index = mat->internal_id;
 
         vkCmdBindDescriptorSets(*curr_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
                                 vk_context->vk_graphics_pipeline.layout, 1, 1,

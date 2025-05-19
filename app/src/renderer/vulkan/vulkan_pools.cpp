@@ -122,6 +122,7 @@ bool vulkan_update_materials_descriptor_set(vulkan_context *vk_context, material
         }
         if (!tex_state)
         {
+            DERROR("No aldbedo map found for material interal_id: %d", descriptor_set_index);
             tex_state = (vulkan_texture *)default_mat->map.albedo->vulkan_texture_state;
         }
 
@@ -139,6 +140,7 @@ bool vulkan_update_materials_descriptor_set(vulkan_context *vk_context, material
         }
         if (!tex_state)
         {
+            DERROR("No alpha map found for material interal_id: %d", descriptor_set_index);
             tex_state = (vulkan_texture *)default_mat->map.alpha->vulkan_texture_state;
         }
 
