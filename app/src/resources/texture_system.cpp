@@ -15,7 +15,7 @@ struct texture_system_state
 };
 
 static texture_system_state *tex_sys_state_ptr;
-bool                         texture_system_create_default_texture();
+bool                         texture_system_create_default_textures();
 
 static bool texture_system_release_textures(dstring *texture_name);
 
@@ -33,7 +33,7 @@ bool texture_system_initialize(u64 *texture_system_mem_requirements, void *state
     tex_sys_state_ptr->loaded_textures.c_init();
 
     stbi_set_flip_vertically_on_load(true);
-    texture_system_create_default_texture();
+    texture_system_create_default_textures();
     return true;
 }
 
@@ -96,54 +96,89 @@ bool texture_system_create_texture(dstring *file_base_name)
     return result;
 }
 
-bool texture_system_create_default_texture()
+bool texture_system_create_default_textures()
 {
-    texture default_texture{};
-    default_texture.name         = DEFAULT_TEXTURE_HANDLE;
-    default_texture.tex_width    = 512;
-    default_texture.tex_height   = 512;
-    default_texture.num_channels = 4;
-
-    u32 tex_width    = default_texture.tex_width;
-    u32 tex_height   = default_texture.tex_height;
-    u32 tex_channels = default_texture.num_channels;
-
-    u32 texture_size = default_texture.tex_width * default_texture.tex_height * default_texture.num_channels;
-
-    u8 *pixels = (u8 *)dallocate(texture_size, MEM_TAG_UNKNOWN);
-
-    for (u32 y = 0; y < tex_height; y++)
     {
-        for (u32 x = 0; x < tex_width; x++)
-        {
-            u32 pixel_index = (y * tex_width + x) * tex_channels;
-            u8  color       = ((x / 32 + y / 32) % 2) ? 255 : 0;
+        // INFO:black and white grids albedo texutre
+        texture default_albedo_texture{};
+        default_albedo_texture.name         = DEFAULT_ALBEDO_TEXTURE_HANDLE;
+        default_albedo_texture.tex_width    = 512;
+        default_albedo_texture.tex_height   = 512;
+        default_albedo_texture.num_channels = 4;
 
-            pixels[pixel_index + 0] = color;
-            pixels[pixel_index + 1] = color;
-            pixels[pixel_index + 2] = color;
-            pixels[pixel_index + 3] = 255;
+        u32 tex_width    = default_albedo_texture.tex_width;
+        u32 tex_height   = default_albedo_texture.tex_height;
+        u32 tex_channels = default_albedo_texture.num_channels;
+
+        u32 texture_size =
+            default_albedo_texture.tex_width * default_albedo_texture.tex_height * default_albedo_texture.num_channels;
+
+        u8 *pixels = (u8 *)dallocate(texture_size, MEM_TAG_UNKNOWN);
+
+        for (u32 y = 0; y < tex_height; y++)
+        {
+            for (u32 x = 0; x < tex_width; x++)
+            {
+                u32 pixel_index = (y * tex_width + x) * tex_channels;
+                u8  color       = ((x / 32 + y / 32) % 2) ? 255 : 0;
+
+                pixels[pixel_index + 0] = color;
+                pixels[pixel_index + 1] = color;
+                pixels[pixel_index + 2] = color;
+                pixels[pixel_index + 3] = 255;
+            }
         }
+
+        bool result = create_texture(&default_albedo_texture, pixels);
+        DASSERT(result == true);
+        dfree(pixels, texture_size, MEM_TAG_UNKNOWN);
     }
 
-    bool result = create_texture(&default_texture, pixels);
+    {
+        // INFO: fully opaque alpha texutre
+        texture default_alpha_texture{};
+        default_alpha_texture.name         = DEFAULT_ALPHA_TEXTURE_HANDLE;
+        default_alpha_texture.tex_width    = 512;
+        default_alpha_texture.tex_height   = 512;
+        default_alpha_texture.num_channels = 4;
 
-    return result;
+        u32 tex_width    = default_alpha_texture.tex_width;
+        u32 tex_height   = default_alpha_texture.tex_height;
+        u32 tex_channels = default_alpha_texture.num_channels;
+
+        u32 texture_size =
+            default_alpha_texture.tex_width * default_alpha_texture.tex_height * default_alpha_texture.num_channels;
+
+        u8 *pixels = (u8 *)dallocate(texture_size, MEM_TAG_UNKNOWN);
+
+        for (u32 y = 0; y < tex_height; y++)
+        {
+            for (u32 x = 0; x < tex_width; x++)
+            {
+                u32 pixel_index = (y * tex_width + x) * tex_channels;
+                u8  color       = 255;
+
+                pixels[pixel_index + 0] = color;
+                pixels[pixel_index + 1] = color;
+                pixels[pixel_index + 2] = color;
+                pixels[pixel_index + 3] = 255;
+            }
+        }
+
+        bool result = create_texture(&default_alpha_texture, pixels);
+        DASSERT(result == true);
+        dfree(pixels, texture_size, MEM_TAG_UNKNOWN);
+    }
+
+    return true;
 }
 
-texture *texture_system_get_default_texture()
-{
-    texture *texture = tex_sys_state_ptr->hashtable.find(DEFAULT_TEXTURE_HANDLE);
-    // TODO: increment the value for texture references
-
-    return texture;
-}
 texture *texture_system_get_texture(const char *texture_name)
 {
     if (texture_name == nullptr)
     {
-        DWARN("Texuture name is nullptr retrunring default material");
-        return texture_system_get_default_texture();
+        DWARN("Texuture name is nullptr retrunring default albedo texture");
+        return texture_system_get_texture(DEFAULT_ALBEDO_TEXTURE_HANDLE);
     }
     texture *texture = tex_sys_state_ptr->hashtable.find(texture_name);
     // TODO: increment the value for texture references

@@ -156,7 +156,7 @@ bool vulkan_update_materials_descriptor_set(vulkan_context *vk_context, material
         desc_writes[i].sType            = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
         desc_writes[i].pNext            = 0;
         desc_writes[i].dstSet           = vk_context->material_descriptor_sets[descriptor_set_index];
-        desc_writes[i].dstBinding       = 0;
+        desc_writes[i].dstBinding       = i;
         desc_writes[i].dstArrayElement  = 0;
         desc_writes[i].descriptorCount  = 1;
         desc_writes[i].descriptorType   = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;

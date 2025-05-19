@@ -119,8 +119,8 @@ bool material_system_create_default_material()
     default_mat.name            = DEFAULT_MATERIAL_HANDLE;
     default_mat.id              = 0;
     default_mat.reference_count = 0;
-    default_mat.map.albedo      = texture_system_get_default_texture();
-    default_mat.map.alpha       = texture_system_get_default_texture();
+    default_mat.map.albedo      = texture_system_get_texture(DEFAULT_ALBEDO_TEXTURE_HANDLE);
+    default_mat.map.alpha       = texture_system_get_texture(DEFAULT_ALPHA_TEXTURE_HANDLE);
     default_mat.diffuse_color   = {1.0f, 1.0f, 1.0f, 1.0f};
 
     mat_sys_state_ptr->hashtable.insert(DEFAULT_MATERIAL_HANDLE, default_mat);
