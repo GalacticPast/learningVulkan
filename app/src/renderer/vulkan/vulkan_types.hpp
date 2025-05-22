@@ -50,6 +50,8 @@ struct vulkan_image
 
     u32 width;
     u32 height;
+
+    u32 mip_levels = INVALID_ID;
 };
 
 struct vulkan_texture
@@ -58,6 +60,8 @@ struct vulkan_texture
     vulkan_image image;
     VkSampler    sampler;
 };
+
+#define DEFAULT_MIP_LEVEL 4
 
 struct vulkan_swapchain
 {

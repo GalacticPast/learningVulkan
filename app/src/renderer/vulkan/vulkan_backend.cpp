@@ -294,9 +294,11 @@ bool vulkan_create_texture(texture *in_texture, u8 *pixels)
     void *data = nullptr;
     vulkan_copy_data_to_buffer(vk_context, &staging_buffer, data, pixels, texture_size);
 
-    result = vulkan_create_image(vk_context, image, tex_width, tex_height, VK_FORMAT_R8G8B8A8_SRGB,
-                                 VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-                                 VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_IMAGE_TILING_OPTIMAL);
+    result = vulkan_create_image(
+        vk_context, image, tex_width, tex_height, VK_FORMAT_R8G8B8A8_SRGB, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+        VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+        VK_IMAGE_TILING_OPTIMAL);
+
     DASSERT(result == true);
 
     vulkan_transition_image_layout(vk_context, image, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
@@ -308,8 +310,10 @@ bool vulkan_create_texture(texture *in_texture, u8 *pixels)
 
     vulkan_destroy_buffer(vk_context, &staging_buffer);
 
+    vulkan_generate_mipmaps(vk_context, image);
+
     result = vulkan_create_image_view(vk_context, &image->handle, &image->view, VK_FORMAT_R8G8B8A8_SRGB,
-                                      VK_IMAGE_ASPECT_COLOR_BIT);
+                                      VK_IMAGE_ASPECT_COLOR_BIT, image->mip_levels);
     DASSERT(result == true);
 
     f32 max_sampler_anisotropy = vk_context->vk_device.physical_properties->limits.maxSamplerAnisotropy;
@@ -330,7 +334,7 @@ bool vulkan_create_texture(texture *in_texture, u8 *pixels)
     texture_sampler_create_info.compareEnable           = VK_FALSE;
     texture_sampler_create_info.compareOp               = VK_COMPARE_OP_ALWAYS;
     texture_sampler_create_info.minLod                  = 0.0f;
-    texture_sampler_create_info.maxLod                  = 0.0f;
+    texture_sampler_create_info.maxLod                  = image->mip_levels;
     texture_sampler_create_info.borderColor             = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
     texture_sampler_create_info.unnormalizedCoordinates = VK_FALSE;
 
