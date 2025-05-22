@@ -276,8 +276,8 @@ bool vulkan_create_texture(texture *in_texture, u8 *pixels)
     in_texture->vulkan_texture_state = (vulkan_texture *)dallocate(sizeof(vulkan_texture), MEM_TAG_RENDERER);
     vulkan_texture *vk_texture       = (vulkan_texture *)in_texture->vulkan_texture_state;
 
-    u32 tex_width    = in_texture->tex_width;
-    u32 tex_height   = in_texture->tex_height;
+    u32 tex_width    = in_texture->width;
+    u32 tex_height   = in_texture->height;
     u32 tex_channel  = 4;
     u32 texture_size = tex_width * tex_height * 4;
 
@@ -285,6 +285,11 @@ bool vulkan_create_texture(texture *in_texture, u8 *pixels)
     vulkan_image *image = &vk_texture->image;
     image->width        = tex_width;
     image->height       = tex_height;
+    image->format       = VK_FORMAT_R8G8B8A8_SRGB;
+
+    u32 max           = DMAX(tex_width, tex_height);
+    u32 mip_level     = floor(log2(max)) + 1;
+    image->mip_levels = mip_level;
 
     bool result =
         vulkan_create_buffer(vk_context, &staging_buffer, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
@@ -294,10 +299,11 @@ bool vulkan_create_texture(texture *in_texture, u8 *pixels)
     void *data = nullptr;
     vulkan_copy_data_to_buffer(vk_context, &staging_buffer, data, pixels, texture_size);
 
-    result = vulkan_create_image(
-        vk_context, image, tex_width, tex_height, VK_FORMAT_R8G8B8A8_SRGB, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-        VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
-        VK_IMAGE_TILING_OPTIMAL);
+    VkImageUsageFlags img_usage =
+        VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+
+    result = vulkan_create_image(vk_context, image, tex_width, tex_height, image->format,
+                                 VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, img_usage, VK_IMAGE_TILING_OPTIMAL);
 
     DASSERT(result == true);
 
@@ -306,13 +312,16 @@ bool vulkan_create_texture(texture *in_texture, u8 *pixels)
     vulkan_copy_buffer_data_to_image(vk_context, &staging_buffer, image);
 
     vulkan_transition_image_layout(vk_context, image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                                   VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+
+    vulkan_generate_mipmaps(vk_context, image);
+
+    vulkan_transition_image_layout(vk_context, image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
                                    VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
     vulkan_destroy_buffer(vk_context, &staging_buffer);
 
-    vulkan_generate_mipmaps(vk_context, image);
-
-    result = vulkan_create_image_view(vk_context, &image->handle, &image->view, VK_FORMAT_R8G8B8A8_SRGB,
+    result = vulkan_create_image_view(vk_context, &image->handle, &image->view, image->format,
                                       VK_IMAGE_ASPECT_COLOR_BIT, image->mip_levels);
     DASSERT(result == true);
 
@@ -720,7 +729,7 @@ bool vulkan_draw_geometries(render_data *data, VkCommandBuffer *curr_command_buf
         vkCmdDrawIndexed(*curr_command_buffer, geo_data->indices_count, 1, index_offset, vertex_offset, 0);
     }
     vulkan_end_frame_renderpass(curr_command_buffer);
-    vulkan_end_command_buffer_single_use(vk_context, *curr_command_buffer);
+    vulkan_end_command_buffer_single_use(vk_context, *curr_command_buffer, false);
     return true;
 }
 

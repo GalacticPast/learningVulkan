@@ -15,8 +15,8 @@ struct texture
 
     dstring name;
     u32     id           = INVALID_ID;
-    u32     tex_width    = INVALID_ID;
-    u32     tex_height   = INVALID_ID;
+    u32     width        = INVALID_ID;
+    u32     height       = INVALID_ID;
     u32     num_channels = INVALID_ID;
 
     void *vulkan_texture_state = nullptr;

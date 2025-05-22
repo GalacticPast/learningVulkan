@@ -80,7 +80,7 @@ bool texture_system_create_texture(dstring *file_base_name)
 
     string_copy_format((char *)full_path_name, "%s%s", 0, prefix, file_base_name->c_str());
 
-    stbi_uc *pixels = stbi_load((const char *)full_path_name, &(int &)texture.tex_width, &(int &)texture.tex_height,
+    stbi_uc *pixels = stbi_load((const char *)full_path_name, &(int &)texture.width, &(int &)texture.height,
                                 &(int &)texture.num_channels, STBI_rgb_alpha);
 
     if (!pixels)
@@ -102,16 +102,16 @@ bool texture_system_create_default_textures()
         // INFO:black and white grids albedo texutre
         texture default_albedo_texture{};
         default_albedo_texture.name         = DEFAULT_ALBEDO_TEXTURE_HANDLE;
-        default_albedo_texture.tex_width    = 512;
-        default_albedo_texture.tex_height   = 512;
+        default_albedo_texture.width        = 512;
+        default_albedo_texture.height       = 512;
         default_albedo_texture.num_channels = 4;
 
-        u32 tex_width    = default_albedo_texture.tex_width;
-        u32 tex_height   = default_albedo_texture.tex_height;
+        u32 tex_width    = default_albedo_texture.width;
+        u32 tex_height   = default_albedo_texture.height;
         u32 tex_channels = default_albedo_texture.num_channels;
 
         u32 texture_size =
-            default_albedo_texture.tex_width * default_albedo_texture.tex_height * default_albedo_texture.num_channels;
+            default_albedo_texture.width * default_albedo_texture.height * default_albedo_texture.num_channels;
 
         u8 *pixels = (u8 *)dallocate(texture_size, MEM_TAG_UNKNOWN);
 
@@ -138,16 +138,16 @@ bool texture_system_create_default_textures()
         // INFO: fully opaque alpha texutre
         texture default_alpha_texture{};
         default_alpha_texture.name         = DEFAULT_ALPHA_TEXTURE_HANDLE;
-        default_alpha_texture.tex_width    = 512;
-        default_alpha_texture.tex_height   = 512;
+        default_alpha_texture.width        = 512;
+        default_alpha_texture.height       = 512;
         default_alpha_texture.num_channels = 4;
 
-        u32 tex_width    = default_alpha_texture.tex_width;
-        u32 tex_height   = default_alpha_texture.tex_height;
+        u32 tex_width    = default_alpha_texture.width;
+        u32 tex_height   = default_alpha_texture.height;
         u32 tex_channels = default_alpha_texture.num_channels;
 
         u32 texture_size =
-            default_alpha_texture.tex_width * default_alpha_texture.tex_height * default_alpha_texture.num_channels;
+            default_alpha_texture.width * default_alpha_texture.height * default_alpha_texture.num_channels;
 
         u8 *pixels = (u8 *)dallocate(texture_size, MEM_TAG_UNKNOWN);
 

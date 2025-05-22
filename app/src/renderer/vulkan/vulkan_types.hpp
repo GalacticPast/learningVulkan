@@ -61,7 +61,7 @@ struct vulkan_texture
     VkSampler    sampler;
 };
 
-#define DEFAULT_MIP_LEVEL 4
+#define DEFAULT_MIP_LEVEL 1
 
 struct vulkan_swapchain
 {

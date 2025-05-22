@@ -160,7 +160,7 @@ void update_camera(global_uniform_buffer_object *ubo, f64 start_time)
     static f32 z  = 0.01f;
     z            += step;
 
-    ubo->projection = mat4_perspective(fov_rad, aspect_ratio, 0.01f, 5000.0f);
+    ubo->projection = mat4_perspective(fov_rad, aspect_ratio, 0.01f, 1000.0f);
 
     static math::vec3 camera_pos   = math::vec3(0, 0, 6);
     static math::vec3 camera_euler = math::vec3(0, 0, 0);

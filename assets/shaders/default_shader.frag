@@ -10,10 +10,6 @@ layout(location = 0) out vec4 out_color;
 
 void main() {
     vec4 color = texture(albedo_map, frag_tex_coord);
-    float alpha = texture(alpha_map, frag_tex_coord).r;  
 
-    if (alpha < 0.5)
-        discard;  
-
-    out_color = vec4(color.rgb, alpha);
+    out_color = color;
 }

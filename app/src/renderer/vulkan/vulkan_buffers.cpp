@@ -1,5 +1,6 @@
 #include "vulkan_buffers.hpp"
 #include "core/application.hpp"
+#include "defines.hpp"
 #include "renderer/vulkan/vulkan_types.hpp"
 #include "vulkan_pools.hpp"
 
@@ -66,7 +67,7 @@ bool vulkan_copy_buffer(vulkan_context *vk_context, vulkan_buffer *dst_buffer, u
     cpy_region.size      = buffer_size;
 
     vkCmdCopyBuffer(staging_command_buffer, src_buffer->handle, dst_buffer->handle, 1, &cpy_region);
-    vulkan_end_command_buffer_single_use(vk_context, staging_command_buffer);
+    vulkan_end_command_buffer_single_use(vk_context, staging_command_buffer, false);
 
     VkSubmitInfo queue_submit_info{};
     queue_submit_info.sType                = VK_STRUCTURE_TYPE_SUBMIT_INFO;
@@ -183,9 +184,39 @@ void vulkan_begin_command_buffer_single_use(vulkan_context *vk_context, VkComman
     VkResult result = vkBeginCommandBuffer(command_buffer, &command_buffer_begin_info);
     VK_CHECK(result);
 }
-void vulkan_end_command_buffer_single_use(vulkan_context *vk_context, VkCommandBuffer command_buffer)
+
+void vulkan_flush_command_buffer(vulkan_context *vk_context, VkCommandBuffer command_buffer)
+{
+    VK_CHECK(vkEndCommandBuffer(command_buffer));
+
+    VkSubmitInfo submit_info{};
+    submit_info.sType              = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    submit_info.commandBufferCount = 1;
+    submit_info.pCommandBuffers    = &command_buffer;
+
+    // Create fence to ensure that the command buffer has finished executing
+    VkFenceCreateInfo fence_info{};
+    fence_info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+
+    VkFence fence;
+    VK_CHECK(vkCreateFence(vk_context->vk_device.logical, &fence_info, nullptr, &fence));
+
+    // Submit to the queue
+    VkResult result = vkQueueSubmit(vk_context->vk_device.graphics_queue, 1, &submit_info, fence);
+    // Wait for the fence to signal that command buffer has finished executing
+    VK_CHECK(vkWaitForFences(vk_context->vk_device.logical, 1, &fence, VK_TRUE, INVALID_ID_64));
+
+    vkDestroyFence(vk_context->vk_device.logical, fence, nullptr);
+}
+
+void vulkan_end_command_buffer_single_use(vulkan_context *vk_context, VkCommandBuffer command_buffer, bool free)
 {
     VkResult result = vkEndCommandBuffer(command_buffer);
+    if (free)
+    {
+        vulkan_free_command_buffers(vk_context, &vk_context->graphics_command_pool, &command_buffer, 1);
+    }
+
     VK_CHECK(result);
 }
 void vulkan_free_command_buffers(vulkan_context *vk_context, VkCommandPool *command_pool, VkCommandBuffer *cmd_buffers,
