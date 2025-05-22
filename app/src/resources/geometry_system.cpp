@@ -321,6 +321,26 @@ geometry *geometry_system_get_default_geometry()
     return geo;
 }
 
+static const char ascii_chars[95] = {'X', 'r', 'F', 'm', 'S', '{', 'K',  '5', 'T', 'B', 'A', '7', '>', '\'', 'j', '/',
+                                     'p', '3', '=', '^', 'W', '&', '|',  'd', '}', 'C', '@', 'h', 'n', 'G',  '0', 'U',
+                                     '2', '!', 'Z', 'c', 'g', 'b', 'v',  'J', 'O', 'i', 's', 'N', 'L', '#',  '(', 'a',
+                                     'x', '9', 'e', 'D', 't', '~', 'R',  'M', 'H', '6', 'E', '.', 'V', 'l',  '1', 'z',
+                                     'w', 'f', 'q', 'I', '<', 'y', 'Q',  'P', 'Y', 'u', 'k', 'o', '8', '4',  '"', ',',
+                                     '}', ']', '_', '+', '(', ':', '\\', '`', '*', ' ', ';', '-', '$', '[',  '?'};
+
+void get_random_string(char *out_string)
+{
+    u32 index;
+    for (u32 i = 0; i < MAX_KEY_LENGTH - 1; i++)
+    {
+        index         = drandom_in_range(0, 94);
+        out_string[i] = ascii_chars[index];
+    }
+    out_string[MAX_KEY_LENGTH - 1] = '\0';
+
+    return;
+}
+//
 // this will allocate and write size back, assumes the caller will call free once the data is processed
 void geometry_system_parse_obj(const char *obj_file_full_path, u32 *num_of_objects, geometry_config **geo_configs)
 {
@@ -342,9 +362,19 @@ void geometry_system_parse_obj(const char *obj_file_full_path, u32 *num_of_objec
     file_open_and_read(obj_file_full_path, &buffer_mem_requirements, (char *)buffer, 0);
 
     // TODO: cleaup this piece of shit code
-    u32 objects     = string_num_of_substring_occurence(buffer, "o ");
+    u32 objects        = string_num_of_substring_occurence(buffer, "o ");
+    u32 usemtl_objects = string_num_of_substring_occurence(buffer, "usemtl");
+
+    bool usemtl_name = true;
+    if (usemtl_objects < objects)
+    {
+        usemtl_name = false;
+    }
+    objects = DMAX(objects, usemtl_objects);
+
     *num_of_objects = objects;
-    *geo_configs    = (geometry_config *)dallocate(sizeof(geometry_config) * objects, MEM_TAG_GEOMETRY);
+
+    *geo_configs = (geometry_config *)dallocate(sizeof(geometry_config) * objects, MEM_TAG_GEOMETRY);
 
     clock_update(&telemetry);
     f64 names_proccesing_start_time = telemetry.time_elapsed;
@@ -353,6 +383,21 @@ void geometry_system_parse_obj(const char *obj_file_full_path, u32 *num_of_objec
         char *next_object_name_ptr = nullptr;
         char *object_usemtl_name   = nullptr;
 
+        auto extract_name = [](char *dest, const char *src) -> u32 {
+            u32 j = 0;
+            while (*src != '\n')
+            {
+                if (*src == ' ')
+                {
+                    src++;
+                    continue;
+                }
+                dest[j++] = *src;
+                src++;
+            }
+            return j;
+        };
+        u32 j = 0;
         for (u32 i = 0; i < objects; i++)
         {
             object_name_ptr = strstr(object_name_ptr, "o ");
@@ -360,21 +405,7 @@ void geometry_system_parse_obj(const char *obj_file_full_path, u32 *num_of_objec
             {
                 break;
             }
-            auto extract_name = [](char *dest, const char *src) {
-                u32 j = 0;
-                while (*src != '\n')
-                {
-                    if (*src == ' ')
-                    {
-                        src++;
-                        continue;
-                    }
-                    dest[j++] = *src;
-                    src++;
-                }
-            };
             object_name_ptr += 2;
-            extract_name((*geo_configs)[i].name, object_name_ptr);
 
             next_object_name_ptr = strstr(object_name_ptr, "o ");
             if (next_object_name_ptr == nullptr)
@@ -382,13 +413,23 @@ void geometry_system_parse_obj(const char *obj_file_full_path, u32 *num_of_objec
                 next_object_name_ptr = buffer + buffer_mem_requirements;
             }
 
-            object_usemtl_name = strstr(object_name_ptr, "usemtl");
-            if (object_usemtl_name != nullptr && object_usemtl_name < next_object_name_ptr)
+            if (usemtl_name)
             {
-                dstring material_name  = {};
-                object_usemtl_name    += 6;
-                extract_name(material_name.string, object_usemtl_name);
-                (*geo_configs)[i].material = material_system_acquire_from_name(&material_name);
+                object_usemtl_name = object_name_ptr;
+                while ((object_usemtl_name = strstr(object_usemtl_name, "usemtl")) && object_usemtl_name != nullptr &&
+                       object_usemtl_name < next_object_name_ptr)
+                {
+                    dstring material_name  = {};
+                    object_usemtl_name    += 6;
+                    u32 size               = extract_name(material_name.string, object_usemtl_name);
+                    get_random_string((*geo_configs)[j].name);
+                    (*geo_configs)[j++].material  = material_system_acquire_from_name(&material_name);
+                    object_usemtl_name           += size;
+                }
+            }
+            else
+            {
+                get_random_string((*geo_configs)[j++].name);
             }
         }
     }
@@ -532,16 +573,39 @@ void geometry_system_parse_obj(const char *obj_file_full_path, u32 *num_of_objec
     u32   object_index = string_first_string_occurence(buffer, "o ");
     char *object_ptr   = buffer + object_index + 2;
 
+    const char *usemtl_substring      = "usemtl";
+    u32         usemtl_substring_size = 6;
+
+    const char *obj_substring      = "o ";
+    u32         obj_substring_size = 3;
+
+    const char *use_string      = nullptr;
+    u32         use_string_size = INVALID_ID;
+    if (usemtl_name)
+    {
+        object_index    = string_first_string_occurence(buffer, usemtl_substring);
+        object_ptr      = buffer + object_index + 6;
+        use_string      = usemtl_substring;
+        use_string_size = usemtl_substring_size;
+    }
+    else
+    {
+        object_index    = string_first_string_occurence(buffer, obj_substring);
+        object_ptr      = buffer + object_index + obj_substring_size;
+        use_string      = obj_substring;
+        use_string_size = obj_substring_size;
+    }
+
     char *indices_ptr = object_ptr;
 
-    s32 object_next_index = string_first_string_occurence(object_ptr, "o ");
+    s32 object_next_index = string_first_string_occurence(object_ptr, use_string);
     if (object_next_index == EOF)
     {
         object_ptr = buffer + buffer_mem_requirements;
     }
     else
     {
-        object_ptr += object_next_index + 2;
+        object_ptr += object_next_index + use_string_size;
     }
 
     // move the pointer to the next object's offsets
@@ -588,14 +652,14 @@ void geometry_system_parse_obj(const char *obj_file_full_path, u32 *num_of_objec
             min_normal_for_obj    = INVALID_ID;
             offsets_count_for_obj = 0;
 
-            s32 object_next_index = string_first_string_occurence(object_ptr, "o ");
+            s32 object_next_index = string_first_string_occurence(object_ptr, use_string);
             if (object_next_index == EOF)
             {
                 object_ptr = buffer + buffer_mem_requirements;
             }
             else
             {
-                object_ptr += object_next_index + 2;
+                object_ptr += object_next_index + use_string_size;
             }
             object_processed++;
             if (found == NULL)
@@ -683,9 +747,6 @@ void geometry_system_parse_obj(const char *obj_file_full_path, u32 *num_of_objec
         }
         DASSERT(index_ind == (*geo_configs)[object].index_count);
     }
-
-    const char *material_name      = "usemtl";
-    u32         material_name_size = 6;
 
     clock_update(&telemetry);
     f64 object_proccesing_end_time = telemetry.time_elapsed;
