@@ -187,13 +187,6 @@ void vulkan_begin_command_buffer_single_use(vulkan_context *vk_context, VkComman
 
 void vulkan_flush_command_buffer(vulkan_context *vk_context, VkCommandBuffer command_buffer)
 {
-    VK_CHECK(vkEndCommandBuffer(command_buffer));
-
-    VkSubmitInfo submit_info{};
-    submit_info.sType              = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-    submit_info.commandBufferCount = 1;
-    submit_info.pCommandBuffers    = &command_buffer;
-
     // Create fence to ensure that the command buffer has finished executing
     VkFenceCreateInfo fence_info{};
     fence_info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
@@ -201,10 +194,22 @@ void vulkan_flush_command_buffer(vulkan_context *vk_context, VkCommandBuffer com
     VkFence fence;
     VK_CHECK(vkCreateFence(vk_context->vk_device.logical, &fence_info, nullptr, &fence));
 
+    VkSubmitInfo queue_submit_info{};
+    queue_submit_info.sType                = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    queue_submit_info.pNext                = 0;
+    queue_submit_info.waitSemaphoreCount   = 0;
+    queue_submit_info.pWaitSemaphores      = 0;
+    queue_submit_info.pWaitDstStageMask    = 0;
+    queue_submit_info.commandBufferCount   = 1;
+    queue_submit_info.pCommandBuffers      = &command_buffer;
+    queue_submit_info.signalSemaphoreCount = 0;
+    queue_submit_info.pSignalSemaphores    = 0;
+
     // Submit to the queue
-    VkResult result = vkQueueSubmit(vk_context->vk_device.graphics_queue, 1, &submit_info, fence);
+    VkResult result = vkQueueSubmit(vk_context->vk_device.graphics_queue, 1, &queue_submit_info, fence);
     // Wait for the fence to signal that command buffer has finished executing
     VK_CHECK(vkWaitForFences(vk_context->vk_device.logical, 1, &fence, VK_TRUE, INVALID_ID_64));
+    vkQueueWaitIdle(vk_context->vk_device.graphics_queue);
 
     vkDestroyFence(vk_context->vk_device.logical, fence, nullptr);
 }

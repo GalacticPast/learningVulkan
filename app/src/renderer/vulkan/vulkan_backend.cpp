@@ -311,13 +311,7 @@ bool vulkan_create_texture(texture *in_texture, u8 *pixels)
 
     vulkan_copy_buffer_data_to_image(vk_context, &staging_buffer, image);
 
-    vulkan_transition_image_layout(vk_context, image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-                                   VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
-
     vulkan_generate_mipmaps(vk_context, image);
-
-    vulkan_transition_image_layout(vk_context, image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-                                   VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
     vulkan_destroy_buffer(vk_context, &staging_buffer);
 
