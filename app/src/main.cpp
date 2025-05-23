@@ -91,16 +91,20 @@ int main()
 
     render_data triangle{};
 
-    geometry **sponza_geo     = nullptr;
-    u32        geometry_count = INVALID_ID;
-    geometry_system_get_sponza_geometries(&sponza_geo, &geometry_count);
-    triangle.test_geometry  = sponza_geo;
+    const char *obj_file_name  = "battle_damaged_helmet.obj";
+    const char *mtl_file_name  = "battle_damaged_helmet.mtl";
+    geometry  **geos           = nullptr;
+    u32         geometry_count = INVALID_ID;
+    geometry_system_get_geometries_from_file(obj_file_name, mtl_file_name, &geos, &geometry_count);
+
+    triangle.test_geometry  = geos;
     triangle.geometry_count = geometry_count;
 
     triangle.global_ubo = global_ubo;
 
-    f64 start_time = 0;
-    f64 end_time   = 0;
+    f64 frame_start_time   = 0;
+    f64 frame_end_time     = 0;
+    f64 frame_elapsed_time = 0;
 
     f64 req_frame_time = (f64)(1.0f / 240);
     clock_start(&clock);
@@ -108,11 +112,10 @@ int main()
     u32 index = 0;
     while (app_state.is_running)
     {
-
         clock_update(&clock);
-        start_time = clock.time_elapsed;
+        frame_start_time = clock.time_elapsed;
 
-        update_camera(&triangle.global_ubo, start_time);
+        update_camera(&triangle.global_ubo, frame_start_time - frame_end_time);
 
         application_run(&triangle);
 
@@ -127,11 +130,12 @@ int main()
         }
 
         clock_update(&clock);
-        end_time = clock.time_elapsed - start_time;
+        frame_end_time     = clock.time_elapsed;
+        frame_elapsed_time = frame_end_time - frame_start_time;
 
-        if (!f32_compare(req_frame_time, end_time, 0.0001))
+        if (!f32_compare(req_frame_time, frame_elapsed_time, 0.0001))
         {
-            f64 sleep = req_frame_time - end_time;
+            f64 sleep = req_frame_time - frame_elapsed_time;
             if (sleep > 0)
             {
                 u64 sleep_ms = (u64)(sleep * D_SEC_TO_MS_MULTIPLIER);
@@ -139,6 +143,7 @@ int main()
             }
         }
         input_update(0);
+        clock_update(&clock);
     }
     application_shutdown();
 }
@@ -155,10 +160,6 @@ void update_camera(global_uniform_buffer_object *ubo, f64 start_time)
 
     math::vec3 velocity = math::vec3();
     f32        step     = 0.01f;
-
-    // HACK:
-    static f32 z  = 0.01f;
-    z            += step;
 
     ubo->projection = mat4_perspective(fov_rad, aspect_ratio, 0.01f, 1000.0f);
 
@@ -198,14 +199,18 @@ void update_camera(global_uniform_buffer_object *ubo, f64 start_time)
     }
 
     math::vec3 z_axis          = math::vec3();
-    float      temp_move_speed = step + 0.15;
+    f32        temp_move_speed = start_time;
+
+    f32 scalar = 10.0f;
+
     if (!vec3_compare(z_axis, velocity, 0.0002f))
     {
         // Be sure to normalize the velocity before applying speed.
         velocity.normalize();
-        camera_pos.x += velocity.x * temp_move_speed * start_time;
-        camera_pos.y += velocity.y * temp_move_speed * start_time;
-        camera_pos.z += velocity.z * temp_move_speed * start_time;
+        velocity     *= scalar;
+        camera_pos.x += velocity.x * temp_move_speed;
+        camera_pos.y += velocity.y * temp_move_speed;
+        camera_pos.z += velocity.z * temp_move_speed;
     }
 
     math::mat4 rotation    = mat4_euler_xyz(camera_euler.x, camera_euler.y, camera_euler.z);

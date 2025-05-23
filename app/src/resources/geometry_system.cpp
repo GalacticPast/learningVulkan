@@ -289,6 +289,7 @@ geometry *geometry_system_get_geometry(geometry_config *config)
         }
         DTRACE("Geometry %s loaded.", config->name);
     }
+    geo = geo_sys_state_ptr->hashtable.find(config->name);
     geo->reference_count++;
     return geo;
 }
@@ -764,73 +765,38 @@ void geometry_system_parse_obj(const char *obj_file_full_path, u32 *num_of_objec
     DTRACE("Parse obj function took %fs : wtf so slow", elapsed);
 }
 
-void geometry_system_get_sponza_geometries(geometry ***sponza_geos, u32 *sponza_geometry_count)
+void geometry_system_get_geometries_from_file(const char *obj_file_name, const char *mtl_file_name, geometry ***geos,
+                                              u32 *geometry_count)
 {
-    const char *file_name       = "sponza.obj";
     const char *file_prefix     = "../assets/meshes/";
-    const char *file_mtl_name   = "sponza.mtl";
     const char *file_mtl_prefix = "../assets/materials/";
 
-    char file_full_path[GEOMETRY_NAME_MAX_LENGTH];
-    string_copy_format(file_full_path, "%s%s", 0, file_prefix, file_name);
+    char obj_file_full_path[GEOMETRY_NAME_MAX_LENGTH];
+    string_copy_format(obj_file_full_path, "%s%s", 0, file_prefix, obj_file_name);
 
     char file_mtl_full_path[GEOMETRY_NAME_MAX_LENGTH];
-    string_copy_format(file_mtl_full_path, "%s%s", 0, file_mtl_prefix, file_mtl_name);
+    string_copy_format(file_mtl_full_path, "%s%s", 0, file_mtl_prefix, mtl_file_name);
 
-    u32              sponza_objects     = INVALID_ID;
-    geometry_config *sponza_geo_configs = nullptr;
+    u32              objects     = INVALID_ID;
+    geometry_config *geo_configs = nullptr;
 
     material_system_parse_mtl_file((const char *)file_mtl_full_path);
-    geometry_system_parse_obj(file_full_path, &sponza_objects, &sponza_geo_configs);
+    geometry_system_parse_obj(obj_file_full_path, &objects, &geo_configs);
 
-    // for (u32 i = 0; i < sponza_objects; i++)
-    //{
-    //     u32 vertex_count = sponza_geo_configs[i].vertex_count;
-    //     u32 index_count  = sponza_geo_configs[i].index_count;
-    //     DTRACE("%s", sponza_geo_configs[i].name);
-    //     for (u32 j = 0; j < vertex_count; j++)
-    //     {
-    //         DTRACE("position{ x: %f , y: %f, z: %f}, normals {x: %f, y: %f, z: %f}, texture{u: %f, v: %f}",
-    //                sponza_geo_configs[i].vertices[j].position.x, sponza_geo_configs[i].vertices[j].position.y,
-    //                sponza_geo_configs[i].vertices[j].position.z, sponza_geo_configs[i].vertices[j].normal.x,
-    //                sponza_geo_configs[i].vertices[j].normal.y, sponza_geo_configs[i].vertices[j].normal.z,
-    //                sponza_geo_configs[i].vertices[j].tex_coord.x, sponza_geo_configs[i].vertices[j].tex_coord.y);
-    //     }
-    //     for (u32 j = 0; j <= index_count - 3; j += 3)
-    //     {
-    //         DTRACE("%d %d %d", sponza_geo_configs[i].indices[j], sponza_geo_configs[i].indices[j + 1],
-    //                sponza_geo_configs[i].indices[j + 2]);
-    //     }
-    //     DTRACE("-------------------------------------------------------------------------------------------------------"
-    //            "--------------------------------------------");
-    // }
+    *geos = (geometry **)dallocate(sizeof(geometry *) * objects, MEM_TAG_GEOMETRY);
 
-    *sponza_geos     = (geometry **)dallocate(sizeof(geometry *) * sponza_objects, MEM_TAG_GEOMETRY);
+    // HACK:
     math::vec3 scale = {0.5, 0.5, 0.5};
 
-    for (u32 i = 0; i < sponza_objects; i++)
+    for (u32 i = 0; i < objects; i++)
     {
 
-        scale_geometries(&sponza_geo_configs[i], scale);
-        geometry_system_create_geometry(&sponza_geo_configs[i]);
-        dstring geo       = sponza_geo_configs[i].name;
-        (*sponza_geos)[i] = geometry_system_get_geometry_by_name(geo);
+        scale_geometries(&geo_configs[i], scale);
+        geometry_system_create_geometry(&geo_configs[i]);
+        dstring geo = geo_configs[i].name;
+        (*geos)[i]  = geometry_system_get_geometry_by_name(geo);
     }
-    *sponza_geometry_count = sponza_objects;
-
-    // for (u32 i = 0; i < sponza_objects; i++)
-    //{
-    //     for (u32 j = 0; j < sponza_objects; j++)
-    //     {
-    //         if (i == j)
-    //             continue;
-    //         if ((*sponza_geos)[i] == (*sponza_geos)[j])
-    //         {
-    //             DERROR("ith_ind %d and jth_ind:%d point to the same address %s", i, j,
-    //             (*sponza_geos)[i]->name.c_str());
-    //         }
-    //     }
-    // }
+    *geometry_count = objects;
 
     return;
 }
