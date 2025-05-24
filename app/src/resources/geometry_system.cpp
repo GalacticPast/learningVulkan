@@ -209,24 +209,13 @@ geometry_config geometry_system_generate_cube_config()
     const char *file_full_path = "../assets/meshes/cube.obj";
     const char *file_name      = "cube.obj";
 
-    geometry_config config{};
+    geometry_config *config      = nullptr;
+    u32              num_objects = INVALID_ID;
 
-    // u32     *cube_vert_object_size = nullptr;
-    // vertex **cube_vert             = nullptr;
-    // u32     *cube_ind_object_size  = nullptr;
-    // u32    **cube_ind              = nullptr;
+    geometry_system_parse_obj(file_full_path, &num_objects, &config);
+    config[0].material = material_system_get_default_material();
 
-    // geometry_system_parse_obj(file_full_path, &cube_vert_object_size, &cube_vert, &cube_ind_object_size, &cube_ind);
-
-    // u32 cube_vert_size = cube_vert[0].size();
-    // u32 cube_ind_size  = cube_ind[0].size();
-
-    // dcopy_memory(config.vertices, cube_vert.data, cube_vert_size);
-    // dcopy_memory(config.indices, cube_ind.data, cube_ind_size);
-
-    string_ncopy(config.name, file_name, GEOMETRY_NAME_MAX_LENGTH);
-
-    return config;
+    return config[0];
 }
 
 bool geometry_system_create_default_geometry()

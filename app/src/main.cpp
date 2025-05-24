@@ -91,14 +91,17 @@ int main()
 
     render_data triangle{};
 
-    const char *obj_file_name  = "sponza.obj";
-    const char *mtl_file_name  = "sponza.mtl";
-    geometry  **geos           = nullptr;
-    u32         geometry_count = INVALID_ID;
-    geometry_system_get_geometries_from_file(obj_file_name, mtl_file_name, &geos, &geometry_count);
+    // const char *obj_file_name  = "cub.obj";
+    // const char *mtl_file_name  = "sponza.mtl";
+    u32             geometry_count = INVALID_ID;
+    geometry_config cube_config    = geometry_system_generate_cube_config();
+
+    geometry **geos = (geometry **)dallocate(sizeof(cube_config), MEM_TAG_GEOMETRY);
+
+    geos[0] = geometry_system_get_geometry(&cube_config);
 
     triangle.test_geometry  = geos;
-    triangle.geometry_count = geometry_count;
+    triangle.geometry_count = 1;
 
     triangle.global_ubo = global_ubo;
 
