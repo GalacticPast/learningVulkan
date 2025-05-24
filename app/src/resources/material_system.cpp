@@ -123,6 +123,9 @@ bool material_system_create_default_material()
     default_mat.map.alpha       = texture_system_get_texture(DEFAULT_ALPHA_TEXTURE_HANDLE);
     default_mat.diffuse_color   = {1.0f, 1.0f, 1.0f, 1.0f};
 
+    bool result = vulkan_create_material(&default_mat);
+    DASSERT(result);
+
     mat_sys_state_ptr->hashtable.insert(DEFAULT_MATERIAL_HANDLE, default_mat);
     mat_sys_state_ptr->loaded_materials.push_back(DEFAULT_MATERIAL_HANDLE);
 

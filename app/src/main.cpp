@@ -91,8 +91,8 @@ int main()
 
     render_data triangle{};
 
-    const char *obj_file_name  = "battle_damaged_helmet.obj";
-    const char *mtl_file_name  = "battle_damaged_helmet.mtl";
+    const char *obj_file_name  = "sponza.obj";
+    const char *mtl_file_name  = "sponza.mtl";
     geometry  **geos           = nullptr;
     u32         geometry_count = INVALID_ID;
     geometry_system_get_geometries_from_file(obj_file_name, mtl_file_name, &geos, &geometry_count);
@@ -115,7 +115,7 @@ int main()
         clock_update(&clock);
         frame_start_time = clock.time_elapsed;
 
-        update_camera(&triangle.global_ubo, frame_start_time - frame_end_time);
+        update_camera(&triangle.global_ubo, frame_elapsed_time);
 
         application_run(&triangle);
 
@@ -201,7 +201,7 @@ void update_camera(global_uniform_buffer_object *ubo, f64 start_time)
     math::vec3 z_axis          = math::vec3();
     f32        temp_move_speed = start_time;
 
-    f32 scalar = 10.0f;
+    f32 scalar = 100.0f;
 
     if (!vec3_compare(z_axis, velocity, 0.0002f))
     {

@@ -2,6 +2,7 @@
 /bin
 /src/platform/wayland
 /.vscode
+/assets
 compile_flags.json
 /obj
 /.cache

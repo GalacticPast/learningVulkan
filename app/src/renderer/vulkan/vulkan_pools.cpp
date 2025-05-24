@@ -110,7 +110,9 @@ bool vulkan_update_materials_descriptor_set(vulkan_context *vk_context, material
     VkDescriptorImageInfo image_infos[2] = {};
 
     // INFO: in case
-    struct material *default_mat = material_system_get_default_material();
+    // I dont get the default material in the start because the default material might not be initialized yet.
+    // Because:desc_writes Create default material calls this function .
+    struct material *default_mat = nullptr;
 
     // albedo
     {
@@ -122,7 +124,14 @@ bool vulkan_update_materials_descriptor_set(vulkan_context *vk_context, material
         }
         if (!tex_state)
         {
-            DERROR("No aldbedo map found for material interal_id: %d", descriptor_set_index);
+            if (default_mat)
+            {
+                DERROR("No aldbedo map found for material interal_id: %d", descriptor_set_index);
+            }
+            else
+            {
+                default_mat = material_system_get_default_material();
+            }
             tex_state = (vulkan_texture *)default_mat->map.albedo->vulkan_texture_state;
         }
 
@@ -140,7 +149,14 @@ bool vulkan_update_materials_descriptor_set(vulkan_context *vk_context, material
         }
         if (!tex_state)
         {
-            DERROR("No alpha map found for material interal_id: %d", descriptor_set_index);
+            if (default_mat)
+            {
+                DERROR("No alpha map found for material interal_id: %d", descriptor_set_index);
+            }
+            else
+            {
+                default_mat = material_system_get_default_material();
+            }
             tex_state = (vulkan_texture *)default_mat->map.alpha->vulkan_texture_state;
         }
 
