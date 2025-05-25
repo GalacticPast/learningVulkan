@@ -13,6 +13,7 @@
 #include "platform/platform.hpp"
 
 #include "resources/geometry_system.hpp"
+#include "resources/material_system.hpp"
 #include "resources/resource_types.hpp"
 
 #include "../tests/containers/darray_test.hpp"
@@ -105,6 +106,8 @@ int main()
 
     math::vec3 left    = {-10.0f, 0, 0};
     geos[1]->ubo.model = mat4_translation(left);
+    dstring mat_file   = "orange_lines_512";
+    geos[1]->material  = material_system_acquire_from_config_file(&mat_file);
 
     triangle.test_geometry  = geos;
     triangle.geometry_count = geometry_count;

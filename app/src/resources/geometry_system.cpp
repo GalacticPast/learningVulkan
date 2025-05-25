@@ -236,29 +236,6 @@ bool geometry_system_create_default_geometry()
 
     for (u32 i = 0; i < num_of_objects; i++)
     {
-
-        for (u32 j = 0; j < num_of_objects; j++)
-        {
-            DTRACE("Object_Name: %s", default_geo_configs[i].name);
-        }
-        u32 default_vert_size = default_geo_configs[i].vertex_count;
-
-        for (u32 j = 0; j < default_vert_size; j++)
-        {
-            DTRACE("position{ x: %f , y: %f, z: %f}, normals {x: %f, y: %f, z: %f}, texture{u: %f, v: %f}",
-                   default_geo_configs[i].vertices[j].position.x, default_geo_configs[i].vertices[j].position.y,
-                   default_geo_configs[i].vertices[j].position.z, default_geo_configs[i].vertices[j].normal.x,
-                   default_geo_configs[i].vertices[j].normal.y, default_geo_configs[i].vertices[j].normal.z,
-                   default_geo_configs[i].vertices[j].tex_coord.x, default_geo_configs[i].vertices[j].tex_coord.y);
-        }
-        u32 default_ind_size = default_geo_configs[i].index_count;
-
-        for (u32 j = 0; j <= default_ind_size - 3; j += 3)
-        {
-            DTRACE("%d %d %d", default_geo_configs[i].indices[j], default_geo_configs[i].indices[j + 1],
-                   default_geo_configs[i].indices[j + 2]);
-        }
-        string_ncopy(default_geo_configs[i].name, DEFAULT_GEOMETRY_HANDLE, sizeof(DEFAULT_GEOMETRY_HANDLE));
         geometry_system_create_geometry(&default_geo_configs[i], true);
     }
 

@@ -1,0 +1,6 @@
+{
+    "version":0.1,
+    "name":"orange_lines_512",
+    "diffuse_color":[1.0,1.0,1.0,1.0],
+    "diffuse_map_name":"orange_lines_512.png"
+}

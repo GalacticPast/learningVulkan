@@ -338,7 +338,7 @@ bool vulkan_create_texture(texture *in_texture, u8 *pixels)
     texture_sampler_create_info.compareOp               = VK_COMPARE_OP_ALWAYS;
     texture_sampler_create_info.minLod                  = 0.0f;
     texture_sampler_create_info.maxLod                  = image->mip_levels;
-    texture_sampler_create_info.borderColor             = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
+    texture_sampler_create_info.borderColor             = VK_BORDER_COLOR_INT_OPAQUE_WHITE;
     texture_sampler_create_info.unnormalizedCoordinates = VK_FALSE;
 
     VkResult res = vkCreateSampler(vk_context->vk_device.logical, &texture_sampler_create_info,
