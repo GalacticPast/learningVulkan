@@ -96,9 +96,11 @@ int main()
     u32             geometry_count = INVALID_ID;
     geometry_config cube_config    = geometry_system_generate_cube_config();
 
-    geometry **geos = (geometry **)dallocate(sizeof(cube_config), MEM_TAG_GEOMETRY);
+    geometry **geos = (geometry **)dallocate(sizeof(geometry) * 2, MEM_TAG_GEOMETRY);
 
     geos[0] = geometry_system_get_geometry(&cube_config);
+    geos[1] = geometry_system_get_geometry(&cube_config);
+    
 
     triangle.test_geometry  = geos;
     triangle.geometry_count = 1;
@@ -121,16 +123,6 @@ int main()
         update_camera(&triangle.global_ubo, frame_elapsed_time);
 
         application_run(&triangle);
-
-        bool a = input_is_key_up(KEY_T);
-        bool b = input_was_key_down(KEY_T);
-        if (b && a)
-        {
-
-            // triangle.test_geometry = geometry_system_get_geometry(&conf);
-            // index++;
-            // index %= 6;
-        }
 
         clock_update(&clock);
         frame_end_time     = clock.time_elapsed;
