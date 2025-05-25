@@ -676,7 +676,9 @@ inline bool f32_compare(f32 a, f32 b, f32 tolerance)
 }
 
 s32 drandom();
+s64 drandom_s64();
 s32 drandom_in_range(s32 min, s32 max);
+s64 drandom_in_range_s64(s64 min, s64 max);
 
 f32 fdrandom();
 f32 fdrandom_in_range(f32 min, f32 max);

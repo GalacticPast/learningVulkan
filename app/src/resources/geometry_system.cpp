@@ -42,6 +42,7 @@ bool geometry_system_initialize(u64 *geometry_system_mem_requirements, void *sta
     geo_sys_state_ptr = (geometry_system_state *)state;
 
     geo_sys_state_ptr->hashtable.c_init(MAX_GEOMETRIES_LOADED);
+    geo_sys_state_ptr->hashtable.is_non_resizable = true;
     geo_sys_state_ptr->loaded_geometry.c_init();
 
     geometry_system_create_default_geometry();
@@ -71,13 +72,9 @@ bool geometry_system_shutdowm(void *state)
     return true;
 }
 
-bool geometry_system_create_geometry(geometry_config *config)
+u64 geometry_system_create_geometry(geometry_config *config, bool use_name)
 {
-    if (config->name[0] == '\0')
-    {
-        DERROR("Provided geometry config doesnt have a valid geometry name .");
-        return false;
-    }
+
     geometry geo{};
     u32      tris_count    = config->vertex_count;
     u32      indices_count = config->index_count;
@@ -85,17 +82,28 @@ bool geometry_system_create_geometry(geometry_config *config)
     geo.name               = config->name;
     geo.reference_count    = 0;
     geo.material           = config->material;
+    // default model
+    geo.ubo.model          = math::mat4();
+    // we are setting this id to INVALID_ID_64 because the hashtable will genereate an ID for us.
 
     if (!result)
     {
         DERROR("Couldnt create geometry %s.", config->name);
         return false;
     }
+    // the hashtable will create a unique id for us
+    if (use_name)
+    {
+        geo_sys_state_ptr->hashtable.insert(config->name, geo);
+    }
+    else
+    {
+        geo.id = geo_sys_state_ptr->hashtable.insert(INVALID_ID_64, geo);
+    }
 
-    geo_sys_state_ptr->hashtable.insert(config->name, geo);
     geo_sys_state_ptr->loaded_geometry.push_back(geo.name);
 
-    return true;
+    return geo.id;
 }
 
 geometry_config geometry_system_generate_plane_config(f32 width, f32 height, u32 x_segment_count, u32 y_segment_count,
@@ -251,7 +259,7 @@ bool geometry_system_create_default_geometry()
                    default_geo_configs[i].indices[j + 2]);
         }
         string_ncopy(default_geo_configs[i].name, DEFAULT_GEOMETRY_HANDLE, sizeof(DEFAULT_GEOMETRY_HANDLE));
-        geometry_system_create_geometry(&default_geo_configs[i]);
+        geometry_system_create_geometry(&default_geo_configs[i], true);
     }
 
     for (u32 i = 0; i < num_of_objects; i++)
@@ -264,37 +272,43 @@ bool geometry_system_create_default_geometry()
     return true;
 }
 
-geometry *geometry_system_get_geometry(geometry_config *config)
+geometry *geometry_system_get_geometry(u64 id)
 {
-    geometry *geo = geo_sys_state_ptr->hashtable.find(config->name);
+    geometry *geo = geo_sys_state_ptr->hashtable.find(id);
+
     if (!geo)
     {
-        DTRACE("Geometry %s not loaded yet. Loading it...", config->name);
-        bool result = geometry_system_create_geometry(config);
-        if (!result)
-        {
-            DWARN("Couldnt load %s geometry. returning default_geometry", config->name);
-            return geometry_system_get_default_geometry();
-        }
-        DTRACE("Geometry %s loaded.", config->name);
+        DERROR("There are no geometry associated with that id. Are you sure you haven't created it yet?? Returning "
+               "default geometry");
+        return geometry_system_get_default_geometry();
     }
-    geo = geo_sys_state_ptr->hashtable.find(config->name);
     geo->reference_count++;
     return geo;
 }
+
 geometry *geometry_system_get_geometry_by_name(dstring geometry_name)
 {
     const char *name = geometry_name.c_str();
     geometry   *geo  = geo_sys_state_ptr->hashtable.find(name);
     if (!geo)
     {
-        DWARN("Geometry %s not loaded yet.Load it first by calling geometry_system_get_geometry. Returning "
+        DWARN("Geometry %s not loaded yet.Load it first by calling geometry_system_create_geometry. Returning "
               "default_geometry",
               name);
         return geometry_system_get_default_geometry();
     }
     geo->reference_count++;
     return geo;
+}
+
+geometry *geometry_system_duplicate_geometry(u64 geometry_id)
+{
+    geometry *duplicate = nullptr;
+    geometry *geo       = geometry_system_get_geometry(geometry_id);
+
+    u64 new_id = geo_sys_state_ptr->hashtable.insert(INVALID_ID_64, *geo);
+    duplicate  = geometry_system_get_geometry(new_id);
+    return duplicate;
 }
 
 geometry *geometry_system_get_default_geometry()
@@ -781,9 +795,8 @@ void geometry_system_get_geometries_from_file(const char *obj_file_name, const c
     {
 
         scale_geometries(&geo_configs[i], scale);
-        geometry_system_create_geometry(&geo_configs[i]);
-        dstring geo = geo_configs[i].name;
-        (*geos)[i]  = geometry_system_get_geometry_by_name(geo);
+        u64 id     = geometry_system_create_geometry(&geo_configs[i], false);
+        (*geos)[i] = geometry_system_get_geometry(id);
     }
     *geometry_count = objects;
 

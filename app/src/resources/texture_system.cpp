@@ -204,7 +204,6 @@ bool texture_system_release_textures(dstring *tex_name)
         DERROR("Couldn't release texture %s", texture_name);
         return false;
     }
-    // TODO: erase
-    // tex_sys_state_ptr->hashtable->erase(texture_name);
+
     return true;
 }

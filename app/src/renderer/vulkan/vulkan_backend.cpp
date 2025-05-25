@@ -720,6 +720,9 @@ bool vulkan_draw_geometries(render_data *data, VkCommandBuffer *curr_command_buf
                                 vk_context->vk_graphics_pipeline.layout, 1, 1,
                                 &vk_context->material_descriptor_sets[descriptor_set_index], 0, nullptr);
 
+        vkCmdPushConstants(*curr_command_buffer, vk_context->vk_graphics_pipeline.layout, VK_SHADER_STAGE_VERTEX_BIT, 0,
+                           sizeof(object_uniform_buffer_object), &data->test_geometry[i]->ubo);
+
         vkCmdDrawIndexed(*curr_command_buffer, geo_data->indices_count, 1, index_offset, vertex_offset, 0);
     }
     vulkan_end_frame_renderpass(curr_command_buffer);

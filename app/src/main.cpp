@@ -83,27 +83,31 @@ int main()
     global_ubo.view       = mat4_look_at({2, 2, 2}, {0, 0, 0}, {0, 0, 1.0f});
     global_ubo.projection = mat4_perspective(fov_rad, aspect_ratio, 0.01f, 1000.0f);
 
-    const char *geometry_names[6] = {"cube.obj",   "torus.obj",    "ico_sphere.obj",
-                                     "sphere.obj", "cylinder.obj", "cone.obj"};
-
     geometry_config plane_config =
         geometry_system_generate_plane_config(10, 5, 5, 5, 5, 5, "its_a_plane", DEFAULT_MATERIAL_HANDLE);
 
     render_data triangle{};
 
-    // const char *obj_file_name  = "cub.obj";
+    // const char *obj_file_name  = "sponza.obj";
     // const char *mtl_file_name  = "sponza.mtl";
-    u32             geometry_count = INVALID_ID;
-    geometry_config cube_config    = geometry_system_generate_cube_config();
+    // u32         geometry_count = INVALID_ID;
+    // geometry  **geos           = nullptr;
+    // geometry_system_get_geometries_from_file(obj_file_name, mtl_file_name, &geos, &geometry_count);
 
-    geometry **geos = (geometry **)dallocate(sizeof(geometry) * 2, MEM_TAG_GEOMETRY);
+    geometry_config cube_config = geometry_system_generate_cube_config();
+    u64             geometry_id = geometry_system_create_geometry(&cube_config, false);
 
-    geos[0] = geometry_system_get_geometry(&cube_config);
-    geos[1] = geometry_system_get_geometry(&cube_config);
-    
+    u32        geometry_count = 2;
+    geometry **geos           = (geometry **)dallocate(sizeof(geometry) * geometry_count, MEM_TAG_GEOMETRY);
+
+    geos[0] = geometry_system_get_geometry(geometry_id);
+    geos[1] = geometry_system_duplicate_geometry(geometry_id);
+
+    math::vec3 left    = {-10.0f, 0, 0};
+    geos[1]->ubo.model = mat4_translation(left);
 
     triangle.test_geometry  = geos;
-    triangle.geometry_count = 1;
+    triangle.geometry_count = geometry_count;
 
     triangle.global_ubo = global_ubo;
 

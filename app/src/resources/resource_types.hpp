@@ -70,9 +70,10 @@ struct geometry_config
 
 struct geometry
 {
-    u32       id              = INVALID_ID;
-    u32       reference_count = INVALID_ID;
-    dstring   name;
-    material *material              = nullptr;
-    void     *vulkan_geometry_state = nullptr;
+    u64                          id              = INVALID_ID_64;
+    u32                          reference_count = INVALID_ID;
+    dstring                      name;
+    material                    *material              = nullptr;
+    void                        *vulkan_geometry_state = nullptr;
+    object_uniform_buffer_object ubo;
 };

@@ -1,7 +1,12 @@
 #include "dmath.hpp"
+#include "core/dasserts.hpp"
 #include "platform/platform.hpp"
 #include "resources/resource_types.hpp"
-
+//
+#include <cstdint>
+#include <iostream>
+#include <random>
+//
 static bool rand_seeded = false;
 
 s32 drandom()
@@ -12,6 +17,26 @@ s32 drandom()
         rand_seeded = true;
     }
     return rand();
+}
+
+s64 drandom_s64()
+{
+    static std::random_device rd;
+
+    u64 high = static_cast<u64>(rd()) << 32;
+    u64 low  = static_cast<u64>(rd());
+
+    u64 random_value = high | low;
+    DASSERT(random_value != INVALID_ID_64);
+
+    return (s64)random_value;
+}
+
+s64 drandom_in_range_64(s64 min, s64 max)
+{
+    s64 value = (drandom_s64() % (max - min + 1)) + min;
+    DASSERT(value != INVALID_ID_64);
+    return value;
 }
 
 s32 drandom_in_range(s32 min, s32 max)

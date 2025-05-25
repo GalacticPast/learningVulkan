@@ -79,7 +79,7 @@ bool vulkan_create_renderpass(vulkan_context *vk_context)
 bool vulkan_begin_frame_renderpass(vulkan_context *vk_context, VkCommandBuffer command_buffer, u32 image_index)
 {
     VkClearValue clear_values[2] = {};
-    clear_values[0]              = {.color = {{0.0f, 0.0f, 0.0f, 1.0f}}};
+    clear_values[0]              = {.color = {{0.243f, 0.286f, 0.42f, 1.0f}}};
     clear_values[1]              = {.depthStencil = {1.0f, 0}};
 
     VkRenderPassBeginInfo renderpass_begin_info{};

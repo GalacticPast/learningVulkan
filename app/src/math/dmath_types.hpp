@@ -2,6 +2,7 @@
 #include "core/dmemory.hpp"
 #include "defines.hpp"
 #include <cmath>
+
 namespace math
 {
 struct vec_2d
@@ -277,4 +278,23 @@ struct vertex
     math::vec3   position;
     math::vec3   normal;
     math::vec_2d tex_coord;
+};
+
+struct camera
+{
+    math::vec3 euler;
+    math::vec3 position;
+    math::vec3 up = math::vec3(0, 1, 0);
+};
+
+struct global_uniform_buffer_object
+{
+    math::mat4 view;
+    math::mat4 projection;
+};
+
+struct object_uniform_buffer_object // aka push constants
+{
+    math::mat4 model;
+    math::mat4 padding1;
 };

@@ -9,6 +9,9 @@
 #include "core/dstring.hpp"
 #include "core/logger.hpp"
 #include "defines.hpp"
+
+#include "math/dmath.hpp"
+
 #include <string.h>
 
 #define MAX_KEY_LENGTH 64
@@ -20,19 +23,27 @@ template <typename T> class dhashtable
   private:
     struct entry
     {
-        bool   is_initialized = false;
-        char   key[MAX_KEY_LENGTH];
-        T      type;
-        entry *next = nullptr;
-        entry *prev = nullptr;
+        bool   is_initialized    = false;
+        entry *next              = nullptr;
+        entry *prev              = nullptr;
+        u32    unique_identifier = INVALID_ID;
+
+        char key[MAX_KEY_LENGTH];
+
+        T type;
     };
     entry *table;
 
     entry *default_entry = nullptr;
 
-    u64  hash_func(const char *key);
-    u64  _find_empty_spot(u64 hash_code);
+    u64 hash_func(const char *key);
+    u64 hash_func(const u64 key);
+
+    u64 _find_empty_spot(u64 hash_code);
+
     void _im_paranoid();
+    void _print_hashtable();
+
     void _resize_and_rehash();
 
     u64 capacity;
@@ -41,6 +52,8 @@ template <typename T> class dhashtable
     u64 num_elements_in_table;
 
   public:
+    bool is_non_resizable = false;
+
     dhashtable();
     dhashtable(u64 table_size);
 
@@ -49,8 +62,6 @@ template <typename T> class dhashtable
 
     ~dhashtable();
 
-    void _print_hashtable();
-
     u64 max_capacity();
     u64 num_elements();
     u64 size();
@@ -58,7 +69,15 @@ template <typename T> class dhashtable
     void clear();
 
     bool erase(const char *key);
-    T   *find(const char *key);
+
+    T *find(const u64 key);
+    T *find(const char *key);
+
+    /* INFO: this will return the index of the table where the value will be inserted, this is kind of a bad idea
+     * because when the hashtable resizes the previous returned values would not be valid. So this will only work for
+     * fixed size hashtables. "DONE: Maybe I should add a flag indicating that its a fixed size hashtable??" Call this
+     * only for fixed size hashtables */
+    u64  insert(const u64 key, T type);
     void insert(const char *key, T type);
 
     void set_default_value(T default_val);
@@ -81,6 +100,7 @@ template <typename T> u64 dhashtable<T>::_find_empty_spot(u64 hash_code)
     DERROR("Couldn't find empty spot");
     return INVALID_ID_64;
 }
+
 template <typename T> void dhashtable<T>::_resize_and_rehash()
 {
     DWARN("Hashtable does not have enough capacity to insert element. Resizing and rehashing");
@@ -125,6 +145,17 @@ template <typename T> void dhashtable<T>::_print_hashtable()
             DTRACE("%s", table[i].key);
         }
     }
+}
+
+template <typename T> u64 dhashtable<T>::hash_func(const u64 key)
+{
+    // SplitMix64 (used in PCG and others)
+    // -> https://github.com/indiesoftby/defold-splitmix64?tab=readme-ov-file
+    u64 x  = key;
+    x     += 0x9e3779b97f4a7c15;
+    x      = (x ^ (x >> 30)) * 0xbf58476d1ce4e5b9;
+    x      = (x ^ (x >> 27)) * 0x94d049bb133111eb;
+    return x ^ (x >> 31);
 }
 
 template <typename T> u64 dhashtable<T>::hash_func(const char *key)
@@ -197,6 +228,80 @@ template <typename T> void dhashtable<T>::set_default_value(T default_val)
     }
     default_entry->type = default_val;
 }
+// should make the bottom 32 bits as the index for the hastable entry and the top 32 bits for the unique-id;
+template <typename T> u64 dhashtable<T>::insert(const u64 key, T type)
+{
+    s64 dummy = key;
+    if (key == INVALID_ID_64)
+    {
+        dummy = drandom_s64();
+    }
+
+    // generate a unqiue identifier and a index
+    u64 hash_code = hash_func(dummy);
+
+    // the high 32 bits will be the unique identifier that we will match for when the user queries for the data.
+    // the low 32 bits will be the index for the query.
+    u32 high = static_cast<u32>(dummy >> 32);
+    u32 low  = static_cast<u32>(dummy);
+
+    low %= max_length;
+
+    if (num_elements_in_table + 1 > max_length)
+    {
+
+        if (is_non_resizable)
+        {
+            DASSERT_MSG(
+                1 == 0,
+                "Hashtable is signaled as non-resizable. Max entries reached. Increase the capacity of the table!!!");
+        }
+        DTRACE("Max capacity reached. Resizing and rehashing hahstable entries");
+        _resize_and_rehash();
+
+        hash_code = hash_func(dummy);
+
+        high  = static_cast<u32>(dummy >> 32);
+        low   = static_cast<u32>(dummy);
+        low  %= max_length;
+    }
+
+    entry *entry_ptr = &table[low];
+    if (table[low].is_initialized)
+    {
+
+        entry *prev = nullptr;
+        while (entry_ptr->next)
+        {
+            prev      = entry_ptr;
+            entry_ptr = entry_ptr->next;
+        }
+        u64 get_empty_id = _find_empty_spot(hash_code);
+
+        if (get_empty_id == INVALID_ID_64)
+        {
+            DFATAL("Table size: %d, elements_in_table: %d", max_length, num_elements_in_table);
+        }
+
+        entry_ptr->next = &table[get_empty_id];
+        entry_ptr->prev = prev;
+        entry_ptr       = entry_ptr->next;
+
+        low = get_empty_id;
+    }
+
+    entry_ptr->unique_identifier = high;
+    entry_ptr->type              = type;
+    entry_ptr->next              = nullptr;
+    entry_ptr->is_initialized    = true;
+
+    num_elements_in_table++;
+
+    u64 final_id = (static_cast<u64>(high) << 32) | low;
+    DASSERT(final_id != INVALID_ID_64);
+
+    return final_id;
+}
 
 template <typename T> void dhashtable<T>::insert(const char *key, T type)
 {
@@ -210,6 +315,12 @@ template <typename T> void dhashtable<T>::insert(const char *key, T type)
     if (num_elements_in_table + 1 > max_length)
     {
 
+        if (is_non_resizable)
+        {
+            DASSERT_MSG(
+                1 == 0,
+                "Hashtable is signaled as non-resizable. Max entries reached. Increase the capacity of the table!!!");
+        }
         DTRACE("Max capacity reached. Resizing and rehashing hahstable entries");
         _resize_and_rehash();
 
@@ -245,6 +356,50 @@ template <typename T> void dhashtable<T>::insert(const char *key, T type)
 
     num_elements_in_table++;
     return;
+}
+
+template <typename T> T *dhashtable<T>::find(const u64 key)
+{
+    if (key == INVALID_ID_64)
+    {
+        DFATAL("Key is invalid_id_64");
+    }
+
+    u32 high = static_cast<u32>(key >> 32);
+    u32 low  = static_cast<u32>(key);
+
+    entry *entry_ptr = &table[low];
+
+    if (!table[low].is_initialized)
+    {
+        if (default_entry)
+        {
+            DWARN("Couldnt find unique_identifer: %d for index: %d. It doesnt exist in the hashtable, returning "
+                  "default_val",
+                  key);
+            return &default_entry->type;
+        }
+        DERROR("The provided key %llu high: %d , low: %d, doesnt map to a entry. Returning nullptr", key, high, low);
+        return nullptr;
+    }
+    if (entry_ptr->unique_identifier != high)
+    {
+        if (is_non_resizable)
+        {
+            DFATAL("The provided key %llu high: %d , low: %d, maps to a incorrent entry. You mayhave resized a "
+                   "un-resizable array so that the hash codes were changed.",
+                   key, high, low);
+        }
+        else
+        {
+            DFATAL(
+                "The provided key %llu high: %d , low: %d, maps to a incorrent entry. Something is really wrong here.",
+                key, high, low);
+        }
+    }
+
+    T *type_ref = &entry_ptr->type;
+    return type_ref;
 }
 
 template <typename T> T *dhashtable<T>::find(const char *key)

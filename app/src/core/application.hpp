@@ -14,25 +14,6 @@ struct application_config
     const char *application_name;
 };
 
-struct camera
-{
-    math::vec3 euler;
-    math::vec3 position;
-    math::vec3 up = math::vec3(0, 1, 0);
-};
-
-struct global_uniform_buffer_object
-{
-    math::mat4 view;
-    math::mat4 projection;
-};
-
-struct object_uniform_buffer_object
-{
-    math::mat4 padding1;
-    math::mat4 model;
-};
-
 struct render_data
 {
     global_uniform_buffer_object global_ubo;
