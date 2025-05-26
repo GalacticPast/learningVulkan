@@ -11,3 +11,5 @@ u32 vulkan_find_memory_type_index(vulkan_context *vk_context, u32 mem_type_filte
                                   VkMemoryPropertyFlags mem_properties_flags);
 
 bool vulkan_find_suitable_depth_format(vulkan_device *device, vulkan_image *depth_image);
+
+bool vulkan_create_sync_objects(vulkan_context *vk_context);

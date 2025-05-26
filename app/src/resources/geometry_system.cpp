@@ -39,7 +39,7 @@ bool geometry_system_initialize(u64 *geometry_system_mem_requirements, void *sta
     {
         return true;
     }
-    geo_sys_state_ptr = (geometry_system_state *)state;
+    geo_sys_state_ptr = static_cast<geometry_system_state *>(state);
 
     geo_sys_state_ptr->hashtable.c_init(MAX_GEOMETRIES_LOADED);
     geo_sys_state_ptr->hashtable.is_non_resizable = true;
@@ -55,7 +55,7 @@ bool geometry_system_shutdowm(void *state)
     u32       loaded_geometry_count = geo_sys_state_ptr->loaded_geometry.size();
     geometry *geo                   = nullptr;
     bool      result                = false;
-    for (int i = 0; i < loaded_geometry_count; i++)
+    for (u32 i = 0; i < loaded_geometry_count; i++)
     {
         const char *geo_name = geo_sys_state_ptr->loaded_geometry[i].c_str();
         geo                  = geo_sys_state_ptr->hashtable.find(geo_name);
@@ -145,9 +145,9 @@ geometry_config geometry_system_generate_plane_config(f32 width, f32 height, u32
     geometry_config config;
 
     config.vertex_count = x_segment_count * y_segment_count * 4;
-    config.vertices     = (vertex *)dallocate(sizeof(vertex) * config.vertex_count, MEM_TAG_GEOMETRY);
+    config.vertices     = static_cast<vertex *>(dallocate(sizeof(vertex) * config.vertex_count, MEM_TAG_GEOMETRY));
     config.index_count  = x_segment_count * y_segment_count * 6;
-    config.indices      = (u32 *)dallocate(sizeof(u32) * config.index_count, MEM_TAG_GEOMETRY);
+    config.indices      = static_cast<u32 *>(dallocate(sizeof(u32) * config.index_count, MEM_TAG_GEOMETRY));
 
     // TODO: This generates extra vertices, but we can always deduplicate them later.
     f32 seg_width   = width / x_segment_count;
@@ -163,16 +163,16 @@ geometry_config geometry_system_generate_plane_config(f32 width, f32 height, u32
             f32 min_y   = (y * seg_height) - half_height;
             f32 max_x   = min_x + seg_width;
             f32 max_y   = min_y + seg_height;
-            f32 min_uvx = (x / (f32)x_segment_count) * tile_x;
-            f32 min_uvy = (y / (f32)y_segment_count) * tile_y;
-            f32 max_uvx = ((x + 1) / (f32)x_segment_count) * tile_x;
-            f32 max_uvy = ((y + 1) / (f32)y_segment_count) * tile_y;
+            f32 min_uvx = (x / static_cast<f32>(x_segment_count)) * tile_x;
+            f32 min_uvy = (y / static_cast<f32>(y_segment_count)) * tile_y;
+            f32 max_uvx = ((x + 1) / static_cast<f32>(x_segment_count)) * tile_x;
+            f32 max_uvy = ((y + 1) / static_cast<f32>(y_segment_count)) * tile_y;
 
             u32     v_offset = ((y * x_segment_count) + x) * 4;
-            vertex *v0       = &((vertex *)config.vertices)[v_offset + 0];
-            vertex *v1       = &((vertex *)config.vertices)[v_offset + 1];
-            vertex *v2       = &((vertex *)config.vertices)[v_offset + 2];
-            vertex *v3       = &((vertex *)config.vertices)[v_offset + 3];
+            vertex *v0       = &(static_cast<vertex *>(config.vertices))[v_offset + 0];
+            vertex *v1       = &(static_cast<vertex *>(config.vertices))[v_offset + 1];
+            vertex *v2       = &(static_cast<vertex *>(config.vertices))[v_offset + 2];
+            vertex *v3       = &(static_cast<vertex *>(config.vertices))[v_offset + 3];
 
             v0->position.x  = min_x;
             v0->position.y  = min_y;
@@ -337,10 +337,10 @@ void geometry_system_parse_obj(const char *obj_file_full_path, u32 *num_of_objec
         return;
     }
     DASSERT(buffer_mem_requirements != INVALID_ID_64);
-    char *buffer = (char *)dallocate(buffer_mem_requirements + 1, MEM_TAG_GEOMETRY);
+    char *buffer = static_cast<char *>(dallocate(buffer_mem_requirements + 1, MEM_TAG_GEOMETRY));
     char *start  = buffer;
 
-    file_open_and_read(obj_file_full_path, &buffer_mem_requirements, (char *)buffer, 0);
+    file_open_and_read(obj_file_full_path, &buffer_mem_requirements, buffer, 0);
 
     // TODO: cleaup this piece of shit code
     u32 objects        = string_num_of_substring_occurence(buffer, "o ");
@@ -355,7 +355,7 @@ void geometry_system_parse_obj(const char *obj_file_full_path, u32 *num_of_objec
 
     *num_of_objects = objects;
 
-    *geo_configs = (geometry_config *)dallocate(sizeof(geometry_config) * objects, MEM_TAG_GEOMETRY);
+    *geo_configs = static_cast<geometry_config *>(dallocate(sizeof(geometry_config) * objects, MEM_TAG_GEOMETRY));
 
     clock_update(&telemetry);
     f64 names_proccesing_start_time = telemetry.time_elapsed;
@@ -429,7 +429,8 @@ void geometry_system_parse_obj(const char *obj_file_full_path, u32 *num_of_objec
     u32 v     = string_first_string_occurence(vert_ptr, vert_substring);
     vert_ptr += v + vert_substring_size;
 
-    math::vec3 *vert_coords = (math::vec3 *)dallocate(sizeof(math::vec3) * vertex_count_obj, MEM_TAG_GEOMETRY);
+    math::vec3 *vert_coords =
+        static_cast<math::vec3 *>(dallocate(sizeof(math::vec3) * vertex_count_obj, MEM_TAG_GEOMETRY));
 
     u32 vert_processed = 0;
     clock_update(&telemetry);
@@ -459,7 +460,7 @@ void geometry_system_parse_obj(const char *obj_file_full_path, u32 *num_of_objec
     clock_update(&telemetry);
     f64 vert_proccesing_end_time = telemetry.time_elapsed;
     f64 total_vert_time          = vert_proccesing_end_time - vert_proccesing_start_time;
-    DTRACE("Vert proccesing took %fs.\n", total_vert_time);
+    DTRACE("%d Vertices processed in %fs.\n", vert_processed, total_vert_time);
 
     char vert_normal[3]             = "vn";
     u32  vert_normal_substring_size = 2;
@@ -467,7 +468,7 @@ void geometry_system_parse_obj(const char *obj_file_full_path, u32 *num_of_objec
     char *norm_ptr         = buffer;
     u32   normal_count_obj = string_num_of_substring_occurence(norm_ptr, "vn");
 
-    math::vec3 *normals = (math::vec3 *)dallocate(sizeof(math::vec3) * normal_count_obj, MEM_TAG_GEOMETRY);
+    math::vec3 *normals = static_cast<math::vec3 *>(dallocate(sizeof(math::vec3) * normal_count_obj, MEM_TAG_GEOMETRY));
 
     u32 vn    = string_first_string_occurence(norm_ptr, vert_normal);
     norm_ptr += vn + vert_normal_substring_size;
@@ -499,7 +500,8 @@ void geometry_system_parse_obj(const char *obj_file_full_path, u32 *num_of_objec
     clock_update(&telemetry);
     f64 norm_proccesing_end_time = telemetry.time_elapsed;
     f64 total_norm_time          = norm_proccesing_end_time - norm_proccesing_start_time;
-    DTRACE("norm proccesing took %fs.\n", total_norm_time);
+
+    DTRACE("%d normals processed in %fs.\n", normal_processed, total_norm_time);
 
     char vert_texture[3]             = "vt";
     u32  vert_texture_substring_size = 2;
@@ -507,7 +509,8 @@ void geometry_system_parse_obj(const char *obj_file_full_path, u32 *num_of_objec
     char *tex_ptr           = buffer;
     u32   texture_count_obj = string_num_of_substring_occurence(tex_ptr, "vt");
 
-    math::vec_2d *textures = (math::vec_2d *)dallocate(sizeof(math::vec_2d) * texture_count_obj, MEM_TAG_GEOMETRY);
+    math::vec_2d *textures =
+        static_cast<math::vec_2d *>(dallocate(sizeof(math::vec_2d) * texture_count_obj, MEM_TAG_GEOMETRY));
 
     u32 vt   = string_first_string_occurence(tex_ptr, vert_texture);
     tex_ptr += vt + vert_texture_substring_size;
@@ -538,7 +541,7 @@ void geometry_system_parse_obj(const char *obj_file_full_path, u32 *num_of_objec
     clock_update(&telemetry);
     f64 textrue_proccesing_end_time = telemetry.time_elapsed;
     f64 total_texture_time          = textrue_proccesing_end_time - textrue_proccesing_start_time;
-    DTRACE("norm proccesing took %fs.\n", total_texture_time);
+    DTRACE("%d Texture_coords processed in %fs.\n", texture_processed, total_texture_time);
 
     // INFO: Experimental get all the offsets
     u32 offsets_count = string_num_of_substring_occurence(buffer, "f ");
@@ -549,7 +552,7 @@ void geometry_system_parse_obj(const char *obj_file_full_path, u32 *num_of_objec
     // array (i.e) 0 , 1 and 2 .. 6 . From 7 till vertices count onwards are the actual
     // global offsets for the object.
     u32  offsets_size = (offsets_count * 9) + (7 * objects);
-    u32 *offsets      = (u32 *)dallocate(sizeof(u32) * (offsets_size), MEM_TAG_GEOMETRY);
+    u32 *offsets      = static_cast<u32 *>(dallocate(sizeof(u32) * (offsets_size), MEM_TAG_GEOMETRY));
 
     u32   object_index = string_first_string_occurence(buffer, "o ");
     char *object_ptr   = buffer + object_index + 2;
@@ -603,11 +606,13 @@ void geometry_system_parse_obj(const char *obj_file_full_path, u32 *num_of_objec
     u32 min_normal_for_obj    = INVALID_ID;
     u32 offsets_count_for_obj = 0;
 
-    u32 object_processed = 0;
+    u32 object_processed  = 0;
+    u32 offsets_processed = 0;
 
     clock_update(&telemetry);
     f64  offsets_proccesing_start_time = telemetry.time_elapsed;
     bool process_final_line            = false;
+
     while (process_final_line || indices_ptr != NULL || found != NULL)
     {
         found = strstr(found, "f ");
@@ -621,6 +626,8 @@ void geometry_system_parse_obj(const char *obj_file_full_path, u32 *num_of_objec
             offset_ptr_start[4] = min_normal_for_obj;
             offset_ptr_start[5] = max_normal_for_obj;
             offset_ptr_start[6] = offsets_count_for_obj;
+
+            offsets_processed += offsets_count_for_obj;
 
             offset_ptr_start = offset_ptr_walk;
             offset_ptr_walk  = &offset_ptr_start[7];
@@ -690,7 +697,7 @@ void geometry_system_parse_obj(const char *obj_file_full_path, u32 *num_of_objec
     clock_update(&telemetry);
     f64 offsets_proccesing_end_time = telemetry.time_elapsed;
     f64 total_offsets_time          = offsets_proccesing_end_time - offsets_proccesing_start_time;
-    DTRACE("offsets proccesing took %fs.\n", total_offsets_time);
+    DTRACE("%d offsets processed in %fs for %d objects .\n", offsets_processed, total_offsets_time, object_processed);
 
     clock_update(&telemetry);
     f64 object_proccesing_start_time = telemetry.time_elapsed;
@@ -708,10 +715,11 @@ void geometry_system_parse_obj(const char *obj_file_full_path, u32 *num_of_objec
         size_till_now            += (count + 7);
         u32 vertex_count_per_obj  = vert_max - vert_min + 1;
 
-        (*geo_configs)[object].vertices     = (vertex *)dallocate(sizeof(vertex) * (count / 3), MEM_TAG_GEOMETRY);
+        (*geo_configs)[object].vertices =
+            static_cast<vertex *>(dallocate(sizeof(vertex) * (count / 3), MEM_TAG_GEOMETRY));
         (*geo_configs)[object].vertex_count = count / 3;
-        (*geo_configs)[object].indices      = (u32 *)dallocate(sizeof(u32) * (count / 3), MEM_TAG_GEOMETRY);
-        (*geo_configs)[object].index_count  = count / 3;
+        (*geo_configs)[object].indices     = static_cast<u32 *>(dallocate(sizeof(u32) * (count / 3), MEM_TAG_GEOMETRY));
+        (*geo_configs)[object].index_count = count / 3;
 
         u32 index_ind = 0;
         for (u32 j = 0; j <= count - 3; j += 3)
@@ -760,10 +768,10 @@ void geometry_system_get_geometries_from_file(const char *obj_file_name, const c
     u32              objects     = INVALID_ID;
     geometry_config *geo_configs = nullptr;
 
-    material_system_parse_mtl_file((const char *)file_mtl_full_path);
+    material_system_parse_mtl_file(static_cast<const char *>(file_mtl_full_path));
     geometry_system_parse_obj(obj_file_full_path, &objects, &geo_configs);
 
-    *geos = (geometry **)dallocate(sizeof(geometry *) * objects, MEM_TAG_GEOMETRY);
+    *geos = static_cast<geometry **>(dallocate(sizeof(geometry *) * objects, MEM_TAG_GEOMETRY));
 
     // HACK:
     math::vec3 scale = {0.5, 0.5, 0.5};

@@ -7,10 +7,10 @@
 
 struct application_config
 {
-    s32         x;
-    s32         y;
-    s32         height;
-    s32         width;
+    u32         x;
+    u32         y;
+    u32         height;
+    u32         width;
     const char *application_name;
 };
 

@@ -46,7 +46,7 @@ bool dfreelist_allocate_and_deallocate_test()
     u32 array_byte_size = array_size * sizeof(u32);
     u32 count           = GB(1) / array_byte_size - 10000;
 
-    u32 *fib_sec = (u32 *)dfreelist_allocate(freelist, array_byte_size);
+    u32 *fib_sec = static_cast<u32 *>(dfreelist_allocate(freelist, array_byte_size));
 
     for (u32 i = 0; i < array_size; i++)
     {
@@ -56,7 +56,7 @@ bool dfreelist_allocate_and_deallocate_test()
 
     while (count--)
     {
-        u32 *array = (u32 *)dfreelist_allocate(freelist, array_byte_size);
+        u32 *array = static_cast<u32 *>(dfreelist_allocate(freelist, array_byte_size));
 
         for (u32 i = 0; i < array_size; i++)
         {

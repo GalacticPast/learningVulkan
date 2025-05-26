@@ -24,7 +24,7 @@ bool renderer_system_startup(u64 *renderer_system_memory_requirements, struct ap
         return true;
     }
     DINFO("Initializing renderer system...");
-    renderer_system_state_ptr = (renderer_system_state *)state;
+    renderer_system_state_ptr = reinterpret_cast<renderer_system_state *>(state);
 
     vulkan_backend_initialize(&renderer_system_state_ptr->vulkan_backend_memory_requirements, 0, 0);
     renderer_system_state_ptr->vulkan_backend_state = linear_allocator_allocate(

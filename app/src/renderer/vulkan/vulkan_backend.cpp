@@ -3,7 +3,6 @@
 #include "core/logger.hpp"
 #include "defines.hpp"
 
-#include "resources/material_system.hpp"
 #include "resources/resource_types.hpp"
 #include "vulkan/vulkan_core.h"
 #include "vulkan_backend.hpp"
@@ -16,10 +15,7 @@
 #include "vulkan_pools.hpp"
 #include "vulkan_renderpass.hpp"
 #include "vulkan_swapchain.hpp"
-#include "vulkan_sync_objects.hpp"
 #include "vulkan_types.hpp"
-
-#include "resources/texture_system.hpp"
 
 static vulkan_context *vk_context;
 
@@ -39,7 +35,7 @@ bool vulkan_backend_initialize(u64 *vulkan_backend_memory_requirements, applicat
         return true;
     }
     DDEBUG("Initializing Vulkan backend...");
-    vk_context               = (vulkan_context *)state;
+    vk_context               = reinterpret_cast<vulkan_context *>(state);
     vk_context->vk_allocator = nullptr;
 
     {
@@ -58,13 +54,13 @@ bool vulkan_backend_initialize(u64 *vulkan_backend_memory_requirements, applicat
 
     VkApplicationInfo app_info{};
 
-    app_info.sType              = VK_STRUCTURE_TYPE_APPLICATION_INFO;
-    app_info.pNext              = nullptr;
-    app_info.pApplicationName   = app_config->application_name;
-    app_info.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
-    app_info.pEngineName        = app_config->application_name;
-    app_info.engineVersion      = VK_MAKE_VERSION(1, 0, 0);
-    app_info.apiVersion         = VK_API_VERSION_1_3;
+    app_info.sType            = VK_STRUCTURE_TYPE_APPLICATION_INFO;
+    app_info.pNext            = nullptr;
+    app_info.pApplicationName = app_config->application_name;
+    // app_info.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
+    app_info.pEngineName      = app_config->application_name;
+    // app_info.engineVersion      = VK_MAKE_VERSION(1, 0, 0);
+    // app_info.apiVersion         = VK_API_VERSION_1_3;
 
     bool enable_validation_layers = false;
     bool validation_layer_support = false;
@@ -157,8 +153,8 @@ bool vulkan_backend_initialize(u64 *vulkan_backend_memory_requirements, applicat
     inst_create_info.flags                   = 0;
     inst_create_info.enabledLayerCount       = vk_context->enabled_layer_count;
     inst_create_info.ppEnabledLayerNames     = vk_context->enabled_layer_names;
-    inst_create_info.enabledExtensionCount   = (u32)vulkan_instance_extensions.size();
-    inst_create_info.ppEnabledExtensionNames = (const char **)vulkan_instance_extensions.data;
+    inst_create_info.enabledExtensionCount   = static_cast<u32>(vulkan_instance_extensions.size());
+    inst_create_info.ppEnabledExtensionNames = reinterpret_cast<const char **>(vulkan_instance_extensions.data);
     inst_create_info.pApplicationInfo        = &app_info;
 
     VkResult result = vkCreateInstance(&inst_create_info, vk_context->vk_allocator, &vk_context->vk_instance);
@@ -273,8 +269,9 @@ bool vulkan_create_material(material *in_mat)
 
 bool vulkan_create_texture(texture *in_texture, u8 *pixels)
 {
-    in_texture->vulkan_texture_state = (vulkan_texture *)dallocate(sizeof(vulkan_texture), MEM_TAG_RENDERER);
-    vulkan_texture *vk_texture       = (vulkan_texture *)in_texture->vulkan_texture_state;
+    in_texture->vulkan_texture_state =
+        static_cast<vulkan_texture *>(dallocate(sizeof(vulkan_texture), MEM_TAG_RENDERER));
+    vulkan_texture *vk_texture = static_cast<vulkan_texture *>(in_texture->vulkan_texture_state);
 
     u32 tex_width    = in_texture->width;
     u32 tex_height   = in_texture->height;
@@ -351,7 +348,7 @@ bool vulkan_create_texture(texture *in_texture, u8 *pixels)
 
 bool vulkan_destroy_texture(texture *in_texture)
 {
-    vulkan_texture *vk_texture = (vulkan_texture *)in_texture->vulkan_texture_state;
+    vulkan_texture *vk_texture = static_cast<vulkan_texture *>(in_texture->vulkan_texture_state);
     if (!vk_texture)
     {
         DWARN("Vk texture is nullptr, invalid texture.");
@@ -388,8 +385,8 @@ bool vulkan_create_debug_messenger(VkDebugUtilsMessengerCreateInfoEXT *dbg_messe
     }
 
     PFN_vkCreateDebugUtilsMessengerEXT func_create_dbg_utils_messenger_ext =
-        (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(vk_context->vk_instance,
-                                                                  "vkCreateDebugUtilsMessengerEXT");
+        reinterpret_cast<PFN_vkCreateDebugUtilsMessengerEXT>(
+            vkGetInstanceProcAddr(vk_context->vk_instance, "vkCreateDebugUtilsMessengerEXT"));
 
     if (func_create_dbg_utils_messenger_ext == nullptr)
     {
@@ -438,7 +435,7 @@ void vulkan_backend_shutdown()
     vk_context->material_descriptor_sets.~darray();
 
     vulkan_free_command_buffers(vk_context, &vk_context->graphics_command_pool,
-                                (VkCommandBuffer *)vk_context->command_buffers.data, MAX_FRAMES_IN_FLIGHT);
+                                static_cast<VkCommandBuffer *>(vk_context->command_buffers.data), MAX_FRAMES_IN_FLIGHT);
     vk_context->command_buffers.~darray();
     vkDestroyCommandPool(device, vk_context->graphics_command_pool, allocator);
 
@@ -493,8 +490,8 @@ void vulkan_backend_shutdown()
 
 #if DEBUG
     PFN_vkDestroyDebugUtilsMessengerEXT func_destroy_dbg_utils_messenger_ext =
-        (PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(vk_context->vk_instance,
-                                                                   "vkDestroyDebugUtilsMessengerEXT");
+        reinterpret_cast<PFN_vkDestroyDebugUtilsMessengerEXT>(
+            vkGetInstanceProcAddr(vk_context->vk_instance, "vkDestroyDebugUtilsMessengerEXT"));
 
     if (func_destroy_dbg_utils_messenger_ext == nullptr)
     {
@@ -514,7 +511,8 @@ bool vulkan_check_validation_layer_support()
     vkEnumerateInstanceLayerProperties(&inst_layer_properties_count, 0);
 
     darray<VkLayerProperties> inst_layer_properties(inst_layer_properties_count);
-    vkEnumerateInstanceLayerProperties(&inst_layer_properties_count, (VkLayerProperties *)inst_layer_properties.data);
+    vkEnumerateInstanceLayerProperties(&inst_layer_properties_count,
+                                       static_cast<VkLayerProperties *>(inst_layer_properties.data));
 
     const char *validation_layer_name = "VK_LAYER_KHRONOS_validation";
 
@@ -583,7 +581,7 @@ u32 vulkan_calculate_vertex_offset(vulkan_context *vk_context, u32 geometry_id)
     // INFO: maybe make this a u64 ?
     u32 vert_offset = 0;
 
-    for (int i = 0; i < MAX_GEOMETRIES_LOADED && i < geometry_id; i++)
+    for (u32 i = 0; i < MAX_GEOMETRIES_LOADED && i < geometry_id; i++)
     {
         if (vk_context->internal_geometries[i].id == INVALID_ID)
         {
@@ -599,7 +597,7 @@ u32 vulkan_calculate_index_offset(vulkan_context *vk_context, u32 geometry_id)
     // INFO: maybe make this a u64 ?
     u32 index_offset = 0;
 
-    for (int i = 0; i < MAX_GEOMETRIES_LOADED && i < geometry_id; i++)
+    for (u32 i = 0; i < MAX_GEOMETRIES_LOADED && i < geometry_id; i++)
     {
         if (vk_context->internal_geometries[i].id == INVALID_ID)
         {
@@ -643,12 +641,12 @@ bool vulkan_create_geometry(geometry *out_geometry, u32 vertex_count, vertex *ve
     vulkan_destroy_buffer(vk_context, &index_staging_buffer);
 
     out_geometry->vulkan_geometry_state = dallocate(sizeof(vulkan_geometry_data), MEM_TAG_RENDERER);
-    vulkan_geometry_data *geo_data      = (vulkan_geometry_data *)out_geometry->vulkan_geometry_state;
+    vulkan_geometry_data *geo_data      = static_cast<vulkan_geometry_data *>(out_geometry->vulkan_geometry_state);
 
     geo_data->indices_count = index_count;
     geo_data->vertex_count  = vertex_count;
 
-    for (int i = 0; i < MAX_GEOMETRIES_LOADED; i++)
+    for (s32 i = 0; i < MAX_GEOMETRIES_LOADED; i++)
     {
         if (vk_context->internal_geometries[i].id == INVALID_ID)
         {
@@ -708,11 +706,12 @@ bool vulkan_draw_geometries(render_data *data, VkCommandBuffer *curr_command_buf
 
         material *mat = data->test_geometry[i]->material;
 
-        texture *instance_texture = (texture *)mat->map.albedo;
+        texture *instance_texture = static_cast<texture *>(mat->map.albedo);
 
         u32                   index_offset  = vulkan_calculate_index_offset(vk_context, data->test_geometry[i]->id);
         u32                   vertex_offset = vulkan_calculate_vertex_offset(vk_context, data->test_geometry[i]->id);
-        vulkan_geometry_data *geo_data      = (vulkan_geometry_data *)data->test_geometry[i]->vulkan_geometry_state;
+        vulkan_geometry_data *geo_data =
+            static_cast<vulkan_geometry_data *>(data->test_geometry[i]->vulkan_geometry_state);
 
         u32 descriptor_set_index = mat->internal_id;
 

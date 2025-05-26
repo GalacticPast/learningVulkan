@@ -14,7 +14,7 @@ extension := .exe
 defines := -DDEBUG -DDPLATFORM_WINDOWS
 includes := -Iapp/tests -I$(src_dir)/src -I$(vulkan_sdk)/Include
 linker_flags := -lgdi32 -luser32 -lvulkan-1 -L$(vulkan_sdk)/Lib 
-compiler_flags := -Wall -Wextra -g -O0 -Wconversion -Wdouble-promotion -Wno-unused-parameter -Wno-unused-function -Wno-sign-conversion -fsanitize=undefined -fsanitize-trap
+compiler_flags := -Wall -Werror -Wextra -g -O0  -Wold-style-cast -Wno-system-headers -Wno-unused-variable -Wno-varargs -Wno-unused-private-field -Wno-unused-parameter -Wno-unused-function -fsanitize=undefined -fsanitize-trap
 build_platform := windows
 
 rwildcard=$(wildcard $1$2) $(foreach d,$(wildcard $1*),$(call rwildcard,$d/,$2))

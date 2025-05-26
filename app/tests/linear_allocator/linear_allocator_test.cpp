@@ -49,11 +49,11 @@ bool linear_allocator_allocate_all_space_in_single_test()
     u64 size = 64 * 1024 * 1024; // 64 mbs
     linear_allocator_create(&test_allocator, size);
 
-    void *memory = (u8 *)(linear_allocator_allocate(&test_allocator, size));
+    void *memory = static_cast<u8 *>((linear_allocator_allocate(&test_allocator, size)));
 
     expect_should_be(size, test_allocator.total_size);
     expect_should_be(size, test_allocator.total_allocated);
-    expect_should_be(memory, (u8 *)test_allocator.current_free_mem_ptr - size);
+    expect_should_be(memory, static_cast<u8 *>(test_allocator.current_free_mem_ptr) - size);
 
     linear_allocator_destroy(&test_allocator);
 
@@ -75,15 +75,15 @@ bool linear_allocator_allocate_all_test()
     void *expected = test_allocator.memory;
     for (u64 i = 0; i < length; i++)
     {
-        mem_ptrs[i] = (u8 *)(linear_allocator_allocate(&test_allocator, chunk_length));
+        mem_ptrs[i] = static_cast<u8 *>((linear_allocator_allocate(&test_allocator, chunk_length)));
         expect_should_be(expected, mem_ptrs[i]);
-        expected = (u8 *)expected + chunk_length;
+        expected = static_cast<u8 *>(expected) + chunk_length;
     }
 
     expect_should_be(size, test_allocator.total_size);
     expect_should_be(size, test_allocator.total_allocated);
     expect_should_be(length, test_allocator.num_allocations);
-    expect_should_be((u8 *)test_allocator.memory + size, test_allocator.current_free_mem_ptr);
+    expect_should_be(static_cast<u8 *>(test_allocator.memory) + size, test_allocator.current_free_mem_ptr);
 
     linear_allocator_destroy(&test_allocator);
 

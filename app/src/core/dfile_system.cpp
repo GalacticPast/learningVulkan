@@ -13,7 +13,7 @@ bool file_open_and_read(const char *file_name, u64 *buffer_size_requirements, ch
         io_stream_flags |= std::ios::binary;
     }
 
-    std::ifstream file(file_name, (std::ios_base::openmode)io_stream_flags);
+    std::ifstream file(file_name, static_cast<std::ios_base::openmode>(io_stream_flags));
 
     if (!file.is_open())
     {

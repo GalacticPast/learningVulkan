@@ -35,7 +35,7 @@ bool input_system_startup(u64 *memory_requirement, void *state)
     }
     DINFO("Initializing input system.");
     dzero_memory(state, sizeof(input_state));
-    input_state_ptr = (input_state *)state;
+    input_state_ptr = reinterpret_cast<input_state *>(state);
     return true;
 }
 

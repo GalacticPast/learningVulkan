@@ -27,7 +27,7 @@ bool texture_system_initialize(u64 *texture_system_mem_requirements, void *state
         return true;
     }
     DINFO("Initializing texture system...");
-    tex_sys_state_ptr = (texture_system_state *)state;
+    tex_sys_state_ptr = static_cast<texture_system_state *>(state);
 
     tex_sys_state_ptr->hashtable.c_init(MAX_TEXTURES_LOADED);
     tex_sys_state_ptr->loaded_textures.c_init();
@@ -78,10 +78,14 @@ bool texture_system_create_texture(dstring *file_base_name)
 
     const char *prefix = "../assets/textures/";
 
-    string_copy_format((char *)full_path_name, "%s%s", 0, prefix, file_base_name->c_str());
+    string_copy_format(static_cast<char *>(full_path_name), "%s%s", 0, prefix, file_base_name->c_str());
 
-    stbi_uc *pixels = stbi_load((const char *)full_path_name, &(int &)texture.width, &(int &)texture.height,
-                                &(int &)texture.num_channels, STBI_rgb_alpha);
+    s32 tex_width    = -1;
+    s32 tex_height   = -1;
+    s32 tex_channels = -1;
+
+    stbi_uc *pixels =
+        stbi_load(static_cast<const char *>(full_path_name), &tex_width, &tex_height, &tex_channels, STBI_rgb_alpha);
 
     if (!pixels)
     {
@@ -89,6 +93,13 @@ bool texture_system_create_texture(dstring *file_base_name)
         stbi__err(0, 0);
         return false;
     }
+    DASSERT(tex_width != -1);
+    DASSERT(tex_height != -1);
+    DASSERT(tex_channels != -1);
+
+    texture.width        = tex_width;
+    texture.height       = tex_height;
+    texture.num_channels = tex_channels;
 
     bool result = create_texture(&texture, pixels);
     stbi_image_free(pixels);
@@ -113,7 +124,7 @@ bool texture_system_create_default_textures()
         u32 texture_size =
             default_albedo_texture.width * default_albedo_texture.height * default_albedo_texture.num_channels;
 
-        u8 *pixels = (u8 *)dallocate(texture_size, MEM_TAG_UNKNOWN);
+        u8 *pixels = static_cast<u8 *>(dallocate(texture_size, MEM_TAG_UNKNOWN));
 
         for (u32 y = 0; y < tex_height; y++)
         {
@@ -149,7 +160,7 @@ bool texture_system_create_default_textures()
         u32 texture_size =
             default_alpha_texture.width * default_alpha_texture.height * default_alpha_texture.num_channels;
 
-        u8 *pixels = (u8 *)dallocate(texture_size, MEM_TAG_UNKNOWN);
+        u8 *pixels = static_cast<u8 *>(dallocate(texture_size, MEM_TAG_UNKNOWN));
 
         for (u32 y = 0; y < tex_height; y++)
         {

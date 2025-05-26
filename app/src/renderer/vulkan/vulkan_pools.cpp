@@ -53,10 +53,11 @@ bool vulkan_create_descriptor_command_pools(vulkan_context *vk_context)
         global_desc_set_alloc_info.pNext              = 0;
         global_desc_set_alloc_info.descriptorPool     = vk_context->global_descriptor_command_pool;
         global_desc_set_alloc_info.descriptorSetCount = MAX_FRAMES_IN_FLIGHT;
-        global_desc_set_alloc_info.pSetLayouts        = (const VkDescriptorSetLayout *)global_desc_set_layout.data;
+        global_desc_set_alloc_info.pSetLayouts =
+            reinterpret_cast<const VkDescriptorSetLayout *>(global_desc_set_layout.data);
 
         result = vkAllocateDescriptorSets(vk_context->vk_device.logical, &global_desc_set_alloc_info,
-                                          (VkDescriptorSet *)vk_context->global_descriptor_sets.data);
+                                          static_cast<VkDescriptorSet *>(vk_context->global_descriptor_sets.data));
         VK_CHECK(result);
     }
     {
@@ -90,10 +91,11 @@ bool vulkan_create_descriptor_command_pools(vulkan_context *vk_context)
         material_desc_set_alloc_info.pNext              = 0;
         material_desc_set_alloc_info.descriptorPool     = vk_context->material_descriptor_command_pool;
         material_desc_set_alloc_info.descriptorSetCount = VULKAN_MAX_DESCRIPTOR_SET_COUNT;
-        material_desc_set_alloc_info.pSetLayouts        = (const VkDescriptorSetLayout *)material_desc_set_layout.data;
+        material_desc_set_alloc_info.pSetLayouts =
+            reinterpret_cast<const VkDescriptorSetLayout *>(material_desc_set_layout.data);
 
         result = vkAllocateDescriptorSets(vk_context->vk_device.logical, &material_desc_set_alloc_info,
-                                          (VkDescriptorSet *)vk_context->material_descriptor_sets.data);
+                                          static_cast<VkDescriptorSet *>(vk_context->material_descriptor_sets.data));
         VK_CHECK(result);
     }
     return true;
@@ -120,7 +122,7 @@ bool vulkan_update_materials_descriptor_set(vulkan_context *vk_context, material
 
         if (material->map.albedo)
         {
-            tex_state = (vulkan_texture *)material->map.albedo->vulkan_texture_state;
+            tex_state = static_cast<vulkan_texture *>(material->map.albedo->vulkan_texture_state);
         }
         if (!tex_state)
         {
@@ -132,7 +134,7 @@ bool vulkan_update_materials_descriptor_set(vulkan_context *vk_context, material
             {
                 default_mat = material_system_get_default_material();
             }
-            tex_state = (vulkan_texture *)default_mat->map.albedo->vulkan_texture_state;
+            tex_state = static_cast<vulkan_texture *>(default_mat->map.albedo->vulkan_texture_state);
         }
 
         image_infos[0].sampler     = tex_state->sampler;
@@ -145,7 +147,7 @@ bool vulkan_update_materials_descriptor_set(vulkan_context *vk_context, material
 
         if (material->map.alpha)
         {
-            tex_state = (vulkan_texture *)material->map.alpha->vulkan_texture_state;
+            tex_state = static_cast<vulkan_texture *>(material->map.alpha->vulkan_texture_state);
         }
         if (!tex_state)
         {
@@ -157,7 +159,7 @@ bool vulkan_update_materials_descriptor_set(vulkan_context *vk_context, material
             {
                 default_mat = material_system_get_default_material();
             }
-            tex_state = (vulkan_texture *)default_mat->map.alpha->vulkan_texture_state;
+            tex_state = static_cast<vulkan_texture *>(default_mat->map.alpha->vulkan_texture_state);
         }
 
         image_infos[1].sampler     = tex_state->sampler;

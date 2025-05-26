@@ -34,14 +34,14 @@ bool memory_system_startup(u64 *memory_system_memory_requirements, void *state)
         return true;
     }
     DINFO("Starting up memory system...");
-    memory_system_ptr = (memory_system *)state;
+    memory_system_ptr = reinterpret_cast<memory_system *>(state);
 
     dzero_memory(memory_system_ptr, *memory_system_memory_requirements);
 
-    void* raw_ptr = (char *)state + sizeof(memory_system);
-    void* freelist_mem = (void *)DALIGN_UP((uintptr_t)raw_ptr, sizeof(memory_system));
+    void* raw_ptr = reinterpret_cast<void *>(static_cast<char *>(state) + sizeof(memory_system));
+    void* freelist_mem = reinterpret_cast<void *>DALIGN_UP(raw_ptr, sizeof(memory_system));
     
-    u64 freelist_memory_size = (freelist_mem_requirements + GB(1)) - ((uintptr_t)freelist_mem - (uintptr_t)raw_ptr);
+    u64 freelist_memory_size = (freelist_mem_requirements + GB(1)) - (reinterpret_cast<uintptr_t>(freelist_mem) - reinterpret_cast<uintptr_t>(raw_ptr));
     memory_system_ptr->dfreelist = dfreelist_create(&freelist_mem_requirements, freelist_memory_size,freelist_mem);
 
     return true;
@@ -102,7 +102,7 @@ void dzero_memory(void *block, u64 size)
 {
     platform_set_memory(block, 0, size);
 }
-void dcopy_memory(void *dest, void *source, u64 size)
+void dcopy_memory(void *dest, const void *source, u64 size)
 {
     memcpy(dest, source, size);
 }
@@ -121,7 +121,7 @@ void get_memory_usg_str(u64 *buffer_usg_mem_requirements, char *out_buffer)
     const char *header = "System memory use (tagged):\n";
     u64         offset = strlen(header);
 
-    dcopy_memory(out_buffer, (void *)header, offset);
+    dcopy_memory(out_buffer, reinterpret_cast<const void *>(header), offset);
 
     for (u32 i = 0; i < MEM_TAG_MAX_TAGS; ++i)
     {
@@ -130,26 +130,26 @@ void get_memory_usg_str(u64 *buffer_usg_mem_requirements, char *out_buffer)
         if (memory_system_ptr->stats.tagged_allocations[i] >= gib)
         {
             unit[0] = 'G';
-            amount  = (f32)memory_system_ptr->stats.tagged_allocations[i] / (f32)gib;
+            amount  = static_cast<f32>(memory_system_ptr->stats.tagged_allocations[i]) / static_cast<f32>(gib);
         }
         else if (memory_system_ptr->stats.tagged_allocations[i] >= mib)
         {
             unit[0] = 'M';
-            amount  = (f32)memory_system_ptr->stats.tagged_allocations[i] / (f32)mib;
+            amount  = static_cast<f32>(memory_system_ptr->stats.tagged_allocations[i]) / static_cast<f32>(mib);
         }
         else if (memory_system_ptr->stats.tagged_allocations[i] >= kib)
         {
             unit[0] = 'K';
-            amount  = (f32)memory_system_ptr->stats.tagged_allocations[i] / (f32)kib;
+            amount  = static_cast<f32>(memory_system_ptr->stats.tagged_allocations[i]) / static_cast<f32>(kib);
         }
         else
         {
             unit[0] = 'B';
             unit[1] = 0;
-            amount  = (float)memory_system_ptr->stats.tagged_allocations[i];
+            amount  = static_cast<float>(memory_system_ptr->stats.tagged_allocations[i]);
         }
 
-        s32 length  = snprintf(out_buffer + offset, 8000, "  %s: %.2f%s\n", memory_tag_strings[i], (f64)amount, unit);
+        s32 length  = snprintf(out_buffer + offset, 8000, "  %s: %.2f%s\n", memory_tag_strings[i], static_cast<f64>(amount), unit);
         offset     += length;
     }
 

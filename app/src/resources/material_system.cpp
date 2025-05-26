@@ -37,7 +37,7 @@ bool material_system_initialize(u64 *material_system_mem_requirements, void *sta
     }
     DINFO("Initializing material system...");
 
-    mat_sys_state_ptr = (material_system_state *)state;
+    mat_sys_state_ptr = static_cast<material_system_state *>(state);
 
     mat_sys_state_ptr->loaded_materials.c_init();
     mat_sys_state_ptr->hashtable.c_init(MAX_MATERIALS_LOADED);
@@ -173,7 +173,7 @@ bool material_system_parse_mtl_file(const char *mtl_file_name)
     char *file                         = nullptr;
     u64   file_buffer_mem_requirements = INVALID_ID_64;
     file_open_and_read(mtl_file_name, &file_buffer_mem_requirements, 0, 0);
-    file = (char *)dallocate(file_buffer_mem_requirements + 1, MEM_TAG_RENDERER);
+    file = static_cast<char *>(dallocate(file_buffer_mem_requirements + 1, MEM_TAG_RENDERER));
     file_open_and_read(mtl_file_name, &file_buffer_mem_requirements, file, 0);
 
     s32 num_materials = string_num_of_substring_occurence(file, "newmtl");
@@ -182,7 +182,8 @@ bool material_system_parse_mtl_file(const char *mtl_file_name)
         DERROR("No newmtl defined in %s file", mtl_file_name);
         return false;
     }
-    configs = (material_config *)dallocate(sizeof(material_config) * (num_materials + 1), MEM_TAG_RENDERER);
+    configs =
+        static_cast<material_config *>(dallocate(sizeof(material_config) * (num_materials + 1), MEM_TAG_RENDERER));
 
     char *mtl_ptr               = file;
     char  newmat_sub_string[7]  = "newmtl";

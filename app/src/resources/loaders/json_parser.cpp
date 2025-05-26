@@ -6,14 +6,14 @@
 void json_parse_string(const char *ptr, char *out_string)
 {
     char ch        = '"';
-    s32  occurence = string_first_char_occurence((const char *)ptr, ch);
+    s32  occurence = string_first_char_occurence(ptr, ch);
     if (occurence == -1)
     {
         DERROR("json_pasrse_string: there is no '\"/' for string %s", ptr);
         return;
     }
     ptr       += occurence + 1;
-    occurence  = string_first_char_occurence((const char *)ptr, ch);
+    occurence  = string_first_char_occurence(ptr, ch);
     if (occurence == -1)
     {
         DERROR("Json_parse_string: there is no '\"/' for string %s", ptr);
@@ -32,7 +32,7 @@ void json_parse_material(dstring *file_base_path, material_config *out_material_
         DFATAL("File: %s doesnt exist!!!", file_base_path->c_str());
         return;
     }
-    char *buffer = (char *)dallocate((buffer_size_requirements + 1) * sizeof(char), MEM_TAG_RENDERER);
+    char *buffer = static_cast<char *>(dallocate((buffer_size_requirements + 1) * sizeof(char), MEM_TAG_RENDERER));
     file_open_and_read(file_base_path->c_str(), &buffer_size_requirements, buffer, 0);
 
     // INFO: this is horrible. I think :)

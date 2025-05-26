@@ -38,7 +38,7 @@ void  dfree(void *block, u64 size, memory_tags tag);
 void dset_memory_value(void *block, u64 value, u64 size);
 void dzero_memory(void *block, u64 size);
 
-void dcopy_memory(void *dest, void *source, u64 size);
+void dcopy_memory(void *dest, const void *source, u64 size);
 
 void get_memory_usg_str(u64 *buffer_usg_mem_requirements, char *out_buffer);
 

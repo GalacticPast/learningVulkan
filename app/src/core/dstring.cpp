@@ -27,14 +27,14 @@ bool string_compare(const char *str0, const char *str1)
 
 u32 string_copy(char *dest, const char *src, u32 offset_to_dest)
 {
-    u32   str_len     = (u32)strlen(src);
-    void *dest_offset = (u8 *)dest + offset_to_dest;
-    dcopy_memory(dest_offset, (void *)src, (u64)str_len);
+    u32   str_len     = static_cast<u32>(strlen(src));
+    void *dest_offset = reinterpret_cast<void *>(reinterpret_cast<u8 *>(dest) + offset_to_dest);
+    dcopy_memory(dest_offset, reinterpret_cast<const void *>(src), static_cast<u64>(str_len));
     return str_len;
 }
 void string_ncopy(char *dest, const char *src, u32 length)
 {
-    dcopy_memory(dest, (void *)src, length);
+    dcopy_memory(dest, reinterpret_cast<const void *>(src), length);
 }
 
 u32 string_copy_format(char *dest, const char *format, u32 offset_to_dest, ...)
@@ -48,9 +48,9 @@ u32 string_copy_format(char *dest, const char *format, u32 offset_to_dest, ...)
     s32  written    = vsnprintf(buffer, 32000, format, arg_ptr);
     buffer[written] = 0;
 
-    void *dest_offset = (u8 *)dest + offset_to_dest;
+    void *dest_offset = reinterpret_cast<void *>(reinterpret_cast<u8 *>(dest) + offset_to_dest);
 
-    dcopy_memory((void *)dest_offset, buffer, written + 1);
+    dcopy_memory(reinterpret_cast<void *>(dest_offset), reinterpret_cast<const void *>(buffer), written + 1);
 
     va_end(arg_ptr);
 
@@ -75,7 +75,7 @@ void dstring::operator=(const char *c_string)
         DWARN("Overiding string %s", string);
         dzero_memory(string, 512);
     }
-    dcopy_memory(string, (char *)c_string, len * sizeof(char));
+    dcopy_memory(string, reinterpret_cast<const void *>(c_string), len * sizeof(char));
     str_len     = len;
     string[len] = '\0';
 }
@@ -92,7 +92,7 @@ const char *dstring::c_str()
 
 void string_copy_length(char *dest, const char *src, u32 len)
 {
-    dcopy_memory(dest, (void *)src, (u64)len);
+    dcopy_memory(dest, reinterpret_cast<const void *>(src), static_cast<u64>(len));
 }
 s32 string_first_char_occurence(const char *string, const char ch)
 {
@@ -112,7 +112,7 @@ s32 string_num_of_substring_occurence(const char *string, const char *sub_str)
 {
 
     char *found = nullptr;
-    char *ptr   = (char *)string;
+    char *ptr   = const_cast<char *>(string);
     u64   count = 0;
 
     while ((found = strstr(ptr, sub_str)) != NULL)
@@ -136,9 +136,9 @@ s32 string_first_string_occurence(const char *string, const char *sub_str)
     }
 
     // im trollin :)
-    char *ptr  = (char *)string;
+    char *ptr  = const_cast<char *>(string);
     char  temp = ' ';
-    u32   ans  = -1;
+    s32   ans  = -1;
 
     for (u32 i = 0; i < str_len - sub_str_len && ans == -1; i++)
     {
@@ -154,6 +154,7 @@ s32 string_first_string_occurence(const char *string, const char *sub_str)
     }
     return ans;
 }
+
 dstring::dstring()
 {
 }
@@ -166,7 +167,7 @@ dstring::dstring(const char *c_string)
         DWARN("String you want to assign is bigger than 512bytes.");
         return;
     }
-    dcopy_memory(string, (char *)c_string, len * sizeof(char));
+    dcopy_memory(string, reinterpret_cast<const void *>(c_string), len * sizeof(char));
     str_len     = len;
     string[len] = '\0';
 }
@@ -175,9 +176,9 @@ dstring::dstring(const char *c_string)
 bool string_to_vec4(const char *string, math::vec4 *vector, const char ch)
 {
     char  floats[64] = {};
-    char *ptr        = (char *)string;
+    char *ptr        = const_cast<char *>(string);
 
-    u32 occurence = string_first_char_occurence(ptr, '[');
+    s32 occurence = string_first_char_occurence(ptr, '[');
     if (occurence == -1)
     {
         DERROR("Couldnt find %s in %s", ch, string);
@@ -194,7 +195,7 @@ bool string_to_vec4(const char *string, math::vec4 *vector, const char ch)
 
     string_copy_length(floats, ptr, occurence - 1);
 
-    for (int i = 0; i < occurence - 1; i++)
+    for (s32 i = 0; i < occurence - 1; i++)
     {
         if (floats[i] == ',' || floats[i] == '"' || floats[i] == '[' || floats[i] == ']')
         {

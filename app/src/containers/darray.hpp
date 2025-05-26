@@ -45,14 +45,14 @@ template <typename T> darray<T>::darray(u64 size)
         capacity = DEFAULT_DARRAY_SIZE * element_size;
     }
     length = size;
-    data   = (T *)dallocate(capacity, MEM_TAG_DARRAY);
+    data   = static_cast<T *>(dallocate(capacity, MEM_TAG_DARRAY));
 }
 template <typename T> darray<T>::darray()
 {
     element_size = sizeof(T);
     capacity     = DEFAULT_DARRAY_SIZE * element_size;
     length       = 0;
-    data         = (T *)dallocate(capacity, MEM_TAG_DARRAY);
+    data         = static_cast<T *>(dallocate(capacity, MEM_TAG_DARRAY));
 }
 template <typename T> darray<T>::~darray()
 {
@@ -68,7 +68,7 @@ template <typename T> void darray<T>::c_init()
     element_size = sizeof(T);
     capacity     = DEFAULT_DARRAY_SIZE * element_size;
     length       = 0;
-    data         = (T *)dallocate(capacity, MEM_TAG_DARRAY);
+    data         = static_cast<T *>(dallocate(capacity, MEM_TAG_DARRAY));
 }
 
 template <typename T> void darray<T>::c_init(u64 size)
@@ -80,7 +80,7 @@ template <typename T> void darray<T>::c_init(u64 size)
         capacity = DEFAULT_DARRAY_SIZE * element_size;
     }
     length = size;
-    data   = (T *)dallocate(capacity, MEM_TAG_DARRAY);
+    data   = static_cast<T *>(dallocate(capacity, MEM_TAG_DARRAY));
 }
 
 template <typename T> void darray<T>::operator=(const darray<T> &in_darray)
@@ -94,7 +94,7 @@ template <typename T> void darray<T>::operator=(const darray<T> &in_darray)
         {
             dfree(data, capacity, MEM_TAG_DARRAY);
         }
-        data     = (T *)dallocate(in_darray.capacity, MEM_TAG_DARRAY);
+        data     = static_cast<T *>(dallocate(in_darray.capacity, MEM_TAG_DARRAY));
         capacity = in_darray.capacity;
     }
     dcopy_memory(data, in_darray.data, in_darray.capacity);
@@ -104,7 +104,7 @@ template <typename T> void darray<T>::operator=(const darray<T> &in_darray)
 }
 template <typename T> T darray<T>::operator[](u64 index) const
 {
-    if (index != 0 && index >= length || index >= capacity)
+    if ((index != 0 && index >= length) || index >= capacity)
     {
         DASSERT_MSG(index >= length, "Index is out of bounds....");
     }
@@ -114,7 +114,7 @@ template <typename T> T darray<T>::operator[](u64 index) const
 
 template <typename T> T &darray<T>::operator[](u64 index)
 {
-    if (index != 0 && index >= length || index >= capacity)
+    if ((index != 0 && index >= length) || index >= capacity)
     {
         DASSERT_MSG(index < length, "Index is out of bounds....");
     }
@@ -143,7 +143,7 @@ template <typename T> void darray<T>::resize(u64 out_size)
         }
         dcopy_memory(buffer, data, capacity);
         dfree(data, capacity, MEM_TAG_DARRAY);
-        data     = (T *)buffer;
+        data     = static_cast<T *>(buffer);
         capacity = element_size * out_size;
         length   = out_size;
     }
@@ -174,7 +174,7 @@ template <typename T> void darray<T>::push_back(T element)
         dfree(data, capacity, MEM_TAG_DARRAY);
 
         capacity = capacity * DEFAULT_DARRAY_RESIZE_FACTOR;
-        data     = (T *)buffer;
+        data     = static_cast<T *>(buffer);
         buffer   = 0;
     }
 
@@ -217,7 +217,7 @@ template <typename T> T darray<T>::pop_at(u32 index)
 
     T *next_element = &data[index + 1];
 
-    T *new_array = (T *)dallocate(capacity, MEM_TAG_DARRAY);
+    T *new_array = static_cast<T *>(dallocate(capacity, MEM_TAG_DARRAY));
     if (!new_array)
     {
         DFATAL("Darray coulnd't allocate block for ::pop_at()");
@@ -226,7 +226,7 @@ template <typename T> T darray<T>::pop_at(u32 index)
     dcopy_memory(&new_array[index], next_element, (length - index) * element_size);
 
     dfree(data, capacity, MEM_TAG_RENDERER);
-    data = (T *)new_array;
+    data = static_cast<T *>(new_array);
 
     length--;
 

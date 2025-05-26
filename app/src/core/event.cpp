@@ -11,7 +11,7 @@ bool event_system_startup(u64 *event_system_memory_requirements, void *state)
         return true;
     }
     DINFO("Starting up event system...");
-    event_system_state_ptr = (event_system_state *)state;
+    event_system_state_ptr = reinterpret_cast<event_system_state *>(state);
     return true;
 }
 void event_system_shutdown(void *state)

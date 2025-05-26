@@ -13,9 +13,9 @@ bool memory_system_test()
     memory_system_startup(&memory_system_mem_requirements, test_inst);
 
     u64 buffer_usg_mem_requirements = 0;
-    get_memory_usg_str(&buffer_usg_mem_requirements, (char *)0);
+    get_memory_usg_str(&buffer_usg_mem_requirements, static_cast<char *>(0));
     darray<char *> buffer(buffer_usg_mem_requirements);
-    get_memory_usg_str(&buffer_usg_mem_requirements, (char *)buffer.data);
+    get_memory_usg_str(&buffer_usg_mem_requirements, reinterpret_cast<char *>(buffer.data));
 
     return true;
 }

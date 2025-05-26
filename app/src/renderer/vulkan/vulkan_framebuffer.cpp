@@ -10,7 +10,7 @@ bool vulkan_create_framebuffers(vulkan_context *vk_context)
     if (vk_context->vk_swapchain.buffers == nullptr)
     {
         vk_context->vk_swapchain.buffers =
-            (VkFramebuffer *)dallocate(sizeof(VkFramebuffer) * framebuffers_count, MEM_TAG_RENDERER);
+            static_cast<VkFramebuffer *>(dallocate(sizeof(VkFramebuffer) * framebuffers_count, MEM_TAG_RENDERER));
     }
     else
     {

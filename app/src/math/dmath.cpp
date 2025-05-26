@@ -13,7 +13,7 @@ s32 drandom()
 {
     if (!rand_seeded)
     {
-        srand((u32)platform_get_absolute_time());
+        srand(static_cast<u32>(platform_get_absolute_time()));
         rand_seeded = true;
     }
     return rand();
@@ -29,13 +29,12 @@ s64 drandom_s64()
     u64 random_value = high | low;
     DASSERT(random_value != INVALID_ID_64);
 
-    return (s64)random_value;
+    return static_cast<s64>(random_value);
 }
 
 s64 drandom_in_range_64(s64 min, s64 max)
 {
     s64 value = (drandom_s64() % (max - min + 1)) + min;
-    DASSERT(value != INVALID_ID_64);
     return value;
 }
 
@@ -43,7 +42,7 @@ s32 drandom_in_range(s32 min, s32 max)
 {
     if (!rand_seeded)
     {
-        srand((u32)platform_get_absolute_time());
+        srand(static_cast<u32>(platform_get_absolute_time()));
         rand_seeded = true;
     }
     return (rand() % (max - min + 1)) + min;
@@ -51,12 +50,12 @@ s32 drandom_in_range(s32 min, s32 max)
 
 f32 fdrandom()
 {
-    return (float)drandom() / (f32)RAND_MAX;
+    return static_cast<f32>(drandom()) / static_cast<f32>(RAND_MAX);
 }
 
 f32 fdrandom_in_range(f32 min, f32 max)
 {
-    return min + ((float)drandom() / ((f32)RAND_MAX / (max - min)));
+    return min + (static_cast<f32>(drandom()) / (static_cast<f32>(RAND_MAX / (max - min))));
 }
 
 // HACK:

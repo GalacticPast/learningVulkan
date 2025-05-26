@@ -113,7 +113,7 @@ bool application_initialize(application_state *state, application_config *config
     DASSERT(result == true);
 
     u64 buffer_usg_mem_requirements = 0;
-    get_memory_usg_str(&buffer_usg_mem_requirements, (char *)0);
+    get_memory_usg_str(&buffer_usg_mem_requirements, static_cast<char *>(0));
 
     char buffer[8000];
     get_memory_usg_str(&buffer_usg_mem_requirements, buffer);

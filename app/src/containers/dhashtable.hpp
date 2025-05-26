@@ -110,10 +110,10 @@ template <typename T> void dhashtable<T>::_resize_and_rehash()
     u64    old_capacity   = capacity;
     u64    old_max_length = max_length;
 
-    entry *new_table  = (entry *)dallocate(capacity * DEFAULT_HASH_TABLE_RESIZE_FACTOR, MEM_TAG_DHASHTABLE);
-    table             = new_table;
-    capacity         *= DEFAULT_HASH_TABLE_RESIZE_FACTOR;
-    max_length        = capacity / element_size;
+    entry *new_table = static_cast<entry *>(dallocate(capacity * DEFAULT_HASH_TABLE_RESIZE_FACTOR, MEM_TAG_DHASHTABLE));
+    table            = new_table;
+    capacity   *= DEFAULT_HASH_TABLE_RESIZE_FACTOR;
+    max_length  = capacity / element_size;
     DTRACE("Num_elements_in_table before resize and rehash %d", num_elements_in_table);
     num_elements_in_table = 0;
 
@@ -179,7 +179,7 @@ template <typename T> dhashtable<T>::dhashtable()
     max_length            = DEFAULT_HASH_TABLE_SIZE;
     num_elements_in_table = 0;
     default_entry         = nullptr;
-    table                 = (entry *)dallocate(capacity, MEM_TAG_DHASHTABLE);
+    table                 = static_cast<entry *>(dallocate(capacity, MEM_TAG_DHASHTABLE));
 }
 
 template <typename T> dhashtable<T>::dhashtable(u64 table_size)
@@ -188,7 +188,7 @@ template <typename T> dhashtable<T>::dhashtable(u64 table_size)
     capacity              = table_size * element_size;
     max_length            = table_size;
     num_elements_in_table = 0;
-    table                 = (entry *)dallocate(capacity, MEM_TAG_DHASHTABLE);
+    table                 = static_cast<entry *>(dallocate(capacity, MEM_TAG_DHASHTABLE));
     default_entry         = nullptr;
 }
 
@@ -199,7 +199,7 @@ template <typename T> void dhashtable<T>::c_init()
     max_length            = DEFAULT_HASH_TABLE_SIZE;
     num_elements_in_table = 0;
     default_entry         = nullptr;
-    table                 = (entry *)dallocate(capacity, MEM_TAG_DHASHTABLE);
+    table                 = static_cast<entry *>(dallocate(capacity, MEM_TAG_DHASHTABLE));
 }
 template <typename T> void dhashtable<T>::c_init(u64 table_size)
 {
@@ -207,7 +207,7 @@ template <typename T> void dhashtable<T>::c_init(u64 table_size)
     capacity              = table_size * element_size;
     max_length            = table_size;
     num_elements_in_table = 0;
-    table                 = (entry *)dallocate(capacity, MEM_TAG_DHASHTABLE);
+    table                 = static_cast<entry *>(dallocate(capacity, MEM_TAG_DHASHTABLE));
     default_entry         = nullptr;
 }
 
@@ -224,7 +224,7 @@ template <typename T> void dhashtable<T>::set_default_value(T default_val)
 {
     if (!default_entry)
     {
-        default_entry = (entry *)dallocate(sizeof(entry), MEM_TAG_DHASHTABLE);
+        default_entry = static_cast<entry *>(dallocate(sizeof(entry), MEM_TAG_DHASHTABLE));
     }
     default_entry->type = default_val;
 }
@@ -349,7 +349,7 @@ template <typename T> void dhashtable<T>::insert(const char *key, T type)
         entry_ptr->prev = prev;
         entry_ptr       = entry_ptr->next;
     }
-    dcopy_memory(entry_ptr->key, (void *)key, strlen(key));
+    dcopy_memory(entry_ptr->key, static_cast<const void *>(key), strlen(key));
     entry_ptr->type           = type;
     entry_ptr->next           = nullptr;
     entry_ptr->is_initialized = true;

@@ -23,8 +23,8 @@ bool event_system_register_and_unregister_test()
     u64                 event_system_memory_requirements = 0;
 
     event_system_startup(&event_system_memory_requirements, 0);
-    event_state = (event_system_state *)malloc(event_system_memory_requirements);
-    memset((void *)event_state, 0, event_system_memory_requirements);
+    event_state = static_cast<event_system_state *>(malloc(event_system_memory_requirements));
+    memset(static_cast<void *>(event_state), 0, event_system_memory_requirements);
     event_system_startup(&event_system_memory_requirements, event_state);
 
     event_system_register(EVENT_CODE_TEST_A, 0, event_code_test_A_callback);

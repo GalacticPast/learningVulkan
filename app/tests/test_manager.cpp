@@ -11,7 +11,7 @@ bool test_manager_initialize(u64 *test_manager_memory_requirements, void *state)
     {
         return true;
     }
-    instance_ptr         = (test_manager *)state;
+    instance_ptr         = static_cast<test_manager *>(state);
     instance_ptr->passed = 0;
     instance_ptr->failed = 0;
 

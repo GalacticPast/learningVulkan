@@ -126,7 +126,7 @@ bool vulkan_create_global_uniform_buffers(vulkan_context *vk_context)
     u32 global_uniform_buffer_size = sizeof(global_uniform_buffer_object);
 
     vk_context->global_uniform_buffers =
-        (vulkan_buffer *)dallocate(sizeof(vulkan_buffer) * MAX_FRAMES_IN_FLIGHT, MEM_TAG_RENDERER);
+        static_cast<vulkan_buffer *>(dallocate(sizeof(vulkan_buffer) * MAX_FRAMES_IN_FLIGHT, MEM_TAG_RENDERER));
 
     vulkan_buffer *buffers = vk_context->global_uniform_buffers;
 

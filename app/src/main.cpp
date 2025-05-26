@@ -35,7 +35,7 @@ void run_tests()
     memory_system_startup(&memory_mem_requirements, block);
 
     test_manager_initialize(&test_manager_mem_requirements, nullptr);
-    test_manager *test_instance = (test_manager *)malloc(test_manager_mem_requirements);
+    test_manager *test_instance = static_cast<test_manager *>(malloc(test_manager_mem_requirements));
     darray<test>  test_array;
     test_instance->tests = &test_array;
     test_manager_initialize(&test_manager_mem_requirements, test_instance);
@@ -78,7 +78,7 @@ int main()
     platform_get_window_dimensions(&s_width, &s_height);
 
     f32 fov_rad      = 45 * D_DEG2RAD_MULTIPLIER;
-    f32 aspect_ratio = (f32)s_width / s_height;
+    f32 aspect_ratio = static_cast<f32>(s_width) / static_cast<f32>(s_height);
 
     global_uniform_buffer_object global_ubo{};
     global_ubo.view       = mat4_look_at({2, 2, 2}, {0, 0, 0}, {0, 0, 1.0f});
@@ -99,7 +99,7 @@ int main()
     u64             geometry_id = geometry_system_create_geometry(&cube_config, false);
 
     u32        geometry_count = 2;
-    geometry **geos           = (geometry **)dallocate(sizeof(geometry) * geometry_count, MEM_TAG_GEOMETRY);
+    geometry **geos = static_cast<geometry **>(dallocate(sizeof(geometry) * geometry_count, MEM_TAG_GEOMETRY));
 
     geos[0] = geometry_system_get_geometry(geometry_id);
     geos[1] = geometry_system_duplicate_geometry(geometry_id);
@@ -118,7 +118,7 @@ int main()
     f64 frame_end_time     = 0;
     f64 frame_elapsed_time = 0;
 
-    f64 req_frame_time = (f64)(1.0f / 240);
+    f64 req_frame_time = static_cast<f64>((1.0f / 240));
     clock_start(&clock);
 
     u32 index = 0;
@@ -140,7 +140,7 @@ int main()
             f64 sleep = req_frame_time - frame_elapsed_time;
             if (sleep > 0)
             {
-                u64 sleep_ms = (u64)(sleep * D_SEC_TO_MS_MULTIPLIER);
+                u64 sleep_ms = static_cast<u64>(sleep * D_SEC_TO_MS_MULTIPLIER);
                 platform_sleep(sleep_ms);
             }
         }
@@ -158,7 +158,7 @@ void update_camera(global_uniform_buffer_object *ubo, f64 start_time)
     platform_get_window_dimensions(&s_width, &s_height);
 
     f32 fov_rad      = 45 * D_DEG2RAD_MULTIPLIER;
-    f32 aspect_ratio = (f32)s_width / s_height;
+    f32 aspect_ratio = static_cast<f32>(s_width) / static_cast<f32>(s_height);
 
     math::vec3 velocity = math::vec3();
     f32        step     = 0.01f;

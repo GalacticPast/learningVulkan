@@ -23,8 +23,8 @@ bool vulkan_create_graphics_pipeline(vulkan_context *vk_context)
         return false;
     }
     darray<char *> vert_shader_code(vert_shader_code_buffer_size_requirements);
-    file_open_and_read(vert_shader_file_name, &vert_shader_code_buffer_size_requirements, (char *)vert_shader_code.data,
-                       1);
+    file_open_and_read(vert_shader_file_name, &vert_shader_code_buffer_size_requirements,
+                       reinterpret_cast<char *>(vert_shader_code.data), 1);
 
     u64         frag_shader_code_buffer_size_requirements = INVALID_ID_64;
     const char *frag_shader_file_name                     = "../assets/shaders/default_shader.frag.spv";
@@ -36,14 +36,14 @@ bool vulkan_create_graphics_pipeline(vulkan_context *vk_context)
         return false;
     }
     darray<char *> frag_shader_code(frag_shader_code_buffer_size_requirements);
-    file_open_and_read(frag_shader_file_name, &frag_shader_code_buffer_size_requirements, (char *)frag_shader_code.data,
-                       1);
+    file_open_and_read(frag_shader_file_name, &frag_shader_code_buffer_size_requirements,
+                       reinterpret_cast<char *>(frag_shader_code.data), 1);
 
-    VkShaderModule vert_shader_module = create_shader_module(vk_context, (const char *)vert_shader_code.data,
-                                                             vert_shader_code_buffer_size_requirements);
+    VkShaderModule vert_shader_module = create_shader_module(
+        vk_context, reinterpret_cast<const char *>(vert_shader_code.data), vert_shader_code_buffer_size_requirements);
 
-    VkShaderModule frag_shader_module = create_shader_module(vk_context, (const char *)frag_shader_code.data,
-                                                             frag_shader_code_buffer_size_requirements);
+    VkShaderModule frag_shader_module = create_shader_module(
+        vk_context, reinterpret_cast<const char *>(frag_shader_code.data), frag_shader_code_buffer_size_requirements);
 
     // create the pipeline shader stage
     u32                   shader_stage_count = 2;
@@ -129,8 +129,8 @@ bool vulkan_create_graphics_pipeline(vulkan_context *vk_context)
     VkViewport view_port{};
     view_port.x        = 0.0f;
     view_port.y        = 0.0f;
-    view_port.width    = (f32)vk_context->vk_swapchain.surface_extent.width;
-    view_port.height   = (f32)vk_context->vk_swapchain.surface_extent.width;
+    view_port.width    = static_cast<f32>(vk_context->vk_swapchain.surface_extent.width);
+    view_port.height   = static_cast<f32>(vk_context->vk_swapchain.surface_extent.width);
     view_port.minDepth = 0.0f;
     view_port.maxDepth = 1.0f;
 
@@ -321,7 +321,7 @@ VkShaderModule create_shader_module(vulkan_context *vk_context, const char *shad
     shader_module_create_info.pNext    = 0;
     shader_module_create_info.flags    = 0;
     shader_module_create_info.codeSize = shader_code_size;
-    shader_module_create_info.pCode    = (u32 *)shader_code;
+    shader_module_create_info.pCode    = reinterpret_cast<u32 *>(const_cast<char *>(shader_code));
 
     VkShaderModule shader_module{};
 

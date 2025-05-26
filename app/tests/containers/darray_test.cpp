@@ -4,7 +4,7 @@
 
 static void print_array(darray<s32> &array)
 {
-    s32 length = (s32)array.size();
+    s32 length = static_cast<s32>(array.size());
 
     for (s32 i = 0; i < length; i++)
     {

@@ -101,8 +101,8 @@ bool vulkan_begin_frame_renderpass(vulkan_context *vk_context, VkCommandBuffer c
     VkViewport view_port{};
     view_port.x        = 0.0f;
     view_port.y        = 0.0f;
-    view_port.width    = (f32)swapchain_extent->width;
-    view_port.height   = (f32)swapchain_extent->height;
+    view_port.width    = static_cast<f32>(swapchain_extent->width);
+    view_port.height   = static_cast<f32>(swapchain_extent->height);
     view_port.minDepth = 0.0f;
     view_port.maxDepth = 1.0f;
 

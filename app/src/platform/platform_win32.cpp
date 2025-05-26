@@ -40,7 +40,7 @@ bool platform_system_startup(u64 *platform_mem_requirements, void *plat_state, a
     {
         return true;
     }
-    platform_state_ptr = (platform_state *)plat_state;
+    platform_state_ptr = reinterpret_cast<platform_state *>(plat_state);
 
     platform_state_ptr->h_instance = GetModuleHandleA(0);
 
@@ -159,7 +159,7 @@ bool platform_system_startup(u64 *platform_mem_requirements, void *plat_state, a
     // Clock setup
     LARGE_INTEGER frequency;
     QueryPerformanceFrequency(&frequency);
-    clock_frequency = 1.0 / (f64)frequency.QuadPart;
+    clock_frequency = 1.0 / static_cast<f64>(frequency.QuadPart);
     QueryPerformanceCounter(&start_time);
 
     return true;
@@ -229,7 +229,7 @@ void platform_console_write(const char *message, u8 colour)
     OutputDebugStringA(message);
     u64     length         = strlen(message);
     LPDWORD number_written = 0;
-    WriteConsoleA(GetStdHandle(STD_OUTPUT_HANDLE), message, (DWORD)length, number_written, 0);
+    WriteConsoleA(GetStdHandle(STD_OUTPUT_HANDLE), message, static_cast<DWORD>(length), number_written, 0);
     SetConsoleTextAttribute(console_handle, white);
 }
 
@@ -243,7 +243,7 @@ void platform_console_write_error(const char *message, u8 colour)
     OutputDebugStringA(message);
     u64     length         = strlen(message);
     LPDWORD number_written = 0;
-    WriteConsoleA(GetStdHandle(STD_ERROR_HANDLE), message, (DWORD)length, number_written, 0);
+    WriteConsoleA(GetStdHandle(STD_ERROR_HANDLE), message, static_cast<DWORD>(length), number_written, 0);
     SetConsoleTextAttribute(console_handle, white);
 }
 
@@ -251,7 +251,7 @@ f64 platform_get_absolute_time()
 {
     LARGE_INTEGER now_time;
     QueryPerformanceCounter(&now_time);
-    return (f64)now_time.QuadPart * clock_frequency;
+    return static_cast<f64>(now_time.QuadPart) * clock_frequency;
 }
 
 void platform_sleep(u64 ms)
@@ -311,7 +311,7 @@ LRESULT CALLBACK win32_process_message(HWND hwnd, u32 msg, WPARAM w_param, LPARA
     case WM_KEYUP:
     case WM_SYSKEYUP: {
         // Key pressed/released
-        keys key = (keys)w_param;
+        keys key = static_cast<keys>(w_param);
 
         // wtf windows why not just send lalt ralt messages seperatly??
         WORD key_flags = HIWORD(l_param);
@@ -331,7 +331,8 @@ LRESULT CALLBACK win32_process_message(HWND hwnd, u32 msg, WPARAM w_param, LPARA
         case VK_SHIFT:   // converts to VK_LSHIFT or VK_RSHIFT
         case VK_CONTROL: // converts to VK_LCONTROL or VK_RCONTROL
         case VK_MENU: {
-            key = (keys)MapVirtualKeyW(scan_code, MAPVK_VSC_TO_VK_EX);
+            UINT win_32_key = MapVirtualKeyW(scan_code, MAPVK_VSC_TO_VK_EX);
+            key             = static_cast<keys>(win_32_key);
         }
         break;
         };
