@@ -39,7 +39,8 @@ bool vulkan_backend_initialize(u64 *vulkan_backend_memory_requirements, applicat
     vk_context->vk_allocator = nullptr;
 
     {
-        vk_context->global_ubo_data.c_init(MAX_FRAMES_IN_FLIGHT);
+        vk_context->scene_global_ubo_data.c_init(MAX_FRAMES_IN_FLIGHT);
+        vk_context->light_global_ubo_data.c_init(MAX_FRAMES_IN_FLIGHT);
     }
     {
         vk_context->global_descriptor_sets.c_init(MAX_FRAMES_IN_FLIGHT);
@@ -433,7 +434,8 @@ void vulkan_backend_shutdown()
     vkDestroyDescriptorSetLayout(device, vk_context->global_descriptor_layout, allocator);
     vk_context->global_descriptor_sets.~darray();
 
-    vk_context->global_ubo_data.~darray();
+    vk_context->scene_global_ubo_data.~darray();
+    vk_context->light_global_ubo_data.~darray();
 
     vkDestroyDescriptorPool(device, vk_context->material_descriptor_command_pool, allocator);
     vkDestroyDescriptorSetLayout(device, vk_context->material_descriptor_layout, allocator);
@@ -453,9 +455,11 @@ void vulkan_backend_shutdown()
 
     for (u32 i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
     {
-        vulkan_destroy_buffer(vk_context, &vk_context->global_uniform_buffers[i]);
+        vulkan_destroy_buffer(vk_context, &vk_context->scene_global_uniform_buffers[i]);
+        vulkan_destroy_buffer(vk_context, &vk_context->light_global_uniform_buffers[i]);
     }
-    dfree(vk_context->global_uniform_buffers, sizeof(vulkan_buffer) * MAX_FRAMES_IN_FLIGHT, MEM_TAG_RENDERER);
+    dfree(vk_context->scene_global_uniform_buffers, sizeof(vulkan_buffer) * MAX_FRAMES_IN_FLIGHT, MEM_TAG_RENDERER);
+    dfree(vk_context->light_global_uniform_buffers, sizeof(vulkan_buffer) * MAX_FRAMES_IN_FLIGHT, MEM_TAG_RENDERER);
 
     vkDestroyPipeline(device, vk_context->vk_graphics_pipeline.handle, allocator);
 
@@ -576,9 +580,10 @@ VkBool32 vulkan_dbg_msg_rprt_callback(VkDebugUtilsMessageSeverityFlagBitsEXT    
     return VK_FALSE;
 }
 
-void vulkan_update_global_uniform_buffer(global_uniform_buffer_object *global_ubo, u32 current_frame_index)
+void vulkan_update_global_uniform_buffer(scene_global_uniform_buffer_object *scene_ubo,light_global_uniform_buffer_object *light_ubo, u32 current_frame_index)
 {
-    dcopy_memory(vk_context->global_ubo_data[current_frame_index], global_ubo, sizeof(global_uniform_buffer_object));
+    dcopy_memory(vk_context->scene_global_ubo_data[current_frame_index], scene_ubo, sizeof(scene_global_uniform_buffer_object));
+    dcopy_memory(vk_context->light_global_ubo_data[current_frame_index], light_ubo, sizeof(light_global_uniform_buffer_object));
 }
 
 u32 vulkan_calculate_vertex_offset(vulkan_context *vk_context, u32 geometry_id)
@@ -706,6 +711,8 @@ bool vulkan_draw_geometries(render_data *data, VkCommandBuffer *curr_command_buf
     vkCmdBindVertexBuffers(*curr_command_buffer, 0, 1, vertex_buffers, offsets);
     vkCmdBindIndexBuffer(*curr_command_buffer, vk_context->index_buffer.handle, 0, VK_INDEX_TYPE_UINT32);
 
+    vk_push_constant pc{};
+
     for (u32 i = 0; i < data->geometry_count; i++)
     {
 
@@ -724,8 +731,11 @@ bool vulkan_draw_geometries(render_data *data, VkCommandBuffer *curr_command_buf
                                 vk_context->vk_graphics_pipeline.layout, 1, 1,
                                 &vk_context->material_descriptor_sets[descriptor_set_index], 0, nullptr);
 
+
+        pc.model = data->test_geometry[i]->ubo.model;
+        pc.diffuse_color = mat->diffuse_color;
         vkCmdPushConstants(*curr_command_buffer, vk_context->vk_graphics_pipeline.layout, VK_SHADER_STAGE_VERTEX_BIT, 0,
-                           sizeof(object_uniform_buffer_object), &data->test_geometry[i]->ubo);
+                           sizeof(vk_push_constant), &pc);
 
         vkCmdDrawIndexed(*curr_command_buffer, geo_data->indices_count, 1, index_offset, vertex_offset, 0);
     }
@@ -760,7 +770,8 @@ bool vulkan_draw_frame(render_data *render_data)
     VkCommandBuffer &curr_command_buffer = vk_context->command_buffers[current_frame];
 
     // update global frame
-    vulkan_update_global_uniform_buffer(&render_data->global_ubo, current_frame);
+
+    vulkan_update_global_uniform_buffer(&render_data->scene_ubo,&render_data->light_ubo, current_frame);
     vulkan_update_global_descriptor_sets(vk_context, current_frame);
 
     vulkan_draw_geometries(render_data, &curr_command_buffer, current_frame);

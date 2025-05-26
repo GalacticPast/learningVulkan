@@ -287,14 +287,26 @@ struct camera
     math::vec3 up = math::vec3(0, 1, 0);
 };
 
-struct global_uniform_buffer_object
+struct scene_global_uniform_buffer_object
 {
     math::mat4 view;
     math::mat4 projection;
 };
+struct light_global_uniform_buffer_object
+{
+    math::vec3 color;
+};
 
-struct object_uniform_buffer_object // aka push constants
+struct object_uniform_buffer_object
 {
     math::mat4 model;
-    math::mat4 padding1;
+};
+
+struct vk_push_constant// aka push constants
+{
+    math::mat4 model;         //64 bytes
+    math::vec4 diffuse_color;
+    math::vec4 padding;
+    math::vec4 padding2;
+    math::vec4 padding3;
 };

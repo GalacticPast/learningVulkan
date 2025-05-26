@@ -115,8 +115,12 @@ struct vulkan_context
 
     vulkan_pipeline vk_graphics_pipeline;
 
-    vulkan_buffer *global_uniform_buffers = nullptr;
-    darray<void *> global_ubo_data;
+    vulkan_buffer *scene_global_uniform_buffers = nullptr;
+    darray<void *> scene_global_ubo_data;
+    //INFO: idk if its should be seperate
+    vulkan_buffer *light_global_uniform_buffers = nullptr;
+    darray<void *> light_global_ubo_data;
+
 
     darray<VkCommandBuffer> command_buffers;
 

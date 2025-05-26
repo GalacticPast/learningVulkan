@@ -1,14 +1,17 @@
 #version 450
 #extension GL_EXT_debug_printf : enable
 
-layout(set = 0, binding = 0) uniform uniform_buffer_object{
+layout(set = 0, binding = 0) uniform uniform_global_object{
     mat4 view;
     mat4 proj;
-} ubo;
+} ugo;
 
 layout(push_constant) uniform push_constants{
     mat4 model;
-    mat4 padding;
+    vec4 diffuse_color;
+    vec4 padding1;
+    vec4 padding2;
+    vec4 padding3;
 } pc;
 
 layout(location = 0) in vec3 in_position;
@@ -21,7 +24,7 @@ layout(location = 1) out vec2 frag_tex_coord;
 
 
 void main() {
-    gl_Position = ubo.proj * ubo.view * pc.model * vec4(in_position, 1.0);
-    frag_color = vec3(0.1,0.4,1.0);
+    gl_Position = ugo.proj * ugo.view * pc.model * vec4(in_position, 1.0);
+    frag_color = vec3(pc.diffuse_color);
     frag_tex_coord = in_tex_coord;
 }

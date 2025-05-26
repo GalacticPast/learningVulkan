@@ -4,6 +4,7 @@
 #include "core/dfile_system.hpp"
 #include "core/dmemory.hpp"
 #include "core/logger.hpp"
+#include "math/dmath_types.hpp"
 
 VkShaderModule create_shader_module(vulkan_context *vk_context, const char *shader_code, u64 shader_code_size);
 
@@ -212,21 +213,25 @@ bool vulkan_create_graphics_pipeline(vulkan_context *vk_context)
     depth_stencil_state_create_info.back                  = {};
 
     // global global_descriptor_set_ubo_layout_binding
-    VkDescriptorSetLayoutBinding global_descriptor_set_ubo_layout_binding{};
-    global_descriptor_set_ubo_layout_binding.binding            = 0;
-    global_descriptor_set_ubo_layout_binding.descriptorType     = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    global_descriptor_set_ubo_layout_binding.descriptorCount    = 1;
-    global_descriptor_set_ubo_layout_binding.stageFlags         = VK_SHADER_STAGE_VERTEX_BIT;
-    global_descriptor_set_ubo_layout_binding.pImmutableSamplers = 0;
+    u32 global_descriptor_binding_count = 2;
+    VkDescriptorSetLayoutBinding global_descriptor_set_layout_bindings[2]{};
+    VkShaderStageFlags global_stage_flags[2] = {VK_SHADER_STAGE_VERTEX_BIT, VK_SHADER_STAGE_FRAGMENT_BIT};
 
-    VkDescriptorSetLayoutBinding global_descriptor_set_layout_bindings[1]{};
-    global_descriptor_set_layout_bindings[0] = global_descriptor_set_ubo_layout_binding;
+    for(u32 i = 0 ; i < 2 ; i++)
+    {
+        global_descriptor_set_layout_bindings[i].binding            = i;
+        global_descriptor_set_layout_bindings[i].descriptorType     = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        global_descriptor_set_layout_bindings[i].descriptorCount    = 1;
+        global_descriptor_set_layout_bindings[i].stageFlags         = global_stage_flags[i];
+        global_descriptor_set_layout_bindings[i].pImmutableSamplers = 0;
+    }
+
 
     VkDescriptorSetLayoutCreateInfo global_descriptor_set_layout_create_info{};
     global_descriptor_set_layout_create_info.sType        = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
     global_descriptor_set_layout_create_info.pNext        = 0;
     global_descriptor_set_layout_create_info.flags        = 0;
-    global_descriptor_set_layout_create_info.bindingCount = 1;
+    global_descriptor_set_layout_create_info.bindingCount = global_descriptor_binding_count;
     global_descriptor_set_layout_create_info.pBindings    = global_descriptor_set_layout_bindings;
 
     VkResult result =
@@ -235,14 +240,17 @@ bool vulkan_create_graphics_pipeline(vulkan_context *vk_context)
     VK_CHECK(result);
 
     // material_descriptor_set_layout_binding
+    u32 material_descriptors_binding_count = 2;
     VkDescriptorSetLayoutBinding material_descriptor_set_layout_bindings[2]{};
+    VkShaderStageFlags stage_flags[2] = {VK_SHADER_STAGE_FRAGMENT_BIT,VK_SHADER_STAGE_FRAGMENT_BIT};
+VkDescriptorType des_types[2] = { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER};
 
-    for (u32 i = 0; i < 2; i++)
+    for (u32 i = 0; i < material_descriptors_binding_count; i++)
     {
         material_descriptor_set_layout_bindings[i].binding            = i;
         material_descriptor_set_layout_bindings[i].descriptorCount    = 1;
-        material_descriptor_set_layout_bindings[i].descriptorType     = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-        material_descriptor_set_layout_bindings[i].stageFlags         = VK_SHADER_STAGE_FRAGMENT_BIT;
+        material_descriptor_set_layout_bindings[i].descriptorType     = des_types[i];
+        material_descriptor_set_layout_bindings[i].stageFlags         = stage_flags[i];
         material_descriptor_set_layout_bindings[i].pImmutableSamplers = nullptr;
     }
 
@@ -250,7 +258,7 @@ bool vulkan_create_graphics_pipeline(vulkan_context *vk_context)
     material_descriptor_set_layout_create_info.sType        = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
     material_descriptor_set_layout_create_info.pNext        = 0;
     material_descriptor_set_layout_create_info.flags        = 0;
-    material_descriptor_set_layout_create_info.bindingCount = 2;
+    material_descriptor_set_layout_create_info.bindingCount = material_descriptors_binding_count;
     material_descriptor_set_layout_create_info.pBindings    = material_descriptor_set_layout_bindings;
 
     result = vkCreateDescriptorSetLayout(vk_context->vk_device.logical, &material_descriptor_set_layout_create_info,
@@ -267,8 +275,8 @@ bool vulkan_create_graphics_pipeline(vulkan_context *vk_context)
     object_push_constant_range.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
     object_push_constant_range.offset     = 0;
 
-    DASSERT_MSG(sizeof(object_uniform_buffer_object) == 128, "Object uniform buffer must be 128 bytes wide.");
-    object_push_constant_range.size = sizeof(object_uniform_buffer_object);
+    DASSERT_MSG(sizeof(vk_push_constant) == 128, "Object uniform buffer must be 128 bytes wide.");
+    object_push_constant_range.size = sizeof(vk_push_constant);
 
     VkPipelineLayoutCreateInfo pipeline_layout_create_info{};
 

@@ -1,4 +1,5 @@
 #include "core/application.hpp"
+#include "math/dmath_types.hpp"
 #include "renderer/vulkan/vulkan_types.hpp"
 #include "resources/material_system.hpp"
 #include "resources/resource_types.hpp"
@@ -189,25 +190,32 @@ bool vulkan_update_materials_descriptor_set(vulkan_context *vk_context, material
 
 bool vulkan_update_global_descriptor_sets(vulkan_context *vk_context, u32 frame_index)
 {
-    VkDescriptorBufferInfo desc_buffer_info{};
 
-    desc_buffer_info.buffer = vk_context->global_uniform_buffers[frame_index].handle;
-    desc_buffer_info.offset = 0;
-    desc_buffer_info.range  = sizeof(global_uniform_buffer_object);
 
-    VkWriteDescriptorSet desc_writes[1]{};
+    VkDescriptorBufferInfo desc_buffer_infos[2]{};
+    VkWriteDescriptorSet desc_writes[2]{};
+    VkDeviceSize ranges[2] = {sizeof(scene_global_uniform_buffer_object), sizeof(light_global_uniform_buffer_object)};
+    vulkan_buffer buffers[2] = {vk_context->scene_global_uniform_buffers[frame_index], vk_context->light_global_uniform_buffers[frame_index]};
 
-    desc_writes[0].sType            = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    desc_writes[0].pNext            = 0;
-    desc_writes[0].dstSet           = vk_context->global_descriptor_sets[frame_index];
-    desc_writes[0].dstBinding       = 0;
-    desc_writes[0].dstArrayElement  = 0;
-    desc_writes[0].descriptorCount  = 1;
-    desc_writes[0].descriptorType   = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    desc_writes[0].pBufferInfo      = &desc_buffer_info;
-    desc_writes[0].pImageInfo       = 0;
-    desc_writes[0].pTexelBufferView = 0;
+    for(u32 i = 0 ; i < 2 ; i++)
+    {
+        desc_buffer_infos[i].buffer = buffers[i].handle;
+        desc_buffer_infos[i].offset = 0;
+        desc_buffer_infos[i].range  = ranges[i];
 
-    vkUpdateDescriptorSets(vk_context->vk_device.logical, 1, desc_writes, 0, nullptr);
+
+        desc_writes[i].sType            = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        desc_writes[i].pNext            = 0;
+        desc_writes[i].dstSet           = vk_context->global_descriptor_sets[frame_index];
+        desc_writes[i].dstBinding       = i;
+        desc_writes[i].dstArrayElement  = 0;
+        desc_writes[i].descriptorCount  = 1;
+        desc_writes[i].descriptorType   = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        desc_writes[i].pBufferInfo      = &desc_buffer_infos[i];
+        desc_writes[i].pImageInfo       = 0;
+        desc_writes[i].pTexelBufferView = 0;
+
+    }
+    vkUpdateDescriptorSets(vk_context->vk_device.logical, 2, desc_writes, 0, nullptr);
     return true;
 }

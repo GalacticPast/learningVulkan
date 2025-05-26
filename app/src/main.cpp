@@ -23,7 +23,7 @@
 #include "../tests/linear_allocator/linear_allocator_test.hpp"
 #include "../tests/test_manager.hpp"
 
-void update_camera(global_uniform_buffer_object *ubo, f64 start_time);
+void update_camera(scene_global_uniform_buffer_object *ubo, f64 start_time);
 
 void run_tests()
 {
@@ -80,9 +80,12 @@ int main()
     f32 fov_rad      = 45 * D_DEG2RAD_MULTIPLIER;
     f32 aspect_ratio = static_cast<f32>(s_width) / static_cast<f32>(s_height);
 
-    global_uniform_buffer_object global_ubo{};
-    global_ubo.view       = mat4_look_at({2, 2, 2}, {0, 0, 0}, {0, 0, 1.0f});
-    global_ubo.projection = mat4_perspective(fov_rad, aspect_ratio, 0.01f, 1000.0f);
+    scene_global_uniform_buffer_object scene_ubo{};
+    scene_ubo.view       = mat4_look_at({2, 2, 2}, {0, 0, 0}, {0, 0, 1.0f});
+    scene_ubo.projection = mat4_perspective(fov_rad, aspect_ratio, 0.01f, 1000.0f);
+
+    light_global_uniform_buffer_object light_ubo{};
+    light_ubo.color = {1.0f,1.0f,1.0f};
 
     geometry_config plane_config =
         geometry_system_generate_plane_config(10, 5, 5, 5, 5, 5, "its_a_plane", DEFAULT_MATERIAL_HANDLE);
@@ -119,7 +122,8 @@ int main()
     triangle.test_geometry  = geos;
     triangle.geometry_count = geometry_count;
 
-    triangle.global_ubo = global_ubo;
+    triangle.scene_ubo = scene_ubo;
+    triangle.light_ubo = light_ubo;
 
     f64 frame_start_time   = 0;
     f64 frame_end_time     = 0;
@@ -134,7 +138,7 @@ int main()
         clock_update(&clock);
         frame_start_time = clock.time_elapsed;
 
-        update_camera(&triangle.global_ubo, frame_elapsed_time);
+        update_camera(&triangle.scene_ubo, frame_elapsed_time);
 
         application_run(&triangle);
 
@@ -157,7 +161,7 @@ int main()
     application_shutdown();
 }
 
-void update_camera(global_uniform_buffer_object *ubo, f64 start_time)
+void update_camera(scene_global_uniform_buffer_object *ubo, f64 start_time)
 {
     // ubo->model = mat4_euler_z((start_time * (90.0f * D_DEG2RAD_MULTIPLIER)));
     u32 s_width;

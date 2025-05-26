@@ -16,7 +16,9 @@ struct application_config
 
 struct render_data
 {
-    global_uniform_buffer_object global_ubo;
+    scene_global_uniform_buffer_object scene_ubo;
+    light_global_uniform_buffer_object light_ubo;
+
     u32                          geometry_count = INVALID_ID;
     // array of geometry pointers
     geometry **test_geometry                    = nullptr;
