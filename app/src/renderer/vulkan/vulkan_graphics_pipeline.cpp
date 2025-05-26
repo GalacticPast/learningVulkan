@@ -260,6 +260,8 @@ bool vulkan_create_graphics_pipeline(vulkan_context *vk_context)
     VkDescriptorSetLayout set_layouts[2] = {vk_context->global_descriptor_layout,
                                             vk_context->material_descriptor_layout};
 
+    // lights descriptor binding
+
     // object specific push constants
     VkPushConstantRange object_push_constant_range{};
     object_push_constant_range.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;

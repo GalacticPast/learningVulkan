@@ -119,7 +119,7 @@ struct vulkan_context
     darray<void *> global_ubo_data;
 
     darray<VkCommandBuffer> command_buffers;
-    
+
     vulkan_buffer vertex_buffer;
     vulkan_buffer index_buffer;
 

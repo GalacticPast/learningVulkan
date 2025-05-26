@@ -10,8 +10,6 @@ u64 geometry_system_create_geometry(geometry_config *config, bool use_name);
 
 geometry *geometry_system_get_geometry(u64 id);
 
-geometry *geometry_system_duplicate_geometry(u64 geometry_id);
-
 geometry *geometry_system_get_default_geometry();
 
 void geometry_system_get_geometries_from_file(const char *obj_file_name, const char *mtl_file_name, geometry ***geos,
@@ -28,3 +26,5 @@ geometry_config geometry_system_generate_plane_config(f32 width, f32 height, u32
                                                       f32 tile_x, f32 tile_y, const char *name,
                                                       const char *material_name);
 geometry_config geometry_system_generate_cube_config();
+
+void geometry_system_copy_config(geometry_config *dst_config, const geometry_config *src_config);

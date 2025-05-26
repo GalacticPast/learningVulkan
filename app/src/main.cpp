@@ -95,16 +95,23 @@ int main()
     // geometry  **geos           = nullptr;
     // geometry_system_get_geometries_from_file(obj_file_name, mtl_file_name, &geos, &geometry_count);
 
-    geometry_config cube_config = geometry_system_generate_cube_config();
-    u64             geometry_id = geometry_system_create_geometry(&cube_config, false);
+    geometry_config parent_config = geometry_system_generate_cube_config();
+    geometry_config child_config{};
+
+    geometry_system_copy_config(&child_config, &parent_config);
+
+    scale_geometries(&child_config, {0.5f, 0.5f, 0.5f});
+
+    u64 cube_id1 = geometry_system_create_geometry(&parent_config, false);
+    u64 cube_id2 = geometry_system_create_geometry(&child_config, false);
 
     u32        geometry_count = 2;
     geometry **geos = static_cast<geometry **>(dallocate(sizeof(geometry) * geometry_count, MEM_TAG_GEOMETRY));
 
-    geos[0] = geometry_system_get_geometry(geometry_id);
-    geos[1] = geometry_system_duplicate_geometry(geometry_id);
+    geos[0] = geometry_system_get_geometry(cube_id1);
+    geos[1] = geometry_system_get_geometry(cube_id2);
 
-    math::vec3 left    = {-10.0f, 0, 0};
+    math::vec3 left    = {-4.0f, 0, 0};
     geos[1]->ubo.model = mat4_translation(left);
     dstring mat_file   = "orange_lines_512";
     geos[1]->material  = material_system_acquire_from_config_file(&mat_file);

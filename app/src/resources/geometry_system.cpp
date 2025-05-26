@@ -278,16 +278,6 @@ geometry *geometry_system_get_geometry_by_name(dstring geometry_name)
     return geo;
 }
 
-geometry *geometry_system_duplicate_geometry(u64 geometry_id)
-{
-    geometry *duplicate = nullptr;
-    geometry *geo       = geometry_system_get_geometry(geometry_id);
-
-    u64 new_id = geo_sys_state_ptr->hashtable.insert(INVALID_ID_64, *geo);
-    duplicate  = geometry_system_get_geometry(new_id);
-    return duplicate;
-}
-
 geometry *geometry_system_get_default_geometry()
 {
 
@@ -300,6 +290,50 @@ geometry *geometry_system_get_default_geometry()
     }
     geo->reference_count++;
     return geo;
+}
+
+void geometry_system_copy_config(geometry_config *dst_config, const geometry_config *src_config)
+{
+    if (src_config == nullptr || dst_config == nullptr)
+    {
+        DERROR("Provided geometry_configs were nullptr");
+        return;
+    }
+    if (src_config->vertex_count == INVALID_ID || src_config->index_count == INVALID_ID)
+    {
+        DERROR("Src geometry config has invalid vertex/index count.");
+        return;
+    }
+    if (src_config->vertices == nullptr || src_config->indices == nullptr)
+    {
+        DERROR("Src geometry config has vertex_count of %d and index count of %d. But one of them is nullptr.",
+               src_config->vertex_count, src_config->index_count);
+        return;
+    }
+    if (dst_config->vertex_count != INVALID_ID || dst_config->index_count != INVALID_ID || dst_config->vertices ||
+        dst_config->indices)
+    {
+        DERROR("Dst_config already has some data in it. Should destroy the data first before calling the function");
+        return;
+    }
+
+    dcopy_memory(dst_config->name, src_config->name, GEOMETRY_NAME_MAX_LENGTH);
+
+    dst_config->vertex_count = src_config->vertex_count;
+    dst_config->vertices =
+        static_cast<vertex *>(dallocate(sizeof(vertex) * src_config->vertex_count, MEM_TAG_GEOMETRY));
+    dcopy_memory(dst_config->vertices, src_config->vertices, src_config->vertex_count * sizeof(vertex));
+
+    dst_config->index_count = src_config->index_count;
+    dst_config->indices     = static_cast<u32 *>(dallocate(sizeof(u32) * src_config->index_count, MEM_TAG_GEOMETRY));
+    dcopy_memory(dst_config->indices, src_config->indices, src_config->index_count * sizeof(u32));
+
+    if (src_config->material)
+    {
+        dst_config->material = material_system_acquire_from_name(&src_config->material->name);
+    }
+
+    return;
 }
 
 static const char ascii_chars[95] = {'X', 'r', 'F', 'm', 'S', '{', 'K',  '5', 'T', 'B', 'A', '7', '>', '\'', 'j', '/',

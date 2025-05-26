@@ -54,13 +54,18 @@ bool vulkan_backend_initialize(u64 *vulkan_backend_memory_requirements, applicat
 
     VkApplicationInfo app_info{};
 
-    app_info.sType            = VK_STRUCTURE_TYPE_APPLICATION_INFO;
-    app_info.pNext            = nullptr;
-    app_info.pApplicationName = app_config->application_name;
-    // app_info.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
-    app_info.pEngineName      = app_config->application_name;
-    // app_info.engineVersion      = VK_MAKE_VERSION(1, 0, 0);
-    // app_info.apiVersion         = VK_API_VERSION_1_3;
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Weverything"
+    // because the VK macros have old c style cast in them , the compiler cries about it and doesnt compile, well tbh
+    // its case I have the dont allow old c style cast enabled.
+    app_info.sType              = VK_STRUCTURE_TYPE_APPLICATION_INFO;
+    app_info.pNext              = nullptr;
+    app_info.pApplicationName   = app_config->application_name;
+    app_info.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
+    app_info.pEngineName        = app_config->application_name;
+    app_info.engineVersion      = VK_MAKE_VERSION(1, 0, 0);
+    app_info.apiVersion         = VK_API_VERSION_1_3;
+#pragma clang diagnostic pop
 
     bool enable_validation_layers = false;
     bool validation_layer_support = false;
