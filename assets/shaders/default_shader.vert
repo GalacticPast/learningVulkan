@@ -20,11 +20,16 @@ layout(location = 2) in vec2 in_tex_coord;
 
 
 layout(location = 0) out vec3 frag_color;
-layout(location = 1) out vec2 frag_tex_coord;
+layout(location = 1) out vec3 frag_normal;
+layout(location = 2) out vec2 frag_tex_coord;
+layout(location = 3) out vec3 frag_position;
 
 
 void main() {
-    gl_Position = ugo.proj * ugo.view * pc.model * vec4(in_position, 1.0);
     frag_color = vec3(pc.diffuse_color);
+    frag_normal = in_normals;
     frag_tex_coord = in_tex_coord;
+    frag_position = vec3(pc.model * vec4(in_position, 1.0f));
+
+    gl_Position = ugo.proj * ugo.view * pc.model * vec4(in_position, 1.0);
 }

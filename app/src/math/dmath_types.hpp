@@ -250,6 +250,31 @@ struct mat4
         data[10] = 1.0f;
         data[15] = 1.0f;
     }
+
+    inline mat4 operator +(mat4 matrix_1)
+    {
+        mat4 out_matrix = mat4();
+
+        f32 *dst_ptr = out_matrix.data;
+        const f32 *m1_ptr  = this->data;
+        const f32 *m2_ptr  = matrix_1.data;
+
+        for(s32 i = 0 ; i < 16 ; i++)
+        {
+            dst_ptr[i] = m1_ptr[i] + m2_ptr[i];
+        }
+        return out_matrix;
+    }
+    inline void operator +=(mat4 matrix_1)
+    {
+        f32 *m1_ptr  = this->data;
+        const f32 *m2_ptr  = matrix_1.data;
+
+        for(s32 i = 0 ; i < 16 ; i++)
+        {
+            m1_ptr[i] += m2_ptr[i];
+        }
+    };
     inline mat4 operator*(mat4 matrix_1)
     {
         mat4 out_matrix = mat4();
@@ -269,6 +294,26 @@ struct mat4
             m1_ptr += 4;
         }
         return out_matrix;
+    }
+    inline void operator*=(mat4 matrix_1)
+    {
+        mat4 out_matrix = mat4();
+
+        const f32 *m1_ptr  = this->data;
+        const f32 *m2_ptr  = matrix_1.data;
+        f32       *dst_ptr = out_matrix.data;
+
+        for (s32 i = 0; i < 4; ++i)
+        {
+            for (s32 j = 0; j < 4; ++j)
+            {
+                *dst_ptr = m1_ptr[0] * m2_ptr[0 + j] + m1_ptr[1] * m2_ptr[4 + j] + m1_ptr[2] * m2_ptr[8 + j] +
+                           m1_ptr[3] * m2_ptr[12 + j];
+                dst_ptr++;
+            }
+            m1_ptr += 4;
+        }
+        dcopy_memory(this->data, out_matrix.data, sizeof(f32) * 16);
     }
 };
 } // namespace math
@@ -294,6 +339,7 @@ struct scene_global_uniform_buffer_object
 };
 struct light_global_uniform_buffer_object
 {
+    math::vec3 position;
     math::vec3 color;
 };
 

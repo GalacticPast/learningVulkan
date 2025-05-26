@@ -268,7 +268,6 @@ VkDescriptorType des_types[2] = { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,VK_D
     VkDescriptorSetLayout set_layouts[2] = {vk_context->global_descriptor_layout,
                                             vk_context->material_descriptor_layout};
 
-    // lights descriptor binding
 
     // object specific push constants
     VkPushConstantRange object_push_constant_range{};

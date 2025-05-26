@@ -85,6 +85,7 @@ int main()
     scene_ubo.projection = mat4_perspective(fov_rad, aspect_ratio, 0.01f, 1000.0f);
 
     light_global_uniform_buffer_object light_ubo{};
+    light_ubo.position = {5.0f,4.0f,0.0f};
     light_ubo.color = {1.0f,1.0f,1.0f};
 
     geometry_config plane_config =
@@ -116,6 +117,9 @@ int main()
 
     math::vec3 left    = {-4.0f, 0, 0};
     geos[1]->ubo.model = mat4_translation(left);
+
+
+
     dstring mat_file   = "orange_lines_512";
     geos[1]->material  = material_system_acquire_from_config_file(&mat_file);
 
@@ -133,12 +137,15 @@ int main()
     clock_start(&clock);
 
     u32 index = 0;
+    f32 z = 0.1f;
     while (app_state.is_running)
     {
         clock_update(&clock);
         frame_start_time = clock.time_elapsed;
-
         update_camera(&triangle.scene_ubo, frame_elapsed_time);
+
+        geos[1]->ubo.model *= mat4_euler_y(z);
+        z = sinf(frame_elapsed_time);
 
         application_run(&triangle);
 
