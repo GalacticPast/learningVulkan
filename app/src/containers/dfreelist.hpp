@@ -7,8 +7,8 @@
 
 struct dfreelist_allocation_header
 {
-    size_t block_size;
-    size_t padding;
+    std::size_t block_size;
+    std::size_t padding;
 };
 
 // An intrusive linked list for the free memory blocks
@@ -16,14 +16,14 @@ typedef struct dfreelist_node dfreelist_node;
 struct dfreelist_node
 {
     dfreelist_node *next;
-    size_t          block_size;
+    std::size_t     block_size;
 };
 
 struct dfreelist
 {
-    void  *data;
-    size_t size;
-    size_t used;
+    void       *data;
+    std::size_t size;
+    std::size_t used;
 
     dfreelist_node *head;
 };
