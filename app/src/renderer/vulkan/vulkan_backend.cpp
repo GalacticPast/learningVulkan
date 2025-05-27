@@ -3,6 +3,7 @@
 #include "core/logger.hpp"
 #include "defines.hpp"
 
+#include "resources/loaders/json_parser.hpp"
 #include "resources/resource_types.hpp"
 #include "vulkan/vulkan_core.h"
 #include "vulkan_backend.hpp"
@@ -259,6 +260,22 @@ bool vulkan_backend_initialize(u64 *vulkan_backend_memory_requirements, applicat
     return true;
 }
 
+bool vulkan_create_shader(dstring* shader_configuration_file_path, shader *in_shader)
+{
+    if(!shader_configuration_file_path || !in_shader)
+    {
+        DERROR("Provided parameters to vulkan_create_shader were nullptr.");
+        return false;
+    }
+    vulkan_shader* vk_shader = static_cast<vulkan_shader *>(dallocate(sizeof(vulkan_shader), MEM_TAG_RENDERER));
+
+    json_deserialize_shader(shader_configuration_file_path, vk_shader);
+
+    in_shader->internal_vulkan_shader_state = vk_shader;
+    return false;
+}
+
+//TODO: destroy material
 bool vulkan_create_material(material *in_mat)
 {
     // HACK: FIX THIS
@@ -351,6 +368,8 @@ bool vulkan_create_texture(texture *in_texture, u8 *pixels)
 
     return true;
 }
+
+bool vulkan_destroy_shader(struct shader *in_shader);
 
 bool vulkan_destroy_texture(texture *in_texture)
 {

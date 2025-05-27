@@ -14,8 +14,9 @@ layout(push_constant) uniform push_constants{
     vec4 padding3;
 } pc;
 
+//attributes
 layout(location = 0) in vec3 in_position;
-layout(location = 1) in vec3 in_normals;
+layout(location = 1) in vec3 in_normal;
 layout(location = 2) in vec2 in_tex_coord;
 
 
@@ -27,7 +28,7 @@ layout(location = 3) out vec3 frag_position;
 
 void main() {
     frag_color = vec3(pc.diffuse_color);
-    frag_normal = in_normals;
+    frag_normal = in_normal;
     frag_tex_coord = in_tex_coord;
     frag_position = vec3(pc.model * vec4(in_position, 1.0f));
 

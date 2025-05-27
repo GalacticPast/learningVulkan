@@ -10,6 +10,10 @@ void vulkan_backend_shutdown();
 bool vulkan_backend_resize();
 bool vulkan_draw_frame(render_data *data);
 
+
+bool vulkan_create_shader(dstring* shader_configuration_file_path, struct shader *in_shader);
+bool vulkan_destroy_shader(struct shader *in_shader);
+
 bool vulkan_create_material(material *in_material);
 bool vulkan_destroy_material(material *in_material);
 

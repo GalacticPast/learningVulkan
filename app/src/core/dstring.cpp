@@ -152,6 +152,7 @@ s32 string_first_string_occurence(const char *string, const char *sub_str)
         temp             = ' ';
         ptr++;
     }
+
     return ans;
 }
 

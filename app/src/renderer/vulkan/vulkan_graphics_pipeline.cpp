@@ -23,7 +23,7 @@ bool vulkan_create_graphics_pipeline(vulkan_context *vk_context)
         DFATAL("File size error");
         return false;
     }
-    darray<char *> vert_shader_code(vert_shader_code_buffer_size_requirements);
+    darray<char> vert_shader_code(vert_shader_code_buffer_size_requirements);
     file_open_and_read(vert_shader_file_name, &vert_shader_code_buffer_size_requirements,
                        reinterpret_cast<char *>(vert_shader_code.data), 1);
 
@@ -36,7 +36,7 @@ bool vulkan_create_graphics_pipeline(vulkan_context *vk_context)
         DFATAL("File size error");
         return false;
     }
-    darray<char *> frag_shader_code(frag_shader_code_buffer_size_requirements);
+    darray<char> frag_shader_code(frag_shader_code_buffer_size_requirements);
     file_open_and_read(frag_shader_file_name, &frag_shader_code_buffer_size_requirements,
                        reinterpret_cast<char *>(frag_shader_code.data), 1);
 

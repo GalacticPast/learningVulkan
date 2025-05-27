@@ -5,6 +5,16 @@
 #include "core/dstring.hpp"
 #include "math/dmath_types.hpp"
 
+#define MAX_SHADER_COUNT 1024
+struct shader
+{
+    u64 id;
+    dstring name;
+
+    void* internal_vulkan_shader_state;
+};
+
+
 #define DEFAULT_ALBEDO_TEXTURE_HANDLE "DEFAULT_ALBDEO_TEXTURE"
 #define DEFAULT_ALPHA_TEXTURE_HANDLE "DEFAULT_ALPHA_TEXTURE"
 #define MAX_TEXTURES_LOADED 1024

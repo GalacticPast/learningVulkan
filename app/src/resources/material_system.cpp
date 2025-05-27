@@ -64,7 +64,7 @@ material *material_system_acquire_from_config_file(dstring *file_base_name)
     string_copy_format(path, "%s%s%s", 0, prefix, file_base_name->c_str(), suffix);
     dstring name;
     name = path;
-    json_parse_material(&name, &base);
+    json_deserialize_material(&name, &base);
 
     material *out_mat = nullptr;
     out_mat           = mat_sys_state_ptr->hashtable.find(base.mat_name);

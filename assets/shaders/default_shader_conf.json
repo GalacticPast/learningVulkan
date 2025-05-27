@@ -1,0 +1,94 @@
+{
+    "stages" :
+    [
+        "vertex" :
+        {
+            "filepath" : "../assets/shaders/default_shader.vert.spv"
+        },
+        "fragment" :
+        {
+            "filepath" : "../assets/shaders/default_shader.frag.spv"
+        }
+    ],
+
+   "attributes" :
+    [
+        "in_position" :
+        {
+            "type" : "vec3",
+            "location" : 0
+        },
+        "in_normal" :
+        {
+            "type" : "vec3",
+            "location" : 1
+        },
+        "in_tex_coord" :
+        {
+            "type" : "vec2",
+            "location" : 2
+        }
+    ],
+
+     "uniforms" :
+    [
+        "per_frame" :
+        [
+            {
+                "name" : "view",
+                "type" : "mat4",
+                "binding" : 0
+                "stage" : "vertex"
+            },
+            {
+                "name" : "projection",
+                "type" : "mat4",
+                "binding" : 0
+                "stage" : "vertex"
+            },
+            {
+                "name" : "light_position",
+                "type" : "vec3",
+                "binding" : 1
+                "stage" : "fragment"
+            },
+            {
+                "name" : "light_color",
+                "type" : "vec3",
+                "binding" : 1
+                "stage" : "fragment"
+            },
+        ],
+
+        "per_group" :
+        [
+            {
+               "name" : "albedo_map",
+               "type" : "sampler2D",
+               "binding" : 0
+                "stage" : "fragment"
+            },
+            {
+               "name" : "albedo_map",
+               "type" : "sampler2D",
+               "binding" : 1
+                "stage" : "fragment"
+            }
+        ],
+
+        "per_object" :
+        [
+            {
+                "name" : "model",
+                "type" : "mat4",
+                "stage" : "vertex"
+            },
+            {
+                "name" : "diffuse_color",
+                "type" : "vec4",
+                "stage" : "vertex"
+            }
+        ]
+    ]
+
+}

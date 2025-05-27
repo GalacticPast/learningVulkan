@@ -7,8 +7,8 @@ layout(set = 0, binding = 1)uniform uniform_light_object
     vec3 color;
 }ulo;
 
-layout(set = 1, binding = 1) uniform sampler2D albedo_map;
-layout(set = 1, binding = 2) uniform sampler2D alpha_map;
+layout(set = 1, binding = 0) uniform sampler2D albedo_map;
+layout(set = 1, binding = 1) uniform sampler2D alpha_map;
 
 layout(location = 0) in vec3 frag_color;
 layout(location = 1) in vec3 frag_normal;

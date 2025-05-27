@@ -103,6 +103,31 @@ struct vulkan_buffer
 };
 
 #define VULKAN_MAX_DESCRIPTOR_SET_COUNT 4096
+struct vulkan_shader
+{
+    dstring vertex_file_path;
+    darray<char> vertex_shader_code;
+    dstring fragment_file_path;
+    darray<char> fragment_shader_code;
+
+    //INFO: for now first will always be vertex and second will always be fragment
+    darray<VkShaderStageFlagBits> stages;
+    darray<VkVertexInputAttributeDescription> input_attribute_descriptions;
+
+    darray<VkDescriptorSetLayoutBinding> per_frame_descriptor_sets_layout_bindings;
+    VkDescriptorSetLayout   per_frame_descriptor_layout;
+    VkDescriptorPool        per_frame_descriptor_command_pool;
+    darray<VkDescriptorSet> per_frame_descriptor_sets;
+
+    darray<VkDescriptorSetLayoutBinding> per_group_descriptor_sets_layout_bindings;
+    VkDescriptorSetLayout   per_group_descriptor_layout;
+    VkDescriptorPool        per_group_descriptor_command_pool;
+    darray<VkDescriptorSet> per_group_descriptor_sets;
+
+    vulkan_pipeline pipeline;
+};
+
+
 struct vulkan_context
 {
     u32 current_frame_index;
