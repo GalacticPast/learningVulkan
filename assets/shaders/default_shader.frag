@@ -29,7 +29,7 @@ void main() {
 
     vec3 result = (ambient + diffuse) * frag_color;
 
-    vec4 color = vec4(result, 1.0f);
+    vec4 color = texture(albedo_map, frag_tex_coord);
 
     out_color = color;
 }
