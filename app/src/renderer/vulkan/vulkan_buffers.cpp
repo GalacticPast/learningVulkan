@@ -80,10 +80,10 @@ bool vulkan_copy_buffer(vulkan_context *vk_context, vulkan_buffer *dst_buffer, u
     queue_submit_info.signalSemaphoreCount = 0;
     queue_submit_info.pSignalSemaphores    = 0;
 
-    result = vkQueueSubmit(vk_context->vk_device.graphics_queue, 1, &queue_submit_info, VK_NULL_HANDLE);
-    VK_CHECK(result);
+    VkResult res = vkQueueSubmit(vk_context->vk_device.graphics_queue, 1, &queue_submit_info, VK_NULL_HANDLE);
+    VK_CHECK(res);
     result = vkQueueWaitIdle(vk_context->vk_device.graphics_queue);
-    VK_CHECK(result);
+    VK_CHECK(res);
 
     vulkan_free_command_buffers(vk_context, &vk_context->graphics_command_pool, &staging_command_buffer, 1);
     return true;

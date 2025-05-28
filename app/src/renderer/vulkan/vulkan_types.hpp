@@ -5,9 +5,14 @@
 #include "resources/resource_types.hpp"
 #include <vulkan/vulkan.h>
 
+const char *vk_result_to_string(VkResult result);
+
 #define VK_CHECK(expr)                                                                                                 \
     {                                                                                                                  \
-        DASSERT(expr == VK_SUCCESS);                                                                                   \
+        if (expr != VK_SUCCESS)                                                                                        \
+        {                                                                                                              \
+            DFATAL("%s", vk_result_to_string(expr));                                                                   \
+        }                                                                                                              \
     }
 
 struct vulkan_geometry_data
@@ -105,28 +110,27 @@ struct vulkan_buffer
 #define VULKAN_MAX_DESCRIPTOR_SET_COUNT 4096
 struct vulkan_shader
 {
-    dstring vertex_file_path;
+    dstring      vertex_file_path;
     darray<char> vertex_shader_code;
-    dstring fragment_file_path;
+    dstring      fragment_file_path;
     darray<char> fragment_shader_code;
 
-    //INFO: for now first will always be vertex and second will always be fragment
-    darray<VkShaderStageFlagBits> stages;
+    // INFO: for now first will always be vertex and second will always be fragment
+    darray<VkShaderStageFlagBits>             stages;
     darray<VkVertexInputAttributeDescription> input_attribute_descriptions;
 
     darray<VkDescriptorSetLayoutBinding> per_frame_descriptor_sets_layout_bindings;
-    VkDescriptorSetLayout   per_frame_descriptor_layout;
-    VkDescriptorPool        per_frame_descriptor_command_pool;
-    darray<VkDescriptorSet> per_frame_descriptor_sets;
+    VkDescriptorSetLayout                per_frame_descriptor_layout;
+    VkDescriptorPool                     per_frame_descriptor_command_pool;
+    darray<VkDescriptorSet>              per_frame_descriptor_sets;
 
     darray<VkDescriptorSetLayoutBinding> per_group_descriptor_sets_layout_bindings;
-    VkDescriptorSetLayout   per_group_descriptor_layout;
-    VkDescriptorPool        per_group_descriptor_command_pool;
-    darray<VkDescriptorSet> per_group_descriptor_sets;
+    VkDescriptorSetLayout                per_group_descriptor_layout;
+    VkDescriptorPool                     per_group_descriptor_command_pool;
+    darray<VkDescriptorSet>              per_group_descriptor_sets;
 
     vulkan_pipeline pipeline;
 };
-
 
 struct vulkan_context
 {
@@ -142,10 +146,9 @@ struct vulkan_context
 
     vulkan_buffer *scene_global_uniform_buffers = nullptr;
     darray<void *> scene_global_ubo_data;
-    //INFO: idk if its should be seperate
+    // INFO: idk if its should be seperate
     vulkan_buffer *light_global_uniform_buffers = nullptr;
     darray<void *> light_global_ubo_data;
-
 
     darray<VkCommandBuffer> command_buffers;
 
