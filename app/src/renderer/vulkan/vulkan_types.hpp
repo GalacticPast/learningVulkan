@@ -1,6 +1,5 @@
 #pragma once
 #include "containers/darray.hpp"
-#include "core/application.hpp"
 #include "core/dasserts.hpp"
 #include "resources/resource_types.hpp"
 #include <vulkan/vulkan.h>
@@ -12,6 +11,7 @@ const char *vk_result_to_string(VkResult result);
         if (expr != VK_SUCCESS)                                                                                        \
         {                                                                                                              \
             DFATAL("%s", vk_result_to_string(expr));                                                                   \
+            debugBreak();                                                                                              \
         }                                                                                                              \
     }
 
