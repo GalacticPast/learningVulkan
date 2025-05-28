@@ -1,3 +1,4 @@
+#include "core/dfile_system.hpp"
 #include "core/dmemory.hpp"
 #include "core/dstring.hpp"
 #include "core/logger.hpp"
@@ -5,6 +6,8 @@
 
 #include "resources/loaders/json_parser.hpp"
 #include "resources/resource_types.hpp"
+#include "resources/shader_system.hpp"
+
 #include "vulkan/vulkan_core.h"
 #include "vulkan_backend.hpp"
 #include "vulkan_buffers.hpp"
@@ -38,17 +41,6 @@ bool vulkan_backend_initialize(u64 *vulkan_backend_memory_requirements, applicat
     DDEBUG("Initializing Vulkan backend...");
     vk_context               = reinterpret_cast<vulkan_context *>(state);
     vk_context->vk_allocator = nullptr;
-
-    {
-        vk_context->scene_global_ubo_data.c_init(MAX_FRAMES_IN_FLIGHT);
-        vk_context->light_global_ubo_data.c_init(MAX_FRAMES_IN_FLIGHT);
-    }
-    {
-        vk_context->global_descriptor_sets.c_init(MAX_FRAMES_IN_FLIGHT);
-    }
-    {
-        vk_context->material_descriptor_sets.c_init(VULKAN_MAX_DESCRIPTOR_SET_COUNT);
-    }
     {
         vk_context->command_buffers.c_init(MAX_FRAMES_IN_FLIGHT);
     }
@@ -199,7 +191,12 @@ bool vulkan_backend_initialize(u64 *vulkan_backend_memory_requirements, applicat
         DERROR("Vulkan renderpass creation failed.");
         return false;
     }
-    if (!vulkan_create_graphics_pipeline(vk_context))
+    vk_context->default_shader = shader_system_get_default_shader();
+    DASSERT_MSG(vk_context->default_shader, "Default shader should be initialized first!!!");
+    vulkan_shader* shader = static_cast<vulkan_shader *>(vk_context->default_shader->internal_vulkan_shader_state);
+    DASSERT_MSG(shader, "Default shader internal state should be initialized");
+
+    if (!vulkan_create_graphics_pipeline(vk_context, shader))
     {
         DERROR("Vulkan graphics pipline creation failed.");
         return false;
@@ -260,19 +257,36 @@ bool vulkan_backend_initialize(u64 *vulkan_backend_memory_requirements, applicat
     return true;
 }
 
-bool vulkan_create_shader(dstring* shader_configuration_file_path, shader *in_shader)
+bool vulkan_create_shader(shader_config* config, shader *in_shader)
 {
-    if(!shader_configuration_file_path || !in_shader)
+    if(!config || !in_shader)
     {
         DERROR("Provided parameters to vulkan_create_shader were nullptr.");
         return false;
     }
     vulkan_shader* vk_shader = static_cast<vulkan_shader *>(dallocate(sizeof(vulkan_shader), MEM_TAG_RENDERER));
 
-    json_deserialize_shader(shader_configuration_file_path, vk_shader);
+
+    u64 vert_shader_code_buffer_size_requirements = INVALID_ID_64;
+    file_open_and_read(config->vert_spv_full_path.c_str(), &vert_shader_code_buffer_size_requirements, 0, 1);
+    DASSERT(vert_shader_code_buffer_size_requirements != INVALID_ID_64);
+
+    vk_shader->vertex_shader_code.resize(vert_shader_code_buffer_size_requirements);
+    file_open_and_read(config->vert_spv_full_path.c_str(), &vert_shader_code_buffer_size_requirements, vk_shader->vertex_shader_code.data, 1);
+
+
+    u64 frag_shader_code_buffer_size_requirements = INVALID_ID_64;
+    file_open_and_read(config->frag_spv_full_path.c_str(), &frag_shader_code_buffer_size_requirements, 0, 1);
+    DASSERT(frag_shader_code_buffer_size_requirements != INVALID_ID_64);
+
+    vk_shader->fragment_shader_code.resize(frag_shader_code_buffer_size_requirements);
+    file_open_and_read(config->frag_spv_full_path.c_str(), &frag_shader_code_buffer_size_requirements, vk_shader->fragment_shader_code.data, 1);
+
+    //TODO create: pipeline
+
 
     in_shader->internal_vulkan_shader_state = vk_shader;
-    return false;
+    return true;
 }
 
 //TODO: destroy material
@@ -449,16 +463,16 @@ void vulkan_backend_shutdown()
     vulkan_destroy_buffer(vk_context, &vk_context->vertex_buffer);
     vulkan_destroy_buffer(vk_context, &vk_context->index_buffer);
 
-    vkDestroyDescriptorPool(device, vk_context->global_descriptor_command_pool, allocator);
-    vkDestroyDescriptorSetLayout(device, vk_context->global_descriptor_layout, allocator);
-    vk_context->global_descriptor_sets.~darray();
+    //vkDestroyDescriptorPool(device, vk_context->global_descriptor_command_pool, allocator);
+    //vkDestroyDescriptorSetLayout(device, vk_context->global_descriptor_layout, allocator);
+    //vk_context->global_descriptor_sets.~darray();
 
-    vk_context->scene_global_ubo_data.~darray();
-    vk_context->light_global_ubo_data.~darray();
+    //vk_context->scene_global_ubo_data.~darray();
+    //vk_context->light_global_ubo_data.~darray();
 
-    vkDestroyDescriptorPool(device, vk_context->material_descriptor_command_pool, allocator);
-    vkDestroyDescriptorSetLayout(device, vk_context->material_descriptor_layout, allocator);
-    vk_context->material_descriptor_sets.~darray();
+    //vkDestroyDescriptorPool(device, vk_context->material_descriptor_command_pool, allocator);
+    //vkDestroyDescriptorSetLayout(device, vk_context->material_descriptor_layout, allocator);
+    //vk_context->material_descriptor_sets.~darray();
 
     vulkan_free_command_buffers(vk_context, &vk_context->graphics_command_pool,
                                 static_cast<VkCommandBuffer *>(vk_context->command_buffers.data), MAX_FRAMES_IN_FLIGHT);
@@ -472,13 +486,13 @@ void vulkan_backend_shutdown()
     dfree(vk_context->vk_swapchain.buffers, sizeof(VkFramebuffer) * vk_context->vk_swapchain.images_count,
           MEM_TAG_RENDERER);
 
-    for (u32 i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
-    {
-        vulkan_destroy_buffer(vk_context, &vk_context->scene_global_uniform_buffers[i]);
-        vulkan_destroy_buffer(vk_context, &vk_context->light_global_uniform_buffers[i]);
-    }
-    dfree(vk_context->scene_global_uniform_buffers, sizeof(vulkan_buffer) * MAX_FRAMES_IN_FLIGHT, MEM_TAG_RENDERER);
-    dfree(vk_context->light_global_uniform_buffers, sizeof(vulkan_buffer) * MAX_FRAMES_IN_FLIGHT, MEM_TAG_RENDERER);
+    //for (u32 i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
+    //{
+    //    vulkan_destroy_buffer(vk_context, &vk_context->scene_global_uniform_buffers[i]);
+    //    vulkan_destroy_buffer(vk_context, &vk_context->light_global_uniform_buffers[i]);
+    //}
+    //dfree(vk_context->scene_global_uniform_buffers, sizeof(vulkan_buffer) * MAX_FRAMES_IN_FLIGHT, MEM_TAG_RENDERER);
+    //dfree(vk_context->light_global_uniform_buffers, sizeof(vulkan_buffer) * MAX_FRAMES_IN_FLIGHT, MEM_TAG_RENDERER);
 
     vkDestroyPipeline(device, vk_context->vk_graphics_pipeline.handle, allocator);
 
@@ -601,8 +615,8 @@ VkBool32 vulkan_dbg_msg_rprt_callback(VkDebugUtilsMessageSeverityFlagBitsEXT    
 
 void vulkan_update_global_uniform_buffer(scene_global_uniform_buffer_object *scene_ubo,light_global_uniform_buffer_object *light_ubo, u32 current_frame_index)
 {
-    dcopy_memory(vk_context->scene_global_ubo_data[current_frame_index], scene_ubo, sizeof(scene_global_uniform_buffer_object));
-    dcopy_memory(vk_context->light_global_ubo_data[current_frame_index], light_ubo, sizeof(light_global_uniform_buffer_object));
+    //dcopy_memory(vk_context->scene_global_ubo_data[current_frame_index], scene_ubo, sizeof(scene_global_uniform_buffer_object));
+    //dcopy_memory(vk_context->light_global_ubo_data[current_frame_index], light_ubo, sizeof(light_global_uniform_buffer_object));
 }
 
 u32 vulkan_calculate_vertex_offset(vulkan_context *vk_context, u32 geometry_id)

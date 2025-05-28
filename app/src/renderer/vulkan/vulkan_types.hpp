@@ -107,13 +107,24 @@ struct vulkan_buffer
     VkDeviceMemory memory;
 };
 
+enum renderpass_types
+{
+    WORLD_RENDERPASS,
+};
+
 #define VULKAN_MAX_DESCRIPTOR_SET_COUNT 4096
 struct vulkan_shader
 {
-    dstring      vertex_file_path;
+
     darray<char> vertex_shader_code;
-    dstring      fragment_file_path;
     darray<char> fragment_shader_code;
+
+    // TODO: maybe use dynamic buffers for this
+    vulkan_buffer *scene_global_uniform_buffers = nullptr;
+    darray<void *> scene_global_ubo_data;
+    // INFO: idk if its should be seperate
+    vulkan_buffer *light_global_uniform_buffers = nullptr;
+    darray<void *> light_global_ubo_data;
 
     // INFO: for now first will always be vertex and second will always be fragment
     darray<VkShaderStageFlagBits>             stages;
@@ -129,7 +140,8 @@ struct vulkan_shader
     VkDescriptorPool                     per_group_descriptor_command_pool;
     darray<VkDescriptorSet>              per_group_descriptor_sets;
 
-    vulkan_pipeline pipeline;
+    renderpass_types type;
+    vulkan_pipeline  pipeline;
 };
 
 struct vulkan_context
@@ -144,26 +156,14 @@ struct vulkan_context
 
     vulkan_pipeline vk_graphics_pipeline;
 
-    vulkan_buffer *scene_global_uniform_buffers = nullptr;
-    darray<void *> scene_global_ubo_data;
-    // INFO: idk if its should be seperate
-    vulkan_buffer *light_global_uniform_buffers = nullptr;
-    darray<void *> light_global_ubo_data;
-
     darray<VkCommandBuffer> command_buffers;
 
     vulkan_buffer vertex_buffer;
     vulkan_buffer index_buffer;
 
+    shader *default_shader;
+
     VkCommandPool graphics_command_pool;
-
-    VkDescriptorSetLayout   global_descriptor_layout;
-    VkDescriptorPool        global_descriptor_command_pool;
-    darray<VkDescriptorSet> global_descriptor_sets;
-
-    VkDescriptorSetLayout   material_descriptor_layout;
-    VkDescriptorPool        material_descriptor_command_pool;
-    darray<VkDescriptorSet> material_descriptor_sets;
 
     VkSemaphore *image_available_semaphores = nullptr;
     VkSemaphore *render_finished_semaphores = nullptr;

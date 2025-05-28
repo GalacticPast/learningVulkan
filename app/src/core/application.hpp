@@ -56,6 +56,9 @@ struct application_state
 
     u64   geometry_system_memory_requirements; // 1 mega bytes
     void *geometry_system_state;
+
+    u64   shader_system_memory_requirements; // 1 mega bytes
+    void *shader_system_state;
 };
 
 bool application_initialize(application_state *out_state, application_config *config);

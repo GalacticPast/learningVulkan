@@ -13,6 +13,7 @@
 #include "resources/geometry_system.hpp"
 #include "resources/material_system.hpp"
 #include "resources/texture_system.hpp"
+#include "resources/shader_system.hpp"
 
 static application_state *app_state_ptr;
 
@@ -77,6 +78,13 @@ bool application_initialize(application_state *state, application_config *config
                                      app_state_ptr->platform_system_state, app_state_ptr->application_config);
     DASSERT(result == true);
 
+    shader_system_startup(&app_state_ptr->shader_system_memory_requirements, 0);
+    app_state_ptr->shader_system_state = linear_allocator_allocate(
+        &app_state_ptr->application_system_linear_allocator, app_state_ptr->shader_system_memory_requirements);
+    result = shader_system_startup( &app_state_ptr->shader_system_memory_requirements, app_state_ptr->shader_system_state);
+    DASSERT(result == true);
+
+    // why are we passing the linear allocator to the renderer system ?? are we allocating something? THis should not be the case because the systems linear allocator should only be used for system level abstractions
     renderer_system_startup(&app_state_ptr->renderer_system_memory_requirements, 0, 0, 0);
     app_state_ptr->renderer_system_state = linear_allocator_allocate(
         &app_state_ptr->application_system_linear_allocator, app_state_ptr->renderer_system_memory_requirements);

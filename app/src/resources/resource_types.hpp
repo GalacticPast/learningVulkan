@@ -6,11 +6,17 @@
 #include "math/dmath_types.hpp"
 
 #define MAX_SHADER_COUNT 1024
+struct shader_config
+{
+    //NOTE: for now
+    dstring name;
+    dstring vert_spv_full_path;
+    dstring frag_spv_full_path;
+};
+
 struct shader
 {
-    u64 id;
-    dstring name;
-
+    u64 id = INVALID_ID_64;
     void* internal_vulkan_shader_state;
 };
 

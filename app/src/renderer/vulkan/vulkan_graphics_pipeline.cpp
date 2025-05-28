@@ -1,50 +1,19 @@
 #include "vulkan_graphics_pipeline.hpp"
 #include "containers/darray.hpp"
-#include "core/application.hpp"
-#include "core/dfile_system.hpp"
-#include "core/dmemory.hpp"
 #include "core/logger.hpp"
 #include "math/dmath_types.hpp"
 
 VkShaderModule create_shader_module(vulkan_context *vk_context, const char *shader_code, u64 shader_code_size);
 
-bool vulkan_create_graphics_pipeline(vulkan_context *vk_context)
+bool vulkan_create_graphics_pipeline(vulkan_context *vk_context, vulkan_shader *shader)
 {
     DDEBUG("Creating vulkan graphics pipeline");
 
-    // INFO: shader stage
-    u64         vert_shader_code_buffer_size_requirements = INVALID_ID_64;
-    const char *vert_shader_file_name                     = "../assets/shaders/default_shader.vert.spv";
-
-    file_open_and_read(vert_shader_file_name, &vert_shader_code_buffer_size_requirements, 0, 1);
-
-    if (vert_shader_code_buffer_size_requirements == INVALID_ID_64)
-    {
-        DFATAL("File size error");
-        return false;
-    }
-    darray<char> vert_shader_code(vert_shader_code_buffer_size_requirements);
-    file_open_and_read(vert_shader_file_name, &vert_shader_code_buffer_size_requirements,
-                       reinterpret_cast<char *>(vert_shader_code.data), 1);
-
-    u64         frag_shader_code_buffer_size_requirements = INVALID_ID_64;
-    const char *frag_shader_file_name                     = "../assets/shaders/default_shader.frag.spv";
-
-    file_open_and_read(frag_shader_file_name, &frag_shader_code_buffer_size_requirements, 0, 1);
-    if (frag_shader_code_buffer_size_requirements == INVALID_ID_64)
-    {
-        DFATAL("File size error");
-        return false;
-    }
-    darray<char> frag_shader_code(frag_shader_code_buffer_size_requirements);
-    file_open_and_read(frag_shader_file_name, &frag_shader_code_buffer_size_requirements,
-                       reinterpret_cast<char *>(frag_shader_code.data), 1);
-
     VkShaderModule vert_shader_module = create_shader_module(
-        vk_context, reinterpret_cast<const char *>(vert_shader_code.data), vert_shader_code_buffer_size_requirements);
+        vk_context, reinterpret_cast<const char *>(shader->vertex_shader_code.data), shader->vertex_shader_code.size());
 
     VkShaderModule frag_shader_module = create_shader_module(
-        vk_context, reinterpret_cast<const char *>(frag_shader_code.data), frag_shader_code_buffer_size_requirements);
+        vk_context, reinterpret_cast<const char *>(shader->fragment_shader_code.data), shader->fragment_shader_code.size());
 
     // create the pipeline shader stage
     u32                   shader_stage_count = 2;
@@ -213,11 +182,11 @@ bool vulkan_create_graphics_pipeline(vulkan_context *vk_context)
     depth_stencil_state_create_info.back                  = {};
 
     // global global_descriptor_set_ubo_layout_binding
-    u32 global_descriptor_binding_count = 2;
+    u32                          global_descriptor_binding_count = 2;
     VkDescriptorSetLayoutBinding global_descriptor_set_layout_bindings[2]{};
-    VkShaderStageFlags global_stage_flags[2] = {VK_SHADER_STAGE_VERTEX_BIT, VK_SHADER_STAGE_FRAGMENT_BIT};
+    VkShaderStageFlags           global_stage_flags[2] = {VK_SHADER_STAGE_VERTEX_BIT, VK_SHADER_STAGE_FRAGMENT_BIT};
 
-    for(u32 i = 0 ; i < 2 ; i++)
+    for (u32 i = 0; i < 2; i++)
     {
         global_descriptor_set_layout_bindings[i].binding            = i;
         global_descriptor_set_layout_bindings[i].descriptorType     = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
@@ -225,7 +194,6 @@ bool vulkan_create_graphics_pipeline(vulkan_context *vk_context)
         global_descriptor_set_layout_bindings[i].stageFlags         = global_stage_flags[i];
         global_descriptor_set_layout_bindings[i].pImmutableSamplers = 0;
     }
-
 
     VkDescriptorSetLayoutCreateInfo global_descriptor_set_layout_create_info{};
     global_descriptor_set_layout_create_info.sType        = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
@@ -236,14 +204,15 @@ bool vulkan_create_graphics_pipeline(vulkan_context *vk_context)
 
     VkResult result =
         vkCreateDescriptorSetLayout(vk_context->vk_device.logical, &global_descriptor_set_layout_create_info,
-                                    vk_context->vk_allocator, &vk_context->global_descriptor_layout);
+                                    vk_context->vk_allocator, &shader->per_frame_descriptor_layout);
     VK_CHECK(result);
 
     // material_descriptor_set_layout_binding
-    u32 material_descriptors_binding_count = 2;
+    u32                          material_descriptors_binding_count = 2;
     VkDescriptorSetLayoutBinding material_descriptor_set_layout_bindings[2]{};
-    VkShaderStageFlags stage_flags[2] = {VK_SHADER_STAGE_FRAGMENT_BIT,VK_SHADER_STAGE_FRAGMENT_BIT};
-VkDescriptorType des_types[2] = { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER};
+    VkShaderStageFlags           stage_flags[2] = {VK_SHADER_STAGE_FRAGMENT_BIT, VK_SHADER_STAGE_FRAGMENT_BIT};
+    VkDescriptorType             des_types[2]   = {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+                                                   VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER};
 
     for (u32 i = 0; i < material_descriptors_binding_count; i++)
     {
@@ -262,12 +231,11 @@ VkDescriptorType des_types[2] = { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,VK_D
     material_descriptor_set_layout_create_info.pBindings    = material_descriptor_set_layout_bindings;
 
     result = vkCreateDescriptorSetLayout(vk_context->vk_device.logical, &material_descriptor_set_layout_create_info,
-                                         vk_context->vk_allocator, &vk_context->material_descriptor_layout);
+                                         vk_context->vk_allocator, &shader->per_group_descriptor_layout);
     VK_CHECK(result);
 
-    VkDescriptorSetLayout set_layouts[2] = {vk_context->global_descriptor_layout,
-                                            vk_context->material_descriptor_layout};
-
+    VkDescriptorSetLayout set_layouts[2] = {shader->per_frame_descriptor_layout,
+                                            shader->per_group_descriptor_layout};
 
     // object specific push constants
     VkPushConstantRange object_push_constant_range{};
