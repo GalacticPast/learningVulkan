@@ -734,6 +734,7 @@ bool vulkan_draw_geometries(render_data *data, VkCommandBuffer *curr_command_buf
     vulkan_begin_frame_renderpass(vk_context, *curr_command_buffer, curr_frame_index);
 
     // bind the globals
+    // HACK: for now we are using the default shader cause thats the only shader we have
     vkCmdBindDescriptorSets(*curr_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
                             vk_context->vk_graphics_pipeline.layout, 0, 1,
                             &vk_context->global_descriptor_sets[curr_frame_index], 0, nullptr);

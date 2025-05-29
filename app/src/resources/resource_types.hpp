@@ -17,6 +17,7 @@ struct shader_config
 struct shader
 {
     u64 id = INVALID_ID_64;
+
     void* internal_vulkan_shader_state;
 };
 
