@@ -26,11 +26,12 @@ enum shader_scope
 
 enum attribute_types
 {
-    MAT_4 = 64,
-    VEC_4 = 16,
-    VEC_3 = 12,
-    VEC_2 = 8,
-    SAMPLER_2D,
+    // sampler doesnt have a size
+    SAMPLER_2D = 8,
+    MAT_4      = 64,
+    VEC_4      = 16,
+    VEC_3      = 12,
+    VEC_2      = 8,
 };
 
 struct shader_uniform_config
@@ -56,8 +57,8 @@ struct shader_config
     // NOTE: for now
     bool has_per_frame;
     bool has_per_group;
-    //NOTE: we will have a push constant regardless of this flag so idk.
-    bool has_per_object;
+    // NOTE: we will have a push constant regardless of this flag so idk.
+    bool    has_per_object;
     dstring name;
 
     shader_stage                    stages;

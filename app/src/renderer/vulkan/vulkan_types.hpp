@@ -1,5 +1,6 @@
 #pragma once
 #include "containers/darray.hpp"
+#include "containers/dhashtable.hpp"
 #include "core/dasserts.hpp"
 #include "defines.hpp"
 #include "resources/resource_types.hpp"
@@ -121,15 +122,14 @@ struct vulkan_shader
     darray<char> vertex_shader_code;
     darray<char> fragment_shader_code;
 
-    // TODO: maybe use dynamic buffers for this
-    vulkan_buffer *per_frame_uniform_buffers = nullptr;
+    vulkan_buffer *per_frame_uniform_buffer = nullptr;
+    dhashtable<dstring> per_frame_offsets;
     darray<void *> per_frame_buffer_data;
 
-    // vulkan_buffer *scene_global_uniform_buffers = nullptr;
-    //  INFO: idk if its should be seperate
+    vulkan_buffer *per_group_uniform_buffer = nullptr;
+    dhashtable<dstring> per_group_offsets;
+    darray<void *> per_group_buffer_data;
 
-    // vulkan_buffer *light_global_uniform_buffers = nullptr;
-    // darray<void *> light_global_ubo_data;
 
     // INFO: for now first will always be vertex and second will always be fragment
     shader_stage stages;
