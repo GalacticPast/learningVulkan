@@ -1,6 +1,7 @@
 #pragma once
 #include "containers/darray.hpp"
 #include "core/dasserts.hpp"
+#include "defines.hpp"
 #include "resources/resource_types.hpp"
 #include <vulkan/vulkan.h>
 
@@ -113,6 +114,7 @@ enum renderpass_types
 };
 
 #define VULKAN_MAX_DESCRIPTOR_SET_COUNT 4096
+
 struct vulkan_shader
 {
 
@@ -120,23 +122,28 @@ struct vulkan_shader
     darray<char> fragment_shader_code;
 
     // TODO: maybe use dynamic buffers for this
-    vulkan_buffer *scene_global_uniform_buffers = nullptr;
-    darray<void *> scene_global_ubo_data;
-    // INFO: idk if its should be seperate
-    vulkan_buffer *light_global_uniform_buffers = nullptr;
-    darray<void *> light_global_ubo_data;
+    vulkan_buffer *per_frame_uniform_buffers = nullptr;
+    darray<void *> per_frame_buffer_data;
+
+    // vulkan_buffer *scene_global_uniform_buffers = nullptr;
+    //  INFO: idk if its should be seperate
+
+    // vulkan_buffer *light_global_uniform_buffers = nullptr;
+    // darray<void *> light_global_ubo_data;
 
     // INFO: for now first will always be vertex and second will always be fragment
-    darray<VkShaderStageFlagBits>             stages;
+    shader_stage stages;
+
+    VkVertexInputBindingDescription           attribute_description;
     darray<VkVertexInputAttributeDescription> input_attribute_descriptions;
 
-    darray<VkDescriptorSetLayoutBinding> per_frame_descriptor_sets_layout_bindings;
     VkDescriptorSetLayout                per_frame_descriptor_layout;
+    darray<VkDescriptorSetLayoutBinding> per_frame_descriptor_sets_layout_bindings;
     VkDescriptorPool                     per_frame_descriptor_command_pool;
     darray<VkDescriptorSet>              per_frame_descriptor_sets;
 
-    darray<VkDescriptorSetLayoutBinding> per_group_descriptor_sets_layout_bindings;
     VkDescriptorSetLayout                per_group_descriptor_layout;
+    darray<VkDescriptorSetLayoutBinding> per_group_descriptor_sets_layout_bindings;
     VkDescriptorPool                     per_group_descriptor_command_pool;
     darray<VkDescriptorSet>              per_group_descriptor_sets;
 
@@ -154,13 +161,12 @@ struct vulkan_context
 
     VkRenderPass vk_renderpass;
 
-    vulkan_pipeline vk_graphics_pipeline;
-
     darray<VkCommandBuffer> command_buffers;
 
     vulkan_buffer vertex_buffer;
     vulkan_buffer index_buffer;
 
+    u64 default_shader_id = INVALID_ID_64;
     shader *default_shader;
 
     VkCommandPool graphics_command_pool;

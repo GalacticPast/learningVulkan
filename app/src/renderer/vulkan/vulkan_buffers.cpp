@@ -121,42 +121,46 @@ bool vulkan_destroy_buffer(vulkan_context *vk_context, vulkan_buffer *buffer)
     return true;
 }
 
-bool vulkan_create_global_uniform_buffers(vulkan_context *vk_context)
+bool vulkan_shader_create_per_frame_uniform_buffers(vulkan_context *vk_context, vulkan_shader* shader)
 {
-    {
-        u32 scene_global_uniform_buffer_size = sizeof(scene_global_uniform_buffer_object);
 
-        vk_context->scene_global_uniform_buffers =
-            static_cast<vulkan_buffer *>(dallocate(sizeof(vulkan_buffer) * MAX_FRAMES_IN_FLIGHT, MEM_TAG_RENDERER));
 
-        vulkan_buffer *buffers = vk_context->scene_global_uniform_buffers;
 
-        for (u32 i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
-        {
-            vulkan_create_buffer(vk_context, &buffers[i], VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-                                 VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-                                 scene_global_uniform_buffer_size);
-            vkMapMemory(vk_context->vk_device.logical, vk_context->scene_global_uniform_buffers[i].memory, 0,
-                        scene_global_uniform_buffer_size, 0, &vk_context->scene_global_ubo_data[i]);
-        }
-    }
-    {
-        u32 light_global_uniform_buffer_size = sizeof(light_global_uniform_buffer_object);
 
-        vk_context->light_global_uniform_buffers =
-            static_cast<vulkan_buffer *>(dallocate(sizeof(vulkan_buffer) * MAX_FRAMES_IN_FLIGHT, MEM_TAG_RENDERER));
+    //{
+    //    u32 scene_global_uniform_buffer_size = sizeof(scene_global_uniform_buffer_object);
 
-        vulkan_buffer *buffers = vk_context->light_global_uniform_buffers;
+    //    vk_context->scene_global_uniform_buffers =
+    //        static_cast<vulkan_buffer *>(dallocate(sizeof(vulkan_buffer) * MAX_FRAMES_IN_FLIGHT, MEM_TAG_RENDERER));
 
-        for (u32 i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
-        {
-            vulkan_create_buffer(vk_context, &buffers[i], VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-                                 VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-                                 light_global_uniform_buffer_size);
-            vkMapMemory(vk_context->vk_device.logical, vk_context->light_global_uniform_buffers[i].memory, 0,
-                        light_global_uniform_buffer_size, 0, &vk_context->light_global_ubo_data[i]);
-        }
-    }
+    //    vulkan_buffer *buffers = vk_context->scene_global_uniform_buffers;
+
+    //    for (u32 i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
+    //    {
+    //        vulkan_create_buffer(vk_context, &buffers[i], VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+    //                             VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+    //                             scene_global_uniform_buffer_size);
+    //        vkMapMemory(vk_context->vk_device.logical, vk_context->scene_global_uniform_buffers[i].memory, 0,
+    //                    scene_global_uniform_buffer_size, 0, &vk_context->scene_global_ubo_data[i]);
+    //    }
+    //}
+    //{
+    //    u32 light_global_uniform_buffer_size = sizeof(light_global_uniform_buffer_object);
+
+    //    vk_context->light_global_uniform_buffers =
+    //        static_cast<vulkan_buffer *>(dallocate(sizeof(vulkan_buffer) * MAX_FRAMES_IN_FLIGHT, MEM_TAG_RENDERER));
+
+    //    vulkan_buffer *buffers = vk_context->light_global_uniform_buffers;
+
+    //    for (u32 i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
+    //    {
+    //        vulkan_create_buffer(vk_context, &buffers[i], VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+    //                             VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+    //                             light_global_uniform_buffer_size);
+    //        vkMapMemory(vk_context->vk_device.logical, vk_context->light_global_uniform_buffers[i].memory, 0,
+    //                    light_global_uniform_buffer_size, 0, &vk_context->light_global_ubo_data[i]);
+    //    }
+    //}
 
     return true;
 }

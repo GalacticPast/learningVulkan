@@ -1,15 +1,69 @@
 #pragma once
 
+#include "containers/darray.hpp"
 #include "defines.hpp"
 
 #include "core/dstring.hpp"
 #include "math/dmath_types.hpp"
 
 #define MAX_SHADER_COUNT 1024
+
+enum shader_stage
+{
+    STAGE_VERTEX   = 0x00000001,
+    STAGE_FRAGMENT = 0x00000010,
+};
+
+enum shader_scope
+{
+    // global
+    SHADER_PER_FRAME_UNIFORM,
+    // local
+    SHADER_PER_GROUP_UNIFORM,
+    // object
+    SHADER_PER_OBJECT_UNIFORM,
+};
+
+enum attribute_types
+{
+    MAT_4 = 64,
+    VEC_4 = 16,
+    VEC_3 = 12,
+    VEC_2 = 8,
+    SAMPLER_2D,
+};
+
+struct shader_uniform_config
+{
+    dstring                 name;
+    shader_stage            stage;
+    shader_scope            scope;
+    u32                     set;
+    u32                     binding;
+    darray<attribute_types> types;
+};
+
+// attributes can only be set for the vertex stage.
+struct shader_attribute_config
+{
+    dstring         name;
+    u32             location;
+    attribute_types type;
+};
+
 struct shader_config
 {
-    //NOTE: for now
+    // NOTE: for now
+    bool has_per_frame;
+    bool has_per_group;
+    //NOTE: we will have a push constant regardless of this flag so idk.
+    bool has_per_object;
     dstring name;
+
+    shader_stage                    stages;
+    darray<shader_uniform_config>   uniforms;
+    darray<shader_attribute_config> attributes;
+
     dstring vert_spv_full_path;
     dstring frag_spv_full_path;
 };
@@ -18,9 +72,8 @@ struct shader
 {
     u64 id = INVALID_ID_64;
 
-    void* internal_vulkan_shader_state;
+    void *internal_vulkan_shader_state;
 };
-
 
 #define DEFAULT_ALBEDO_TEXTURE_HANDLE "DEFAULT_ALBDEO_TEXTURE"
 #define DEFAULT_ALPHA_TEXTURE_HANDLE "DEFAULT_ALPHA_TEXTURE"

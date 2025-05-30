@@ -12,7 +12,9 @@ bool vulkan_copy_data_to_buffer(vulkan_context *vk_context, vulkan_buffer *src_b
 
 bool vulkan_create_vertex_buffer(vulkan_context *vk_context);
 bool vulkan_create_index_buffer(vulkan_context *vk_context);
-bool vulkan_create_global_uniform_buffers(vulkan_context *vk_context);
+
+//shader specific
+bool vulkan_shader_create_per_frame_uniform_buffers(vulkan_context *vk_context, vulkan_shader* shader);
 
 // I assume that the memory for the command buffers are already allocated when you call the belowfunction
 bool vulkan_allocate_command_buffers(vulkan_context *vk_context, VkCommandPool *command_pool,

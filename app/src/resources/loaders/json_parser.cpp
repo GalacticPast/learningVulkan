@@ -4,8 +4,8 @@
 #include "core/dstring.hpp"
 #include "core/logger.hpp"
 #include "defines.hpp"
-#include "renderer/vulkan/vulkan_types.hpp"
 #include "json_parser.hpp"
+#include "renderer/vulkan/vulkan_types.hpp"
 
 void json_parse_string(const char *ptr, char *out_string)
 {
@@ -173,13 +173,14 @@ static void extract_file_path(char *line, char *out_file_path)
 {
 }
 
-#define JSON_CHECK(a, b, msg) \
-    do { \
-        if ((a) == INVALID_ID || (a) > (b)) { \
-            DFATAL(msg); \
-            return; \
-        } \
-    } while (0)
+#define JSON_CHECK(a, b, msg)                                                                                          \
+    {                                                                                                                  \
+        if ((a) == INVALID_ID || (a) > (b))                                                                            \
+        {                                                                                                              \
+            DFATAL(msg);                                                                                               \
+            return;                                                                                                    \
+        }                                                                                                              \
+    }
 
 void json_deserialize_shader(dstring *file_base_path, struct vulkan_shader *out_vk_shader)
 {
@@ -197,9 +198,9 @@ void json_deserialize_shader(dstring *file_base_path, struct vulkan_shader *out_
     file_open_and_read(file_base_path->c_str(), &buffer_size_requirements, buffer, 0);
 
     bool has_attributes = false;
-    bool has_uniforms = false;
-    bool has_vertex   = false;
-    bool has_fragment = false;
+    bool has_uniforms   = false;
+    bool has_vertex     = false;
+    bool has_fragment   = false;
 
     u32 stages_index = string_first_string_occurence(buffer, grammer_to_string(STAGES).c_str());
     if (stages_index == INVALID_ID)
@@ -229,18 +230,20 @@ void json_deserialize_shader(dstring *file_base_path, struct vulkan_shader *out_
 
     // stage
     {
-        char *ptr  = buffer;
-        ptr       += stages_index;
-        u32 next_scope = DMIN(attributes_index, uniforms_index);
+        char *ptr       = buffer;
+        ptr            += stages_index;
+        u32 next_scope  = DMIN(attributes_index, uniforms_index);
 
         u32 end_of_scope = string_first_char_occurence(ptr, ']');
-        JSON_CHECK(end_of_scope , next_scope,"End of scope identifier ']' is missing for the scope 'stages' .");
+        JSON_CHECK(end_of_scope, next_scope, "End of scope identifier ']' is missing for the scope 'stages' .");
 
         u32 vertex_index = string_first_string_occurence(ptr, grammer_to_string(VERTEX).c_str());
-        JSON_CHECK(vertex_index , end_of_scope,"identifier 'vertex' is missing from scope 'stages'. Every shader should have a vertex stage");
+        JSON_CHECK(vertex_index, end_of_scope,
+                   "identifier 'vertex' is missing from scope 'stages'. Every shader should have a vertex stage");
 
         u32 fragment_index = string_first_string_occurence(ptr, grammer_to_string(FRAGMENT).c_str());
-        JSON_CHECK(fragment_index , end_of_scope,"identifier 'fragment' is missing from scope 'stages'. Every shader should have a fragment stage");
+        JSON_CHECK(fragment_index, end_of_scope,
+                   "identifier 'fragment' is missing from scope 'stages'. Every shader should have a fragment stage");
 
         // has_vertex = true;
         // has_fragment = true;
@@ -249,32 +252,29 @@ void json_deserialize_shader(dstring *file_base_path, struct vulkan_shader *out_
         {
             char *vertex_ptr      = ptr + vertex_index;
             u32   file_path_index = string_first_string_occurence(vertex_ptr, grammer_to_string(FILE_PATH).c_str());
-            JSON_CHECK(file_path_index , fragment_index,"identifier 'file_path' is missing for local scope 'vertex' for global scope 'stages'.");
+            JSON_CHECK(file_path_index, fragment_index,
+                       "identifier 'file_path' is missing for local scope 'vertex' for global scope 'stages'.");
             vertex_ptr += file_path_index;
             extract_file_path(vertex_ptr, out_vk_shader->vertex_file_path.string);
         }
         // get fragment_file_path
         {
-            char *fragment_ptr      = ptr + fragment_index;
+            char *fragment_ptr    = ptr + fragment_index;
             u32   file_path_index = string_first_string_occurence(fragment_ptr, grammer_to_string(FILE_PATH).c_str());
-            JSON_CHECK(file_path_index , fragment_index,"identifier 'file_path' is missing for local scope 'fragment' for global scope 'stages'.");
+            JSON_CHECK(file_path_index, fragment_index,
+                       "identifier 'file_path' is missing for local scope 'fragment' for global scope 'stages'.");
             fragment_ptr += file_path_index;
             extract_file_path(fragment_ptr, out_vk_shader->fragment_file_path.string);
         }
     }
     // attributes
-    if(has_attributes)
+    if (has_attributes)
     {
-        char *ptr = buffer;
-        ptr += attributes_index;
-        u32 next_scope = DMIN(attributes_index, uniforms_index);
+        char *ptr       = buffer;
+        ptr            += attributes_index;
+        u32 next_scope  = DMIN(attributes_index, uniforms_index);
 
         u32 end_of_scope = string_first_char_occurence(ptr, ']');
-        JSON_CHECK(end_of_scope , next_scope,"End of scope identifier ']' is missing for the scope 'attributes' .");
-
-
-
-
-
+        JSON_CHECK(end_of_scope, next_scope, "End of scope identifier ']' is missing for the scope 'attributes' .");
     }
 }

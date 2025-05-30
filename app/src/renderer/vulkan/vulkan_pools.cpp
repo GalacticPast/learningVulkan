@@ -26,89 +26,13 @@ bool vulkan_create_descriptor_command_pools(vulkan_context *vk_context)
 {
     {
         // global descriptor command pool
-        VkDescriptorPoolSize global_pool_sizes[1]{};
-
-        u32 max_uniform_buffer_limit = vk_context->vk_device.physical_properties->limits.maxDescriptorSetUniformBuffers;
-        u32 max_uniform_descriptors = DMIN(max_uniform_buffer_limit, (MAX_FRAMES_IN_FLIGHT * 3));
-
-        global_pool_sizes[0].type            = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-        global_pool_sizes[0].descriptorCount = max_uniform_descriptors;
-
-        VkDescriptorPoolCreateInfo global_descriptor_pool_create_info{};
-        global_descriptor_pool_create_info.sType         = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-        global_descriptor_pool_create_info.pNext         = 0;
-        global_descriptor_pool_create_info.flags         = 0;
-        global_descriptor_pool_create_info.maxSets       = max_uniform_descriptors;
-        global_descriptor_pool_create_info.poolSizeCount = 1;
-        global_descriptor_pool_create_info.pPoolSizes    = global_pool_sizes;
-
-        VkResult result = vkCreateDescriptorPool(vk_context->vk_device.logical, &global_descriptor_pool_create_info,
-                                                 vk_context->vk_allocator, &vk_context->global_descriptor_command_pool);
-        VK_CHECK(result);
-
-        darray<VkDescriptorSetLayout> global_desc_set_layout(max_uniform_descriptors);
-        for (u32 i = 0; i < max_uniform_descriptors; i++)
-        {
-            global_desc_set_layout[i] = vk_context->global_descriptor_layout;
-        }
-
-        VkDescriptorSetAllocateInfo global_desc_set_alloc_info{};
-        global_desc_set_alloc_info.sType              = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-        global_desc_set_alloc_info.pNext              = 0;
-        global_desc_set_alloc_info.descriptorPool     = vk_context->global_descriptor_command_pool;
-        global_desc_set_alloc_info.descriptorSetCount = MAX_FRAMES_IN_FLIGHT;
-        global_desc_set_alloc_info.pSetLayouts =
-            reinterpret_cast<const VkDescriptorSetLayout *>(global_desc_set_layout.data);
-
-        result = vkAllocateDescriptorSets(vk_context->vk_device.logical, &global_desc_set_alloc_info,
-                                          static_cast<VkDescriptorSet *>(vk_context->global_descriptor_sets.data));
-        VK_CHECK(result);
     }
     {
-        // material
-        //NOTE: if it has more than one binding then you need to multiply the max_num_sets * num_bindings
-        u32 max_image_sampler_limit = vk_context->vk_device.physical_properties->limits.maxDescriptorSetSampledImages;
-        u32 max_descriptors = DMIN(max_image_sampler_limit, VULKAN_MAX_DESCRIPTOR_SET_COUNT);
-
-        VkDescriptorPoolSize material_pool_sizes[1]{};
-
-        material_pool_sizes[0].type            = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-        material_pool_sizes[0].descriptorCount = max_descriptors * 2;
-
-        VkDescriptorPoolCreateInfo material_descriptor_pool_create_info{};
-        material_descriptor_pool_create_info.sType         = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-        material_descriptor_pool_create_info.pNext         = 0;
-        material_descriptor_pool_create_info.flags         = 0;
-        material_descriptor_pool_create_info.maxSets       = max_descriptors * 2 ;
-        material_descriptor_pool_create_info.poolSizeCount = 1;
-        material_descriptor_pool_create_info.pPoolSizes    = material_pool_sizes;
-
-        VkResult result =
-            vkCreateDescriptorPool(vk_context->vk_device.logical, &material_descriptor_pool_create_info,
-                                   vk_context->vk_allocator, &vk_context->material_descriptor_command_pool);
-        VK_CHECK(result);
-
-        darray<VkDescriptorSetLayout> material_desc_set_layout(max_descriptors);
-        for (u32 i = 0; i < max_descriptors; i++)
-        {
-            material_desc_set_layout[i] = vk_context->material_descriptor_layout;
-        }
-
-        VkDescriptorSetAllocateInfo material_desc_set_alloc_info{};
-        material_desc_set_alloc_info.sType              = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-        material_desc_set_alloc_info.pNext              = 0;
-        material_desc_set_alloc_info.descriptorPool     = vk_context->material_descriptor_command_pool;
-        material_desc_set_alloc_info.descriptorSetCount = max_descriptors;
-        material_desc_set_alloc_info.pSetLayouts =
-            reinterpret_cast<const VkDescriptorSetLayout *>(material_desc_set_layout.data);
-
-        result = vkAllocateDescriptorSets(vk_context->vk_device.logical, &material_desc_set_alloc_info,
-                                          static_cast<VkDescriptorSet *>(vk_context->material_descriptor_sets.data));
-        VK_CHECK(result);
     }
     return true;
 }
 
+//HACK: this is a hack
 bool vulkan_update_materials_descriptor_set(vulkan_context *vk_context, material *material)
 {
     VkDescriptorBufferInfo desc_buffer_info{};

@@ -3,16 +3,20 @@
 #include "core/application.hpp"
 #include "defines.hpp"
 #include "renderer/vulkan/vulkan_types.hpp"
-#include "resources/texture_system.hpp"
 
 bool vulkan_backend_initialize(u64 *vulkan_backend_memory_requirements, application_config *app_config, void *state);
 void vulkan_backend_shutdown();
 bool vulkan_backend_resize();
 bool vulkan_draw_frame(render_data *data);
 
+bool vulkan_initalize_shader(shader_config *config, shader *in_shader);
+// bool vulkan_add_uniforms(shader *in_shader, shader_stage stage, shader_scope scope, dstring *uniform_name, u32
+// sizeof_uniform,
+//                          u32 num_binding, void *data);
+// bool vulkan_add_attributes(shader *in_shader, shader_stage stage, shader_scope scope, dstring *attribute_name, u32
+// sizeof_attribute,
+//                            u32 location, void *data);
 
-bool vulkan_create_shader(shader_config* config, shader *in_shader);
-bool vulkan_destroy_shader(shader *in_shader);
 
 bool vulkan_create_material(material *in_material);
 bool vulkan_destroy_material(material *in_material);

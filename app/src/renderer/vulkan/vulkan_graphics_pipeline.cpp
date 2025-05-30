@@ -5,19 +5,32 @@
 
 VkShaderModule create_shader_module(vulkan_context *vk_context, const char *shader_code, u64 shader_code_size);
 
-bool vulkan_create_graphics_pipeline(vulkan_context *vk_context, vulkan_shader *shader)
+bool vulkan_create_pipeline(vulkan_context *vk_context, vulkan_shader* shader)
 {
     DDEBUG("Creating vulkan graphics pipeline");
-
-    VkShaderModule vert_shader_module = create_shader_module(
-        vk_context, reinterpret_cast<const char *>(shader->vertex_shader_code.data), shader->vertex_shader_code.size());
 
     VkShaderModule frag_shader_module = create_shader_module(
         vk_context, reinterpret_cast<const char *>(shader->fragment_shader_code.data), shader->fragment_shader_code.size());
 
     // create the pipeline shader stage
-    u32                   shader_stage_count = 2;
-    VkShaderStageFlagBits stage_flag_bits[2] = {VK_SHADER_STAGE_VERTEX_BIT, VK_SHADER_STAGE_FRAGMENT_BIT};
+    u32                   shader_stage_count = 0;
+    darray<VkShaderStageFlagBits> stage_flag_bits = {};
+
+    VkShaderModule vert_shader_module = create_shader_module(
+        vk_context, reinterpret_cast<const char *>(shader->vertex_shader_code.data), shader->vertex_shader_code.size());
+
+    //INFO: this is redundant
+    if(shader->stages & STAGE_VERTEX)
+    {
+        shader_stage_count++;
+        stage_flag_bits.push_back(VK_SHADER_STAGE_VERTEX_BIT);
+
+    }
+    if(shader->stages & STAGE_FRAGMENT)
+    {
+        shader_stage_count++;
+        stage_flag_bits.push_back(VK_SHADER_STAGE_FRAGMENT_BIT);
+    }
 
     VkShaderModule shader_modules[2] = {vert_shader_module, frag_shader_module};
 
@@ -51,43 +64,15 @@ bool vulkan_create_graphics_pipeline(vulkan_context *vk_context, vulkan_shader *
 
     // INFO: Vertex INPUT
 
-    u32                             vertex_input_attribute_descriptions_count = 3;
-    VkVertexInputBindingDescription vertex_input_binding_description{};
-    vertex_input_binding_description.binding   = 0;
-    vertex_input_binding_description.stride    = sizeof(vertex);
-    vertex_input_binding_description.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
-
-    VkVertexInputAttributeDescription vertex_input_attribute_descriptions[3]{};
-    VkFormat vertex_input_attribute_formats[3] = {VK_FORMAT_R32G32B32_SFLOAT, VK_FORMAT_R32G32B32_SFLOAT,
-                                                  VK_FORMAT_R32G32_SFLOAT};
-
-    // position
-    vertex_input_attribute_descriptions[0].location = 0;
-    vertex_input_attribute_descriptions[0].binding  = 0;
-    vertex_input_attribute_descriptions[0].format   = vertex_input_attribute_formats[0];
-    vertex_input_attribute_descriptions[0].offset   = 0;
-
-    // normals
-    vertex_input_attribute_descriptions[1].location = 1;
-    vertex_input_attribute_descriptions[1].binding  = 0;
-    vertex_input_attribute_descriptions[1].format   = vertex_input_attribute_formats[1];
-    vertex_input_attribute_descriptions[1].offset   = sizeof(math::vec3) * 1;
-
-    // texture coordinates
-    vertex_input_attribute_descriptions[2].location = 2;
-    vertex_input_attribute_descriptions[2].binding  = 0;
-    vertex_input_attribute_descriptions[2].format   = vertex_input_attribute_formats[2];
-    vertex_input_attribute_descriptions[2].offset   = sizeof(math::vec3) * 2;
-
     VkPipelineVertexInputStateCreateInfo vertex_input_state_create_info{};
 
     vertex_input_state_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
     vertex_input_state_create_info.pNext = 0;
     vertex_input_state_create_info.flags = 0;
     vertex_input_state_create_info.vertexBindingDescriptionCount   = 1;
-    vertex_input_state_create_info.pVertexBindingDescriptions      = &vertex_input_binding_description;
-    vertex_input_state_create_info.vertexAttributeDescriptionCount = vertex_input_attribute_descriptions_count;
-    vertex_input_state_create_info.pVertexAttributeDescriptions    = vertex_input_attribute_descriptions;
+    vertex_input_state_create_info.pVertexBindingDescriptions      = &shader->attribute_description;
+    vertex_input_state_create_info.vertexAttributeDescriptionCount = shader->input_attribute_descriptions.size();
+    vertex_input_state_create_info.pVertexAttributeDescriptions    = shader->input_attribute_descriptions.data;
 
     VkPipelineInputAssemblyStateCreateInfo input_assembly_state_create_info{};
     input_assembly_state_create_info.sType    = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
@@ -182,57 +167,8 @@ bool vulkan_create_graphics_pipeline(vulkan_context *vk_context, vulkan_shader *
     depth_stencil_state_create_info.back                  = {};
 
     // global global_descriptor_set_ubo_layout_binding
-    u32                          global_descriptor_binding_count = 2;
-    VkDescriptorSetLayoutBinding global_descriptor_set_layout_bindings[2]{};
-    VkShaderStageFlags           global_stage_flags[2] = {VK_SHADER_STAGE_VERTEX_BIT, VK_SHADER_STAGE_FRAGMENT_BIT};
-
-    for (u32 i = 0; i < 2; i++)
-    {
-        global_descriptor_set_layout_bindings[i].binding            = i;
-        global_descriptor_set_layout_bindings[i].descriptorType     = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-        global_descriptor_set_layout_bindings[i].descriptorCount    = 1;
-        global_descriptor_set_layout_bindings[i].stageFlags         = global_stage_flags[i];
-        global_descriptor_set_layout_bindings[i].pImmutableSamplers = 0;
-    }
-
-    VkDescriptorSetLayoutCreateInfo global_descriptor_set_layout_create_info{};
-    global_descriptor_set_layout_create_info.sType        = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-    global_descriptor_set_layout_create_info.pNext        = 0;
-    global_descriptor_set_layout_create_info.flags        = 0;
-    global_descriptor_set_layout_create_info.bindingCount = global_descriptor_binding_count;
-    global_descriptor_set_layout_create_info.pBindings    = global_descriptor_set_layout_bindings;
-
-    VkResult result =
-        vkCreateDescriptorSetLayout(vk_context->vk_device.logical, &global_descriptor_set_layout_create_info,
-                                    vk_context->vk_allocator, &shader->per_frame_descriptor_layout);
-    VK_CHECK(result);
 
     // material_descriptor_set_layout_binding
-    u32                          material_descriptors_binding_count = 2;
-    VkDescriptorSetLayoutBinding material_descriptor_set_layout_bindings[2]{};
-    VkShaderStageFlags           stage_flags[2] = {VK_SHADER_STAGE_FRAGMENT_BIT, VK_SHADER_STAGE_FRAGMENT_BIT};
-    VkDescriptorType             des_types[2]   = {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-                                                   VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER};
-
-    for (u32 i = 0; i < material_descriptors_binding_count; i++)
-    {
-        material_descriptor_set_layout_bindings[i].binding            = i;
-        material_descriptor_set_layout_bindings[i].descriptorCount    = 1;
-        material_descriptor_set_layout_bindings[i].descriptorType     = des_types[i];
-        material_descriptor_set_layout_bindings[i].stageFlags         = stage_flags[i];
-        material_descriptor_set_layout_bindings[i].pImmutableSamplers = nullptr;
-    }
-
-    VkDescriptorSetLayoutCreateInfo material_descriptor_set_layout_create_info{};
-    material_descriptor_set_layout_create_info.sType        = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-    material_descriptor_set_layout_create_info.pNext        = 0;
-    material_descriptor_set_layout_create_info.flags        = 0;
-    material_descriptor_set_layout_create_info.bindingCount = material_descriptors_binding_count;
-    material_descriptor_set_layout_create_info.pBindings    = material_descriptor_set_layout_bindings;
-
-    result = vkCreateDescriptorSetLayout(vk_context->vk_device.logical, &material_descriptor_set_layout_create_info,
-                                         vk_context->vk_allocator, &shader->per_group_descriptor_layout);
-    VK_CHECK(result);
 
     VkDescriptorSetLayout set_layouts[2] = {shader->per_frame_descriptor_layout,
                                             shader->per_group_descriptor_layout};
@@ -255,33 +191,33 @@ bool vulkan_create_graphics_pipeline(vulkan_context *vk_context, vulkan_shader *
     pipeline_layout_create_info.pushConstantRangeCount = 1;
     pipeline_layout_create_info.pPushConstantRanges    = &object_push_constant_range;
 
-    result = vkCreatePipelineLayout(vk_context->vk_device.logical, &pipeline_layout_create_info,
-                                    vk_context->vk_allocator, &vk_context->vk_graphics_pipeline.layout);
+    VkResult result = vkCreatePipelineLayout(vk_context->vk_device.logical, &pipeline_layout_create_info,
+                                    vk_context->vk_allocator, &shader->pipeline.layout);
     VK_CHECK(result);
 
-    VkGraphicsPipelineCreateInfo graphics_pipeline_create_info{};
-    graphics_pipeline_create_info.sType               = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-    graphics_pipeline_create_info.pNext               = 0;
-    graphics_pipeline_create_info.flags               = 0;
-    graphics_pipeline_create_info.stageCount          = shader_stage_count;
-    graphics_pipeline_create_info.pStages             = shader_stage_create_infos;
-    graphics_pipeline_create_info.pVertexInputState   = &vertex_input_state_create_info;
-    graphics_pipeline_create_info.pInputAssemblyState = &input_assembly_state_create_info;
-    graphics_pipeline_create_info.pTessellationState  = nullptr;
-    graphics_pipeline_create_info.pViewportState      = &viewport_state_create_info;
-    graphics_pipeline_create_info.pRasterizationState = &rasterization_state_create_info;
-    graphics_pipeline_create_info.pMultisampleState   = &multisampling_state_create_info;
-    graphics_pipeline_create_info.pDepthStencilState  = &depth_stencil_state_create_info;
-    graphics_pipeline_create_info.pColorBlendState    = &color_blend_state_create_info;
-    graphics_pipeline_create_info.pDynamicState       = &dynamic_state_create_info;
-    graphics_pipeline_create_info.layout              = vk_context->vk_graphics_pipeline.layout;
-    graphics_pipeline_create_info.renderPass          = vk_context->vk_renderpass;
-    graphics_pipeline_create_info.subpass             = 0;
-    graphics_pipeline_create_info.basePipelineHandle  = VK_NULL_HANDLE;
-    graphics_pipeline_create_info.basePipelineIndex   = -1;
+    VkGraphicsPipelineCreateInfo pipeline_create_info{};
+    pipeline_create_info.sType               = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+    pipeline_create_info.pNext               = 0;
+    pipeline_create_info.flags               = 0;
+    pipeline_create_info.stageCount          = shader_stage_count;
+    pipeline_create_info.pStages             = shader_stage_create_infos;
+    pipeline_create_info.pVertexInputState   = &vertex_input_state_create_info;
+    pipeline_create_info.pInputAssemblyState = &input_assembly_state_create_info;
+    pipeline_create_info.pTessellationState  = nullptr;
+    pipeline_create_info.pViewportState      = &viewport_state_create_info;
+    pipeline_create_info.pRasterizationState = &rasterization_state_create_info;
+    pipeline_create_info.pMultisampleState   = &multisampling_state_create_info;
+    pipeline_create_info.pDepthStencilState  = &depth_stencil_state_create_info;
+    pipeline_create_info.pColorBlendState    = &color_blend_state_create_info;
+    pipeline_create_info.pDynamicState       = &dynamic_state_create_info;
+    pipeline_create_info.layout              = shader->pipeline.layout;
+    pipeline_create_info.renderPass          = vk_context->vk_renderpass;
+    pipeline_create_info.subpass             = 0;
+    pipeline_create_info.basePipelineHandle  = VK_NULL_HANDLE;
+    pipeline_create_info.basePipelineIndex   = -1;
 
-    result = vkCreateGraphicsPipelines(vk_context->vk_device.logical, VK_NULL_HANDLE, 1, &graphics_pipeline_create_info,
-                                       vk_context->vk_allocator, &vk_context->vk_graphics_pipeline.handle);
+    result = vkCreateGraphicsPipelines(vk_context->vk_device.logical, VK_NULL_HANDLE, 1, &pipeline_create_info,
+                                       vk_context->vk_allocator, &shader->pipeline.handle);
     VK_CHECK(result);
 
     vkDestroyShaderModule(vk_context->vk_device.logical, vert_shader_module, vk_context->vk_allocator);

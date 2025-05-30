@@ -5,7 +5,7 @@
 #include "core/logger.hpp"
 #include "defines.hpp"
 
-#define DEFAULT_DARRAY_SIZE 100
+#define DEFAULT_DARRAY_SIZE 10
 #define DEFAULT_DARRAY_RESIZE_FACTOR 2
 
 template <typename T> class darray
