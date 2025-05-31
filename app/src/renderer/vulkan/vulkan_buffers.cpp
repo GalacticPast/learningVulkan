@@ -1,8 +1,6 @@
 #include "vulkan_buffers.hpp"
-#include "core/application.hpp"
 #include "defines.hpp"
 #include "renderer/vulkan/vulkan_types.hpp"
-#include "vulkan_pools.hpp"
 
 bool vulkan_create_buffer(vulkan_context *vk_context, vulkan_buffer *out_buffer, VkBufferUsageFlags usg_flags,
                           VkMemoryPropertyFlags memory_properties_flags, u64 buffer_size)

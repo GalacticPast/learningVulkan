@@ -122,12 +122,18 @@ struct vulkan_shader
     darray<char> vertex_shader_code;
     darray<char> fragment_shader_code;
 
-    vulkan_buffer *per_frame_uniform_buffer = nullptr;
-    dhashtable<dstring> per_frame_offsets;
-    darray<void *> per_frame_buffer_data;
+    u32 per_frame_ubo_size;
+    //FIXME: should figure out how to do this using dynamic buffers
+    darray<void*> scene_ubo;
+    darray<void*> light_ubo;
+    darray<vulkan_buffer> per_frame_scene_uniform_buffers;
+    darray<vulkan_buffer> per_frame_light_uniform_buffers;
+    //
+    //darray<vulkan_buffer> per_frame_uniform_buffers;
+    //darray<void *> per_frame_buffer_data;
 
-    vulkan_buffer *per_group_uniform_buffer = nullptr;
-    dhashtable<dstring> per_group_offsets;
+    u32 per_group_ubo_size;
+    vulkan_buffer per_group_uniform_buffer;
     darray<void *> per_group_buffer_data;
 
 

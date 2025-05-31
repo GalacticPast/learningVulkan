@@ -21,14 +21,14 @@ static const char *memory_tag_strings[MEM_TAG_MAX_TAGS] = {
     "RENDERER   ",
     "GEOMETRY   "
 };
-// clang-format on 
+// clang-format on
 
 bool memory_system_startup(u64 *memory_system_memory_requirements, void *state)
 {
-    u64 freelist_mem_requirements = INVALID_ID_64; 
+    u64 freelist_mem_requirements = INVALID_ID_64;
     dfreelist_create(&freelist_mem_requirements, 0, 0);
     *memory_system_memory_requirements = sizeof(memory_system) + freelist_mem_requirements + GB(1);
-    
+
     if (!state)
     {
         return true;
@@ -40,7 +40,7 @@ bool memory_system_startup(u64 *memory_system_memory_requirements, void *state)
 
     void* raw_ptr = reinterpret_cast<void *>(static_cast<char *>(state) + sizeof(memory_system));
     void* freelist_mem = reinterpret_cast<void *>DALIGN_UP(raw_ptr, sizeof(memory_system));
-    
+
     u64 freelist_memory_size = (freelist_mem_requirements + GB(1)) - (reinterpret_cast<uintptr_t>(freelist_mem) - reinterpret_cast<uintptr_t>(raw_ptr));
     memory_system_ptr->dfreelist = dfreelist_create(&freelist_mem_requirements, freelist_memory_size,freelist_mem);
 
@@ -73,7 +73,7 @@ void *dallocate(u64 mem_size, memory_tags tag)
     }
     //void *block = platform_allocate(mem_size, false);
     void *block = dfreelist_allocate(memory_system_ptr->dfreelist, mem_size);
-
+    DASSERT(block);
     return block;
 }
 void dfree(void *block, u64 mem_size, memory_tags tag)

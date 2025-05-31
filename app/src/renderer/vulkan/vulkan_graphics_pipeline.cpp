@@ -31,6 +31,7 @@ bool vulkan_create_pipeline(vulkan_context *vk_context, vulkan_shader* shader)
         shader_stage_count++;
         stage_flag_bits.push_back(VK_SHADER_STAGE_FRAGMENT_BIT);
     }
+    DASSERT_MSG(shader_stage_count, "There cannot be 0 shader stages for a pipeline");
 
     VkShaderModule shader_modules[2] = {vert_shader_module, frag_shader_module};
 

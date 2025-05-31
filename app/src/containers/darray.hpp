@@ -65,9 +65,13 @@ template <typename T> darray<T>::~darray()
 
 template <typename T> void darray<T>::c_init()
 {
+    if(data)
+    {
+        DASSERT_MSG(!data, "THE ARRAY HAS BEEN ALREADY INITIALIZED.");
+    }
     element_size = sizeof(T);
     capacity     = DEFAULT_DARRAY_SIZE * element_size;
-    length       = 0;
+    length       = DEFAULT_DARRAY_SIZE;
     data         = static_cast<T *>(dallocate(capacity, MEM_TAG_DARRAY));
 }
 
@@ -125,6 +129,12 @@ template <typename T> T &darray<T>::operator[](u64 index)
 
 template <typename T> void darray<T>::resize(u64 out_size)
 {
+    if(out_size < DEFAULT_DARRAY_SIZE)
+    {
+        length = out_size;
+        DASSERT_MSG(data, "array hasnt been initalized yet.");
+        return;
+    }
     u64 new_capacity = (out_size * element_size);
     if (data)
     {
@@ -141,10 +151,10 @@ template <typename T> void darray<T>::resize(u64 out_size)
         {
             DFATAL("Darray coulnd't allocate block for ::resize()");
         }
-        dcopy_memory(buffer, data, capacity);
+        dcopy_memory(buffer, data, new_capacity);
         dfree(data, capacity, MEM_TAG_DARRAY);
         data     = static_cast<T *>(buffer);
-        capacity = element_size * out_size;
+        capacity = new_capacity;
         length   = out_size;
     }
     else

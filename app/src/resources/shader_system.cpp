@@ -1,6 +1,7 @@
 #include "containers/dhashtable.hpp"
 
 #include "defines.hpp"
+#include "math/dmath_types.hpp"
 #include "renderer/vulkan/vulkan_backend.hpp"
 #include "resources/resource_types.hpp"
 
@@ -28,10 +29,6 @@ bool shader_system_startup(u64 *shader_system_mem_requirements, void *state)
 
     shader_sys_state_ptr->hashtable.c_init(MAX_SHADER_COUNT);
     shader_sys_state_ptr->loaded_shaders.c_init(MAX_SHADER_COUNT);
-
-    shader default_shader{};
-    u64    default_shader_id = INVALID_ID_64;
-    shader_system_create_default_shader(&default_shader, &default_shader_id);
 
     return true;
 }
@@ -95,30 +92,34 @@ bool shader_system_create_default_shader(shader *out_shader, u64 *out_shader_id)
         uni_conf[0].scope   = SHADER_PER_FRAME_UNIFORM;
         uni_conf[0].set     = 0;
         uni_conf[0].binding = 0;
-        uni_conf[0].types.push_back(MAT_4);
-        uni_conf[0].types.push_back(MAT_4);
+        uni_conf[0].types.c_init();
+        uni_conf[0].types[0] = MAT_4;
+        uni_conf[0].types[1] = MAT_4;
 
         uni_conf[1].name    = "uniform_light_object";
         uni_conf[1].stage   = STAGE_FRAGMENT;
         uni_conf[1].scope   = SHADER_PER_FRAME_UNIFORM;
         uni_conf[1].set     = 0;
         uni_conf[1].binding = 1;
-        uni_conf[1].types.push_back(VEC_3);
-        uni_conf[1].types.push_back(VEC_3);
+        uni_conf[1].types.c_init();
+        uni_conf[1].types[0] = VEC_3;
+        uni_conf[1].types[1] = VEC_3;
 
         uni_conf[2].name    = "albedo_map";
         uni_conf[2].stage   = STAGE_FRAGMENT;
         uni_conf[2].scope   = SHADER_PER_GROUP_UNIFORM;
         uni_conf[2].set     = 1;
         uni_conf[2].binding = 0;
-        uni_conf[2].types.push_back(SAMPLER_2D);
+        uni_conf[2].types.c_init();
+        uni_conf[2].types[0] = SAMPLER_2D;
 
         uni_conf[3].name    = "alpha_map";
         uni_conf[3].stage   = STAGE_FRAGMENT;
         uni_conf[3].scope   = SHADER_PER_GROUP_UNIFORM;
         uni_conf[3].set     = 1;
         uni_conf[3].binding = 1;
-        uni_conf[3].types.push_back(SAMPLER_2D);
+        uni_conf[3].types.c_init();
+        uni_conf[3].types[0] = SAMPLER_2D;
     }
 
     default_shader_conf.attributes.resize(3);
@@ -138,6 +139,10 @@ bool shader_system_create_default_shader(shader *out_shader, u64 *out_shader_id)
     }
 
     default_shader_conf.stages = static_cast<shader_stage>(STAGE_VERTEX | STAGE_FRAGMENT);
+
+    default_shader_conf.has_per_frame  = true;
+    default_shader_conf.has_per_group  = true;
+    default_shader_conf.has_per_object = true;
 
     *out_shader_id                          = _create_shader(&default_shader_conf, out_shader);
     shader_sys_state_ptr->default_shader_id = *out_shader_id;
@@ -173,11 +178,17 @@ shader *shader_system_get_default_shader()
     return out_shader;
 }
 
-bool shader_system_update_per_frame(shader *shader, u64 offset, void *data)
+bool shader_use(u64 shader_id)
 {
-
     return true;
 }
+// HACK: this should be abstracted away to support more shaders
+bool shader_system_update_per_frame(shader *shader, scene_global_uniform_buffer_object *scene_global,
+                                    light_global_uniform_buffer_object *light_global)
+{
+    return false;
+}
+// HACK: this should be abstracted away to support more shaders
 bool shader_system_update_per_group(shader *shader, u64 offset, void *data)
 {
     return true;
@@ -186,7 +197,7 @@ bool shader_system_update_per_object(shader *shader, u64 offset, void *data)
 {
     return true;
 }
-
+// might not need this
 bool shader_system_bind_per_frame(shader *shader, u64 offset)
 {
 

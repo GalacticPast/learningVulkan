@@ -1,6 +1,4 @@
 #include "vulkan_renderpass.hpp"
-#include "core/application.hpp"
-#include "renderer/vulkan/vulkan_backend.hpp"
 #include "renderer/vulkan/vulkan_types.hpp"
 
 bool vulkan_create_renderpass(vulkan_context *vk_context)
@@ -76,7 +74,7 @@ bool vulkan_create_renderpass(vulkan_context *vk_context)
     return true;
 }
 
-bool vulkan_begin_frame_renderpass(vulkan_context *vk_context, VkCommandBuffer command_buffer, u32 image_index)
+bool vulkan_begin_frame_renderpass(vulkan_context *vk_context, VkCommandBuffer command_buffer, vulkan_pipeline* pipeline, u32 image_index)
 {
     VkClearValue clear_values[2] = {};
     clear_values[0]              = {.color = {{0.05f, 0.07f, 0.12f, 1.0f}}};
@@ -94,7 +92,7 @@ bool vulkan_begin_frame_renderpass(vulkan_context *vk_context, VkCommandBuffer c
 
     vkCmdBeginRenderPass(command_buffer, &renderpass_begin_info, VK_SUBPASS_CONTENTS_INLINE);
 
-    vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, vk_context->vk_graphics_pipeline.handle);
+    vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->handle);
 
     VkExtent2D *swapchain_extent = &vk_context->vk_swapchain.surface_extent;
 

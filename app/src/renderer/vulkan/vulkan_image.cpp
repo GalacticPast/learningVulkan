@@ -2,7 +2,6 @@
 #include "vulkan/vulkan_core.h"
 #include "vulkan_buffers.hpp"
 #include "vulkan_device.hpp"
-#include "vulkan_pools.hpp"
 
 bool vulkan_create_image(vulkan_context *vk_context, vulkan_image *out_image, u32 img_width, u32 img_height,
                          VkFormat img_format, VkMemoryPropertyFlags mem_properties_flags, VkImageUsageFlags img_usage,

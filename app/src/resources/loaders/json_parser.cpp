@@ -255,7 +255,7 @@ void json_deserialize_shader(dstring *file_base_path, struct vulkan_shader *out_
             JSON_CHECK(file_path_index, fragment_index,
                        "identifier 'file_path' is missing for local scope 'vertex' for global scope 'stages'.");
             vertex_ptr += file_path_index;
-            extract_file_path(vertex_ptr, out_vk_shader->vertex_file_path.string);
+            //extract_file_path(vertex_ptr, out_vk_shader->vertex_file_path.string);
         }
         // get fragment_file_path
         {
@@ -264,7 +264,7 @@ void json_deserialize_shader(dstring *file_base_path, struct vulkan_shader *out_
             JSON_CHECK(file_path_index, fragment_index,
                        "identifier 'file_path' is missing for local scope 'fragment' for global scope 'stages'.");
             fragment_ptr += file_path_index;
-            extract_file_path(fragment_ptr, out_vk_shader->fragment_file_path.string);
+            //extract_file_path(fragment_ptr, out_vk_shader->fragment_file_path.string);
         }
     }
     // attributes

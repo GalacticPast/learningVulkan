@@ -92,12 +92,13 @@ int main()
         geometry_system_generate_plane_config(10, 5, 5, 5, 5, 5, "its_a_plane", DEFAULT_MATERIAL_HANDLE);
 
     render_data triangle{};
+
     {
-        const char *obj_file_name  = "sponza.obj";
-        const char *mtl_file_name  = "sponza.mtl";
-        u32         geometry_count = INVALID_ID;
-        geometry  **geos           = nullptr;
-        geometry_system_get_geometries_from_file(obj_file_name, mtl_file_name, &geos, &geometry_count);
+        //const char *obj_file_name  = "sponza.obj";
+        //const char *mtl_file_name  = "sponza.mtl";
+        //u32         geometry_count = INVALID_ID;
+        //geometry  **geos           = nullptr;
+        //geometry_system_get_geometries_from_file(obj_file_name, mtl_file_name, &geos, &geometry_count);
     }
 
     geometry_config parent_config = geometry_system_generate_cube_config();

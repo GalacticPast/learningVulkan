@@ -180,6 +180,9 @@ dfreelist_node *free_list_find_best(dfreelist *fl, u64 size, u64 alignment, u64 
 
 void *dfreelist_allocate(dfreelist *fl, u64 size)
 {
+    DASSERT(fl);
+    DASSERT_MSG(fl->head, "Freelist head ptr is null, how is this possible");
+
     u64                  padding   = 0;
     dfreelist_node              *prev_node = nullptr;
     dfreelist_node              *node      = nullptr;
