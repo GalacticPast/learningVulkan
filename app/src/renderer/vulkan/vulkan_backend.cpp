@@ -506,7 +506,7 @@ bool vulkan_initialize_shader(shader_config *config, shader *in_shader)
 
             for (u32 i = 0; i < uniforms_size; i++)
             {
-                //per_frame_ubo_size = (per_frame_ubo_size + required_alignment - 1) & ~(required_alignment - 1);
+                // per_frame_ubo_size = (per_frame_ubo_size + required_alignment - 1) & ~(required_alignment - 1);
                 if (config->uniforms[i].scope == SHADER_PER_FRAME_UNIFORM)
                 {
                     u32 uniform_types_size = config->uniforms[i].types.size();
@@ -1056,14 +1056,13 @@ void vulkan_update_global_uniform_buffer(vulkan_shader *shader, scene_global_uni
                                          light_global_uniform_buffer_object *light_ubo, u32 current_frame_index)
 {
 
-    u64 scene_aligned = align_upto(sizeof(scene_global_uniform_buffer_object), shader->min_ubo_alignment);
-    //u64 scene_aligned = sizeof(scene_global_uniform_buffer_object);
-    u8 *addr          = static_cast<u8 *>(shader->per_frame_mapped_data) +
-               ((shader->per_frame_stride * current_frame_index) + scene_aligned);
+    // u64 scene_aligned = align_upto(sizeof(scene_global_uniform_buffer_object), shader->min_ubo_alignment);
+    u64 scene_aligned = sizeof(scene_global_uniform_buffer_object);
+    u8 *addr = static_cast<u8 *>(shader->per_frame_mapped_data) + ((shader->per_frame_stride * current_frame_index));
     dcopy_memory(addr, scene_ubo, sizeof(scene_global_uniform_buffer_object));
 
-    //u64 light_aligned  = scene_aligned + sizeof(light_global_uniform_buffer_object);
-    u64 light_aligned  = align_upto(sizeof(light_global_uniform_buffer_object), shader->min_ubo_alignment);
+    u64 light_aligned  = scene_aligned;
+    // u64 light_aligned  = align_upto(sizeof(light_global_uniform_buffer_object), shader->min_ubo_alignment);
     addr              += light_aligned;
     dcopy_memory(addr, light_ubo, sizeof(light_global_uniform_buffer_object));
 }
@@ -1187,10 +1186,10 @@ bool vulkan_draw_geometries(render_data *data, VkCommandBuffer *curr_command_buf
     vulkan_begin_frame_renderpass(vk_context, *curr_command_buffer, &vk_shader->pipeline, curr_frame_index);
 
     // bind the globals
-    //u32 aligned_global    = sizeof(scene_global_uniform_buffer_object);
-    u32 aligned_global    = align_upto(sizeof(scene_global_uniform_buffer_object), vk_shader->min_ubo_alignment);
+    // u32 aligned_global    = sizeof(scene_global_uniform_buffer_object);
+    u32 aligned_global     = align_upto(sizeof(scene_global_uniform_buffer_object), vk_shader->min_ubo_alignment);
     u32 dynamic_offsets[2] = {curr_frame_index * vk_shader->per_frame_stride,
-                             curr_frame_index * vk_shader->per_frame_stride + aligned_global};
+                              curr_frame_index * vk_shader->per_frame_stride + aligned_global};
 
     vkCmdBindDescriptorSets(*curr_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, vk_shader->pipeline.layout, 0, 1,
                             &vk_shader->per_frame_descriptor_set, 2, dynamic_offsets);
