@@ -119,50 +119,6 @@ bool vulkan_destroy_buffer(vulkan_context *vk_context, vulkan_buffer *buffer)
     return true;
 }
 
-bool vulkan_shader_create_per_frame_uniform_buffers(vulkan_context *vk_context, vulkan_shader* shader)
-{
-
-
-
-
-    //{
-    //    u32 scene_global_uniform_buffer_size = sizeof(scene_global_uniform_buffer_object);
-
-    //    vk_context->scene_global_uniform_buffers =
-    //        static_cast<vulkan_buffer *>(dallocate(sizeof(vulkan_buffer) * MAX_FRAMES_IN_FLIGHT, MEM_TAG_RENDERER));
-
-    //    vulkan_buffer *buffers = vk_context->scene_global_uniform_buffers;
-
-    //    for (u32 i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
-    //    {
-    //        vulkan_create_buffer(vk_context, &buffers[i], VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-    //                             VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-    //                             scene_global_uniform_buffer_size);
-    //        vkMapMemory(vk_context->vk_device.logical, vk_context->scene_global_uniform_buffers[i].memory, 0,
-    //                    scene_global_uniform_buffer_size, 0, &vk_context->scene_global_ubo_data[i]);
-    //    }
-    //}
-    //{
-    //    u32 light_global_uniform_buffer_size = sizeof(light_global_uniform_buffer_object);
-
-    //    vk_context->light_global_uniform_buffers =
-    //        static_cast<vulkan_buffer *>(dallocate(sizeof(vulkan_buffer) * MAX_FRAMES_IN_FLIGHT, MEM_TAG_RENDERER));
-
-    //    vulkan_buffer *buffers = vk_context->light_global_uniform_buffers;
-
-    //    for (u32 i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
-    //    {
-    //        vulkan_create_buffer(vk_context, &buffers[i], VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-    //                             VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-    //                             light_global_uniform_buffer_size);
-    //        vkMapMemory(vk_context->vk_device.logical, vk_context->light_global_uniform_buffers[i].memory, 0,
-    //                    light_global_uniform_buffer_size, 0, &vk_context->light_global_ubo_data[i]);
-    //    }
-    //}
-
-    return true;
-}
-
 bool vulkan_copy_data_to_buffer(vulkan_context *vk_context, vulkan_buffer *src_buffer, void *to_be_mapped_data,
                                 void *to_be_copied_data, u32 to_be_copied_data_size)
 {
@@ -200,7 +156,7 @@ void vulkan_begin_command_buffer_single_use(vulkan_context *vk_context, VkComman
 {
     VkCommandBufferBeginInfo command_buffer_begin_info{};
     command_buffer_begin_info.sType            = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-    command_buffer_begin_info.flags            = 0;       // Optional
+    command_buffer_begin_info.flags            = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;       // Optional
     command_buffer_begin_info.pInheritanceInfo = nullptr; // Optional
 
     VkResult result = vkBeginCommandBuffer(command_buffer, &command_buffer_begin_info);

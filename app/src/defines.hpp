@@ -1,5 +1,6 @@
 #pragma once
 #include <cstdint>
+#include "vendor/tracy/Tracy.hpp"
 
 // Unsigned int types.
 typedef uint8_t  u8;

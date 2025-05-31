@@ -11,21 +11,25 @@ DIR := $(subst /,\,${CURDIR})
 
 assembly := learningVulkan
 extension := .exe
-defines := -DDEBUG -DDPLATFORM_WINDOWS
+defines := -DDEBUG -DDPLATFORM_WINDOWS -DTRACY_ENABLE
 includes := -Iapp/tests -I$(src_dir)/src -I$(vulkan_sdk)/Include
-linker_flags := -lgdi32 -luser32 -lvulkan-1 -L$(vulkan_sdk)/Lib
-compiler_flags := -Wall -Werror -Wextra -g -O0  -Wold-style-cast -Wno-system-headers -Wno-unused-but-set-variable -Wno-unused-variable -Wno-varargs -Wno-unused-private-field -Wno-unused-parameter -Wno-unused-function -fsanitize=undefined -fsanitize-trap
+linker_flags := -lgdi32 -luser32 -lvulkan-1 -L$(vulkan_sdk)/Lib -ladvapi32 -ltdh -lWinmm
+compiler_flags := -Wall -Wextra -g -O0 -Wno-system-headers -Wno-unused-but-set-variable -Wno-unused-variable -Wno-varargs -Wno-unused-private-field -Wno-unused-parameter -Wno-unused-function -fsanitize=undefined -fsanitize-trap
 build_platform := windows
 
 rwildcard=$(wildcard $1$2) $(foreach d,$(wildcard $1*),$(call rwildcard,$d/,$2))
 src_files_c := $(call rwildcard,$(src_dir)/,*.c)
 src_files_cpp := $(call rwildcard,$(src_dir)/,*.cpp)
 
+# Tracy integration
+src_files_cpp := $(filter-out $(src_dir)/src/vendor/tracy/%, $(src_files_cpp))
+src_files_c := $(filter-out $(src_dir)/src/vendor/tracy/%, $(src_files_c))
+src_files_cpp += $(src_dir)/src/vendor/tracy/TracyClient.cpp
+
 directories:= $(subst $(DIR),,$(shell dir $(src_dir) /S /AD /B | findstr /i $(src_dir) )) # Get all directories under src.
 
 obj_files_c := $(patsubst %.c, $(obj_dir)/%.c.o, $(src_files_c))
 obj_files_cpp := $(patsubst %.cpp, $(obj_dir)/%.cpp.o, $(src_files_cpp))
-
 else
 
 is_linux := $(shell uname -s)

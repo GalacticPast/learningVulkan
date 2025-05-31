@@ -10,6 +10,7 @@
 #include <stdlib.h>
 #include <windows.h>
 #include <windowsx.h> // param input extraction
+#include <timeapi.h>
 
 /* VULKAN */
 #include "renderer/vulkan/vulkan_platform.hpp"
@@ -162,6 +163,9 @@ bool platform_system_startup(u64 *platform_mem_requirements, void *plat_state, a
     clock_frequency = 1.0 / static_cast<f64>(frequency.QuadPart);
     QueryPerformanceCounter(&start_time);
 
+    //set the default timer resolution to the target fps
+    timeBeginPeriod(1.0);
+
     return true;
 }
 
@@ -174,6 +178,7 @@ void platform_system_shutdown(void *state)
         DestroyWindow(platform_state_ptr->hwnd);
         platform_state_ptr->hwnd = 0;
     }
+    timeEndPeriod(1.0);
 }
 
 bool platform_pump_messages()
@@ -256,6 +261,7 @@ f64 platform_get_absolute_time()
 
 void platform_sleep(u64 ms)
 {
+    ZoneScoped;
     Sleep(ms);
 }
 

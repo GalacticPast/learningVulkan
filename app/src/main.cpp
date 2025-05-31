@@ -146,6 +146,7 @@ int main()
     f32 z     = 0.1f;
     while (app_state.is_running)
     {
+        ZoneScoped;
         clock_update(&clock);
         frame_start_time = clock.time_elapsed;
         update_camera(&triangle.scene_ubo, frame_elapsed_time);
@@ -159,17 +160,14 @@ int main()
         frame_end_time     = clock.time_elapsed;
         frame_elapsed_time = frame_end_time - frame_start_time;
 
-        if (!f32_compare(req_frame_time, frame_elapsed_time, 0.0001))
+        if (frame_elapsed_time < req_frame_time)
         {
-            f64 sleep = req_frame_time - frame_elapsed_time;
-            if (sleep > 0)
-            {
-                u64 sleep_ms = static_cast<u64>(sleep * D_SEC_TO_MS_MULTIPLIER);
-                platform_sleep(sleep_ms);
-            }
+            f64 remaining_time = fabs(req_frame_time - frame_elapsed_time);
+            u64 sleep_ms = static_cast<u64>(remaining_time * D_SEC_TO_MS_MULTIPLIER);
+            platform_sleep(sleep_ms);
         }
+
         input_update(0);
-        clock_update(&clock);
     }
     application_shutdown();
 }

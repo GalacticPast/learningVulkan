@@ -1,3 +1,4 @@
+#include "core/dclock.hpp"
 #include "core/dfile_system.hpp"
 #include "core/dmemory.hpp"
 #include "core/dstring.hpp"
@@ -350,6 +351,7 @@ bool vulkan_update_materials_descriptor_set(vulkan_shader *shader, material *mat
 bool vulkan_update_global_descriptor_sets(vulkan_shader *shader, scene_global_uniform_buffer_object *scene_global,
                                           light_global_uniform_buffer_object *light_global)
 {
+    ZoneScoped;
 
     VkDescriptorBufferInfo desc_buffer_infos[2]{};
     VkWriteDescriptorSet   desc_writes[2]{};
@@ -1055,7 +1057,6 @@ VkBool32 vulkan_dbg_msg_rprt_callback(VkDebugUtilsMessageSeverityFlagBitsEXT    
 void vulkan_update_global_uniform_buffer(vulkan_shader *shader, scene_global_uniform_buffer_object *scene_ubo,
                                          light_global_uniform_buffer_object *light_ubo, u32 current_frame_index)
 {
-
     // u64 scene_aligned = align_upto(sizeof(scene_global_uniform_buffer_object), shader->min_ubo_alignment);
     u64 scene_aligned = sizeof(scene_global_uniform_buffer_object);
     u8 *addr = static_cast<u8 *>(shader->per_frame_mapped_data) + ((shader->per_frame_stride * current_frame_index));
@@ -1175,18 +1176,17 @@ bool vulkan_destroy_geometry(geometry *geometry)
 
 bool vulkan_draw_geometries(render_data *data, VkCommandBuffer *curr_command_buffer, u32 curr_frame_index)
 {
-
+    ZoneScoped;
     // HACK: for now we are using the default shader cause thats the only shader we have
     vulkan_shader *vk_shader = static_cast<vulkan_shader *>(vk_context->default_shader->internal_vulkan_shader_state);
 
-    // vulkan_geometry_data *geo_data = (vulkan_geometry_data *)render_data->test_geometry->vulkan_geometry_state;
     vkResetCommandBuffer(*curr_command_buffer, 0);
     vulkan_begin_command_buffer_single_use(vk_context, *curr_command_buffer);
 
     vulkan_begin_frame_renderpass(vk_context, *curr_command_buffer, &vk_shader->pipeline, curr_frame_index);
 
     // bind the globals
-    // u32 aligned_global    = sizeof(scene_global_uniform_buffer_object);
+
     u32 aligned_global     = align_upto(sizeof(scene_global_uniform_buffer_object), vk_shader->min_ubo_alignment);
     u32 dynamic_offsets[2] = {curr_frame_index * vk_shader->per_frame_stride,
                               curr_frame_index * vk_shader->per_frame_stride + aligned_global};
@@ -1233,6 +1233,7 @@ bool vulkan_draw_geometries(render_data *data, VkCommandBuffer *curr_command_buf
 
 bool vulkan_draw_frame(render_data *render_data)
 {
+    ZoneScoped;
     u32      current_frame = vk_context->current_frame_index;
     VkResult result;
 
@@ -1255,6 +1256,7 @@ bool vulkan_draw_frame(render_data *render_data)
     VK_CHECK(result);
 
     VkCommandBuffer &curr_command_buffer = vk_context->command_buffers[current_frame];
+
     // HACK:
     vulkan_shader *def_shader = static_cast<vulkan_shader *>(vk_context->default_shader->internal_vulkan_shader_state);
     vulkan_update_global_uniform_buffer(def_shader, &render_data->scene_ubo, &render_data->light_ubo, current_frame);
