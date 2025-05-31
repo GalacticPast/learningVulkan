@@ -60,7 +60,7 @@ static bool _create_shader(shader_config *config, shader *out_shader)
         return false;
     }
 
-    bool result = vulkan_initalize_shader(config, out_shader);
+    bool result = vulkan_initialize_shader(config, out_shader);
     DASSERT(result);
 
     u64 id = shader_sys_state_ptr->hashtable.insert(INVALID_ID_64, *out_shader);

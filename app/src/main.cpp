@@ -93,35 +93,41 @@ int main()
 
     render_data triangle{};
 
+    geometry  **geos           = nullptr;
+    u32         geometry_count = INVALID_ID;
+
+#if false
     {
-        //const char *obj_file_name  = "sponza.obj";
-        //const char *mtl_file_name  = "sponza.mtl";
-        //u32         geometry_count = INVALID_ID;
-        //geometry  **geos           = nullptr;
-        //geometry_system_get_geometries_from_file(obj_file_name, mtl_file_name, &geos, &geometry_count);
+        const char *obj_file_name  = "sponza.obj";
+        const char *mtl_file_name  = "sponza.mtl";
+        geometry_system_get_geometries_from_file(obj_file_name, mtl_file_name, &geos, &geometry_count);
     }
+#endif
 
-    geometry_config parent_config = geometry_system_generate_cube_config();
-    geometry_config child_config{};
+#if true
+    {
+        geometry_config parent_config = geometry_system_generate_cube_config();
+        geometry_config child_config{};
 
-    geometry_system_copy_config(&child_config, &parent_config);
+        geometry_system_copy_config(&child_config, &parent_config);
 
-    scale_geometries(&child_config, {0.5f, 0.5f, 0.5f});
+        scale_geometries(&child_config, {0.5f, 0.5f, 0.5f});
 
-    u64 cube_id1 = geometry_system_create_geometry(&parent_config, false);
-    u64 cube_id2 = geometry_system_create_geometry(&child_config, false);
+        u64 cube_id1 = geometry_system_create_geometry(&parent_config, false);
+        u64 cube_id2 = geometry_system_create_geometry(&child_config, false);
 
-    u32        geometry_count = 2;
-    geometry **geos = static_cast<geometry **>(dallocate(sizeof(geometry) * geometry_count, MEM_TAG_GEOMETRY));
+        geos = static_cast<geometry **>(dallocate(sizeof(geometry *) * 2, MEM_TAG_UNKNOWN));
+        geos[0] = geometry_system_get_geometry(cube_id1);
+        geos[1] = geometry_system_get_geometry(cube_id2);
 
-    geos[0] = geometry_system_get_geometry(cube_id1);
-    geos[1] = geometry_system_get_geometry(cube_id2);
+        math::vec3 left    = {-4.0f, 0, 0};
+        geos[1]->ubo.model = mat4_translation(left);
 
-    math::vec3 left    = {-4.0f, 0, 0};
-    geos[1]->ubo.model = mat4_translation(left);
-
-    dstring mat_file  = "orange_lines_512";
-    geos[1]->material = material_system_acquire_from_config_file(&mat_file);
+        dstring mat_file  = "orange_lines_512";
+        geos[1]->material = material_system_acquire_from_config_file(&mat_file);
+        geometry_count = 2;
+    }
+#endif
 
     triangle.test_geometry  = geos;
     triangle.geometry_count = geometry_count;

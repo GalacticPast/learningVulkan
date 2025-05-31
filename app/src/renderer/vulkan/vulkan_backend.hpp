@@ -9,7 +9,7 @@ void vulkan_backend_shutdown();
 bool vulkan_backend_resize();
 bool vulkan_draw_frame(render_data *data);
 
-bool vulkan_initalize_shader(shader_config *config, shader *in_shader);
+bool vulkan_initialize_shader(shader_config *config, shader *in_shader);
 // bool vulkan_add_uniforms(shader *in_shader, shader_stage stage, shader_scope scope, dstring *uniform_name, u32
 // sizeof_uniform,
 //                          u32 num_binding, void *data);

@@ -119,41 +119,17 @@ enum renderpass_types
 struct vulkan_shader
 {
 
-    u32 min_ubo_alignment;
-
     darray<char> vertex_shader_code;
     darray<char> fragment_shader_code;
-    /*TODO: there should be a way to store the global offsets for the bindings
-     *   for eg (set 0 , binding = 0) should have the following offsets and we shoudl store them
-     *   {
-     *       mat4 view;
-     *       mat4 proj;
-     *   }
-     *   binding_0 -> offset = 0
-     *  binding_0 -> size = get_alligned(sizeof(binding_0), min_gpu_ubo_alignment_limit )
-     *                                          _____________^________________ this is gpu specific so we have to qurey
-     * them (set 0, binding = 1)
-     *  {
-     *     vec3 a;
-     *     vec3 b;
-     *  }
-     *  binding_1 -> offset = binding_0.size();
-     *  binding_1 -> size = get_allgined(sizeof(binding_1) , "");
-     *  .
-     *  .
-     *  .
-     *  .
-     *  binding_n -> offset = binding_(n-1).size();
-     *  binding_n -> size = get_allgined(sizeof(binding_n) , "");
-     *  and so on and so forth
-     */
-    u32           per_frame_stride;
-    vulkan_buffer per_frame_uniform_buffer;
-    void         *per_frame_mapped_data;
 
-    u32            per_group_ubo_size;
-    vulkan_buffer  per_group_uniform_buffer;
+    u32 per_frame_ubo_size;
+    vulkan_buffer* per_frame_uniform_buffer;
+    darray<void *> per_frame_buffer_data;
+
+    u32 per_group_ubo_size;
+    vulkan_buffer per_group_uniform_buffer;
     darray<void *> per_group_buffer_data;
+
 
     // INFO: for now first will always be vertex and second will always be fragment
     shader_stage stages;
@@ -164,7 +140,7 @@ struct vulkan_shader
     VkDescriptorSetLayout                per_frame_descriptor_layout;
     darray<VkDescriptorSetLayoutBinding> per_frame_descriptor_sets_layout_bindings;
     VkDescriptorPool                     per_frame_descriptor_command_pool;
-    VkDescriptorSet                      per_frame_descriptor_set;
+    darray<VkDescriptorSet>              per_frame_descriptor_sets;
 
     VkDescriptorSetLayout                per_group_descriptor_layout;
     darray<VkDescriptorSetLayoutBinding> per_group_descriptor_sets_layout_bindings;
@@ -190,7 +166,7 @@ struct vulkan_context
     vulkan_buffer vertex_buffer;
     vulkan_buffer index_buffer;
 
-    u64     default_shader_id = INVALID_ID_64;
+    u64 default_shader_id = INVALID_ID_64;
     shader *default_shader;
 
     VkCommandPool graphics_command_pool;

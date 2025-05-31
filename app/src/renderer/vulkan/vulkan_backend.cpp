@@ -353,23 +353,22 @@ bool vulkan_update_global_descriptor_sets(vulkan_shader *shader, scene_global_un
 
     VkDescriptorBufferInfo desc_buffer_infos[2]{};
     VkWriteDescriptorSet   desc_writes[2]{};
-    VkDeviceSize ranges[2] = {sizeof(scene_global_uniform_buffer_object), sizeof(light_global_uniform_buffer_object)};
-    u32 curr_frame = vk_context->current_frame_index;
-    vulkan_buffer buffers[2] = {shader->per_frame_scene_uniform_buffers[curr_frame], shader->per_frame_light_uniform_buffers[curr_frame]};
+    VkDeviceSize ranges[2]  = {sizeof(scene_global_uniform_buffer_object), sizeof(light_global_uniform_buffer_object)};
+    u32          curr_frame = vk_context->current_frame_index;
 
     for (u32 i = 0; i < 2; i++)
     {
-        desc_buffer_infos[i].buffer = buffers[i].handle;
+        desc_buffer_infos[i].buffer = shader->per_frame_uniform_buffer.handle;
         desc_buffer_infos[i].offset = 0;
         desc_buffer_infos[i].range  = ranges[i];
 
         desc_writes[i].sType            = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
         desc_writes[i].pNext            = 0;
-        desc_writes[i].dstSet           = shader->per_frame_descriptor_sets[vk_context->current_frame_index];
+        desc_writes[i].dstSet           = shader->per_frame_descriptor_set;
         desc_writes[i].dstBinding       = i;
         desc_writes[i].dstArrayElement  = 0;
         desc_writes[i].descriptorCount  = 1;
-        desc_writes[i].descriptorType   = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        desc_writes[i].descriptorType   = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
         desc_writes[i].pBufferInfo      = &desc_buffer_infos[i];
         desc_writes[i].pImageInfo       = 0;
         desc_writes[i].pTexelBufferView = 0;
@@ -393,7 +392,13 @@ bool vulkan_create_material(material *in_mat)
     return true;
 }
 
-bool vulkan_initalize_shader(shader_config *config, shader *in_shader)
+u64 align_upto(u64 size, u64 alignment)
+{
+    u64 aligned_size = ((size + alignment - 1) & ~(alignment - 1));
+    return aligned_size;
+}
+
+bool vulkan_initialize_shader(shader_config *config, shader *in_shader)
 {
     if (!vk_context)
     {
@@ -431,7 +436,7 @@ bool vulkan_initalize_shader(shader_config *config, shader *in_shader)
                 {
                     per_frame_descriptor_binding_count++;
                     per_frame_stage_flags.push_back(config->uniforms[i].stage);
-                    des_types.push_back(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
+                    des_types.push_back(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC);
                 }
             }
 
@@ -459,17 +464,14 @@ bool vulkan_initalize_shader(shader_config *config, shader *in_shader)
             // create the per_frame_descriptor pool
             VkDescriptorPoolSize per_frame_pool_sizes[1]{};
 
-            u32 max_uniform__limit = vk_context->vk_device.physical_properties->limits.maxDescriptorSetUniformBuffers;
-            u32 max_uniform_descriptors = DMIN(max_uniform__limit, (MAX_FRAMES_IN_FLIGHT * 3));
-
-            per_frame_pool_sizes[0].type            = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-            per_frame_pool_sizes[0].descriptorCount = max_uniform_descriptors;
+            per_frame_pool_sizes[0].type            = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
+            per_frame_pool_sizes[0].descriptorCount = MAX_FRAMES_IN_FLIGHT;
 
             VkDescriptorPoolCreateInfo per_frame_descriptor_pool_create_info{};
             per_frame_descriptor_pool_create_info.sType         = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
             per_frame_descriptor_pool_create_info.pNext         = 0;
             per_frame_descriptor_pool_create_info.flags         = 0;
-            per_frame_descriptor_pool_create_info.maxSets       = max_uniform_descriptors;
+            per_frame_descriptor_pool_create_info.maxSets       = MAX_FRAMES_IN_FLIGHT;
             per_frame_descriptor_pool_create_info.poolSizeCount = 1;
             per_frame_descriptor_pool_create_info.pPoolSizes    = per_frame_pool_sizes;
 
@@ -477,8 +479,8 @@ bool vulkan_initalize_shader(shader_config *config, shader *in_shader)
                                             vk_context->vk_allocator, &vk_shader->per_frame_descriptor_command_pool);
             VK_CHECK(result);
 
-            darray<VkDescriptorSetLayout> per_frame_desc_set_layout(max_uniform_descriptors);
-            for (u32 i = 0; i < max_uniform_descriptors; i++)
+            darray<VkDescriptorSetLayout> per_frame_desc_set_layout(MAX_FRAMES_IN_FLIGHT);
+            for (u32 i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
             {
                 per_frame_desc_set_layout[i] = vk_shader->per_frame_descriptor_layout;
             }
@@ -487,23 +489,24 @@ bool vulkan_initalize_shader(shader_config *config, shader *in_shader)
             per_frame_desc_set_alloc_info.sType              = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
             per_frame_desc_set_alloc_info.pNext              = 0;
             per_frame_desc_set_alloc_info.descriptorPool     = vk_shader->per_frame_descriptor_command_pool;
-            per_frame_desc_set_alloc_info.descriptorSetCount = MAX_FRAMES_IN_FLIGHT;
+            per_frame_desc_set_alloc_info.descriptorSetCount = 1;
             per_frame_desc_set_alloc_info.pSetLayouts =
                 reinterpret_cast<const VkDescriptorSetLayout *>(per_frame_desc_set_layout.data);
 
-            vk_shader->per_frame_descriptor_sets.c_init(MAX_FRAMES_IN_FLIGHT);
-
-            result =
-                vkAllocateDescriptorSets(vk_context->vk_device.logical, &per_frame_desc_set_alloc_info,
-                                         static_cast<VkDescriptorSet *>(vk_shader->per_frame_descriptor_sets.data));
+            result = vkAllocateDescriptorSets(vk_context->vk_device.logical, &per_frame_desc_set_alloc_info,
+                                              &vk_shader->per_frame_descriptor_set);
             VK_CHECK(result);
 
-            // create per_frame buffers
-
             // get the per_frame ubo size
-            u32 &per_frame_ubo_size = vk_shader->per_frame_ubo_size;
+            u32 &per_frame_ubo_size = vk_shader->per_frame_stride;
+            per_frame_ubo_size      = 0;
+
+            u32 required_alignment = vk_context->vk_device.physical_properties->limits.minUniformBufferOffsetAlignment;
+            vk_shader->min_ubo_alignment = required_alignment;
+
             for (u32 i = 0; i < uniforms_size; i++)
             {
+                //per_frame_ubo_size = (per_frame_ubo_size + required_alignment - 1) & ~(required_alignment - 1);
                 if (config->uniforms[i].scope == SHADER_PER_FRAME_UNIFORM)
                 {
                     u32 uniform_types_size = config->uniforms[i].types.size();
@@ -514,37 +517,22 @@ bool vulkan_initalize_shader(shader_config *config, shader *in_shader)
                 }
             }
 
-            u32 required_alignment = vk_context->vk_device.physical_properties->limits.minUniformBufferOffsetAlignment;
-            per_frame_ubo_size     = (per_frame_ubo_size + required_alignment - 1) & ~(required_alignment - 1);
+            per_frame_ubo_size = (per_frame_ubo_size + required_alignment - 1) & ~(required_alignment - 1);
 
             u64 total_per_frame_buffer_size = per_frame_ubo_size * MAX_FRAMES_IN_FLIGHT;
-            //FIXME: this is a hack for now
+
             {
-                vk_shader->per_frame_scene_uniform_buffers.c_init(MAX_FRAMES_IN_FLIGHT);
-                vk_shader->per_frame_light_uniform_buffers.c_init(MAX_FRAMES_IN_FLIGHT);
-                vk_shader->scene_ubo.c_init(MAX_FRAMES_IN_FLIGHT);
-                vk_shader->light_ubo.c_init(MAX_FRAMES_IN_FLIGHT);
+                VkBufferUsageFlags    usg_flags = VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+                VkMemoryPropertyFlags prop_flags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT |
+                                                   VK_MEMORY_PROPERTY_HOST_COHERENT_BIT |
+                                                   VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
+                bool res = vulkan_create_buffer(vk_context, &vk_shader->per_frame_uniform_buffer, usg_flags, prop_flags,
+                                                total_per_frame_buffer_size);
+                DASSERT_MSG(res, "Vulkan Couldnt create per_frame_uniform_buffer.");
 
-                for(u32 i = 0 ; i < MAX_FRAMES_IN_FLIGHT ; i++)
-                {
-                    VkBufferUsageFlags    usg_flags  = VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
-                    VkMemoryPropertyFlags prop_flags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT |
-                        VK_MEMORY_PROPERTY_HOST_COHERENT_BIT |
-                        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
-                    bool res = vulkan_create_buffer(vk_context, &vk_shader->per_frame_scene_uniform_buffers[i], usg_flags, prop_flags,
-                                                    total_per_frame_buffer_size);
-                    DASSERT_MSG(res, "Vulkan Couldnt create per_frame_uniform_buffer.");
-
-                    res = vulkan_create_buffer(vk_context, &vk_shader->per_frame_light_uniform_buffers[i], usg_flags, prop_flags,
-                                                    total_per_frame_buffer_size);
-                    DASSERT_MSG(res, "Vulkan Couldnt create per_frame_uniform_buffer.");
-
-                    // map the memory
-                    VK_CHECK(vkMapMemory(vk_context->vk_device.logical, vk_shader->per_frame_scene_uniform_buffers[i].memory, 0,
-                                         VK_WHOLE_SIZE, 0, &vk_shader->scene_ubo[i]));
-                    VK_CHECK(vkMapMemory(vk_context->vk_device.logical, vk_shader->per_frame_light_uniform_buffers[i].memory, 0,
-                                         VK_WHOLE_SIZE, 0, &vk_shader->light_ubo[i]));
-                }
+                // map the memory
+                VK_CHECK(vkMapMemory(vk_context->vk_device.logical, vk_shader->per_frame_uniform_buffer.memory, 0,
+                                     VK_WHOLE_SIZE, 0, &vk_shader->per_frame_mapped_data));
             }
         }
         else
@@ -709,9 +697,6 @@ bool vulkan_initalize_shader(shader_config *config, shader *in_shader)
                 return false;
             }
         }
-        DASSERT_MSG(offset == sizeof(vertex),
-                    "The attributes do not match to the struct 'vertex'. You have to make sure that the attributes are "
-                    "the same in both the shaders and the engine");
 
         VkVertexInputBindingDescription &vertex_input_binding_description = vk_shader->attribute_description;
         vertex_input_binding_description.binding                          = 0;
@@ -1071,17 +1056,16 @@ void vulkan_update_global_uniform_buffer(vulkan_shader *shader, scene_global_uni
                                          light_global_uniform_buffer_object *light_ubo, u32 current_frame_index)
 {
 
-    dcopy_memory(shader->scene_ubo[current_frame_index], scene_ubo,
-                 sizeof(scene_global_uniform_buffer_object));
-    dcopy_memory(shader->light_ubo[current_frame_index], light_ubo,
-                 sizeof(light_global_uniform_buffer_object));
-    //
-    // u8 *addr = static_cast<u8 *>(shader->per_frame_mapped_data) +
-    //           ((shader->per_frame_ubo_size * current_frame_index) + sizeof(scene_global_uniform_buffer_object));
-    // dcopy_memory(addr, scene_ubo, sizeof(scene_global_uniform_buffer_object));
+    u64 scene_aligned = align_upto(sizeof(scene_global_uniform_buffer_object), shader->min_ubo_alignment);
+    //u64 scene_aligned = sizeof(scene_global_uniform_buffer_object);
+    u8 *addr          = static_cast<u8 *>(shader->per_frame_mapped_data) +
+               ((shader->per_frame_stride * current_frame_index) + scene_aligned);
+    dcopy_memory(addr, scene_ubo, sizeof(scene_global_uniform_buffer_object));
 
-    // addr += sizeof(light_global_uniform_buffer_object);
-    // dcopy_memory(addr, light_ubo, sizeof(light_global_uniform_buffer_object));
+    //u64 light_aligned  = scene_aligned + sizeof(light_global_uniform_buffer_object);
+    u64 light_aligned  = align_upto(sizeof(light_global_uniform_buffer_object), shader->min_ubo_alignment);
+    addr              += light_aligned;
+    dcopy_memory(addr, light_ubo, sizeof(light_global_uniform_buffer_object));
 }
 
 u32 vulkan_calculate_vertex_offset(vulkan_context *vk_context, u32 geometry_id)
@@ -1203,9 +1187,13 @@ bool vulkan_draw_geometries(render_data *data, VkCommandBuffer *curr_command_buf
     vulkan_begin_frame_renderpass(vk_context, *curr_command_buffer, &vk_shader->pipeline, curr_frame_index);
 
     // bind the globals
+    //u32 aligned_global    = sizeof(scene_global_uniform_buffer_object);
+    u32 aligned_global    = align_upto(sizeof(scene_global_uniform_buffer_object), vk_shader->min_ubo_alignment);
+    u32 dynamic_offsets[2] = {curr_frame_index * vk_shader->per_frame_stride,
+                             curr_frame_index * vk_shader->per_frame_stride + aligned_global};
 
     vkCmdBindDescriptorSets(*curr_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, vk_shader->pipeline.layout, 0, 1,
-                            &vk_shader->per_frame_descriptor_sets[curr_frame_index], 0, nullptr);
+                            &vk_shader->per_frame_descriptor_set, 2, dynamic_offsets);
 
     VkBuffer     vertex_buffers[] = {vk_context->vertex_buffer.handle};
     VkDeviceSize offsets[]        = {0};
