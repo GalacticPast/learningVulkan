@@ -50,12 +50,12 @@ bool vulkan_create_buffer(vulkan_context *vk_context, vulkan_buffer *out_buffer,
     return true;
 }
 
-bool vulkan_copy_buffer(vulkan_context *vk_context, vulkan_buffer *dst_buffer, u64 dst_offset,
+bool vulkan_copy_buffer(vulkan_context *vk_context, VkCommandPool* cmd_pool,VkQueue* queue, vulkan_buffer *dst_buffer, u64 dst_offset,
                         vulkan_buffer *src_buffer, u64 buffer_size)
 {
 
     VkCommandBuffer staging_command_buffer{};
-    bool            result = vulkan_allocate_command_buffers(vk_context, &vk_context->graphics_command_pool,
+    bool            result = vulkan_allocate_command_buffers(vk_context, cmd_pool,
                                                              &staging_command_buffer, 1, true);
     DASSERT_MSG(result == true, "Couldnt allocate command buffers");
 
@@ -78,12 +78,12 @@ bool vulkan_copy_buffer(vulkan_context *vk_context, vulkan_buffer *dst_buffer, u
     queue_submit_info.signalSemaphoreCount = 0;
     queue_submit_info.pSignalSemaphores    = 0;
 
-    VkResult res = vkQueueSubmit(vk_context->vk_device.graphics_queue, 1, &queue_submit_info, VK_NULL_HANDLE);
+    VkResult res = vkQueueSubmit(*queue, 1, &queue_submit_info, VK_NULL_HANDLE);
     VK_CHECK(res);
-    result = vkQueueWaitIdle(vk_context->vk_device.graphics_queue);
+    result = vkQueueWaitIdle(*queue);
     VK_CHECK(res);
 
-    vulkan_free_command_buffers(vk_context, &vk_context->graphics_command_pool, &staging_command_buffer, 1);
+    vulkan_free_command_buffers(vk_context, cmd_pool, &staging_command_buffer, 1);
     return true;
 }
 
@@ -163,7 +163,7 @@ void vulkan_begin_command_buffer_single_use(vulkan_context *vk_context, VkComman
     VK_CHECK(result);
 }
 
-void vulkan_flush_command_buffer(vulkan_context *vk_context, VkCommandBuffer command_buffer)
+void vulkan_flush_command_buffer(vulkan_context *vk_context, VkQueue* queue,VkCommandBuffer command_buffer)
 {
     // Create fence to ensure that the command buffer has finished executing
     VkFenceCreateInfo fence_info{};
@@ -184,10 +184,10 @@ void vulkan_flush_command_buffer(vulkan_context *vk_context, VkCommandBuffer com
     queue_submit_info.pSignalSemaphores    = 0;
 
     // Submit to the queue
-    VkResult result = vkQueueSubmit(vk_context->vk_device.graphics_queue, 1, &queue_submit_info, fence);
+    VkResult result = vkQueueSubmit(*queue, 1, &queue_submit_info, fence);
     // Wait for the fence to signal that command buffer has finished executing
     VK_CHECK(vkWaitForFences(vk_context->vk_device.logical, 1, &fence, VK_TRUE, INVALID_ID_64));
-    vkQueueWaitIdle(vk_context->vk_device.graphics_queue);
+    vkQueueWaitIdle(*queue);
 
     vkDestroyFence(vk_context->vk_device.logical, fence, nullptr);
 }

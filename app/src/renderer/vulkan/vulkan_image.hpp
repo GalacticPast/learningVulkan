@@ -10,8 +10,8 @@ bool vulkan_create_image_view(vulkan_context *vk_context, VkImage *image, VkImag
 
 bool vulkan_destroy_image(vulkan_context *vk_context, vulkan_image *image);
 
-bool vulkan_copy_buffer_data_to_image(vulkan_context *vk_context, vulkan_buffer *src_buffer, vulkan_image *image);
-bool vulkan_transition_image_layout(vulkan_context *vk_context, vulkan_image *image, VkImageLayout old_layout,
-                                    VkImageLayout new_layout);
+bool vulkan_copy_buffer_data_to_image(vulkan_context *vk_context, VkCommandPool* cmd_pool, VkQueue* queue, vulkan_buffer *src_buffer, vulkan_image *image);
+bool vulkan_transition_image_layout(vulkan_context *vk_context, VkCommandPool *cmd_pool, VkQueue* queue, vulkan_image *image,
+                                    VkImageLayout old_layout, VkImageLayout new_layout);
 
 bool vulkan_generate_mipmaps(vulkan_context *vk_context, vulkan_image *image);

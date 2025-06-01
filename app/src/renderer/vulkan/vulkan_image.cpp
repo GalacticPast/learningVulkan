@@ -85,12 +85,12 @@ bool vulkan_destroy_image(vulkan_context *vk_context, vulkan_image *image)
     return true;
 }
 // NOTE: for now we use graphics command pool to allocate. Maybe we have to make it a function parameter??
-bool vulkan_transition_image_layout(vulkan_context *vk_context, vulkan_image *image, VkImageLayout old_layout,
-                                    VkImageLayout new_layout)
+bool vulkan_transition_image_layout(vulkan_context *vk_context, VkCommandPool *cmd_pool, VkQueue* queue, vulkan_image *image,
+                                    VkImageLayout old_layout, VkImageLayout new_layout)
 {
     VkCommandBuffer staging_cmd_buffer{};
     bool            result =
-        vulkan_allocate_command_buffers(vk_context, &vk_context->graphics_command_pool, &staging_cmd_buffer, 1, true);
+        vulkan_allocate_command_buffers(vk_context, cmd_pool, &staging_cmd_buffer, 1, true);
     if (!result)
     {
         DERROR("Vulkan command buffer allocation failed.");
@@ -151,16 +151,16 @@ bool vulkan_transition_image_layout(vulkan_context *vk_context, vulkan_image *im
 
     vulkan_end_command_buffer_single_use(vk_context, staging_cmd_buffer, false);
 
-    vulkan_flush_command_buffer(vk_context, staging_cmd_buffer);
+    vulkan_flush_command_buffer(vk_context, queue, staging_cmd_buffer);
 
-    vulkan_free_command_buffers(vk_context, &vk_context->graphics_command_pool, &staging_cmd_buffer, 1);
+    vulkan_free_command_buffers(vk_context, cmd_pool, &staging_cmd_buffer, 1);
     return true;
 }
 
-bool vulkan_copy_buffer_data_to_image(vulkan_context *vk_context, vulkan_buffer *src_buffer, vulkan_image *image)
+bool vulkan_copy_buffer_data_to_image(vulkan_context *vk_context, VkCommandPool* cmd_pool, VkQueue* queue, vulkan_buffer *src_buffer, vulkan_image *image)
 {
     VkCommandBuffer staging_command_buffer{};
-    vulkan_allocate_command_buffers(vk_context, &vk_context->graphics_command_pool, &staging_command_buffer, 1, true);
+    vulkan_allocate_command_buffers(vk_context, cmd_pool, &staging_command_buffer, 1, true);
 
     VkBufferImageCopy buffer_img_cpy_region{};
     buffer_img_cpy_region.bufferOffset      = 0;
@@ -180,9 +180,9 @@ bool vulkan_copy_buffer_data_to_image(vulkan_context *vk_context, vulkan_buffer 
 
     vulkan_end_command_buffer_single_use(vk_context, staging_command_buffer, false);
 
-    vulkan_flush_command_buffer(vk_context, staging_command_buffer);
+    vulkan_flush_command_buffer(vk_context, queue, staging_command_buffer);
 
-    vulkan_free_command_buffers(vk_context, &vk_context->graphics_command_pool, &staging_command_buffer, 1);
+    vulkan_free_command_buffers(vk_context, cmd_pool, &staging_command_buffer, 1);
     return true;
 }
 
@@ -267,7 +267,7 @@ bool vulkan_generate_mipmaps(vulkan_context *vk_context, vulkan_image *image)
 
     vulkan_end_command_buffer_single_use(vk_context, staging_cmd_buffer, false);
 
-    vulkan_flush_command_buffer(vk_context, staging_cmd_buffer);
+    vulkan_flush_command_buffer(vk_context, &vk_context->vk_device.graphics_queue, staging_cmd_buffer);
 
     vulkan_free_command_buffers(vk_context, &vk_context->graphics_command_pool, &staging_cmd_buffer, 1);
 

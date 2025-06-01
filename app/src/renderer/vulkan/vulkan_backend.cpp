@@ -1,4 +1,3 @@
-#include "core/dclock.hpp"
 #include "core/dfile_system.hpp"
 #include "core/dmemory.hpp"
 #include "core/dstring.hpp"
@@ -32,7 +31,7 @@ VkBool32 vulkan_dbg_msg_rprt_callback(VkDebugUtilsMessageSeverityFlagBitsEXT    
 bool vulkan_check_validation_layer_support();
 bool vulkan_create_debug_messenger(VkDebugUtilsMessengerCreateInfoEXT *dbg_messenger_create_info);
 bool vulkan_create_default_texture();
-
+bool vulkan_allocate_descriptor_set(VkDescriptorPool* desc_pool, VkDescriptorSetLayout* set_layout, u32 descriptor_count);
 bool vulkan_backend_initialize(u64 *vulkan_backend_memory_requirements, application_config *app_config, void *state)
 {
     *vulkan_backend_memory_requirements = sizeof(vulkan_context);
@@ -205,7 +204,7 @@ bool vulkan_backend_initialize(u64 *vulkan_backend_memory_requirements, applicat
         DERROR("Vulkan framebuffer creation failed.");
         return false;
     }
-    if (!vulkan_create_graphics_command_pool(vk_context))
+    if (!vulkan_create_command_pools(vk_context))
     {
         DERROR("Vulkan command pool creation failed.");
         return false;
@@ -245,7 +244,7 @@ bool vulkan_backend_initialize(u64 *vulkan_backend_memory_requirements, applicat
     return true;
 }
 
-bool vulkan_create_graphics_command_pool(vulkan_context *vk_context)
+bool vulkan_create_command_pools(vulkan_context *vk_context)
 {
     VkCommandPoolCreateInfo command_pool_create_info{};
 
@@ -258,6 +257,27 @@ bool vulkan_create_graphics_command_pool(vulkan_context *vk_context)
                                           vk_context->vk_allocator, &vk_context->graphics_command_pool);
     VK_CHECK(result);
 
+    command_pool_create_info.queueFamilyIndex = vk_context->vk_device.transfer_family_index;
+
+    result = vkCreateCommandPool(vk_context->vk_device.logical, &command_pool_create_info,
+                                          vk_context->vk_allocator, &vk_context->transfer_command_pool);
+    VK_CHECK(result);
+
+    return true;
+}
+
+bool vulkan_allocate_descriptor_set(VkDescriptorPool* desc_pool, VkDescriptorSetLayout* set_layout, VkDescriptorSet *set)
+{
+    VkDescriptorSetAllocateInfo per_frame_desc_set_alloc_info{};
+    per_frame_desc_set_alloc_info.sType              = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+    per_frame_desc_set_alloc_info.pNext              = 0;
+    per_frame_desc_set_alloc_info.descriptorPool     = *desc_pool;
+    per_frame_desc_set_alloc_info.descriptorSetCount = 1;
+    per_frame_desc_set_alloc_info.pSetLayouts = set_layout;
+
+    VkResult result = vkAllocateDescriptorSets(vk_context->vk_device.logical, &per_frame_desc_set_alloc_info,
+                                      set);
+    VK_CHECK(result);
     return true;
 }
 
@@ -267,6 +287,9 @@ bool vulkan_update_materials_descriptor_set(vulkan_shader *shader, material *mat
     VkDescriptorBufferInfo desc_buffer_info{};
 
     u32 descriptor_set_index = material->internal_id;
+
+    vulkan_allocate_descriptor_set(&shader->per_group_descriptor_command_pool, &shader->per_group_descriptor_layout, &shader->per_group_descriptor_sets[descriptor_set_index]);
+
     DTRACE("Updataing descriptor_set_index: %d", descriptor_set_index);
 
     // for now we only have 2
@@ -615,24 +638,7 @@ bool vulkan_initialize_shader(shader_config *config, shader *in_shader)
                                             vk_context->vk_allocator, &vk_shader->per_group_descriptor_command_pool);
             VK_CHECK(result);
 
-            darray<VkDescriptorSetLayout> material_desc_set_layout(max_descriptors);
-            for (u32 i = 0; i < max_descriptors; i++)
-            {
-                material_desc_set_layout[i] = vk_shader->per_group_descriptor_layout;
-            }
-
-            VkDescriptorSetAllocateInfo material_desc_set_alloc_info{};
-            material_desc_set_alloc_info.sType              = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-            material_desc_set_alloc_info.pNext              = 0;
-            material_desc_set_alloc_info.descriptorPool     = vk_shader->per_group_descriptor_command_pool;
-            material_desc_set_alloc_info.descriptorSetCount = max_descriptors;
-            material_desc_set_alloc_info.pSetLayouts =
-                reinterpret_cast<const VkDescriptorSetLayout *>(material_desc_set_layout.data);
-
             vk_shader->per_group_descriptor_sets.c_init(max_descriptors);
-            result =
-                vkAllocateDescriptorSets(vk_context->vk_device.logical, &material_desc_set_alloc_info,
-                                         static_cast<VkDescriptorSet *>(vk_shader->per_group_descriptor_sets.data));
 
             u32 &per_group_ubo_size = vk_shader->per_group_ubo_size;
             for (u32 i = 0; i < uniforms_size; i++)
@@ -782,9 +788,9 @@ bool vulkan_create_texture(texture *in_texture, u8 *pixels)
 
     DASSERT(result == true);
 
-    vulkan_transition_image_layout(vk_context, image, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+    vulkan_transition_image_layout(vk_context,&vk_context->transfer_command_pool,&vk_context->vk_device.transfer_queue, image, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
-    vulkan_copy_buffer_data_to_image(vk_context, &staging_buffer, image);
+    vulkan_copy_buffer_data_to_image(vk_context,&vk_context->transfer_command_pool, &vk_context->vk_device.transfer_queue,  &staging_buffer, image);
 
     vulkan_generate_mipmaps(vk_context, image);
 
@@ -1114,7 +1120,7 @@ bool vulkan_create_geometry(geometry *out_geometry, u32 vertex_count, vertex *ve
 
     vulkan_copy_data_to_buffer(vk_context, &vertex_staging_buffer, vertex_data, vertices, buffer_size);
     u32 vertex_offset = vulkan_calculate_vertex_offset(vk_context, out_geometry->id) * sizeof(vertex);
-    vulkan_copy_buffer(vk_context, &vk_context->vertex_buffer, vertex_offset, &vertex_staging_buffer, buffer_size);
+    vulkan_copy_buffer(vk_context,&vk_context->transfer_command_pool, &vk_context->vk_device.transfer_queue,  &vk_context->vertex_buffer, vertex_offset, &vertex_staging_buffer, buffer_size);
 
     vulkan_destroy_buffer(vk_context, &vertex_staging_buffer);
 
@@ -1128,7 +1134,7 @@ bool vulkan_create_geometry(geometry *out_geometry, u32 vertex_count, vertex *ve
 
     vulkan_copy_data_to_buffer(vk_context, &index_staging_buffer, index_data, indices, buffer_size);
     u32 index_offset = vulkan_calculate_index_offset(vk_context, out_geometry->id) * sizeof(u32);
-    vulkan_copy_buffer(vk_context, &vk_context->index_buffer, index_offset, &index_staging_buffer, buffer_size);
+    vulkan_copy_buffer(vk_context,&vk_context->transfer_command_pool, &vk_context->vk_device.transfer_queue, &vk_context->index_buffer, index_offset, &index_staging_buffer, buffer_size);
 
     vulkan_destroy_buffer(vk_context, &index_staging_buffer);
 

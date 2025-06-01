@@ -199,6 +199,7 @@ struct vulkan_context
     shader *default_shader;
 
     VkCommandPool graphics_command_pool;
+    VkCommandPool transfer_command_pool;
 
     VkSemaphore *image_available_semaphores = nullptr;
     VkSemaphore *render_finished_semaphores = nullptr;

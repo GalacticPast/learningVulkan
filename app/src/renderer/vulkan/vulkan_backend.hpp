@@ -35,7 +35,7 @@ u32 vulkan_calculate_vertex_offset(vulkan_context *vk_context, u32 geometry_id);
 bool vulkan_update_global_descriptor_sets(vulkan_shader *shader, scene_global_uniform_buffer_object *scene_global,
                                           light_global_uniform_buffer_object *light_global);
 
-bool vulkan_create_graphics_command_pool(vulkan_context *vk_context);
+bool vulkan_create_command_pools(vulkan_context *vk_context);
 bool vulkan_create_descriptor_command_pools(vulkan_context *vk_context);
 bool vulkan_update_materials_descriptor_set(vulkan_shader* shader, material *material);
 

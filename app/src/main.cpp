@@ -93,8 +93,8 @@ int main()
 
     render_data triangle{};
 
-    geometry  **geos           = nullptr;
-    u32         geometry_count = INVALID_ID;
+    geometry **geos           = nullptr;
+    u32        geometry_count = INVALID_ID;
 
 #if false
     {
@@ -116,7 +116,7 @@ int main()
         u64 cube_id1 = geometry_system_create_geometry(&parent_config, false);
         u64 cube_id2 = geometry_system_create_geometry(&child_config, false);
 
-        geos = static_cast<geometry **>(dallocate(sizeof(geometry *) * 2, MEM_TAG_UNKNOWN));
+        geos    = static_cast<geometry **>(dallocate(sizeof(geometry *) * 2, MEM_TAG_UNKNOWN));
         geos[0] = geometry_system_get_geometry(cube_id1);
         geos[1] = geometry_system_get_geometry(cube_id2);
 
@@ -125,7 +125,7 @@ int main()
 
         dstring mat_file  = "orange_lines_512";
         geos[1]->material = material_system_acquire_from_config_file(&mat_file);
-        geometry_count = 2;
+        geometry_count    = 2;
     }
 #endif
 
@@ -140,15 +140,14 @@ int main()
     f64 frame_elapsed_time = 0;
 
     f64 req_frame_time = static_cast<f64>((1.0f / 240));
-    clock_start(&clock);
 
     u32 index = 0;
     f32 z     = 0.1f;
     while (app_state.is_running)
     {
         ZoneScoped;
-        clock_update(&clock);
-        frame_start_time = clock.time_elapsed;
+        frame_start_time = platform_get_absolute_time();
+
         update_camera(&triangle.scene_ubo, frame_elapsed_time);
 
         // geos[1]->ubo.model *= mat4_euler_y(z);
@@ -156,15 +155,19 @@ int main()
 
         application_run(&triangle);
 
-        clock_update(&clock);
-        frame_end_time     = clock.time_elapsed;
+        // Figure out how long the frame took and, if below
+        f64 frame_end_time     = platform_get_absolute_time();
         frame_elapsed_time = frame_end_time - frame_start_time;
+        f64 remaining_seconds  = req_frame_time - frame_elapsed_time;
 
-        if (frame_elapsed_time < req_frame_time)
+        if (remaining_seconds > 0)
         {
-            f64 remaining_time = fabs(req_frame_time - frame_elapsed_time);
-            u64 sleep_ms = static_cast<u64>(remaining_time * D_SEC_TO_MS_MULTIPLIER);
-            platform_sleep(sleep_ms);
+            u64  remaining_ms = (remaining_seconds * 1000);
+            bool limit_frames = true;
+            if (remaining_ms > 0 && limit_frames)
+            {
+                platform_sleep(remaining_ms - 1);
+            }
         }
 
         input_update(0);
