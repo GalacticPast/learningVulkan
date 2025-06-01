@@ -2,13 +2,17 @@
 #include "core/dmemory.hpp"
 #include "core/dstring.hpp"
 #include "core/logger.hpp"
+#include "vulkan/vulkan_core.h"
 
 struct vulkan_physical_device_requirements
 {
     bool is_discrete_gpu;
     bool has_geometry_shader;
+
     bool has_graphics_queue_family;
     bool has_present_queue_family;
+    bool has_transfer_queue_family;
+
     // INFO: I mean we need this for every gpu right??
     bool has_swapchain_support;
     bool has_sampler_anisotropy;
@@ -26,10 +30,11 @@ bool vulkan_create_logical_device(vulkan_context *vk_context)
     DDEBUG("Creating Vulkan logical device...");
 
     vulkan_physical_device_requirements physical_device_requirements{};
-    physical_device_requirements.is_discrete_gpu           = false;
+    physical_device_requirements.is_discrete_gpu           = true;
     physical_device_requirements.has_geometry_shader       = true;
     physical_device_requirements.has_graphics_queue_family = true;
     physical_device_requirements.has_present_queue_family  = true;
+    physical_device_requirements.has_transfer_queue_family = true;
     physical_device_requirements.has_swapchain_support     = true;
     physical_device_requirements.has_sampler_anisotropy    = true;
 
@@ -56,7 +61,7 @@ bool vulkan_create_logical_device(vulkan_context *vk_context)
 
     u32 queue_family_count           = 0;
     u32 vulkan_queue_family_index[4] = {vk_context->vk_device.graphics_family_index,
-                                        vk_context->vk_device.present_family_index, 0, 0};
+                                        vk_context->vk_device.present_family_index, vk_context->vk_device.transfer_family_index, 0};
 
     if (physical_device_requirements.has_graphics_queue_family &&
         vk_context->vk_device.graphics_family_index != INVALID_ID)
@@ -67,6 +72,13 @@ bool vulkan_create_logical_device(vulkan_context *vk_context)
     if (physical_device_requirements.has_present_queue_family &&
         (vk_context->vk_device.present_family_index != INVALID_ID) &&
         vk_context->vk_device.present_family_index != vk_context->vk_device.graphics_family_index)
+    {
+        queue_family_count++;
+    }
+
+    if (physical_device_requirements.has_transfer_queue_family &&
+        (vk_context->vk_device.transfer_family_index != INVALID_ID) &&
+        vk_context->vk_device.transfer_family_index != vk_context->vk_device.graphics_family_index && vk_context->vk_device.transfer_family_index != vk_context->vk_device.present_family_index)
     {
         queue_family_count++;
     }
@@ -106,6 +118,8 @@ bool vulkan_create_logical_device(vulkan_context *vk_context)
                      &vk_context->vk_device.graphics_queue);
     vkGetDeviceQueue(vk_context->vk_device.logical, vk_context->vk_device.present_family_index, 0,
                      &vk_context->vk_device.present_queue);
+    vkGetDeviceQueue(vk_context->vk_device.logical, vk_context->vk_device.transfer_family_index, 0,
+                     &vk_context->vk_device.transfer_queue);
 
     return true;
 }
@@ -160,6 +174,7 @@ bool vulkan_choose_physical_device(vulkan_context                      *vk_conte
     DINFO("Vulkan: Found suitable gpu. GPU name: %s", vk_context->vk_device.physical_properties->deviceName);
     DINFO("Vulkan: Found Graphics Queue Family. Queue family Index: %d", vk_context->vk_device.graphics_family_index);
     DINFO("Vulkan: Found Present Queue Family. Queue family Index: %d", vk_context->vk_device.present_family_index);
+    DINFO("Vulkan: Found Transfer Queue Family. Queue family Index: %d", vk_context->vk_device.transfer_family_index);
 
     return true;
 }
@@ -226,73 +241,74 @@ bool vulkan_is_physical_device_suitable(vulkan_context *vk_context, VkPhysicalDe
 
     u32 graphics_family_index = INVALID_ID;
     u32 present_family_index  = INVALID_ID;
+    u32 transfer_family_index = INVALID_ID;
 
     bool is_suitable = true;
 
-    if(physical_device_requirements->is_discrete_gpu)
+    if (physical_device_requirements->is_discrete_gpu)
     {
         is_suitable &= physical_properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU;
     }
-    if(physical_features.geometryShader )
+    if (physical_features.geometryShader)
     {
         is_suitable &= physical_device_requirements->has_geometry_shader;
     }
 
     if (is_suitable)
     {
-        if (physical_device_requirements->has_graphics_queue_family &&
-            physical_device_requirements->has_present_queue_family)
-        {
-            vkGetPhysicalDeviceQueueFamilyProperties(physical_device, &queue_family_count, queue_family_properties);
+
+        vkGetPhysicalDeviceQueueFamilyProperties(physical_device, &queue_family_count, queue_family_properties);
 
 #ifdef DEBUG
-            DDEBUG("GPU NAME: %s", physical_properties.deviceName);
+        DDEBUG("GPU NAME: %s", physical_properties.deviceName);
 
-            for (u32 i = 0; i < queue_family_count; i++)
+        for (u32 i = 0; i < queue_family_count; i++)
+        {
+            u32  offset = 0;
+            char buffer[2000]{};
+
+            offset += string_copy_format(buffer, "Queue Index: %d", offset, i);
+
+            // INFO: putting offset - 1 because the string_copy_format null terminates the string
+            // WARN: might be dangerous but idk :)
+            buffer[offset - 1] = ' ';
+
+            if (queue_family_properties[i].queueFlags & VK_QUEUE_GRAPHICS_BIT)
             {
-                u32  offset = 0;
-                char buffer[2000]{};
-
-                offset += string_copy_format(buffer, "Queue Index: %d", offset, i);
-
-                // INFO: putting offset - 1 because the string_copy_format null terminates the string
-                // WARN: might be dangerous but idk :)
-                buffer[offset - 1] = ' ';
-
-                if (queue_family_properties[i].queueFlags & VK_QUEUE_GRAPHICS_BIT)
-                {
-                    offset += string_copy(buffer, "VK_QUEUE_GRAPHICS_BIT | ", offset);
-                }
-                if (queue_family_properties[i].queueFlags & VK_QUEUE_COMPUTE_BIT)
-                {
-                    offset += string_copy(buffer, "VK_QUEUE_COMPUTE_BIT | ", offset);
-                }
-                if (queue_family_properties[i].queueFlags & VK_QUEUE_TRANSFER_BIT)
-                {
-                    offset += string_copy(buffer, "VK_QUEUE_TRANSFER_BIT | ", offset);
-                }
-                if (queue_family_properties[i].queueFlags & VK_QUEUE_PROTECTED_BIT)
-                {
-                    offset += string_copy(buffer, "VK_QUEUE_PROTECTED_BIT | ", offset);
-                }
-                DDEBUG("%s", buffer);
+                offset += string_copy(buffer, "VK_QUEUE_GRAPHICS_BIT | ", offset);
             }
+            if (queue_family_properties[i].queueFlags & VK_QUEUE_COMPUTE_BIT)
+            {
+                offset += string_copy(buffer, "VK_QUEUE_COMPUTE_BIT | ", offset);
+            }
+            if (queue_family_properties[i].queueFlags & VK_QUEUE_TRANSFER_BIT)
+            {
+                offset += string_copy(buffer, "VK_QUEUE_TRANSFER_BIT | ", offset);
+            }
+            if (queue_family_properties[i].queueFlags & VK_QUEUE_PROTECTED_BIT)
+            {
+                offset += string_copy(buffer, "VK_QUEUE_PROTECTED_BIT | ", offset);
+            }
+            DDEBUG("%s", buffer);
+        }
 #endif
 
-            for (u32 i = 0; i < queue_family_count; i++)
+        for (u32 i = 0; i < queue_family_count; i++)
+        {
+            if (queue_family_properties[i].queueFlags & VK_QUEUE_GRAPHICS_BIT && graphics_family_index == INVALID_ID)
             {
-                if (queue_family_properties[i].queueFlags & VK_QUEUE_GRAPHICS_BIT)
-                {
-                    graphics_family_index = i;
-                }
-
-                // INFO: check for vulkan surface support
-                VkBool32 present_support = false;
-                vkGetPhysicalDeviceSurfaceSupportKHR(physical_device, i, vk_context->vk_surface, &present_support);
-                if (present_support)
-                {
-                    present_family_index = i;
-                }
+                graphics_family_index = i;
+            }
+            if (queue_family_properties[i].queueFlags & VK_QUEUE_TRANSFER_BIT)
+            {
+                transfer_family_index = i;
+            }
+            // INFO: check for vulkan surface support
+            VkBool32 present_support = false;
+            vkGetPhysicalDeviceSurfaceSupportKHR(physical_device, i, vk_context->vk_surface, &present_support);
+            if (present_support)
+            {
+                present_family_index = i;
             }
         }
 
@@ -308,6 +324,7 @@ bool vulkan_is_physical_device_suitable(vulkan_context *vk_context, VkPhysicalDe
                 return false;
             }
         }
+
         if (physical_device_requirements->has_present_queue_family)
         {
             if (present_family_index != INVALID_ID)
@@ -320,6 +337,19 @@ bool vulkan_is_physical_device_suitable(vulkan_context *vk_context, VkPhysicalDe
                 return false;
             }
         }
+        if (physical_device_requirements->has_transfer_queue_family)
+        {
+            if (transfer_family_index != INVALID_ID)
+            {
+                vk_context->vk_device.transfer_family_index = transfer_family_index;
+            }
+            else
+            {
+                DERROR("Present queue family required but not found. Skipping device...");
+                return false;
+            }
+        }
+
 
         // swapchain extension support
         if (physical_device_requirements->has_swapchain_support)

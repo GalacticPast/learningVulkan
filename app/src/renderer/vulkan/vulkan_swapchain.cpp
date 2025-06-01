@@ -82,7 +82,7 @@ bool create_swapchain(vulkan_context *vk_context)
     u32 best_image_sharing_mode    = INVALID_ID;
     u32 enabled_queue_family_count = vk_context->vk_device.enabled_queue_family_count;
     u32 queue_family_indicies[4]   = {vk_context->vk_device.graphics_family_index,
-                                      vk_context->vk_device.present_family_index, 0, 0};
+                                      vk_context->vk_device.present_family_index, vk_context->vk_device.transfer_family_index, 0};
 
     if (enabled_queue_family_count == 1)
     {

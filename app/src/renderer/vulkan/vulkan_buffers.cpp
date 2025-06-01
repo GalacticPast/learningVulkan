@@ -156,8 +156,8 @@ void vulkan_begin_command_buffer_single_use(vulkan_context *vk_context, VkComman
 {
     VkCommandBufferBeginInfo command_buffer_begin_info{};
     command_buffer_begin_info.sType            = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-    command_buffer_begin_info.flags            = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;       // Optional
-    command_buffer_begin_info.pInheritanceInfo = nullptr; // Optional
+    command_buffer_begin_info.flags            = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT; // Optional
+    command_buffer_begin_info.pInheritanceInfo = nullptr;                                     // Optional
 
     VkResult result = vkBeginCommandBuffer(command_buffer, &command_buffer_begin_info);
     VK_CHECK(result);

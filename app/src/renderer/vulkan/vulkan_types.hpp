@@ -5,7 +5,7 @@
 #include "resources/resource_types.hpp"
 #include <vulkan/vulkan.h>
 
-//tracy integration
+// tracy integration
 #include "vendor/tracy/TracyVulkan.hpp"
 //
 
@@ -36,6 +36,7 @@ struct vulkan_device
 
     VkQueue graphics_queue;
     VkQueue present_queue;
+    VkQueue transfer_queue;
 
     VkPhysicalDeviceMemoryProperties memory_properties;
 
@@ -49,6 +50,7 @@ struct vulkan_device
     u32 enabled_queue_family_count = INVALID_ID;
     u32 graphics_family_index      = INVALID_ID;
     u32 present_family_index       = INVALID_ID;
+    u32 transfer_family_index         = INVALID_ID;
 };
 
 struct vulkan_image

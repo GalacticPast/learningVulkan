@@ -1237,9 +1237,10 @@ bool vulkan_draw_frame(render_data *render_data)
     u32      current_frame = vk_context->current_frame_index;
     VkResult result;
 
-    vkWaitForFences(vk_context->vk_device.logical, 1, &vk_context->in_flight_fences[current_frame], VK_TRUE,
-                    INVALID_ID_64);
-    vkResetFences(vk_context->vk_device.logical, 1, &vk_context->in_flight_fences[current_frame]);
+    {
+        VK_CHECK(vkWaitForFences(vk_context->vk_device.logical, 1, &vk_context->in_flight_fences[current_frame], VK_TRUE, INVALID_ID_64));
+        VK_CHECK(vkResetFences(vk_context->vk_device.logical, 1, &vk_context->in_flight_fences[current_frame]));
+    }
 
     // HACK:
 
