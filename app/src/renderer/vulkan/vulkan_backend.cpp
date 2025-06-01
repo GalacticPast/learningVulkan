@@ -1269,20 +1269,24 @@ bool vulkan_draw_frame(render_data *render_data)
     VkSemaphore          signal_semaphores[] = {vk_context->render_finished_semaphores[current_frame]};
     VkPipelineStageFlags wait_stages[]       = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
 
-    VkSubmitInfo submit_info{};
-    submit_info.sType                = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-    submit_info.waitSemaphoreCount   = 1;
-    submit_info.pWaitSemaphores      = wait_semaphores;
-    submit_info.pWaitDstStageMask    = wait_stages;
-    submit_info.commandBufferCount   = 1;
-    submit_info.pCommandBuffers      = &curr_command_buffer;
-    submit_info.signalSemaphoreCount = 1;
-    submit_info.pSignalSemaphores    = signal_semaphores;
+    {
 
-    result = vkQueueSubmit(vk_context->vk_device.graphics_queue, 1, &submit_info,
-                           vk_context->in_flight_fences[current_frame]);
-    VK_CHECK(result);
-    vkQueueWaitIdle(vk_context->vk_device.graphics_queue);
+        ZoneScopedN("queue submit");
+        VkSubmitInfo submit_info{};
+        submit_info.sType                = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+        submit_info.waitSemaphoreCount   = 1;
+        submit_info.pWaitSemaphores      = wait_semaphores;
+        submit_info.pWaitDstStageMask    = wait_stages;
+        submit_info.commandBufferCount   = 1;
+        submit_info.pCommandBuffers      = &curr_command_buffer;
+        submit_info.signalSemaphoreCount = 1;
+        submit_info.pSignalSemaphores    = signal_semaphores;
+
+        result = vkQueueSubmit(vk_context->vk_device.graphics_queue, 1, &submit_info,
+                               vk_context->in_flight_fences[current_frame]);
+        VK_CHECK(result);
+        vkQueueWaitIdle(vk_context->vk_device.graphics_queue);
+    }
 
     VkSwapchainKHR swapchains[1] = {};
     swapchains[0]                = vk_context->vk_swapchain.handle;
