@@ -17,11 +17,11 @@ enum shader_stage
 enum shader_scope
 {
     // global
-    SHADER_PER_FRAME_UNIFORM,
+    SHADER_PER_FRAME_UNIFORM = 0,
     // local
-    SHADER_PER_GROUP_UNIFORM,
+    SHADER_PER_GROUP_UNIFORM = 1,
     // object
-    SHADER_PER_OBJECT_UNIFORM,
+    SHADER_PER_OBJECT_UNIFORM = 2,
 };
 
 enum attribute_types
@@ -30,6 +30,9 @@ enum attribute_types
     SAMPLER_2D = 8,
     MAT_4      = 64,
     VEC_4      = 16,
+    // INFO: You have to align the size of vec3 to the same size as vec4 if you are using vec3's in the uniform buffer.
+    //  if you dont know what this means. Do better future me :). In short For uniform buffers the vec3 has to be
+    //  alligned to 16 bytes but for vertexInputAttribute the vec3 can be 12bytes large.
     VEC_3      = 12,
     VEC_2      = 8,
 };
@@ -62,6 +65,8 @@ struct shader_config
     dstring name;
 
     shader_stage                    stages;
+    darray<u32>                     per_frame_uniform_offsets;
+    darray<u32>                     per_group_uniform_offsets;
     darray<shader_uniform_config>   uniforms;
     darray<shader_attribute_config> attributes;
 

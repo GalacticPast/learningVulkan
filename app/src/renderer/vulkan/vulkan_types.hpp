@@ -50,7 +50,7 @@ struct vulkan_device
     u32 enabled_queue_family_count = INVALID_ID;
     u32 graphics_family_index      = INVALID_ID;
     u32 present_family_index       = INVALID_ID;
-    u32 transfer_family_index         = INVALID_ID;
+    u32 transfer_family_index      = INVALID_ID;
 };
 
 struct vulkan_image
@@ -128,33 +128,11 @@ struct vulkan_shader
 
     darray<char> vertex_shader_code;
     darray<char> fragment_shader_code;
-    /*TODO: there should be a way to store the global offsets for the bindings
-     *   for eg (set 0 , binding = 0) should have the following offsets and we shoudl store them
-     *   {
-     *       mat4 view;
-     *       mat4 proj;
-     *   }
-     *   binding_0 -> offset = 0
-     *  binding_0 -> size = get_alligned(sizeof(binding_0), min_gpu_ubo_alignment_limit )
-     *                                          _____________^________________ this is gpu specific so we have to qurey
-     * them (set 0, binding = 1)
-     *  {
-     *     vec3 a;
-     *     vec3 b;
-     *  }
-     *  binding_1 -> offset = binding_0.size();
-     *  binding_1 -> size = get_allgined(sizeof(binding_1) , "");
-     *  .
-     *  .
-     *  .
-     *  .
-     *  binding_n -> offset = binding_(n-1).size();
-     *  binding_n -> size = get_allgined(sizeof(binding_n) , "");
-     *  and so on and so forth
-     */
+
     u32           per_frame_stride;
     vulkan_buffer per_frame_uniform_buffer;
     void         *per_frame_mapped_data;
+    darray<u32>   per_frame_uniform_offsets;
 
     u32            per_group_ubo_size;
     vulkan_buffer  per_group_uniform_buffer;
@@ -168,12 +146,13 @@ struct vulkan_shader
 
     VkDescriptorSetLayout                per_frame_descriptor_layout;
     darray<VkDescriptorSetLayoutBinding> per_frame_descriptor_sets_layout_bindings;
-    VkDescriptorPool                     per_frame_descriptor_command_pool;
+    VkDescriptorPool                     per_frame_descriptor_pool;
     VkDescriptorSet                      per_frame_descriptor_set;
 
     VkDescriptorSetLayout                per_group_descriptor_layout;
     darray<VkDescriptorSetLayoutBinding> per_group_descriptor_sets_layout_bindings;
-    VkDescriptorPool                     per_group_descriptor_command_pool;
+    VkDescriptorPool                     per_group_descriptor_pool;
+    u32                                  total_descriptors_allocated = INVALID_ID;
     darray<VkDescriptorSet>              per_group_descriptor_sets;
 
     renderpass_types type;

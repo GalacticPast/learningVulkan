@@ -31,7 +31,8 @@ VkBool32 vulkan_dbg_msg_rprt_callback(VkDebugUtilsMessageSeverityFlagBitsEXT    
 bool vulkan_check_validation_layer_support();
 bool vulkan_create_debug_messenger(VkDebugUtilsMessengerCreateInfoEXT *dbg_messenger_create_info);
 bool vulkan_create_default_texture();
-bool vulkan_allocate_descriptor_set(VkDescriptorPool* desc_pool, VkDescriptorSetLayout* set_layout, u32 descriptor_count);
+bool vulkan_allocate_descriptor_set(VkDescriptorPool *desc_pool, VkDescriptorSetLayout *set_layout,
+                                    u32 descriptor_count);
 bool vulkan_backend_initialize(u64 *vulkan_backend_memory_requirements, application_config *app_config, void *state)
 {
     *vulkan_backend_memory_requirements = sizeof(vulkan_context);
@@ -259,24 +260,24 @@ bool vulkan_create_command_pools(vulkan_context *vk_context)
 
     command_pool_create_info.queueFamilyIndex = vk_context->vk_device.transfer_family_index;
 
-    result = vkCreateCommandPool(vk_context->vk_device.logical, &command_pool_create_info,
-                                          vk_context->vk_allocator, &vk_context->transfer_command_pool);
+    result = vkCreateCommandPool(vk_context->vk_device.logical, &command_pool_create_info, vk_context->vk_allocator,
+                                 &vk_context->transfer_command_pool);
     VK_CHECK(result);
 
     return true;
 }
 
-bool vulkan_allocate_descriptor_set(VkDescriptorPool* desc_pool, VkDescriptorSetLayout* set_layout, VkDescriptorSet *set)
+bool vulkan_allocate_descriptor_set(VkDescriptorPool *desc_pool, VkDescriptorSetLayout *set_layout,
+                                    VkDescriptorSet *set)
 {
     VkDescriptorSetAllocateInfo per_frame_desc_set_alloc_info{};
     per_frame_desc_set_alloc_info.sType              = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
     per_frame_desc_set_alloc_info.pNext              = 0;
     per_frame_desc_set_alloc_info.descriptorPool     = *desc_pool;
     per_frame_desc_set_alloc_info.descriptorSetCount = 1;
-    per_frame_desc_set_alloc_info.pSetLayouts = set_layout;
+    per_frame_desc_set_alloc_info.pSetLayouts        = set_layout;
 
-    VkResult result = vkAllocateDescriptorSets(vk_context->vk_device.logical, &per_frame_desc_set_alloc_info,
-                                      set);
+    VkResult result = vkAllocateDescriptorSets(vk_context->vk_device.logical, &per_frame_desc_set_alloc_info, set);
     VK_CHECK(result);
     return true;
 }
@@ -288,7 +289,9 @@ bool vulkan_update_materials_descriptor_set(vulkan_shader *shader, material *mat
 
     u32 descriptor_set_index = material->internal_id;
 
-    vulkan_allocate_descriptor_set(&shader->per_group_descriptor_command_pool, &shader->per_group_descriptor_layout, &shader->per_group_descriptor_sets[descriptor_set_index]);
+    vulkan_allocate_descriptor_set(&shader->per_group_descriptor_pool, &shader->per_group_descriptor_layout,
+                                   &shader->per_group_descriptor_sets[descriptor_set_index]);
+    shader->total_descriptors_allocated = descriptor_set_index;
 
     DTRACE("Updataing descriptor_set_index: %d", descriptor_set_index);
 
@@ -501,7 +504,7 @@ bool vulkan_initialize_shader(shader_config *config, shader *in_shader)
             per_frame_descriptor_pool_create_info.pPoolSizes    = per_frame_pool_sizes;
 
             result = vkCreateDescriptorPool(vk_context->vk_device.logical, &per_frame_descriptor_pool_create_info,
-                                            vk_context->vk_allocator, &vk_shader->per_frame_descriptor_command_pool);
+                                            vk_context->vk_allocator, &vk_shader->per_frame_descriptor_pool);
             VK_CHECK(result);
 
             darray<VkDescriptorSetLayout> per_frame_desc_set_layout(MAX_FRAMES_IN_FLIGHT);
@@ -513,7 +516,7 @@ bool vulkan_initialize_shader(shader_config *config, shader *in_shader)
             VkDescriptorSetAllocateInfo per_frame_desc_set_alloc_info{};
             per_frame_desc_set_alloc_info.sType              = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
             per_frame_desc_set_alloc_info.pNext              = 0;
-            per_frame_desc_set_alloc_info.descriptorPool     = vk_shader->per_frame_descriptor_command_pool;
+            per_frame_desc_set_alloc_info.descriptorPool     = vk_shader->per_frame_descriptor_pool;
             per_frame_desc_set_alloc_info.descriptorSetCount = 1;
             per_frame_desc_set_alloc_info.pSetLayouts =
                 reinterpret_cast<const VkDescriptorSetLayout *>(per_frame_desc_set_layout.data);
@@ -522,24 +525,19 @@ bool vulkan_initialize_shader(shader_config *config, shader *in_shader)
                                               &vk_shader->per_frame_descriptor_set);
             VK_CHECK(result);
 
-            // get the per_frame ubo size
+            // get the uniform_offsets
+            vk_shader->per_frame_uniform_offsets = config->per_frame_uniform_offsets;
+
             u32 &per_frame_ubo_size = vk_shader->per_frame_stride;
             per_frame_ubo_size      = 0;
 
             u32 required_alignment = vk_context->vk_device.physical_properties->limits.minUniformBufferOffsetAlignment;
             vk_shader->min_ubo_alignment = required_alignment;
 
-            for (u32 i = 0; i < uniforms_size; i++)
+            u32 size = config->per_frame_uniform_offsets.size();
+            for (u32 i = 0; i < size ; i++)
             {
-                // per_frame_ubo_size = (per_frame_ubo_size + required_alignment - 1) & ~(required_alignment - 1);
-                if (config->uniforms[i].scope == SHADER_PER_FRAME_UNIFORM)
-                {
-                    u32 uniform_types_size = config->uniforms[i].types.size();
-                    for (u32 j = 0; j < uniform_types_size; j++)
-                    {
-                        per_frame_ubo_size += config->uniforms[i].types[j];
-                    }
-                }
+                per_frame_ubo_size += config->per_frame_uniform_offsets[i];
             }
 
             per_frame_ubo_size = (per_frame_ubo_size + required_alignment - 1) & ~(required_alignment - 1);
@@ -579,12 +577,16 @@ bool vulkan_initialize_shader(shader_config *config, shader *in_shader)
 
             for (u32 i = 0; i < uniforms_count; i++)
             {
-                if (config->uniforms[i].scope == SHADER_PER_GROUP_UNIFORM)
+                shader_scope scope = config->uniforms[i].scope ;
+                if (scope == SHADER_PER_GROUP_UNIFORM)
                 {
                     per_group_descriptors_binding_count++;
                     stage_flags.push_back(config->uniforms[i].stage);
 
-                    if (config->uniforms[i].types[0] == SAMPLER_2D)
+                    // we only check for the first one for now
+                    attribute_types type = config->uniforms[i].types[0];
+
+                    if (type == SAMPLER_2D)
                     {
                         des_types.push_back(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
                     }
@@ -635,22 +637,18 @@ bool vulkan_initialize_shader(shader_config *config, shader *in_shader)
             material_descriptor_pool_create_info.pPoolSizes    = material_pool_sizes;
 
             result = vkCreateDescriptorPool(vk_context->vk_device.logical, &material_descriptor_pool_create_info,
-                                            vk_context->vk_allocator, &vk_shader->per_group_descriptor_command_pool);
+                                            vk_context->vk_allocator, &vk_shader->per_group_descriptor_pool);
             VK_CHECK(result);
 
             vk_shader->per_group_descriptor_sets.c_init(max_descriptors);
 
             u32 &per_group_ubo_size = vk_shader->per_group_ubo_size;
-            for (u32 i = 0; i < uniforms_size; i++)
+            per_group_ubo_size = 0;
+
+            u32 size = config->per_group_uniform_offsets.size();
+            for (u32 i = 0; i < size ; i++)
             {
-                if (config->uniforms[i].scope == SHADER_PER_GROUP_UNIFORM)
-                {
-                    u32 uniform_types_size = config->uniforms[i].types.size();
-                    for (u32 j = 0; j < uniform_types_size; j++)
-                    {
-                        per_group_ubo_size += config->uniforms[i].types[j];
-                    }
-                }
+                per_group_ubo_size += config->per_group_uniform_offsets[i];
             }
 
             u32 required_alignment = vk_context->vk_device.physical_properties->limits.minUniformBufferOffsetAlignment;
@@ -735,22 +733,36 @@ bool vulkan_initialize_shader(shader_config *config, shader *in_shader)
     return true;
 }
 
-// bool vulkan_add_uniforms(vulkan_context *vk_context, shader *in_shader, shader_stage stage, shader_scope scope,
-//                          dstring *uniform_name, u32 sizeof_uniform, u32 num_binding, void *data)
-//{
-//     DASSERT_MSG(in_shader, "In shader is nullptr for vulkan_add_uniforms.");
-//     DASSERT_MSG(uniform_name, "uniform name is nullptr for vulkan_add_uniforms.");
-//     DASSERT_MSG(data, "provided uniform data is nullptr for vulkan_add_uniforms.");
-//
-//     return false;
-// }
-// bool vulkan_add_attributes(vulkan_context *vk_context, shader *in_shader, shader_scope scope, dstring
-// *attribute_name,
-//                            u32 sizeof_attribute, u32 location, void *data)
-//{
-//     return false;
-// };
+bool vulkan_destroy_shader(shader *shader)
+{
+    DASSERT(shader);
+    vulkan_shader *vk_shader = static_cast<vulkan_shader *>(shader->internal_vulkan_shader_state);
+    DASSERT(vk_shader);
 
+    VkDevice              &device    = vk_context->vk_device.logical;
+    VkAllocationCallbacks *allocator = vk_context->vk_allocator;
+
+    vkDestroyDescriptorPool(device, vk_shader->per_frame_descriptor_pool, allocator);
+    vkDestroyDescriptorSetLayout(device, vk_shader->per_frame_descriptor_layout, allocator);
+    vk_shader->per_frame_mapped_data = nullptr;
+
+    vkDestroyDescriptorPool(device, vk_shader->per_group_descriptor_pool, allocator);
+    vkDestroyDescriptorSetLayout(device, vk_shader->per_group_descriptor_layout, allocator);
+    vk_shader->per_group_buffer_data.~darray();
+    vk_shader->per_group_descriptor_sets.~darray();
+
+    vulkan_destroy_buffer(vk_context, &vk_shader->per_frame_uniform_buffer);
+    vulkan_destroy_buffer(vk_context, &vk_shader->per_group_uniform_buffer);
+
+    vkDestroyPipeline(device, vk_shader->pipeline.handle, allocator);
+
+    // NOTE: should the shaders be manging renderpasses??
+    vkDestroyRenderPass(device, vk_context->vk_renderpass, allocator);
+
+    vkDestroyPipelineLayout(device, vk_shader->pipeline.layout, allocator);
+
+    return true;
+}
 bool vulkan_create_texture(texture *in_texture, u8 *pixels)
 {
     in_texture->vulkan_texture_state =
@@ -788,9 +800,12 @@ bool vulkan_create_texture(texture *in_texture, u8 *pixels)
 
     DASSERT(result == true);
 
-    vulkan_transition_image_layout(vk_context,&vk_context->transfer_command_pool,&vk_context->vk_device.transfer_queue, image, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+    vulkan_transition_image_layout(vk_context, &vk_context->transfer_command_pool,
+                                   &vk_context->vk_device.transfer_queue, image, VK_IMAGE_LAYOUT_UNDEFINED,
+                                   VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
-    vulkan_copy_buffer_data_to_image(vk_context,&vk_context->transfer_command_pool, &vk_context->vk_device.transfer_queue,  &staging_buffer, image);
+    vulkan_copy_buffer_data_to_image(vk_context, &vk_context->transfer_command_pool,
+                                     &vk_context->vk_device.transfer_queue, &staging_buffer, image);
 
     vulkan_generate_mipmaps(vk_context, image);
 
@@ -910,21 +925,11 @@ void vulkan_backend_shutdown()
     vulkan_destroy_buffer(vk_context, &vk_context->vertex_buffer);
     vulkan_destroy_buffer(vk_context, &vk_context->index_buffer);
 
-    // vkDestroyDescriptorPool(device, vk_context->global_descriptor_command_pool, allocator);
-    // vkDestroyDescriptorSetLayout(device, vk_context->global_descriptor_layout, allocator);
-    // vk_context->global_descriptor_sets.~darray();
-
-    // vk_context->scene_global_ubo_data.~darray();
-    // vk_context->light_global_ubo_data.~darray();
-
-    // vkDestroyDescriptorPool(device, vk_context->material_descriptor_command_pool, allocator);
-    // vkDestroyDescriptorSetLayout(device, vk_context->material_descriptor_layout, allocator);
-    // vk_context->material_descriptor_sets.~darray();
-
     vulkan_free_command_buffers(vk_context, &vk_context->graphics_command_pool,
                                 static_cast<VkCommandBuffer *>(vk_context->command_buffers.data), MAX_FRAMES_IN_FLIGHT);
     vk_context->command_buffers.~darray();
     vkDestroyCommandPool(device, vk_context->graphics_command_pool, allocator);
+    vkDestroyCommandPool(device, vk_context->transfer_command_pool, allocator);
 
     for (u32 i = 0; i < vk_context->vk_swapchain.images_count; i++)
     {
@@ -933,19 +938,7 @@ void vulkan_backend_shutdown()
     dfree(vk_context->vk_swapchain.buffers, sizeof(VkFramebuffer) * vk_context->vk_swapchain.images_count,
           MEM_TAG_RENDERER);
 
-    // for (u32 i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
-    //{
-    //     vulkan_destroy_buffer(vk_context, &vk_context->scene_global_uniform_buffers[i]);
-    //     vulkan_destroy_buffer(vk_context, &vk_context->light_global_uniform_buffers[i]);
-    // }
-    // dfree(vk_context->scene_global_uniform_buffers, sizeof(vulkan_buffer) * MAX_FRAMES_IN_FLIGHT, MEM_TAG_RENDERER);
-    // dfree(vk_context->light_global_uniform_buffers, sizeof(vulkan_buffer) * MAX_FRAMES_IN_FLIGHT, MEM_TAG_RENDERER);
-
-    // vkDestroyPipeline(device, vk_context->vk_graphics_pipeline.handle, allocator);
-
-    // vkDestroyRenderPass(device, vk_context->vk_renderpass, allocator);
-
-    // vkDestroyPipelineLayout(device, vk_context->vk_graphics_pipeline.layout, allocator);
+    vulkan_destroy_shader(vk_context->default_shader);
 
     for (u32 i = 0; i < vk_context->vk_swapchain.images_count; i++)
     {
@@ -1063,15 +1056,14 @@ VkBool32 vulkan_dbg_msg_rprt_callback(VkDebugUtilsMessageSeverityFlagBitsEXT    
 void vulkan_update_global_uniform_buffer(vulkan_shader *shader, scene_global_uniform_buffer_object *scene_ubo,
                                          light_global_uniform_buffer_object *light_ubo, u32 current_frame_index)
 {
-    // u64 scene_aligned = align_upto(sizeof(scene_global_uniform_buffer_object), shader->min_ubo_alignment);
-    u64 scene_aligned = sizeof(scene_global_uniform_buffer_object);
+    u64 scene_aligned = shader->per_frame_uniform_offsets[1];
     u8 *addr = static_cast<u8 *>(shader->per_frame_mapped_data) + ((shader->per_frame_stride * current_frame_index));
-    dcopy_memory(addr, scene_ubo, sizeof(scene_global_uniform_buffer_object));
+    dcopy_memory(addr, scene_ubo, scene_aligned);
 
     u64 light_aligned  = scene_aligned;
     // u64 light_aligned  = align_upto(sizeof(light_global_uniform_buffer_object), shader->min_ubo_alignment);
     addr              += light_aligned;
-    dcopy_memory(addr, light_ubo, sizeof(light_global_uniform_buffer_object));
+    dcopy_memory(addr, light_ubo, shader->per_frame_uniform_offsets[2]);
 }
 
 u32 vulkan_calculate_vertex_offset(vulkan_context *vk_context, u32 geometry_id)
@@ -1120,7 +1112,8 @@ bool vulkan_create_geometry(geometry *out_geometry, u32 vertex_count, vertex *ve
 
     vulkan_copy_data_to_buffer(vk_context, &vertex_staging_buffer, vertex_data, vertices, buffer_size);
     u32 vertex_offset = vulkan_calculate_vertex_offset(vk_context, out_geometry->id) * sizeof(vertex);
-    vulkan_copy_buffer(vk_context,&vk_context->transfer_command_pool, &vk_context->vk_device.transfer_queue,  &vk_context->vertex_buffer, vertex_offset, &vertex_staging_buffer, buffer_size);
+    vulkan_copy_buffer(vk_context, &vk_context->transfer_command_pool, &vk_context->vk_device.transfer_queue,
+                       &vk_context->vertex_buffer, vertex_offset, &vertex_staging_buffer, buffer_size);
 
     vulkan_destroy_buffer(vk_context, &vertex_staging_buffer);
 
@@ -1134,7 +1127,8 @@ bool vulkan_create_geometry(geometry *out_geometry, u32 vertex_count, vertex *ve
 
     vulkan_copy_data_to_buffer(vk_context, &index_staging_buffer, index_data, indices, buffer_size);
     u32 index_offset = vulkan_calculate_index_offset(vk_context, out_geometry->id) * sizeof(u32);
-    vulkan_copy_buffer(vk_context,&vk_context->transfer_command_pool, &vk_context->vk_device.transfer_queue, &vk_context->index_buffer, index_offset, &index_staging_buffer, buffer_size);
+    vulkan_copy_buffer(vk_context, &vk_context->transfer_command_pool, &vk_context->vk_device.transfer_queue,
+                       &vk_context->index_buffer, index_offset, &index_staging_buffer, buffer_size);
 
     vulkan_destroy_buffer(vk_context, &index_staging_buffer);
 
@@ -1244,7 +1238,8 @@ bool vulkan_draw_frame(render_data *render_data)
     VkResult result;
 
     {
-        VK_CHECK(vkWaitForFences(vk_context->vk_device.logical, 1, &vk_context->in_flight_fences[current_frame], VK_TRUE, INVALID_ID_64));
+        VK_CHECK(vkWaitForFences(vk_context->vk_device.logical, 1, &vk_context->in_flight_fences[current_frame],
+                                 VK_TRUE, INVALID_ID_64));
         VK_CHECK(vkResetFences(vk_context->vk_device.logical, 1, &vk_context->in_flight_fences[current_frame]));
     }
 

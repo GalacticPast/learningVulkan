@@ -34,6 +34,7 @@ template <typename T> class darray
     T    pop_back();
     T    pop_at(u32 index);
     u64  size();
+    void clear();
 };
 
 template <typename T> darray<T>::darray(u64 size)
@@ -65,7 +66,7 @@ template <typename T> darray<T>::~darray()
 
 template <typename T> void darray<T>::c_init()
 {
-    if(data)
+    if (data)
     {
         DASSERT_MSG(!data, "THE ARRAY HAS BEEN ALREADY INITIALIZED.");
     }
@@ -89,18 +90,17 @@ template <typename T> void darray<T>::c_init(u64 size)
 
 template <typename T> void darray<T>::operator=(const darray<T> &in_darray)
 {
-    if (capacity < in_darray.capacity)
+    DASSERT_MSG(length == 0,
+                "There is still some data in the array, cannot assign another array into a already initialized array.");
+
+    if (data)
     {
-        DASSERT_MSG(
-            length == 0,
-            "There is still some data in the array, cannot assign another array into a already initialized array.");
-        if (data)
-        {
-            dfree(data, capacity, MEM_TAG_DARRAY);
-        }
-        data     = static_cast<T *>(dallocate(in_darray.capacity, MEM_TAG_DARRAY));
+        dfree(data, capacity, MEM_TAG_DARRAY);
         capacity = in_darray.capacity;
     }
+
+    data = static_cast<T *>(dallocate(in_darray.capacity, MEM_TAG_DARRAY));
+
     dcopy_memory(data, in_darray.data, in_darray.capacity);
     length       = in_darray.length;
     element_size = in_darray.element_size;
@@ -129,7 +129,7 @@ template <typename T> T &darray<T>::operator[](u64 index)
 
 template <typename T> void darray<T>::resize(u64 out_size)
 {
-    if(out_size < DEFAULT_DARRAY_SIZE)
+    if (out_size < DEFAULT_DARRAY_SIZE)
     {
         length = out_size;
         DASSERT_MSG(data, "array hasnt been initalized yet.");
@@ -161,6 +161,14 @@ template <typename T> void darray<T>::resize(u64 out_size)
     {
         DFATAL("Array hasnt been initialized yet.");
         debugBreak();
+    }
+}
+
+template <typename T> void darray<T>::clear()
+{
+    if (data)
+    {
+        dzero_memory(data, capacity);
     }
 }
 

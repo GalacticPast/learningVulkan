@@ -16,6 +16,8 @@ struct shader_system_state
 static shader_system_state *shader_sys_state_ptr = nullptr;
 
 static bool shader_system_create_default_shader(shader *out_shader, u64 *out_shader_id);
+static void shader_system_add_uniform(shader_config *out_config, const char *name, shader_stage stage,
+                                      shader_scope scope, u32 set, u32 binding, darray<attribute_types> types);
 
 bool shader_system_startup(u64 *shader_system_mem_requirements, void *state)
 {
@@ -81,45 +83,30 @@ bool shader_system_create_default_shader(shader *out_shader, u64 *out_shader_id)
     default_shader_conf.frag_spv_full_path = "../assets/shaders/default_shader.frag.spv";
     default_shader_conf.vert_spv_full_path = "../assets/shaders/default_shader.vert.spv";
 
-    u32 def_uniform_count = 4;
-    default_shader_conf.uniforms.resize(def_uniform_count);
-
     darray<shader_uniform_config> &uni_conf = default_shader_conf.uniforms;
 
     {
-        uni_conf[0].name    = "uniform_global_object";
-        uni_conf[0].stage   = STAGE_VERTEX;
-        uni_conf[0].scope   = SHADER_PER_FRAME_UNIFORM;
-        uni_conf[0].set     = 0;
-        uni_conf[0].binding = 0;
-        uni_conf[0].types.c_init();
-        uni_conf[0].types[0] = MAT_4;
-        uni_conf[0].types[1] = MAT_4;
+        darray<attribute_types> types{};
+        types.push_back(MAT_4);
+        types.push_back(MAT_4);
+        shader_system_add_uniform(&default_shader_conf, "uniform_global_object", STAGE_VERTEX, SHADER_PER_FRAME_UNIFORM,
+                                  0, 0, types);
 
-        uni_conf[1].name    = "uniform_light_object";
-        uni_conf[1].stage   = STAGE_FRAGMENT;
-        uni_conf[1].scope   = SHADER_PER_FRAME_UNIFORM;
-        uni_conf[1].set     = 0;
-        uni_conf[1].binding = 1;
-        uni_conf[1].types.c_init();
-        uni_conf[1].types[0] = VEC_3;
-        uni_conf[1].types[1] = VEC_3;
+        types.clear();
+        types.push_back(VEC_3);
+        types.push_back(VEC_3);
+        shader_system_add_uniform(&default_shader_conf, "uniform_light_object", STAGE_VERTEX, SHADER_PER_FRAME_UNIFORM,
+                                  0, 1, types);
 
-        uni_conf[2].name    = "albedo_map";
-        uni_conf[2].stage   = STAGE_FRAGMENT;
-        uni_conf[2].scope   = SHADER_PER_GROUP_UNIFORM;
-        uni_conf[2].set     = 1;
-        uni_conf[2].binding = 0;
-        uni_conf[2].types.c_init();
-        uni_conf[2].types[0] = SAMPLER_2D;
+        types.clear();
+        types.push_back(SAMPLER_2D);
+        shader_system_add_uniform(&default_shader_conf, "albedo_map", STAGE_VERTEX, SHADER_PER_GROUP_UNIFORM, 1, 0,
+                                  types);
 
-        uni_conf[3].name    = "alpha_map";
-        uni_conf[3].stage   = STAGE_FRAGMENT;
-        uni_conf[3].scope   = SHADER_PER_GROUP_UNIFORM;
-        uni_conf[3].set     = 1;
-        uni_conf[3].binding = 1;
-        uni_conf[3].types.c_init();
-        uni_conf[3].types[0] = SAMPLER_2D;
+        types.clear();
+        types.push_back(SAMPLER_2D);
+        shader_system_add_uniform(&default_shader_conf, "alpha_map", STAGE_VERTEX, SHADER_PER_GROUP_UNIFORM, 1, 1,
+                                  types);
     }
 
     default_shader_conf.attributes.resize(3);
@@ -182,6 +169,69 @@ bool shader_use(u64 shader_id)
 {
     return true;
 }
+
+static void shader_system_add_uniform(shader_config *out_config, const char *name, shader_stage stage,
+                                      shader_scope scope, u32 set, u32 binding, darray<attribute_types> types)
+{
+    DASSERT(out_config);
+
+    shader_uniform_config conf{};
+
+    DASSERT_MSG(set < 2, "You cannot have a set in local scope. You can have uniforms for only global scope (aka set "
+                         "0) or for instance scope (aka set 1)")
+    switch (scope)
+    {
+        // global
+    case SHADER_PER_FRAME_UNIFORM: {
+        DASSERT_MSG(set == 0, "Specified per_frame_uniform but provided set is not zero");
+    }
+    break;
+        // local
+    case SHADER_PER_GROUP_UNIFORM: {
+        DASSERT_MSG(set == 1, "Specified shader_per_group_uniform but provided set is not one");
+    }
+    break;
+        // object
+    case SHADER_PER_OBJECT_UNIFORM: {
+        DFATAL("Cannot have uniforms in object scope. Use push constants for it");
+    }
+    break;
+    }
+
+    conf.name    = name;
+    conf.stage   = stage;
+    conf.scope   = scope;
+    conf.set     = set;
+    conf.binding = binding;
+    conf.types   = types;
+
+    u32 size = types.size();
+    DASSERT(size);
+    u32 offset = 0;
+    for (u32 i = 0; i < size; i++)
+    {
+        if (types[i] == VEC_3)
+        {
+            // For uniform buffers the vec_3 has to be aligned to a vec4 aka 16 bytes
+            offset += 16;
+        }
+        else
+        {
+            offset += types[i];
+        }
+    }
+    DASSERT(offset);
+    if (scope == SHADER_PER_FRAME_UNIFORM)
+    {
+        out_config->per_frame_uniform_offsets.push_back(offset);
+    }
+    else if(scope == SHADER_PER_GROUP_UNIFORM)
+    {
+        out_config->per_group_uniform_offsets.push_back(offset);
+    }
+    out_config->uniforms.push_back(conf);
+}
+
 // HACK: this should be abstracted away to support more shaders
 bool shader_system_update_per_frame(shader *shader, scene_global_uniform_buffer_object *scene_global,
                                     light_global_uniform_buffer_object *light_global)
