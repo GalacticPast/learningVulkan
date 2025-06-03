@@ -131,10 +131,6 @@ void string_split(dstring *string, const char ch, darray<dstring> *split_strings
 
     for (u32 i = 0; i < len; i++)
     {
-        if ((*string)[i] == '\n')
-        {
-            break;
-        }
         if ((*string)[i] == ' ')
         {
             continue;
@@ -150,6 +146,9 @@ void string_split(dstring *string, const char ch, darray<dstring> *split_strings
         }
         a[a_ind++] = (*string)[i];
     }
+    a.str_len = a_ind;
+    split_strings->push_back(a);
+
 
     return;
 }

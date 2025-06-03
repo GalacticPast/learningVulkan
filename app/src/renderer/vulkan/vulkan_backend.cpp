@@ -1056,11 +1056,11 @@ VkBool32 vulkan_dbg_msg_rprt_callback(VkDebugUtilsMessageSeverityFlagBitsEXT    
 void vulkan_update_global_uniform_buffer(vulkan_shader *shader, scene_global_uniform_buffer_object *scene_ubo,
                                          light_global_uniform_buffer_object *light_ubo, u32 current_frame_index)
 {
-    u64 scene_aligned = shader->per_frame_uniform_offsets[1];
+    u64 scene_aligned = shader->per_frame_uniform_offsets[0];
     u8 *addr = static_cast<u8 *>(shader->per_frame_mapped_data) + ((shader->per_frame_stride * current_frame_index));
     dcopy_memory(addr, scene_ubo, scene_aligned);
 
-    u32 size = shader->per_frame_uniform_offsets[2] - scene_aligned;
+    u32 size = shader->per_frame_uniform_offsets[1] - scene_aligned;
     u64 light_aligned  = scene_aligned;
     addr              += light_aligned;
     dcopy_memory(addr, light_ubo, size);

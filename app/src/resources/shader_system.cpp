@@ -20,8 +20,8 @@ struct shader_system_state
 static shader_system_state *shader_sys_state_ptr = nullptr;
 
 static bool shader_system_create_default_shader(shader *out_shader, u64 *out_shader_id);
-static void shader_system_add_uniform(shader_config *out_config, dstring *name, shader_stage stage,
-                                      shader_scope scope, u32 set, u32 binding, attribute_types type);
+static void shader_system_add_uniform(shader_config *out_config, dstring *name, shader_stage stage, shader_scope scope,
+                                      u32 set, u32 binding, attribute_types type);
 static void shader_system_add_attributes(shader_config *out_config, const char *name, u32 location,
                                          attribute_types type);
 
@@ -78,6 +78,50 @@ static bool _create_shader(shader_config *config, shader *out_shader)
 
     return true;
 }
+static void shader_system_calculate_offsets(shader_config *out_config)
+{
+    DASSERT(out_config);
+    u32                            size    = out_config->uniforms.size();
+    darray<shader_uniform_config> &configs = out_config->uniforms;
+
+    u32 offset = 0;
+
+    for (u32 i = 0; i < size; i++)
+    {
+        if (configs[i].scope == SHADER_PER_FRAME_UNIFORM)
+        {
+            u32 num_types = configs[i].types_count;
+            for (u32 j = 0; j < num_types; j++)
+            {
+                if (configs[i].types[j] == VEC_3)
+                {
+                    offset += VEC_4;
+                }
+                else
+                {
+                    offset += configs[i].types[j];
+                }
+            }
+            out_config->per_frame_uniform_offsets.push_back(offset);
+        }
+        else if (configs[i].scope == SHADER_PER_GROUP_UNIFORM)
+        {
+            u32 num_types = configs[i].types_count;
+            for (u32 j = 0; j < num_types; j++)
+            {
+                if (configs[i].types[j] == VEC_3)
+                {
+                    offset += VEC_4;
+                }
+                else
+                {
+                    offset += configs[i].types[j];
+                }
+            }
+            out_config->per_group_uniform_offsets.push_back(offset);
+        }
+    }
+}
 
 // TODO: Should use a dedicated parser to parse this
 static void shader_parse_configuration_file(dstring conf_file_name, shader_config *out_config)
@@ -108,7 +152,7 @@ static void shader_parse_configuration_file(dstring conf_file_name, shader_confi
             }
             index++;
         }
-        return line + index;
+        return line + index + 1;
     };
     auto translate_shader_scope_type = [](dstring string) -> shader_scope {
         const char *str = string.c_str();
@@ -119,6 +163,10 @@ static void shader_parse_configuration_file(dstring conf_file_name, shader_confi
         else if (string_compare(str, "per_group"))
         {
             return SHADER_PER_GROUP_UNIFORM;
+        }
+        else if (string_compare(str, "per_object"))
+        {
+            return SHADER_PER_OBJECT_UNIFORM;
         }
 
         return SHADER_SCOPE_UNKNOWN;
@@ -131,7 +179,7 @@ static void shader_parse_configuration_file(dstring conf_file_name, shader_confi
         {
             return STAGE_VERTEX;
         }
-        else if (string_compare(str, "FRAGMENT"))
+        else if (string_compare(str, "fragment"))
         {
             return STAGE_FRAGMENT;
         }
@@ -173,7 +221,7 @@ static void shader_parse_configuration_file(dstring conf_file_name, shader_confi
     while (file_get_line(file, &line))
     {
         // INFO: if comment skip line
-        if (line[0] == '#')
+        if (line[0] == '#' || line[0] == '\0')
         {
             continue;
         }
@@ -287,33 +335,32 @@ static void shader_parse_configuration_file(dstring conf_file_name, shader_confi
             u32 size = list.size();
             DASSERT_MSG(size == 6, "Uniforms must have 6 identifiers associated with it");
 
-
-//NOTE: uniform_name,stage,scope,set,binding,type. Make sure there are 6 in total.
-//           0        1     2     3   4       5
+            // NOTE: uniform_name,stage,scope,set,binding,type. Make sure there are 6 in total.
+            //            0        1     2     3    4      5
 
             shader_uniform_config conf{};
 
             shader_stage stage = translate_shader_stage_type(list[1]);
             shader_scope scope = translate_shader_scope_type(list[2]);
 
-            u32 set     = list[3].string[0] - '0';
-            u32 binding = list[4].string[0] - '0';
-            attribute_types type = translate_attr_type(list[5]);
+            u32             set     = list[3].string[0] - '0';
+            u32             binding = list[4].string[0] - '0';
+            attribute_types type    = translate_attr_type(list[5]);
 
-            shader_system_add_uniform(out_config, &list[0], stage, scope, set, binding,
-                                      type);
+            shader_system_add_uniform(out_config, &list[0], stage, scope, set, binding, type);
         }
         else
         {
             DERROR("Unidentified identifier %s.", identifier.c_str());
             return;
         }
+        line.clear();
     }
+    shader_system_calculate_offsets(out_config);
 }
 
 bool shader_system_create_default_shader(shader *out_shader, u64 *out_shader_id)
 {
-    // TODO: should use a configuration file.
     DASSERT_MSG(out_shader, "out shader is nullptr.");
     DASSERT_MSG(out_shader_id, "out_shader_id is nullptr");
 
@@ -321,40 +368,6 @@ bool shader_system_create_default_shader(shader *out_shader, u64 *out_shader_id)
 
     dstring conf_file = "default_shader.conf";
     shader_parse_configuration_file(conf_file, &default_shader_conf);
-
-    default_shader_conf.frag_spv_full_path = "../assets/shaders/default_shader.frag.spv";
-    default_shader_conf.vert_spv_full_path = "../assets/shaders/default_shader.vert.spv";
-
-    darray<attribute_types> types{};
-    types.push_back(MAT_4);
-    types.push_back(MAT_4);
-    shader_system_add_uniform(&default_shader_conf, "uniform_global_object", STAGE_VERTEX, SHADER_PER_FRAME_UNIFORM, 0,
-                              0, types);
-
-    types.clear();
-    types.push_back(VEC_3);
-    types.push_back(VEC_3);
-    shader_system_add_uniform(&default_shader_conf, "uniform_light_object", STAGE_FRAGMENT, SHADER_PER_FRAME_UNIFORM, 0,
-                              1, types);
-
-    types.clear();
-    types.push_back(SAMPLER_2D);
-    shader_system_add_uniform(&default_shader_conf, "albedo_map", STAGE_FRAGMENT, SHADER_PER_GROUP_UNIFORM, 1, 0,
-                              types);
-
-    types.clear();
-    types.push_back(SAMPLER_2D);
-    shader_system_add_uniform(&default_shader_conf, "alpha_map", STAGE_FRAGMENT, SHADER_PER_GROUP_UNIFORM, 1, 1, types);
-
-    shader_system_add_attributes(&default_shader_conf, "in_position", 0, VEC_3);
-    shader_system_add_attributes(&default_shader_conf, "in_normal", 1, VEC_3);
-    shader_system_add_attributes(&default_shader_conf, "in_tex_coord", 2, VEC_2);
-
-    default_shader_conf.stages = static_cast<shader_stage>(STAGE_VERTEX | STAGE_FRAGMENT);
-
-    default_shader_conf.has_per_frame  = true;
-    default_shader_conf.has_per_group  = true;
-    default_shader_conf.has_per_object = true;
 
     *out_shader_id                          = _create_shader(&default_shader_conf, out_shader);
     shader_sys_state_ptr->default_shader_id = *out_shader_id;
@@ -408,15 +421,17 @@ static void shader_system_add_attributes(shader_config *out_config, const char *
     return;
 }
 
-static void shader_system_add_uniform(shader_config *out_config, dstring *name, shader_stage stage,
-                                      shader_scope scope, u32 set, u32 binding, attribute_types type)
+static void shader_system_add_uniform(shader_config *out_config, dstring *name, shader_stage stage, shader_scope scope,
+                                      u32 set, u32 binding, attribute_types type)
 {
     DASSERT(out_config);
 
     shader_uniform_config conf{};
 
-    DASSERT_MSG(set < 2, "You cannot have a set in local scope. You can have uniforms for only global scope (aka set "
-                         "0) or for instance scope (aka set 1)")
+    DASSERT_MSG(stage != STAGE_UNKNOWN, "Specified shader stage is unknown");
+    DASSERT_MSG(scope != SHADER_SCOPE_UNKNOWN,
+                "Unknown shader scope. This could mean that there is a bug within the shader configuration parser.");
+    DASSERT_MSG(type != MAX_SHADER_ATTRIBUTE_TYPE, "Unknown attribute type.");
 
     switch (scope)
     {
@@ -432,62 +447,37 @@ static void shader_system_add_uniform(shader_config *out_config, dstring *name, 
     break;
         // object
     case SHADER_PER_OBJECT_UNIFORM: {
-        DFATAL("Cannot have uniforms in object scope. Use push constants for it");
+        // TODO: do smth about push_constants
+        return;
+    }
+    default: {
     }
     break;
     }
-
-    conf.name    = name;
-    conf.stage   = stage;
-    conf.scope   = scope;
-    conf.set     = set;
-    conf.binding = binding;
-    dzero_memory(conf.types, MAX_UNIFORM_ATTRIBUTES * sizeof(attribute_types));
-
-    u32 size = types.size();
-    DASSERT(size);
-    DASSERT_MSG(size < MAX_UNIFORM_ATTRIBUTES, "Types size is greater than MAX_UNIFORM_ATTRIBUTES, Change it.");
-
-    u32 offset = 0;
+    // NOTE: Maybe we should'nt be doing this like this.
+    u32                            size    = out_config->uniforms.size();
+    darray<shader_uniform_config> &configs = out_config->uniforms;
+    // check if the set is already in the array if it is update its types
     for (u32 i = 0; i < size; i++)
     {
-        if (types[i] == VEC_3)
+        if (configs[i].set == set && configs[i].binding == binding && configs[i].stage == stage &&
+            configs[i].scope == scope)
         {
-            // For uniform buffers the vec_3 has to be aligned to a vec4 aka 16 bytes
-            offset += VEC_4;
+            configs[i].types[configs[i].types_count] = type;
+            configs[i].types_count++;
+            return;
         }
-        else
-        {
-            offset += types[i];
-        }
-        conf.types[i] = types[i];
     }
 
-    DASSERT(offset);
-    if (scope == SHADER_PER_FRAME_UNIFORM)
-    {
-        u32 len = out_config->per_frame_uniform_offsets.size();
-        // If this is the first entry then skip the first one
-        if (len == 0)
-        {
-            out_config->per_frame_uniform_offsets.push_back(0);
-        }
-        u32 prev_offset    = out_config->per_frame_uniform_offsets[binding];
-        u32 running_offset = prev_offset + offset;
-        out_config->per_frame_uniform_offsets.push_back(running_offset);
-    }
-    else if (scope == SHADER_PER_GROUP_UNIFORM)
-    {
-        u32 len = out_config->per_group_uniform_offsets.size();
-        // If this is the first entry then skip the first one
-        if (len == 0)
-        {
-            out_config->per_group_uniform_offsets.push_back(0);
-        }
-        u32 prev_offset    = out_config->per_group_uniform_offsets[binding];
-        u32 running_offset = prev_offset + offset;
-        out_config->per_group_uniform_offsets.push_back(running_offset);
-    }
+    conf.name        = name;
+    conf.stage       = stage;
+    conf.scope       = scope;
+    conf.set         = set;
+    conf.binding     = binding;
+    conf.types_count = 1;
+    dzero_memory(conf.types, MAX_UNIFORM_ATTRIBUTES * sizeof(attribute_types));
+    conf.types[0] = type;
+
     out_config->uniforms.push_back(conf);
 }
 
