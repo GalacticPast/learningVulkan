@@ -84,7 +84,6 @@ bool vulkan_destroy_image(vulkan_context *vk_context, vulkan_image *image)
     image->memory = 0;
     return true;
 }
-// NOTE: for now we use graphics command pool to allocate. Maybe we have to make it a function parameter??
 bool vulkan_transition_image_layout(vulkan_context *vk_context, VkCommandPool *cmd_pool, VkQueue* queue, vulkan_image *image,
                                     VkImageLayout old_layout, VkImageLayout new_layout)
 {
@@ -139,6 +138,14 @@ bool vulkan_transition_image_layout(vulkan_context *vk_context, VkCommandPool *c
 
         source_stage_flags      = VK_PIPELINE_STAGE_TRANSFER_BIT;
         destination_stage_flags = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+    }
+    else if(old_layout == VK_IMAGE_LAYOUT_UNDEFINED && new_layout == VK_IMAGE_LAYOUT_PRESENT_SRC_KHR)
+    {
+        img_barrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+        img_barrier.dstAccessMask = 0;
+
+        source_stage_flags = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+        destination_stage_flags = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
     }
     else
     {

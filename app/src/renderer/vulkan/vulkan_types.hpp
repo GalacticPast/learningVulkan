@@ -48,6 +48,7 @@ struct vulkan_device
 
     // INFO: might need the selected graphics queue's QueueFamilyProperties.
     u32 enabled_queue_family_count = INVALID_ID;
+    darray<u32> enabled_queue_family_ind;
     u32 graphics_family_index      = INVALID_ID;
     u32 present_family_index       = INVALID_ID;
     u32 transfer_family_index      = INVALID_ID;

@@ -1272,6 +1272,12 @@ bool vulkan_draw_frame(render_data *render_data)
     VkPipelineStageFlags wait_stages[]       = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
 
     {
+        //transition the image
+        vulkan_image img;
+        img.handle = vk_context->vk_swapchain.images[image_index];
+        img.format = vk_context->vk_swapchain.img_format;
+        img.mip_levels = DEFAULT_MIP_LEVEL;
+        vulkan_transition_image_layout(vk_context,&vk_context->graphics_command_pool, &vk_context->vk_device.graphics_queue,&img, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
 
         ZoneScopedN("queue submit");
         VkSubmitInfo submit_info{};

@@ -4,7 +4,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include "../common/TracyApi.h"
+#include "common/TracyApi.h"
 
 #ifdef __cplusplus
 extern "C" {
