@@ -1060,10 +1060,10 @@ void vulkan_update_global_uniform_buffer(vulkan_shader *shader, scene_global_uni
     u8 *addr = static_cast<u8 *>(shader->per_frame_mapped_data) + ((shader->per_frame_stride * current_frame_index));
     dcopy_memory(addr, scene_ubo, scene_aligned);
 
+    u32 size = shader->per_frame_uniform_offsets[2] - scene_aligned;
     u64 light_aligned  = scene_aligned;
-    // u64 light_aligned  = align_upto(sizeof(light_global_uniform_buffer_object), shader->min_ubo_alignment);
     addr              += light_aligned;
-    dcopy_memory(addr, light_ubo, shader->per_frame_uniform_offsets[2]);
+    dcopy_memory(addr, light_ubo, size);
 }
 
 u32 vulkan_calculate_vertex_offset(vulkan_context *vk_context, u32 geometry_id)

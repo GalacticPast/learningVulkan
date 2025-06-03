@@ -17,9 +17,9 @@ enum shader_stage
 enum shader_scope
 {
     // global
-    SHADER_PER_FRAME_UNIFORM = 0,
+    SHADER_PER_FRAME_UNIFORM  = 0,
     // local
-    SHADER_PER_GROUP_UNIFORM = 1,
+    SHADER_PER_GROUP_UNIFORM  = 1,
     // object
     SHADER_PER_OBJECT_UNIFORM = 2,
 };
@@ -36,15 +36,17 @@ enum attribute_types
     VEC_3      = 12,
     VEC_2      = 8,
 };
+//INFO: I just decided this arbitarily so....
+#define MAX_UNIFORM_ATTRIBUTES 5
 
 struct shader_uniform_config
 {
-    dstring                 name;
-    shader_stage            stage;
-    shader_scope            scope;
-    u32                     set;
-    u32                     binding;
-    darray<attribute_types> types;
+    dstring         name;
+    shader_stage    stage;
+    shader_scope    scope;
+    u32             set;
+    u32             binding;
+    attribute_types types[MAX_UNIFORM_ATTRIBUTES];
 };
 
 // attributes can only be set for the vertex stage.

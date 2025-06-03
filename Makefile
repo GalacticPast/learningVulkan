@@ -11,7 +11,9 @@ DIR := $(subst /,\,${CURDIR})
 
 assembly := learningVulkan
 extension := .exe
-defines := -DDEBUG -DDPLATFORM_WINDOWS -DTRACY_ENABLE
+defines := -DDEBUG -DDPLATFORM_WINDOWS
+# Turn this on if you want tracy profiler
+#defines += -DTRACY_ENABLE
 includes := -Iapp/tests -I$(src_dir)/src -I$(vulkan_sdk)/Include
 linker_flags := -lgdi32 -luser32 -lvulkan-1 -L$(vulkan_sdk)/Lib -ladvapi32 -ltdh -lWinmm
 compiler_flags := -Wall -Wextra -g -O0 -Wno-system-headers -Wno-unused-but-set-variable -Wno-unused-variable -Wno-varargs -Wno-unused-private-field -Wno-unused-parameter -Wno-unused-function -fsanitize=undefined -fsanitize-trap
@@ -24,7 +26,8 @@ src_files_cpp := $(call rwildcard,$(src_dir)/,*.cpp)
 # Tracy integration
 src_files_cpp := $(filter-out $(src_dir)/src/vendor/tracy/%, $(src_files_cpp))
 src_files_c := $(filter-out $(src_dir)/src/vendor/tracy/%, $(src_files_c))
-src_files_cpp += $(src_dir)/src/vendor/tracy/TracyClient.cpp
+#turn this on if you want tracy
+#src_files_cpp += $(src_dir)/src/vendor/tracy/TracyClient.cpp
 
 directories:= $(subst $(DIR),,$(shell dir $(src_dir) /S /AD /B | findstr /i $(src_dir) )) # Get all directories under src.
 

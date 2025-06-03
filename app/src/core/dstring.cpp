@@ -1,8 +1,7 @@
-#include "dstring.hpp"
 #include "core/dasserts.hpp"
 #include "core/dmemory.hpp"
 #include "core/logger.hpp"
-#include "math/dmath.hpp"
+#include "dstring.hpp"
 
 // TODO: temporary
 #include <cstdio>
@@ -57,18 +56,25 @@ u32 string_copy_format(char *dest, const char *format, u32 offset_to_dest, ...)
     return written + 1;
 }
 
-void dstring::operator=(const dstring *in_string)
+char &dstring::operator[](u32 index)
 {
-    dcopy_memory(this, string, sizeof(dstring));
+    DASSERT_MSG(index < MAX_STRING_LENGTH, "Index should be less than MAX_STRING_LENGTH");
+    return string[index];
 }
 
-void dstring::operator=(const char *c_string)
+dstring &dstring::operator=(const dstring *in_string)
+{
+    dcopy_memory(this, string, sizeof(dstring));
+    return *this;
+}
+
+dstring &dstring::operator=(const char *c_string)
 {
     u64 len = strlen(c_string);
     if (len > MAX_STRING_LENGTH)
     {
         DWARN("String you want to assign is bigger than 512bytes.");
-        return;
+        return *this;
     }
     if (string[0])
     {
@@ -78,6 +84,7 @@ void dstring::operator=(const char *c_string)
     dcopy_memory(string, reinterpret_cast<const void *>(c_string), len * sizeof(char));
     str_len     = len;
     string[len] = '\0';
+    return *this;
 }
 
 void dstring::clear()
@@ -106,6 +113,44 @@ s32 string_first_char_occurence(const char *string, const char ch)
         }
     }
     return -1;
+}
+
+void string_split(dstring *string, const char ch, darray<dstring> *split_strings)
+{
+    DASSERT(string);
+    DASSERT(split_strings);
+
+    u32 len = string->str_len;
+    DASSERT(len != INVALID_ID);
+    DASSERT(len < MAX_STRING_LENGTH);
+
+    dstring a{};
+    dstring b{};
+
+    u32 a_index = 0;
+    u32 b_index = 0;
+
+    u32     &ref_index = a_index;
+    dstring &ref       = a;
+    for (u32 i = 0; i < len; i++)
+    {
+        if ((*string)[i] == ' ')
+        {
+            continue;
+        }
+        if ((*string)[i] == ch)
+        {
+            ref       = b;
+            ref_index = b_index;
+        }
+        ref[ref_index++] = (*string)[i];
+    }
+    a.str_len = a_index;
+    b.str_len = b_index;
+    split_strings->push_back(a);
+    split_strings->push_back(b);
+
+    return;
 }
 
 s32 string_num_of_substring_occurence(const char *string, const char *sub_str)

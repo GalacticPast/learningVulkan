@@ -170,6 +170,7 @@ template <typename T> void darray<T>::clear()
     {
         dzero_memory(data, capacity);
     }
+    length = 0;
 }
 
 template <typename T> u64 darray<T>::size()

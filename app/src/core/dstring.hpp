@@ -1,4 +1,5 @@
 #pragma once
+#include "containers/darray.hpp"
 #include "defines.hpp"
 #include "math/dmath_types.hpp"
 //
@@ -18,8 +19,10 @@ class dstring
 
     dstring();
     dstring(const char *c_string);
-    void operator=(const char *c_string);
-    void operator=(const dstring *str);
+    char& operator[](u32 index);
+    dstring& operator=(const char *c_string);
+    dstring& operator=(const dstring *str);
+    dstring& operator=(const char ch);
     void clear();
 
     const char *c_str();
@@ -27,6 +30,8 @@ class dstring
 
 // @param: return false if strings are not equal, true if they are equal
 bool string_compare(const char *str0, const char *str1);
+// ch -> identifer to split the string to
+bool string_split(const dstring *string, const char ch, darray<dstring>* split_strings);
 
 u32 string_copy(char *dest, const char *src, u32 offset_to_dest);
 u32 string_length(const char *string);

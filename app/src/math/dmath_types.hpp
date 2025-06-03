@@ -251,26 +251,26 @@ struct mat4
         data[15] = 1.0f;
     }
 
-    inline mat4 operator +(mat4 matrix_1)
+    inline mat4 operator+(mat4 matrix_1)
     {
         mat4 out_matrix = mat4();
 
-        f32 *dst_ptr = out_matrix.data;
+        f32       *dst_ptr = out_matrix.data;
         const f32 *m1_ptr  = this->data;
         const f32 *m2_ptr  = matrix_1.data;
 
-        for(s32 i = 0 ; i < 16 ; i++)
+        for (s32 i = 0; i < 16; i++)
         {
             dst_ptr[i] = m1_ptr[i] + m2_ptr[i];
         }
         return out_matrix;
     }
-    inline void operator +=(mat4 matrix_1)
+    inline void operator+=(mat4 matrix_1)
     {
-        f32 *m1_ptr  = this->data;
-        const f32 *m2_ptr  = matrix_1.data;
+        f32       *m1_ptr = this->data;
+        const f32 *m2_ptr = matrix_1.data;
 
-        for(s32 i = 0 ; i < 16 ; i++)
+        for (s32 i = 0; i < 16; i++)
         {
             m1_ptr[i] += m2_ptr[i];
         }
@@ -339,8 +339,8 @@ struct scene_global_uniform_buffer_object
 };
 struct light_global_uniform_buffer_object
 {
-    math::vec3 position;
-    math::vec3 color;
+    alignas(16) math::vec3 position;
+    alignas(16) math::vec3 color;
 };
 
 struct object_uniform_buffer_object
@@ -348,9 +348,9 @@ struct object_uniform_buffer_object
     math::mat4 model;
 };
 
-struct vk_push_constant// aka push constants
+struct vk_push_constant // aka push constants
 {
-    math::mat4 model;         //64 bytes
+    math::mat4 model; // 64 bytes
     math::vec4 diffuse_color;
     math::vec4 padding;
     math::vec4 padding2;
