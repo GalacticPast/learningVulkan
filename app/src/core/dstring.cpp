@@ -1,7 +1,7 @@
+#include "dstring.hpp"
 #include "core/dasserts.hpp"
 #include "core/dmemory.hpp"
 #include "core/logger.hpp"
-#include "dstring.hpp"
 
 // TODO: temporary
 #include <cstdio>
@@ -90,6 +90,7 @@ dstring &dstring::operator=(const char *c_string)
 void dstring::clear()
 {
     dzero_memory(string, MAX_STRING_LENGTH);
+    str_len = 0;
 }
 
 const char *dstring::c_str()
@@ -125,30 +126,30 @@ void string_split(dstring *string, const char ch, darray<dstring> *split_strings
     DASSERT(len < MAX_STRING_LENGTH);
 
     dstring a{};
-    dstring b{};
 
-    u32 a_index = 0;
-    u32 b_index = 0;
+    u32 a_ind = 0;
 
-    u32     &ref_index = a_index;
-    dstring &ref       = a;
     for (u32 i = 0; i < len; i++)
     {
+        if ((*string)[i] == '\n')
+        {
+            break;
+        }
         if ((*string)[i] == ' ')
         {
             continue;
         }
         if ((*string)[i] == ch)
         {
-            ref       = b;
-            ref_index = b_index;
+            a.str_len = a_ind;
+            split_strings->push_back(a);
+
+            a.clear();
+            a_ind = 0;
+            continue;
         }
-        ref[ref_index++] = (*string)[i];
+        a[a_ind++] = (*string)[i];
     }
-    a.str_len = a_index;
-    b.str_len = b_index;
-    split_strings->push_back(a);
-    split_strings->push_back(b);
 
     return;
 }

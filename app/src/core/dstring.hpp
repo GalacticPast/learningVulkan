@@ -19,19 +19,20 @@ class dstring
 
     dstring();
     dstring(const char *c_string);
-    char& operator[](u32 index);
-    dstring& operator=(const char *c_string);
-    dstring& operator=(const dstring *str);
-    dstring& operator=(const char ch);
-    void clear();
+    char    &operator[](u32 index);
+    dstring &operator=(const char *c_string);
+    dstring &operator=(const dstring *str);
+    dstring &operator=(const char ch);
+    void     clear();
 
     const char *c_str();
 };
 
 // @param: return false if strings are not equal, true if they are equal
 bool string_compare(const char *str0, const char *str1);
-// ch -> identifer to split the string to
-bool string_split(const dstring *string, const char ch, darray<dstring>* split_strings);
+// ch -> identifer to split the string to or if it cannot find the identifer
+// it will copy everything till it encounters a new line char
+void string_split(dstring *string, const char ch, darray<dstring> *split_strings);
 
 u32 string_copy(char *dest, const char *src, u32 offset_to_dest);
 u32 string_length(const char *string);

@@ -6,6 +6,12 @@
       "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|D:\\projects\\learningVulkan\\app\\src\\resources\\shader_system.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
     },
     {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|D:\\projects\\learningVulkan\\app\\src\\renderer\\vulkan\\vulkan_backend.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|D:\\projects\\learningVulkan\\app\\src\\renderer\\vulkan\\vulkan_graphics_pipeline.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
+    },
+    {
       "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|D:\\projects\\learningVulkan\\app\\src\\core\\dfile_system.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
     },
     {
@@ -19,17 +25,43 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-          "SelectedChildIndex": 1,
+          "SelectedChildIndex": 3,
           "Children": [
             {
               "$type": "Document",
               "DocumentIndex": 1,
+              "Title": "vulkan_backend.cpp",
+              "DocumentMoniker": "D:\\projects\\learningVulkan\\app\\src\\renderer\\vulkan\\vulkan_backend.cpp",
+              "RelativeDocumentMoniker": "..\\app\\src\\renderer\\vulkan\\vulkan_backend.cpp",
+              "ToolTip": "D:\\projects\\learningVulkan\\app\\src\\renderer\\vulkan\\vulkan_backend.cpp",
+              "RelativeToolTip": "..\\app\\src\\renderer\\vulkan\\vulkan_backend.cpp",
+              "ViewState": "AgIAALICAAAAAAAAAAAewNkCAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000677|",
+              "WhenOpened": "2025-06-03T04:03:31.385Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 2,
+              "Title": "vulkan_graphics_pipeline.cpp",
+              "DocumentMoniker": "D:\\projects\\learningVulkan\\app\\src\\renderer\\vulkan\\vulkan_graphics_pipeline.cpp",
+              "RelativeDocumentMoniker": "..\\app\\src\\renderer\\vulkan\\vulkan_graphics_pipeline.cpp",
+              "ToolTip": "D:\\projects\\learningVulkan\\app\\src\\renderer\\vulkan\\vulkan_graphics_pipeline.cpp",
+              "RelativeToolTip": "..\\app\\src\\renderer\\vulkan\\vulkan_graphics_pipeline.cpp",
+              "ViewState": "AgIAAOsAAAAAAAAAAAAewPcAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000677|",
+              "WhenOpened": "2025-06-03T04:03:15.388Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 3,
               "Title": "dfile_system.cpp",
               "DocumentMoniker": "D:\\projects\\learningVulkan\\app\\src\\core\\dfile_system.cpp",
               "RelativeDocumentMoniker": "..\\app\\src\\core\\dfile_system.cpp",
               "ToolTip": "D:\\projects\\learningVulkan\\app\\src\\core\\dfile_system.cpp",
               "RelativeToolTip": "..\\app\\src\\core\\dfile_system.cpp",
-              "ViewState": "AgIAACUAAAAAAAAAAAApwD4AAAAAAAAAAAAAAA==",
+              "ViewState": "AgIAABsAAAAAAAAAAAAewCcAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000677|",
               "WhenOpened": "2025-06-03T00:49:46.42Z",
               "EditorCaption": ""
@@ -42,14 +74,14 @@
               "RelativeDocumentMoniker": "..\\app\\src\\resources\\shader_system.cpp",
               "ToolTip": "D:\\projects\\learningVulkan\\app\\src\\resources\\shader_system.cpp",
               "RelativeToolTip": "..\\app\\src\\resources\\shader_system.cpp",
-              "ViewState": "AgIAAF8AAAAAAAAAAAApwLAAAAAAAAAAAAAAAA==",
+              "ViewState": "AgIAAIAAAAAAAAAAAAAewIwAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000677|",
               "WhenOpened": "2025-06-03T00:41:52.977Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 2,
+              "DocumentIndex": 4,
               "Title": "main.cpp",
               "DocumentMoniker": "D:\\projects\\learningVulkan\\app\\src\\main.cpp",
               "RelativeDocumentMoniker": "..\\app\\src\\main.cpp",
@@ -57,8 +89,7 @@
               "RelativeToolTip": "..\\app\\src\\main.cpp",
               "ViewState": "AgIAACQAAAAAAAAAAAAAAFoAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000677|",
-              "WhenOpened": "2025-06-03T00:41:05.187Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-06-03T00:41:05.187Z"
             }
           ]
         }

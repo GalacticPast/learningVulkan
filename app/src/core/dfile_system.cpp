@@ -5,7 +5,7 @@
 #include "dstring.hpp"
 #include <string>
 
-bool file_open(dstring file_name, std::ifstream* out_file_handle, bool is_binary)
+bool file_open(dstring file_name, std::ifstream *out_file_handle, bool is_binary)
 {
     DASSERT(out_file_handle);
 
@@ -25,21 +25,22 @@ bool file_open(dstring file_name, std::ifstream* out_file_handle, bool is_binary
     return true;
 }
 
-bool file_close(std::ifstream* f)
+bool file_close(std::ifstream *f)
 {
     DASSERT(f);
     f->close();
     return true;
 }
 
-bool file_get_line(std::ifstream& f, dstring* out_line)
+bool file_get_line(std::ifstream &f, dstring *out_line)
 {
     DASSERT(f);
     DASSERT(out_line);
 
     f.getline(out_line->string, MAX_STRING_LENGTH);
+    out_line->str_len = f.gcount();
 
-    if(f.fail())
+    if (f.fail())
     {
         std::ios_base::iostate state = f.rdstate();
 
@@ -62,10 +63,9 @@ bool file_get_line(std::ifstream& f, dstring* out_line)
     return true;
 }
 
-
 bool file_open_and_read(const char *file_name, u64 *buffer_size_requirements, char *buffer, bool is_binary)
 {
-    u32 io_stream_flags = std::ios::in;
+    u32 io_stream_flags = std::ios::ate;
     if (is_binary)
     {
         io_stream_flags |= std::ios::binary;

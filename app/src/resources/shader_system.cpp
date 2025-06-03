@@ -20,8 +20,8 @@ struct shader_system_state
 static shader_system_state *shader_sys_state_ptr = nullptr;
 
 static bool shader_system_create_default_shader(shader *out_shader, u64 *out_shader_id);
-static void shader_system_add_uniform(shader_config *out_config, const char *name, shader_stage stage,
-                                      shader_scope scope, u32 set, u32 binding, darray<attribute_types> types);
+static void shader_system_add_uniform(shader_config *out_config, dstring *name, shader_stage stage,
+                                      shader_scope scope, u32 set, u32 binding, attribute_types type);
 static void shader_system_add_attributes(shader_config *out_config, const char *name, u32 location,
                                          attribute_types type);
 
@@ -89,7 +89,7 @@ static void shader_parse_configuration_file(dstring conf_file_name, shader_confi
     string_copy_format(full_file_path.string, "%s%s", 0, prefix, conf_file_name.c_str());
 
     std::ifstream file;
-    bool result = file_open(full_file_path,&file,false);
+    bool          result = file_open(full_file_path, &file, false);
     DASSERT(result);
 
     // NOTE:  this is literraly an adhoc aproach. So future me learn to write a proper parser :)
@@ -98,35 +98,93 @@ static void shader_parse_configuration_file(dstring conf_file_name, shader_confi
     bool has_vertex   = false;
     bool has_fragment = false;
 
-    auto turn_to_line = [](const char *buffer_to_line) {
-        char *line  = const_cast<char *>(buffer_to_line);
-        u32   index = string_first_char_occurence(line, '\n');
-        DASSERT(index != INVALID_ID);
-        line[index] = '\0';
+    auto go_to_colon = [](const char *line) -> const char * {
+        u32 index = 0;
+        while (line[index] != ':')
+        {
+            if (line[index] == '\n' || line[index] == '\0')
+            {
+                return nullptr;
+            }
+            index++;
+        }
+        return line + index;
     };
-    auto turn_to_buffer = [](const char *line_to_buffer) {
-        char *line  = const_cast<char *>(line_to_buffer);
-        u32   index = string_first_char_occurence(line, '\0');
-        DASSERT(index != INVALID_ID);
-        line[index] = '\n';
+    auto translate_shader_scope_type = [](dstring string) -> shader_scope {
+        const char *str = string.c_str();
+        if (string_compare(str, "per_frame"))
+        {
+            return SHADER_PER_FRAME_UNIFORM;
+        }
+        else if (string_compare(str, "per_group"))
+        {
+            return SHADER_PER_GROUP_UNIFORM;
+        }
+
+        return SHADER_SCOPE_UNKNOWN;
     };
 
+    auto translate_shader_stage_type = [](dstring string) -> shader_stage {
+        const char *str = string.c_str();
+
+        if (string_compare(str, "vertex"))
+        {
+            return STAGE_VERTEX;
+        }
+        else if (string_compare(str, "FRAGMENT"))
+        {
+            return STAGE_FRAGMENT;
+        }
+        return STAGE_UNKNOWN;
+    };
+
+    auto translate_attr_type = [](dstring string) -> attribute_types {
+        const char *str = string.c_str();
+
+        if (string_compare(str, "vec3"))
+        {
+            return VEC_3;
+        }
+        else if (string_compare(str, "vec4"))
+        {
+            return VEC_4;
+        }
+        else if (string_compare(str, "vec2"))
+        {
+            return VEC_2;
+        }
+        else if (string_compare(str, "mat4"))
+        {
+            return MAT_4;
+        }
+        else if (string_compare(str, "vec4"))
+        {
+            return VEC_4;
+        }
+        else if (string_compare(str, "sampler2D"))
+        {
+            return SAMPLER_2D;
+        }
+        return MAX_SHADER_ATTRIBUTE_TYPE;
+    };
 
     dstring line;
-    while(file_get_line(file, &line))
+    u32     num_stages = 0;
+    while (file_get_line(file, &line))
     {
-        //INFO: if comment skip line
-        if(line[0] == '#')
+        // INFO: if comment skip line
+        if (line[0] == '#')
         {
             continue;
         }
         dstring identifier;
 
         u32 index = 0;
-        u32 j = 0;
-        while(line[index] != ':' &&  line[index] != '\n')
+        u32 j     = 0;
+
+        while (line[index] != ':' && line[index] != '\n')
         {
-            if(line[index] == ' ')
+            if (line[index] == ' ')
             {
                 index++;
                 continue;
@@ -134,95 +192,123 @@ static void shader_parse_configuration_file(dstring conf_file_name, shader_confi
             identifier[j++] = line[index++];
         }
 
-        if(string_compare(identifier.c_str(), "stages"))
+        if (string_compare(identifier.c_str(), "stages"))
         {
+            darray<dstring> stages;
 
+            const char *str = go_to_colon(line.c_str());
+            DASSERT(str);
+            dstring string = str;
+
+            string_split(&string, ',', &stages);
+            num_stages = stages.size();
+
+            for (u32 i = 0; i < num_stages; i++)
+            {
+                if (string_compare(stages[i].c_str(), "vertex"))
+                {
+                    out_config->stages.push_back(STAGE_VERTEX);
+                }
+                else if (string_compare(stages[i].c_str(), "fragment"))
+                {
+                    out_config->stages.push_back(STAGE_FRAGMENT);
+                }
+                else
+                {
+                    DERROR("Unsupported stage %s", stages[i].c_str());
+                }
+            }
         }
-        else if(string_compare(identifier.c_str(), "filepaths"))
+        else if (string_compare(identifier.c_str(), "filepaths"))
         {
+            darray<dstring> filepaths;
 
+            const char *str = go_to_colon(line.c_str());
+            DASSERT(str);
+
+            dstring string = str;
+
+            string_split(&string, ',', &filepaths);
+            u32 num_filepaths = filepaths.size();
+            DASSERT_MSG(num_filepaths == num_stages, "There should be a corresponding filepath for each stages");
+            for (u32 i = 0; i < num_stages; i++)
+            {
+                if (string_num_of_substring_occurence(filepaths[i].c_str(), "vert"))
+                {
+                    out_config->vert_spv_full_path = filepaths[i];
+                }
+                else if (string_num_of_substring_occurence(filepaths[i].c_str(), "frag"))
+                {
+                    out_config->frag_spv_full_path = filepaths[i];
+                }
+                else
+                {
+                    DERROR("Unsupported filepath %s", filepaths[i].c_str());
+                }
+            }
         }
-        else if(string_compare(identifier.c_str(), "has_per_frame"))
+        else if (string_compare(identifier.c_str(), "has_per_frame"))
         {
-
+            out_config->has_per_frame = true;
         }
-        else if(string_compare(identifier.c_str(), "has_per_group"))
+        else if (string_compare(identifier.c_str(), "has_per_group"))
         {
-
+            out_config->has_per_group = true;
         }
-        else if(string_compare(identifier.c_str(), "has_per_object"))
+        else if (string_compare(identifier.c_str(), "has_per_object"))
         {
-
+            out_config->has_per_object = true;
         }
-        else if(string_compare(identifier.c_str(), "attribute"))
+        else if (string_compare(identifier.c_str(), "attribute"))
         {
+            darray<dstring> list;
+            const char     *str = go_to_colon(line.c_str());
+            DASSERT(str);
 
+            dstring string = str;
+
+            string_split(&string, ',', &list);
+            u32 size = list.size();
+            DASSERT_MSG(size == 3, "There should be a name for the attribute, location for it , and a type.");
+
+            u32             location = list[1].string[0] - '0';
+            attribute_types type     = translate_attr_type(list[2]);
+            shader_system_add_attributes(out_config, list[0].c_str(), location, type);
         }
-        else if(string_compare(identifier.c_str(), "uniform"))
+        else if (string_compare(identifier.c_str(), "uniform"))
         {
+            darray<dstring> list;
+            const char     *str = go_to_colon(line.c_str());
+            DASSERT(str);
 
+            dstring string = str;
+            string_split(&string, ',', &list);
+
+            u32 size = list.size();
+            DASSERT_MSG(size == 6, "Uniforms must have 6 identifiers associated with it");
+
+
+//NOTE: uniform_name,stage,scope,set,binding,type. Make sure there are 6 in total.
+//           0        1     2     3   4       5
+
+            shader_uniform_config conf{};
+
+            shader_stage stage = translate_shader_stage_type(list[1]);
+            shader_scope scope = translate_shader_scope_type(list[2]);
+
+            u32 set     = list[3].string[0] - '0';
+            u32 binding = list[4].string[0] - '0';
+            attribute_types type = translate_attr_type(list[5]);
+
+            shader_system_add_uniform(out_config, &list[0], stage, scope, set, binding,
+                                      type);
         }
         else
         {
             DERROR("Unidentified identifier %s.", identifier.c_str());
             return;
         }
-
-
-
     }
-
-
-
-
-        //u32 index = string_first_string_occurence(buffer, "stages");
-        //if (index == INVALID_ID)
-        //{
-        //    DFATAL("shader configuration file %s doenst have the identifier 'stages'.", conf_file_name.c_str());
-        //    return;
-        //}
-        //const char *stages_ptr = buffer + index;
-        //turn_to_line(stages_ptr);
-
-        //index = string_first_string_occurence(stages_ptr, "vertex");
-        //if (index != INVALID_ID)
-        //{
-        //    has_vertex = true;
-        //}
-        //index = string_first_string_occurence(stages_ptr, "fragment");
-        //if (index != INVALID_ID)
-        //{
-        //    has_fragment = true;
-        //}
-
-        //if ((has_vertex || has_fragment) == false)
-        //{
-        //    DFATAL("Neither vertex nor fragment stages were specifed in the shader configuration file %s",
-        //           conf_file_name.c_str());
-        //}
-        //turn_to_buffer(stages_ptr);
-    }
-    // f//ilepaths
-    {
-        //u32 index = string_first_string_occurence(buffer, "filepaths");
-        //if (index == INVALID_ID)
-        //{
-        //    DFATAL("shader configuration file %s doenst have the identifier 'filepaths'.", conf_file_name.c_str());
-        //    return;
-        //}
-        //const char* file_path_ptr = buffer + index;
-        //turn_to_line(file_path_ptr);
-
-        //if(has_vertex)
-        //{
-        //    char* ptr = const_cast<char *>(file_path_ptr);
-        //    u32 i = 0;
-        //    while(*ptr != '\0' || *ptr != ',')
-        //    {
-        //    }
-        //}
-    }
-
 }
 
 bool shader_system_create_default_shader(shader *out_shader, u64 *out_shader_id)
@@ -322,8 +408,8 @@ static void shader_system_add_attributes(shader_config *out_config, const char *
     return;
 }
 
-static void shader_system_add_uniform(shader_config *out_config, const char *name, shader_stage stage,
-                                      shader_scope scope, u32 set, u32 binding, darray<attribute_types> types)
+static void shader_system_add_uniform(shader_config *out_config, dstring *name, shader_stage stage,
+                                      shader_scope scope, u32 set, u32 binding, attribute_types type)
 {
     DASSERT(out_config);
 
@@ -331,6 +417,7 @@ static void shader_system_add_uniform(shader_config *out_config, const char *nam
 
     DASSERT_MSG(set < 2, "You cannot have a set in local scope. You can have uniforms for only global scope (aka set "
                          "0) or for instance scope (aka set 1)")
+
     switch (scope)
     {
         // global

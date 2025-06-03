@@ -139,7 +139,7 @@ struct vulkan_shader
     darray<void *> per_group_buffer_data;
 
     // INFO: for now first will always be vertex and second will always be fragment
-    shader_stage stages;
+    darray<shader_stage> stages;
 
     VkVertexInputBindingDescription           attribute_description;
     darray<VkVertexInputAttributeDescription> input_attribute_descriptions;

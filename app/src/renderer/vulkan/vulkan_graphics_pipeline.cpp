@@ -20,17 +20,23 @@ bool vulkan_create_pipeline(vulkan_context *vk_context, vulkan_shader* shader)
         vk_context, reinterpret_cast<const char *>(shader->vertex_shader_code.data), shader->vertex_shader_code.size());
 
     //INFO: this is redundant
-    if(shader->stages & STAGE_VERTEX)
+    u32 num_stages = shader->stages.size();
+    for(u32 i = 0 ; i < num_stages ; i++)
     {
-        shader_stage_count++;
-        stage_flag_bits.push_back(VK_SHADER_STAGE_VERTEX_BIT);
+        if(shader->stages[i] & STAGE_VERTEX)
+        {
+            shader_stage_count++;
+            stage_flag_bits.push_back(VK_SHADER_STAGE_VERTEX_BIT);
 
+        }
+        else if(shader->stages[i] & STAGE_FRAGMENT)
+        {
+            shader_stage_count++;
+            stage_flag_bits.push_back(VK_SHADER_STAGE_FRAGMENT_BIT);
+        }
     }
-    if(shader->stages & STAGE_FRAGMENT)
-    {
-        shader_stage_count++;
-        stage_flag_bits.push_back(VK_SHADER_STAGE_FRAGMENT_BIT);
-    }
+
+
     DASSERT_MSG(shader_stage_count, "There cannot be 0 shader stages for a pipeline");
 
     VkShaderModule shader_modules[2] = {vert_shader_module, frag_shader_module};
