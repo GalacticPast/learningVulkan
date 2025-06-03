@@ -1,7 +1,47 @@
-/.vs
-/bin
-/src/platform/wayland
-/.vscode
-compile_flags.json
-/obj
-/.cache
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+*.log
+
+# Visual Studio files
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Rider IDE
+.idea/
+
+# Build configuration files
+*.VC.db
+*.VC.VC.opendb
+
+# Backup & crash files
+*.bak
+*.tmp
+*.cache
+*.pidb
+*.svclog
+
+# NUGET
+*.nupkg
+packages/
+*.snupkg
+project.lock.json
+project.fragment.lock.json
+artifacts/
+
+# dotnet CLI
+project.assets.json
+*.csproj.user
+
+# Others
+*.dbmdl
+*.pdb
+*.mdb
+
+# OS files
+.DS_Store
+Thumbs.db
+
