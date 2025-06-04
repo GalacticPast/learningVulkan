@@ -86,7 +86,7 @@ int main()
     scene_ubo.projection = mat4_perspective(fov_rad, aspect_ratio, 0.01f, 1000.0f);
 
     light_global_uniform_buffer_object light_ubo{};
-    light_ubo.color    = {1.0f, 1.0f, 1.0f};
+    light_ubo.color    = {1.0f, 0.0f, 0.0f};
 
 
     render_data triangle{};
@@ -126,7 +126,7 @@ int main()
         geos[1] = geometry_system_get_geometry(id2);
         //geos[2] = geometry_system_get_default_plane();
 
-        light_ubo.position = {3.0f, 2.0f, 0.0f};
+        light_ubo.position = {3.0f, 1.0f, 0.0f};
         math::vec3 xyz = light_ubo.position;
         geos[1]->ubo.model = mat4_translation(light_ubo.position);
 
@@ -156,8 +156,8 @@ int main()
         update_camera(&triangle.scene_ubo,&triangle.light_ubo, frame_elapsed_time);
 
         f32 z = sinf(frame_elapsed_time);
-        geos[0]->ubo.model *= mat4_euler_y(z);
-        geos[1]->ubo.model *= mat4_euler_y(z);
+        //geos[0]->ubo.model *= mat4_euler_y(z);
+        //geos[1]->ubo.model *= mat4_euler_y(z);
         math::vec3 pos = mat4_position(geos[1]->ubo.model);
         triangle.light_ubo.position = pos;
 
