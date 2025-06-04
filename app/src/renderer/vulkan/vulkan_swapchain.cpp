@@ -161,6 +161,10 @@ bool create_swapchain(vulkan_context *vk_context)
         vk_context->vk_swapchain.depth_image.format, VK_IMAGE_ASPECT_DEPTH_BIT, DEFAULT_MIP_LEVEL);
     DASSERT(res == true);
 
+    vk_context->swapchain_recreated[0] = true;
+    vk_context->swapchain_recreated[1] = true;
+    vk_context->swapchain_recreated[2] = true;
+
     return true;
 }
 

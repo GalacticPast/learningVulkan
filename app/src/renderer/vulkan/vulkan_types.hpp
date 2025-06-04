@@ -49,9 +49,9 @@ struct vulkan_device
     // INFO: might need the selected graphics queue's QueueFamilyProperties.
     darray<u32> enabled_queue_family_indicies;
 
-    u32 graphics_family_index      = INVALID_ID;
-    u32 present_family_index       = INVALID_ID;
-    u32 transfer_family_index      = INVALID_ID;
+    u32 graphics_family_index = INVALID_ID;
+    u32 present_family_index  = INVALID_ID;
+    u32 transfer_family_index = INVALID_ID;
 };
 
 struct vulkan_image
@@ -202,4 +202,5 @@ struct vulkan_context
     u32         enabled_extension_count = INVALID_ID;
     const char *enabled_extension_names[4];
 
+    bool swapchain_recreated[MAX_FRAMES_IN_FLIGHT];
 };

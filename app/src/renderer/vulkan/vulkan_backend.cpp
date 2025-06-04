@@ -1256,11 +1256,12 @@ bool vulkan_draw_frame(render_data *render_data)
     swapchain_img.view   = vk_context->vk_swapchain.img_views[image_index];
 
     // transition it
-    if(vk_context->frame_counter < MAX_FRAMES_IN_FLIGHT)
+    if(vk_context->swapchain_recreated[current_frame])
     {
         vulkan_transition_image_layout(vk_context, &vk_context->graphics_command_pool,
                                        &vk_context->vk_device.graphics_queue, &swapchain_img,
                                        VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+        vk_context->swapchain_recreated[current_frame] = false;
     }
     else
     {
