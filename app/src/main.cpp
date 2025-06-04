@@ -106,26 +106,34 @@ int main()
 
 #if true
     {
-        geometry_config parent_config = geometry_system_generate_cube_config();
-        geometry_config child_config{};
+        dstring cube_obj = "cube.obj";
+        geometry_config parent_config = *geometry_system_generate_config(cube_obj);
+        dstring mat_name = "orange_lines_512.json";
+        parent_config.material = material_system_acquire_from_config_file(&mat_name);
 
-        geometry_system_copy_config(&child_config, &parent_config);
+        dstring sphere_obj = "sphere.obj";
+        geometry_config child_config = *geometry_system_generate_config(sphere_obj);
 
-        scale_geometries(&child_config, {0.5f, 0.5f, 0.5f});
+        mat_name.clear();
+        mat_name = DEFAULT_LIGHT_MATERIAL_HANDLE;
+        child_config.material = material_system_acquire_from_name(&mat_name);
 
-        u64 cube_id1 = geometry_system_create_geometry(&parent_config, false);
-        u64 cube_id2 = geometry_system_create_geometry(&child_config, false);
+        scale_geometries(&child_config, {0.2f, 0.2f, 0.2f});
+
+        u64 id1 = geometry_system_create_geometry(&parent_config, false);
+        u64 id2 = geometry_system_create_geometry(&child_config, false);
 
         geos    = static_cast<geometry **>(dallocate(sizeof(geometry *) * 2, MEM_TAG_UNKNOWN));
-        geos[0] = geometry_system_get_geometry(cube_id1);
-        geos[1] = geometry_system_get_geometry(cube_id2);
+        geos[0] = geometry_system_get_geometry(id1);
+        geos[1] = geometry_system_get_geometry(id2);
 
-        math::vec3 left    = {-4.0f, 0, 0};
-        geos[1]->ubo.model = mat4_translation(left);
+        math::vec3 right = {5.0f, 0, 0};
+        geos[1]->ubo.model = mat4_translation(right);
+        math::vec3  up = {0.0f, 4, 0};
+        geos[1]->ubo.model += mat4_translation(up);
 
-        dstring mat_file  = "orange_lines_512";
-        geos[1]->material = material_system_acquire_from_config_file(&mat_file);
-        geometry_count    = 2;
+        geometry_count = 2;
+
     }
 #endif
 

@@ -212,18 +212,20 @@ geometry_config geometry_system_generate_plane_config(f32 width, f32 height, u32
     return config;
 }
 
-geometry_config geometry_system_generate_cube_config()
+geometry_config* geometry_system_generate_config(dstring obj_file_name)
 {
-    const char *file_full_path = "../assets/meshes/cube.obj";
-    const char *file_name      = "cube.obj";
+    dstring file_full_path;
+    const char *prefix = "../assets/meshes/";
+    string_copy_format(file_full_path.string, "%s%s", 0, prefix, obj_file_name.c_str());
 
     geometry_config *config      = nullptr;
     u32              num_objects = INVALID_ID;
 
-    geometry_system_parse_obj(file_full_path, &num_objects, &config);
+    geometry_system_parse_obj(file_full_path.c_str(), &num_objects, &config);
+    DASSERT(config);
     config[0].material = material_system_get_default_material();
 
-    return config[0];
+    return config;
 }
 
 bool geometry_system_create_default_geometry()

@@ -106,6 +106,8 @@ struct texture
 };
 
 #define DEFAULT_MATERIAL_HANDLE "default_material"
+//INFO: maybe name it differenlty
+#define DEFAULT_LIGHT_MATERIAL_HANDLE "default_light_material"
 #define MAX_MATERIALS_LOADED 1024
 #define MATERIAL_NAME_MAX_LENGTH 256
 

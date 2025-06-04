@@ -1,4 +1,5 @@
 #version 450
+#extension GL_EXT_debug_printf : enable
 
 //light
 layout(set = 0, binding = 1)uniform uniform_light_object
@@ -17,19 +18,29 @@ layout(location = 3) in vec3 frag_position;
 
 layout(location = 0) out vec4 out_color;
 
+float radius = 1.0f;
+
 void main() {
-    vec3 norm = normalize(frag_normal);
-    vec3 light_dir = normalize(ulo.position - frag_position);
 
-    float diffuse_strength = max(dot(norm, light_dir),0.0);
-    vec3 diffuse = ulo.color * diffuse_strength;
+    // ambient lighting
+	float ambient = 0.20f;
 
-    float ambient_strength = 0.1f;
-    vec3 ambient = ulo.color * ambient_strength;
+	// diffuse lighting
+	vec3 normal = normalize(frag_normal);
+	vec3 light_dir = ulo.position - frag_position;
 
-    vec3 result = (ambient + diffuse) * frag_color;
+    float dis = length(light_dir);
 
-    vec4 color = texture(albedo_map, frag_tex_coord);
+    vec3 norm_light_dir = normalize(light_dir);
 
-    out_color = color;
+	float diffuse = max(dot(frag_normal, norm_light_dir), 0.0f);
+
+    if(dis < radius)
+    {
+        diffuse = 0.5f;
+        ambient = 0.5f;
+    }
+
+
+    out_color = texture(albedo_map, frag_tex_coord) * vec4(ulo.color * (diffuse + ambient), 1.0f);
 }

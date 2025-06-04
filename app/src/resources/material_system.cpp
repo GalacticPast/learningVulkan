@@ -58,10 +58,9 @@ material *material_system_acquire_from_config_file(dstring *file_base_name)
 {
     material_config base{};
     const char     *prefix = "../assets/materials/";
-    const char     *suffix = ".json";
 
     char path[128] = {};
-    string_copy_format(path, "%s%s%s", 0, prefix, file_base_name->c_str(), suffix);
+    string_copy_format(path, "%s%s", 0, prefix, file_base_name->c_str());
     dstring name;
     name = path;
     json_deserialize_material(&name, &base);
@@ -115,19 +114,36 @@ bool material_system_create_material(material_config *config)
 
 bool material_system_create_default_material()
 {
-    material default_mat{};
-    default_mat.name            = DEFAULT_MATERIAL_HANDLE;
-    default_mat.id              = 0;
-    default_mat.reference_count = 0;
-    default_mat.map.albedo      = texture_system_get_texture(DEFAULT_ALBEDO_TEXTURE_HANDLE);
-    default_mat.map.alpha       = texture_system_get_texture(DEFAULT_ALPHA_TEXTURE_HANDLE);
-    default_mat.diffuse_color   = {1.0f, 1.0f, 1.0f, 1.0f};
+    {
+        material default_mat{};
+        default_mat.name            = DEFAULT_MATERIAL_HANDLE;
+        default_mat.id              = 0;
+        default_mat.reference_count = 0;
+        default_mat.map.albedo      = texture_system_get_texture(DEFAULT_ALBEDO_TEXTURE_HANDLE);
+        default_mat.map.alpha       = texture_system_get_texture(DEFAULT_ALPHA_TEXTURE_HANDLE);
+        default_mat.diffuse_color   = {1.0f, 1.0f, 1.0f, 1.0f};
 
-    bool result = vulkan_create_material(&default_mat);
-    DASSERT(result);
+        bool result = vulkan_create_material(&default_mat);
+        DASSERT(result);
 
-    mat_sys_state_ptr->hashtable.insert(DEFAULT_MATERIAL_HANDLE, default_mat);
-    mat_sys_state_ptr->loaded_materials.push_back(DEFAULT_MATERIAL_HANDLE);
+        mat_sys_state_ptr->hashtable.insert(DEFAULT_MATERIAL_HANDLE, default_mat);
+        mat_sys_state_ptr->loaded_materials.push_back(DEFAULT_MATERIAL_HANDLE);
+    }
+    {
+        material default_light_mat{};
+        default_light_mat.name            = DEFAULT_LIGHT_MATERIAL_HANDLE;
+        default_light_mat.id              = 0;
+        default_light_mat.reference_count = 0;
+        default_light_mat.map.albedo      = texture_system_get_texture(DEFAULT_ALPHA_TEXTURE_HANDLE);
+        default_light_mat.map.alpha       = texture_system_get_texture(DEFAULT_ALPHA_TEXTURE_HANDLE);
+        default_light_mat.diffuse_color   = {1.0f, 1.0f, 1.0f, 1.0f};
+
+        bool result = vulkan_create_material(&default_light_mat);
+        DASSERT(result);
+
+        mat_sys_state_ptr->hashtable.insert(DEFAULT_LIGHT_MATERIAL_HANDLE, default_light_mat);
+        mat_sys_state_ptr->loaded_materials.push_back(DEFAULT_LIGHT_MATERIAL_HANDLE);
+    }
 
     return true;
 }
