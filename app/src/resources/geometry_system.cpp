@@ -212,9 +212,9 @@ geometry_config geometry_system_generate_plane_config(f32 width, f32 height, u32
     return config;
 }
 
-geometry_config* geometry_system_generate_config(dstring obj_file_name)
+geometry_config *geometry_system_generate_config(dstring obj_file_name)
 {
-    dstring file_full_path;
+    dstring     file_full_path;
     const char *prefix = "../assets/meshes/";
     string_copy_format(file_full_path.string, "%s%s", 0, prefix, obj_file_name.c_str());
 
@@ -245,8 +245,12 @@ bool geometry_system_create_default_geometry()
     {
         destroy_geometry_config(&default_geo_configs[i]);
     }
-
     dfree(default_geo_configs, num_of_objects * sizeof(geometry_config), MEM_TAG_GEOMETRY);
+
+    geometry_config plane_config = geometry_system_generate_plane_config(
+        1000, 1000, 500, 500, 50, 50, DEFAULT_PLANE_HANDLE, "orange_lines_512.json");
+    u64 plane_id = geometry_system_create_geometry(&plane_config, true);
+    destroy_geometry_config(&plane_config);
 
     return true;
 }
@@ -293,6 +297,20 @@ geometry *geometry_system_get_default_geometry()
     geo->reference_count++;
     return geo;
 }
+
+geometry *geometry_system_get_default_plane()
+{
+    geometry *geo = geo_sys_state_ptr->hashtable.find(DEFAULT_PLANE_HANDLE);
+    if (!geo)
+    {
+        DERROR("Default plane geometry is not loaded yet. How is this possible?? Make sure that you have initialzed the "
+               "geometry system first.");
+        return nullptr;
+    }
+    geo->reference_count++;
+    return geo;
+}
+
 
 void geometry_system_copy_config(geometry_config *dst_config, const geometry_config *src_config)
 {

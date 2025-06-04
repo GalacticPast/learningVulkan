@@ -85,11 +85,8 @@ int main()
     scene_ubo.projection = mat4_perspective(fov_rad, aspect_ratio, 0.01f, 1000.0f);
 
     light_global_uniform_buffer_object light_ubo{};
-    light_ubo.position = {5.0f, 4.0f, 0.0f};
     light_ubo.color    = {1.0f, 1.0f, 1.0f};
 
-    geometry_config plane_config =
-        geometry_system_generate_plane_config(10, 5, 5, 5, 5, 5, "its_a_plane", DEFAULT_MATERIAL_HANDLE);
 
     render_data triangle{};
 
@@ -118,22 +115,21 @@ int main()
         mat_name = DEFAULT_LIGHT_MATERIAL_HANDLE;
         child_config.material = material_system_acquire_from_name(&mat_name);
 
-        scale_geometries(&child_config, {0.2f, 0.2f, 0.2f});
+        scale_geometries(&child_config, {0.5f, 0.5f, 0.5f});
 
         u64 id1 = geometry_system_create_geometry(&parent_config, false);
         u64 id2 = geometry_system_create_geometry(&child_config, false);
 
-        geos    = static_cast<geometry **>(dallocate(sizeof(geometry *) * 2, MEM_TAG_UNKNOWN));
+        geos    = static_cast<geometry **>(dallocate(sizeof(geometry *) * 3, MEM_TAG_UNKNOWN));
         geos[0] = geometry_system_get_geometry(id1);
         geos[1] = geometry_system_get_geometry(id2);
+        //geos[2] = geometry_system_get_default_plane();
 
-        math::vec3 right = {5.0f, 0, 0};
-        geos[1]->ubo.model = mat4_translation(right);
-        math::vec3  up = {0.0f, 4, 0};
-        geos[1]->ubo.model += mat4_translation(up);
+        light_ubo.position = {5.0f, 5.0f, 5.0f};
+        math::vec3 xyz = light_ubo.position;
+        geos[1]->ubo.model = mat4_translation(light_ubo.position);
 
         geometry_count = 2;
-
     }
 #endif
 
@@ -158,8 +154,10 @@ int main()
 
         update_camera(&triangle.scene_ubo, frame_elapsed_time);
 
-        // geos[1]->ubo.model *= mat4_euler_y(z);
-        z = sinf(frame_elapsed_time);
+        f32 z = sinf(frame_elapsed_time);
+        geos[1]->ubo.model *= mat4_euler_y(z);
+        math::vec3 pos = mat4_position(geos[1]->ubo.model);
+        triangle.light_ubo.position = pos;
 
         application_run(&triangle);
 
@@ -200,6 +198,7 @@ void update_camera(scene_global_uniform_buffer_object *ubo, f64 start_time)
 
     static math::vec3 camera_pos   = math::vec3(0, 0, 6);
     static math::vec3 camera_euler = math::vec3(0, 0, 0);
+
 
     if (input_is_key_down(KEY_A) || input_is_key_down(KEY_LEFT))
     {

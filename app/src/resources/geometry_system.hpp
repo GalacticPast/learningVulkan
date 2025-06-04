@@ -13,6 +13,7 @@ geometry_config* geometry_system_generate_config(dstring obj_file_name);
 geometry *geometry_system_get_geometry(u64 id);
 
 geometry *geometry_system_get_default_geometry();
+geometry *geometry_system_get_default_plane();
 
 void geometry_system_get_geometries_from_file(const char *obj_file_name, const char *mtl_file_name, geometry ***geos,
                                               u32 *geometry_count);

@@ -23,7 +23,7 @@ float radius = 1.0f;
 void main() {
 
     // ambient lighting
-	float ambient = 0.20f;
+	float ambient = 0.10f;
 
 	// diffuse lighting
 	vec3 normal = normalize(frag_normal);
@@ -34,6 +34,7 @@ void main() {
     vec3 norm_light_dir = normalize(light_dir);
 
 	float diffuse = max(dot(frag_normal, norm_light_dir), 0.0f);
+
 
     if(dis < radius)
     {

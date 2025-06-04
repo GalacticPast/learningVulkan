@@ -63,10 +63,10 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <NMakeBuildCommandLine>cd .. &amp;&amp; build-debug.bat</NMakeBuildCommandLine>
+    <NMakeBuildCommandLine>cd .. &amp;&amp; build_debug.bat</NMakeBuildCommandLine>
     <NMakeOutput>..\bin\learningVulkan.exe</NMakeOutput>
     <NMakeCleanCommandLine>cd .. &amp;&amp; clean.bat</NMakeCleanCommandLine>
-    <NMakeReBuildCommandLine>cd .. &amp;&amp; (clean.bat &amp;&amp; build-debug.bat)</NMakeReBuildCommandLine>
+    <NMakeReBuildCommandLine>cd .. &amp;&amp; (clean.bat &amp;&amp; build_debug.bat)</NMakeReBuildCommandLine>
     <NMakePreprocessorDefinitions>
     </NMakePreprocessorDefinitions>
   </PropertyGroup>

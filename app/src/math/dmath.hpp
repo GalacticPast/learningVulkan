@@ -391,6 +391,11 @@ inline math::mat4 mat4_euler_xyz(f32 x_radians, f32 y_radians, f32 z_radians)
     return out_matrix;
 }
 
+inline math::vec3 mat4_position(math::mat4 matrix)
+{
+    return math::vec3(matrix.data[12], matrix.data[13], matrix.data[14]);
+}
+
 inline math::vec3 mat4_forward(math::mat4 matrix)
 {
     math::vec3 forward;
