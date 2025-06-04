@@ -341,6 +341,7 @@ struct light_global_uniform_buffer_object
 {
     alignas(16) math::vec3 position;
     alignas(16) math::vec3 color;
+    alignas(16) math::vec3 camera_pos;
 };
 
 struct object_uniform_buffer_object

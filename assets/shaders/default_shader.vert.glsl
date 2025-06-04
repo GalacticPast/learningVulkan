@@ -28,7 +28,7 @@ layout(location = 3) out vec3   frag_position;
 
 void main() {
     frag_color      = vec3(pc.diffuse_color);
-    frag_normal     = in_normal;
+    frag_normal     = mat3(transpose(inverse(pc.model))) * in_normal;
     frag_tex_coord  = in_tex_coord;
     frag_position   = vec3(pc.model * vec4(in_position, 1.0f));
 

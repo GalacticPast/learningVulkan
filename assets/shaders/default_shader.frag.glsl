@@ -6,6 +6,7 @@ layout(set = 0, binding = 1)uniform uniform_light_object
 {
     vec3 position;
     vec3 color;
+    vec3 camera_pos;
 }ulo;
 
 layout(set = 1, binding = 0) uniform sampler2D albedo_map;
@@ -28,12 +29,12 @@ void main() {
 	// diffuse lighting
 	vec3 normal = normalize(frag_normal);
 	vec3 light_dir = ulo.position - frag_position;
-
     float dis = length(light_dir);
-
     vec3 norm_light_dir = normalize(light_dir);
-
 	float diffuse = max(dot(frag_normal, norm_light_dir), 0.0f);
+
+    //specular ligthing
+
 
 
     if(dis < radius)

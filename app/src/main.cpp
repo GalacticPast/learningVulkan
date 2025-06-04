@@ -10,6 +10,7 @@
 
 #include "math/dmath.hpp"
 
+#include "math/dmath_types.hpp"
 #include "platform/platform.hpp"
 
 #include "resources/geometry_system.hpp"
@@ -23,7 +24,7 @@
 #include "../tests/linear_allocator/linear_allocator_test.hpp"
 #include "../tests/test_manager.hpp"
 
-void update_camera(scene_global_uniform_buffer_object *ubo, f64 start_time);
+void update_camera(scene_global_uniform_buffer_object *ubo,light_global_uniform_buffer_object* lbo, f64 start_time);
 
 void run_tests()
 {
@@ -115,7 +116,7 @@ int main()
         mat_name = DEFAULT_LIGHT_MATERIAL_HANDLE;
         child_config.material = material_system_acquire_from_name(&mat_name);
 
-        scale_geometries(&child_config, {0.5f, 0.5f, 0.5f});
+        scale_geometries(&child_config, {0.3f, 0.3f, 0.3f});
 
         u64 id1 = geometry_system_create_geometry(&parent_config, false);
         u64 id2 = geometry_system_create_geometry(&child_config, false);
@@ -125,7 +126,7 @@ int main()
         geos[1] = geometry_system_get_geometry(id2);
         //geos[2] = geometry_system_get_default_plane();
 
-        light_ubo.position = {5.0f, 5.0f, 5.0f};
+        light_ubo.position = {3.0f, 2.0f, 0.0f};
         math::vec3 xyz = light_ubo.position;
         geos[1]->ubo.model = mat4_translation(light_ubo.position);
 
@@ -152,9 +153,10 @@ int main()
         ZoneScoped;
         frame_start_time = platform_get_absolute_time();
 
-        update_camera(&triangle.scene_ubo, frame_elapsed_time);
+        update_camera(&triangle.scene_ubo,&triangle.light_ubo, frame_elapsed_time);
 
         f32 z = sinf(frame_elapsed_time);
+        geos[0]->ubo.model *= mat4_euler_y(z);
         geos[1]->ubo.model *= mat4_euler_y(z);
         math::vec3 pos = mat4_position(geos[1]->ubo.model);
         triangle.light_ubo.position = pos;
@@ -181,7 +183,7 @@ int main()
     application_shutdown();
 }
 
-void update_camera(scene_global_uniform_buffer_object *ubo, f64 start_time)
+void update_camera(scene_global_uniform_buffer_object *ubo,light_global_uniform_buffer_object* lbo, f64 start_time)
 {
     // ubo->model = mat4_euler_z((start_time * (90.0f * D_DEG2RAD_MULTIPLIER)));
     u32 s_width;
@@ -246,6 +248,8 @@ void update_camera(scene_global_uniform_buffer_object *ubo, f64 start_time)
         camera_pos.y += velocity.y * temp_move_speed;
         camera_pos.z += velocity.z * temp_move_speed;
     }
+
+    lbo->camera_pos = camera_pos;
 
     math::mat4 rotation    = mat4_euler_xyz(camera_euler.x, camera_euler.y, camera_euler.z);
     math::mat4 translation = mat4_translation(camera_pos);
