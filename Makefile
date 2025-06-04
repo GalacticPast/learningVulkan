@@ -44,6 +44,7 @@ assembly := learningVulkan
 extension :=
 includes := -Iapp/src -I$(VULKAN_SDK)/include
 compiler_flags := -Wall -Wextra -g -O0 -Wconversion -Wdouble-promotion -Wno-unused-parameter -Wno-unused-variable -Wno-unused-function -Wno-sign-conversion -fsanitize=undefined  -fsanitize-trap
+
 defines := -DDEBUG
 linker_flags := -lvulkan -lm
 
@@ -63,6 +64,11 @@ endif
 
 src_files_c := $(shell find $(src_dir) -type f -name '*.c')
 src_files_cpp := $(shell find $(src_dir) -type f -name '*.cpp')
+# Tracy integration
+src_files_cpp := $(filter-out $(src_dir)/src/vendor/tracy/%, $(src_files_cpp))
+src_files_c := $(filter-out $(src_dir)/src/vendor/tracy/%, $(src_files_c))
+#turn this on if you want tracy
+#src_files_cpp += $(src_dir)/src/vendor/tracy/TracyClient.cpp
 dependencies := $(shell find $(src_dir) -type d)
 obj_files_cpp := $(patsubst %.cpp, $(obj_dir)/%.cpp.o, $(src_files_cpp))
 obj_files_c := $(patsubst %.c, $(obj_dir)/%.c.o, $(src_files_c))
