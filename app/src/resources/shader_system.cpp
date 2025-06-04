@@ -19,7 +19,6 @@ struct shader_system_state
 };
 static shader_system_state *shader_sys_state_ptr = nullptr;
 
-static bool shader_system_create_default_shader(shader *out_shader, u64 *out_shader_id);
 static void shader_system_add_uniform(shader_config *out_config, dstring *name, shader_stage stage, shader_scope scope,
                                       u32 set, u32 binding, attribute_types type);
 static void shader_system_add_attributes(shader_config *out_config, const char *name, u32 location,
