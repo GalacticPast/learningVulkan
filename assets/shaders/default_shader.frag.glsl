@@ -34,15 +34,21 @@ void main() {
 	float diffuse = max(dot(frag_normal, norm_light_dir), 0.0f);
 
     //specular ligthing
+    float specular_strength = 0.5;
 
+    vec3 view_dir = normalize(ulo.camera_pos - frag_position);
+    vec3 reflect_dir = reflect(-norm_light_dir,frag_normal);
+    float spec_amount =  pow(max(dot(view_dir, reflect_dir),0.0),32);
 
+    float specular = specular_strength * spec_amount;
 
     if(dis < radius)
     {
         diffuse = 0.5f;
         ambient = 0.5f;
+        specular = 0.0f;
     }
 
-
-    out_color = texture(albedo_map, frag_tex_coord) * vec4(ulo.color * (diffuse + ambient), 1.0f);
+    vec3 result = (ambient + diffuse + specular) * ulo.color;
+    out_color = texture(albedo_map, frag_tex_coord) * vec4(result, 1.0f);
 }
