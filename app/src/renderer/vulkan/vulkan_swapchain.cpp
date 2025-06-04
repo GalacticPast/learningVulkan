@@ -80,9 +80,7 @@ bool create_swapchain(vulkan_context *vk_context)
                          vk_swapchain->surface_capabilities.maxImageCount);
 
     u32 best_image_sharing_mode    = INVALID_ID;
-    u32 enabled_queue_family_count = vk_context->vk_device.enabled_queue_family_count;
-    u32 queue_family_indicies[4]   = {vk_context->vk_device.graphics_family_index,
-                                      vk_context->vk_device.present_family_index, vk_context->vk_device.transfer_family_index, 0};
+    u32 enabled_queue_family_count = vk_context->vk_device.enabled_queue_family_indicies.size();
 
     if (enabled_queue_family_count == 1)
     {
@@ -106,7 +104,7 @@ bool create_swapchain(vulkan_context *vk_context)
     swapchain_create_info.imageUsage            = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
     swapchain_create_info.imageSharingMode      = static_cast<VkSharingMode>(best_image_sharing_mode);
     swapchain_create_info.queueFamilyIndexCount = enabled_queue_family_count;
-    swapchain_create_info.pQueueFamilyIndices   = queue_family_indicies;
+    swapchain_create_info.pQueueFamilyIndices   = vk_context->vk_device.enabled_queue_family_indicies.data;
     swapchain_create_info.preTransform          = vk_swapchain->surface_capabilities.currentTransform;
     swapchain_create_info.compositeAlpha        = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
     swapchain_create_info.presentMode           = vk_swapchain->present_modes[best_present_mode_index];

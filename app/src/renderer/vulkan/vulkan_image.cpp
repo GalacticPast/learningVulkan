@@ -1,7 +1,7 @@
-#include "vulkan_image.hpp"
 #include "vulkan/vulkan_core.h"
 #include "vulkan_buffers.hpp"
 #include "vulkan_device.hpp"
+#include "vulkan_image.hpp"
 
 bool vulkan_create_image(vulkan_context *vk_context, vulkan_image *out_image, u32 img_width, u32 img_height,
                          VkFormat img_format, VkMemoryPropertyFlags mem_properties_flags, VkImageUsageFlags img_usage,
@@ -85,12 +85,11 @@ bool vulkan_destroy_image(vulkan_context *vk_context, vulkan_image *image)
     return true;
 }
 // NOTE: for now we use graphics command pool to allocate. Maybe we have to make it a function parameter??
-bool vulkan_transition_image_layout(vulkan_context *vk_context, VkCommandPool *cmd_pool, VkQueue* queue, vulkan_image *image,
-                                    VkImageLayout old_layout, VkImageLayout new_layout)
+bool vulkan_transition_image_layout(vulkan_context *vk_context, VkCommandPool *cmd_pool, VkQueue *queue,
+                                    vulkan_image *image, VkImageLayout old_layout, VkImageLayout new_layout)
 {
     VkCommandBuffer staging_cmd_buffer{};
-    bool            result =
-        vulkan_allocate_command_buffers(vk_context, cmd_pool, &staging_cmd_buffer, 1, true);
+    bool            result = vulkan_allocate_command_buffers(vk_context, cmd_pool, &staging_cmd_buffer, 1, true);
     if (!result)
     {
         DERROR("Vulkan command buffer allocation failed.");
@@ -122,6 +121,30 @@ bool vulkan_transition_image_layout(vulkan_context *vk_context, VkCommandPool *c
 
         source_stage_flags      = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
         destination_stage_flags = VK_PIPELINE_STAGE_TRANSFER_BIT;
+    }
+    else if (old_layout == VK_IMAGE_LAYOUT_UNDEFINED && new_layout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
+    {
+        img_barrier.srcAccessMask = 0;
+        img_barrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+
+        source_stage_flags      = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+        destination_stage_flags = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    }
+    else if (old_layout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL && new_layout == VK_IMAGE_LAYOUT_PRESENT_SRC_KHR)
+    {
+        img_barrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+        img_barrier.dstAccessMask = 0;
+
+        source_stage_flags      = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+        destination_stage_flags = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+    }
+    else if (old_layout == VK_IMAGE_LAYOUT_PRESENT_SRC_KHR && new_layout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
+    {
+        img_barrier.srcAccessMask = 0;
+        img_barrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+
+        source_stage_flags      = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+        destination_stage_flags = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
     }
     else if (old_layout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL && new_layout == VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL)
     {
@@ -157,7 +180,8 @@ bool vulkan_transition_image_layout(vulkan_context *vk_context, VkCommandPool *c
     return true;
 }
 
-bool vulkan_copy_buffer_data_to_image(vulkan_context *vk_context, VkCommandPool* cmd_pool, VkQueue* queue, vulkan_buffer *src_buffer, vulkan_image *image)
+bool vulkan_copy_buffer_data_to_image(vulkan_context *vk_context, VkCommandPool *cmd_pool, VkQueue *queue,
+                                      vulkan_buffer *src_buffer, vulkan_image *image)
 {
     VkCommandBuffer staging_command_buffer{};
     vulkan_allocate_command_buffers(vk_context, cmd_pool, &staging_command_buffer, 1, true);

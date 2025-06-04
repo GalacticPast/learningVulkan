@@ -241,6 +241,7 @@ bool vulkan_backend_initialize(u64 *vulkan_backend_memory_requirements, applicat
 
     vk_context->current_frame_index     = 0;
     vk_context->loaded_geometries_count = 0;
+    vk_context->frame_counter           = 0;
 
     return true;
 }
@@ -535,7 +536,7 @@ bool vulkan_initialize_shader(shader_config *config, shader *in_shader)
             vk_shader->min_ubo_alignment = required_alignment;
 
             u32 size = config->per_frame_uniform_offsets.size();
-            for (u32 i = 0; i < size ; i++)
+            for (u32 i = 0; i < size; i++)
             {
                 per_frame_ubo_size += config->per_frame_uniform_offsets[i];
             }
@@ -577,7 +578,7 @@ bool vulkan_initialize_shader(shader_config *config, shader *in_shader)
 
             for (u32 i = 0; i < uniforms_count; i++)
             {
-                shader_scope scope = config->uniforms[i].scope ;
+                shader_scope scope = config->uniforms[i].scope;
                 if (scope == SHADER_PER_GROUP_UNIFORM)
                 {
                     per_group_descriptors_binding_count++;
@@ -643,10 +644,10 @@ bool vulkan_initialize_shader(shader_config *config, shader *in_shader)
             vk_shader->per_group_descriptor_sets.c_init(max_descriptors);
 
             u32 &per_group_ubo_size = vk_shader->per_group_ubo_size;
-            per_group_ubo_size = 0;
+            per_group_ubo_size      = 0;
 
             u32 size = config->per_group_uniform_offsets.size();
-            for (u32 i = 0; i < size ; i++)
+            for (u32 i = 0; i < size; i++)
             {
                 per_group_ubo_size += config->per_group_uniform_offsets[i];
             }
@@ -1060,7 +1061,7 @@ void vulkan_update_global_uniform_buffer(vulkan_shader *shader, scene_global_uni
     u8 *addr = static_cast<u8 *>(shader->per_frame_mapped_data) + ((shader->per_frame_stride * current_frame_index));
     dcopy_memory(addr, scene_ubo, scene_aligned);
 
-    u32 size = shader->per_frame_uniform_offsets[1] - scene_aligned;
+    u32 size           = shader->per_frame_uniform_offsets[1] - scene_aligned;
     u64 light_aligned  = scene_aligned;
     addr              += light_aligned;
     dcopy_memory(addr, light_ubo, size);
@@ -1249,6 +1250,25 @@ bool vulkan_draw_frame(render_data *render_data)
     result = vkAcquireNextImageKHR(vk_context->vk_device.logical, vk_context->vk_swapchain.handle, INVALID_ID_64,
                                    vk_context->image_available_semaphores[current_frame], VK_NULL_HANDLE, &image_index);
 
+    static vulkan_image swapchain_img{};
+    swapchain_img.handle = vk_context->vk_swapchain.images[image_index];
+    swapchain_img.format = vk_context->vk_swapchain.img_format;
+    swapchain_img.view   = vk_context->vk_swapchain.img_views[image_index];
+
+    // transition it
+    if(vk_context->frame_counter < MAX_FRAMES_IN_FLIGHT)
+    {
+        vulkan_transition_image_layout(vk_context, &vk_context->graphics_command_pool,
+                                       &vk_context->vk_device.graphics_queue, &swapchain_img,
+                                       VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+    }
+    else
+    {
+        vulkan_transition_image_layout(vk_context, &vk_context->graphics_command_pool,
+                                       &vk_context->vk_device.graphics_queue, &swapchain_img,
+                                       VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+    }
+
     if (result & VK_ERROR_OUT_OF_DATE_KHR)
     {
         vulkan_recreate_swapchain(vk_context);
@@ -1272,6 +1292,11 @@ bool vulkan_draw_frame(render_data *render_data)
     VkPipelineStageFlags wait_stages[]       = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
 
     {
+
+        // transition it back
+        vulkan_transition_image_layout(vk_context, &vk_context->graphics_command_pool,
+                                       &vk_context->vk_device.graphics_queue, &swapchain_img,
+                                       VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
 
         ZoneScopedN("queue submit");
         VkSubmitInfo submit_info{};
@@ -1311,6 +1336,7 @@ bool vulkan_draw_frame(render_data *render_data)
 
     vk_context->current_frame_index++;
     vk_context->current_frame_index %= MAX_FRAMES_IN_FLIGHT;
+    vk_context->frame_counter++;
 
     return true;
 }

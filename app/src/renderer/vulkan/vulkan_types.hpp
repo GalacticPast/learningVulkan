@@ -47,7 +47,8 @@ struct vulkan_device
     VkQueueFamilyProperties *queue_family_properties;
 
     // INFO: might need the selected graphics queue's QueueFamilyProperties.
-    u32 enabled_queue_family_count = INVALID_ID;
+    darray<u32> enabled_queue_family_indicies;
+
     u32 graphics_family_index      = INVALID_ID;
     u32 present_family_index       = INVALID_ID;
     u32 transfer_family_index      = INVALID_ID;
@@ -161,6 +162,7 @@ struct vulkan_shader
 
 struct vulkan_context
 {
+    u64 frame_counter;
     u32 current_frame_index;
 
     vulkan_device vk_device;
@@ -199,4 +201,5 @@ struct vulkan_context
 
     u32         enabled_extension_count = INVALID_ID;
     const char *enabled_extension_names[4];
+
 };

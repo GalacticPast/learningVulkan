@@ -60,13 +60,13 @@ bool vulkan_create_logical_device(vulkan_context *vk_context)
     }
 
     u32 queue_family_count           = 0;
-    u32 vulkan_queue_family_index[4] = {vk_context->vk_device.graphics_family_index,
-                                        vk_context->vk_device.present_family_index, vk_context->vk_device.transfer_family_index, 0};
+    darray<u32> vulkan_queue_family_index;
 
     if (physical_device_requirements.has_graphics_queue_family &&
         vk_context->vk_device.graphics_family_index != INVALID_ID)
     {
         queue_family_count++;
+        vulkan_queue_family_index.push_back(vk_context->vk_device.graphics_family_index);
     }
     // if we have 2 different queue family index for each
     if (physical_device_requirements.has_present_queue_family &&
@@ -74,6 +74,7 @@ bool vulkan_create_logical_device(vulkan_context *vk_context)
         vk_context->vk_device.present_family_index != vk_context->vk_device.graphics_family_index)
     {
         queue_family_count++;
+        vulkan_queue_family_index.push_back(vk_context->vk_device.present_family_index);
     }
 
     if (physical_device_requirements.has_transfer_queue_family &&
@@ -81,8 +82,9 @@ bool vulkan_create_logical_device(vulkan_context *vk_context)
         vk_context->vk_device.transfer_family_index != vk_context->vk_device.graphics_family_index && vk_context->vk_device.transfer_family_index != vk_context->vk_device.present_family_index)
     {
         queue_family_count++;
+        vulkan_queue_family_index.push_back(vk_context->vk_device.transfer_family_index);
     }
-    vk_context->vk_device.enabled_queue_family_count = queue_family_count;
+    vk_context->vk_device.enabled_queue_family_indicies = vulkan_queue_family_index;
 
     VkDeviceQueueCreateInfo device_queue_create_infos[4];
 
