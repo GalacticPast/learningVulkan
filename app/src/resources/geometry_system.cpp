@@ -23,6 +23,7 @@ struct geometry_system_state
 {
     darray<dstring>      loaded_geometry;
     dhashtable<geometry> hashtable;
+    u64                  default_geo_id;
 };
 
 static geometry_system_state *geo_sys_state_ptr;
@@ -160,9 +161,9 @@ geometry_config geometry_system_generate_plane_config(f32 width, f32 height, u32
         {
             // Generate vertices
             f32 min_x   = (x * seg_width) - half_width;
-            f32 min_y   = (y * seg_height) - half_height;
+            f32 min_z   = (y * seg_height) - half_height;
             f32 max_x   = min_x + seg_width;
-            f32 max_y   = min_y + seg_height;
+            f32 max_z   = min_z + seg_height;
             f32 min_uvx = (x / static_cast<f32>(x_segment_count)) * tile_x;
             f32 min_uvy = (y / static_cast<f32>(y_segment_count)) * tile_y;
             f32 max_uvx = ((x + 1) / static_cast<f32>(x_segment_count)) * tile_x;
@@ -175,22 +176,34 @@ geometry_config geometry_system_generate_plane_config(f32 width, f32 height, u32
             vertex *v3       = &(static_cast<vertex *>(config.vertices))[v_offset + 3];
 
             v0->position.x  = min_x;
-            v0->position.y  = min_y;
+            v0->position.z  = -min_z;
+            v0->normal.x = 0;
+            v0->normal.y = 1;
+            v0->normal.z = 0;
             v0->tex_coord.x = min_uvx;
             v0->tex_coord.y = min_uvy;
 
             v1->position.x  = max_x;
-            v1->position.y  = max_y;
+            v1->position.z  = -max_z;
+            v1->normal.x = 0;
+            v1->normal.y = 1;
+            v1->normal.z = 0;
             v1->tex_coord.x = max_uvx;
             v1->tex_coord.y = max_uvy;
 
             v2->position.x  = min_x;
-            v2->position.y  = max_y;
+            v2->position.z  = -max_z;
+            v2->normal.x = 0;
+            v2->normal.y = 1;
+            v2->normal.z = 0;
             v2->tex_coord.x = min_uvx;
             v2->tex_coord.y = max_uvy;
 
             v3->position.x  = max_x;
-            v3->position.y  = min_y;
+            v3->position.z  = -min_z;
+            v3->normal.x = 0;
+            v3->normal.y = 1;
+            v3->normal.z = 0;
             v3->tex_coord.x = max_uvx;
             v3->tex_coord.y = min_uvy;
 
@@ -238,7 +251,7 @@ bool geometry_system_create_default_geometry()
 
     for (u32 i = 0; i < num_of_objects; i++)
     {
-        geometry_system_create_geometry(&default_geo_configs[i], true);
+        geo_sys_state_ptr->default_geo_id = geometry_system_create_geometry(&default_geo_configs[i], false);
     }
 
     for (u32 i = 0; i < num_of_objects; i++)
@@ -247,10 +260,6 @@ bool geometry_system_create_default_geometry()
     }
     dfree(default_geo_configs, num_of_objects * sizeof(geometry_config), MEM_TAG_GEOMETRY);
 
-    geometry_config plane_config = geometry_system_generate_plane_config(
-        1000, 1000, 500, 500, 50, 50, DEFAULT_PLANE_HANDLE, "orange_lines_512.conf");
-    u64 plane_id = geometry_system_create_geometry(&plane_config, true);
-    destroy_geometry_config(&plane_config);
 
     return true;
 }
@@ -287,7 +296,8 @@ geometry *geometry_system_get_geometry_by_name(dstring geometry_name)
 geometry *geometry_system_get_default_geometry()
 {
 
-    geometry *geo = geo_sys_state_ptr->hashtable.find(DEFAULT_GEOMETRY_HANDLE);
+    u64 default_id = geo_sys_state_ptr->default_geo_id;
+    geometry *geo = geo_sys_state_ptr->hashtable.find(default_id);
     if (!geo)
     {
         DERROR("Default geometry is not loaded yet. How is this possible?? Make sure that you have initialzed the "
@@ -303,14 +313,14 @@ geometry *geometry_system_get_default_plane()
     geometry *geo = geo_sys_state_ptr->hashtable.find(DEFAULT_PLANE_HANDLE);
     if (!geo)
     {
-        DERROR("Default plane geometry is not loaded yet. How is this possible?? Make sure that you have initialzed the "
-               "geometry system first.");
+        DERROR(
+            "Default plane geometry is not loaded yet. How is this possible?? Make sure that you have initialzed the "
+            "geometry system first.");
         return nullptr;
     }
     geo->reference_count++;
     return geo;
 }
-
 
 void geometry_system_copy_config(geometry_config *dst_config, const geometry_config *src_config)
 {
