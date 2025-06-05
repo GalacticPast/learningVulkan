@@ -13,8 +13,6 @@
 
 #include "resource_types.hpp"
 
-#include "loaders/json_parser.hpp"
-
 struct material_system_state
 {
     darray<dstring>      loaded_materials;
@@ -24,10 +22,11 @@ struct material_system_state
 
 static material_system_state *mat_sys_state_ptr;
 
-bool material_system_create_material(material_config *config);
-bool material_system_create_default_material();
-bool material_system_initialize(u64 *material_system_mem_requirements, void *state)
+bool        material_system_create_material(material_config *config);
+bool        material_system_create_default_material();
+static bool material_system_parse_configuration_file(dstring *conf_file_name, material_config* out_config);
 
+bool material_system_initialize(u64 *material_system_mem_requirements, void *state)
 {
     *material_system_mem_requirements = sizeof(material_system_state);
 
@@ -57,13 +56,8 @@ bool material_system_shutdown(void *state)
 material *material_system_acquire_from_config_file(dstring *file_base_name)
 {
     material_config base{};
-    const char     *prefix = "../assets/materials/";
 
-    char path[128] = {};
-    string_copy_format(path, "%s%s", 0, prefix, file_base_name->c_str());
-    dstring name;
-    name = path;
-    json_deserialize_material(&name, &base);
+    material_system_parse_configuration_file(file_base_name, &base);
 
     material *out_mat = nullptr;
     out_mat           = mat_sys_state_ptr->hashtable.find(base.mat_name);
@@ -100,6 +94,7 @@ bool material_system_create_material(material_config *config)
     mat.reference_count = 0;
     mat.map.albedo      = texture_system_get_texture(config->albedo_map);
     mat.map.alpha       = texture_system_get_texture(config->alpha_map);
+    mat.map.normal      = texture_system_get_texture(config->normal_map);
     mat.diffuse_color   = config->diffuse_color;
 
     bool result = vulkan_create_material(&mat);
@@ -121,6 +116,7 @@ bool material_system_create_default_material()
         default_mat.reference_count = 0;
         default_mat.map.albedo      = texture_system_get_texture(DEFAULT_ALBEDO_TEXTURE_HANDLE);
         default_mat.map.alpha       = texture_system_get_texture(DEFAULT_ALPHA_TEXTURE_HANDLE);
+        default_mat.map.normal      = texture_system_get_texture(DEFAULT_NORMAL_TEXTURE_HANDLE);
         default_mat.diffuse_color   = {1.0f, 1.0f, 1.0f, 1.0f};
 
         bool result = vulkan_create_material(&default_mat);
@@ -136,6 +132,7 @@ bool material_system_create_default_material()
         default_light_mat.reference_count = 0;
         default_light_mat.map.albedo      = texture_system_get_texture(DEFAULT_ALPHA_TEXTURE_HANDLE);
         default_light_mat.map.alpha       = texture_system_get_texture(DEFAULT_ALPHA_TEXTURE_HANDLE);
+        default_light_mat.map.normal      = texture_system_get_texture(DEFAULT_NORMAL_TEXTURE_HANDLE);
         default_light_mat.diffuse_color   = {1.0f, 1.0f, 1.0f, 1.0f};
 
         bool result = vulkan_create_material(&default_light_mat);
@@ -292,5 +289,90 @@ bool material_system_parse_mtl_file(const char *mtl_file_name)
     {
         material_system_create_material(&configs[i]);
     }
+    return true;
+}
+
+static bool material_system_parse_configuration_file(dstring *conf_file_name, material_config* out_config)
+{
+    DASSERT(conf_file_name);
+    DASSERT(out_config);
+
+    dstring conf_full_path;
+    const char* prefix = "../assets/materials/";
+    string_copy_format(conf_full_path.string, "%s%s",0, prefix, conf_file_name->c_str());
+
+    std::ifstream file;
+    bool result = file_open(conf_full_path, &file, false);
+    DASSERT(result);
+
+
+    auto go_to_colon = [](const char *line) -> const char * {
+        u32 index = 0;
+        while (line[index] != ':')
+        {
+            if (line[index] == '\n' || line[index] == '\0')
+            {
+                return nullptr;
+            }
+            index++;
+        }
+        return line + index + 1;
+    };
+
+    auto extract_identifier = [](const char* line, char* dst)
+        {
+            u32 index = 0;
+            u32 j     = 0;
+
+            while (line[index] != ':' && line[index] != '\0')
+            {
+                if (line[index] == ' ')
+                {
+                    index++;
+                    continue;
+                }
+                dst[j++] = line[index++];
+            }
+            dst[j++] = '\0';
+        };
+
+    dstring line;
+    while(file_get_line(file, &line))
+    {
+        // INFO: if comment skip line
+        if (line[0] == '#' || line[0] == '\0')
+        {
+            continue;
+        }
+        dstring identifier;
+        extract_identifier(line.c_str(), identifier.string);
+
+        const char *str = go_to_colon(line.c_str());
+        DASSERT(str);
+        dstring string = str;
+
+        if(string_compare(identifier.c_str(), "name"))
+        {
+            extract_identifier(str, out_config->mat_name);
+        }
+        else if(string_compare(identifier.c_str(), "diffuse_color"))
+        {
+            string_to_vec4(string.c_str(), &out_config->diffuse_color);
+        }
+        else if(string_compare(identifier.c_str(), "albedo_map"))
+        {
+            extract_identifier(str, out_config->albedo_map);
+        }
+        else if(string_compare(identifier.c_str(), "normal_map"))
+        {
+            extract_identifier(str, out_config->normal_map);
+        }
+        else
+        {
+            DERROR("Unidentified identifier%s in line %s", identifier.c_str(), line.c_str());
+            return false;
+        }
+    }
+
     return true;
 }

@@ -47,5 +47,5 @@ s32 string_first_char_occurence(const char *string, const char ch);
 s32 string_first_string_occurence(const char *string, const char *str);
 s32 string_num_of_substring_occurence(const char *string, const char *str);
 
-// @param: ch-> keep searching till the first occurecne of the character
-bool string_to_vec4(const char *string, math::vec4 *vector, const char ch);
+//WARN: This will modify the string provided just to let you know :)
+bool string_to_vec4(const char *string, math::vec4 *vector);

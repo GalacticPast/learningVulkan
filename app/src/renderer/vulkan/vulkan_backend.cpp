@@ -5,7 +5,6 @@
 #include "defines.hpp"
 
 #include "math/dmath_types.hpp"
-#include "resources/loaders/json_parser.hpp"
 #include "resources/material_system.hpp"
 #include "resources/resource_types.hpp"
 #include "resources/shader_system.hpp"
@@ -296,8 +295,8 @@ bool vulkan_update_materials_descriptor_set(vulkan_shader *shader, material *mat
 
     DTRACE("Updataing descriptor_set_index: %d", descriptor_set_index);
 
-    // for now we only have 2
-    VkDescriptorImageInfo image_infos[2] = {};
+    u32 image_count = 3;
+    VkDescriptorImageInfo image_infos[3] = {};
 
     // INFO: in case
     // I dont get the default material in the start because the default material might not be initialized yet.
@@ -354,10 +353,34 @@ bool vulkan_update_materials_descriptor_set(vulkan_shader *shader, material *mat
         image_infos[1].imageView   = tex_state->image.view;
         image_infos[1].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
     }
+    {
+        vulkan_texture *tex_state = nullptr;
 
-    VkWriteDescriptorSet desc_writes[2]{};
+        if (material->map.alpha)
+        {
+            tex_state = static_cast<vulkan_texture *>(material->map.normal->vulkan_texture_state);
+        }
+        if (!tex_state)
+        {
+            if (default_mat)
+            {
+                DERROR("No alpha map found for material interal_id: %d", descriptor_set_index);
+            }
+            else
+            {
+                default_mat = material_system_get_default_material();
+            }
+            tex_state = static_cast<vulkan_texture *>(default_mat->map.normal->vulkan_texture_state);
+        }
+
+        image_infos[2].sampler     = tex_state->sampler;
+        image_infos[2].imageView   = tex_state->image.view;
+        image_infos[2].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    }
+
+    VkWriteDescriptorSet desc_writes[3]{};
     // albdeo
-    for (u32 i = 0; i < 2; i++)
+    for (u32 i = 0; i < image_count; i++)
     {
         desc_writes[i].sType            = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
         desc_writes[i].pNext            = 0;
@@ -371,7 +394,7 @@ bool vulkan_update_materials_descriptor_set(vulkan_shader *shader, material *mat
         desc_writes[i].pTexelBufferView = 0;
     }
 
-    vkUpdateDescriptorSets(vk_context->vk_device.logical, 2, desc_writes, 0, nullptr);
+    vkUpdateDescriptorSets(vk_context->vk_device.logical, image_count, desc_writes, 0, nullptr);
     return true;
 }
 
@@ -627,13 +650,13 @@ bool vulkan_initialize_shader(shader_config *config, shader *in_shader)
             VkDescriptorPoolSize material_pool_sizes[1]{};
 
             material_pool_sizes[0].type            = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-            material_pool_sizes[0].descriptorCount = max_descriptors * 2;
+            material_pool_sizes[0].descriptorCount = max_descriptors * 3;
 
             VkDescriptorPoolCreateInfo material_descriptor_pool_create_info{};
             material_descriptor_pool_create_info.sType         = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
             material_descriptor_pool_create_info.pNext         = 0;
             material_descriptor_pool_create_info.flags         = 0;
-            material_descriptor_pool_create_info.maxSets       = max_descriptors * 2;
+            material_descriptor_pool_create_info.maxSets       = max_descriptors * 3;
             material_descriptor_pool_create_info.poolSizeCount = 1;
             material_descriptor_pool_create_info.pPoolSizes    = material_pool_sizes;
 

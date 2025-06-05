@@ -248,7 +248,7 @@ bool geometry_system_create_default_geometry()
     dfree(default_geo_configs, num_of_objects * sizeof(geometry_config), MEM_TAG_GEOMETRY);
 
     geometry_config plane_config = geometry_system_generate_plane_config(
-        1000, 1000, 500, 500, 50, 50, DEFAULT_PLANE_HANDLE, "orange_lines_512.json");
+        1000, 1000, 500, 500, 50, 50, DEFAULT_PLANE_HANDLE, "orange_lines_512.conf");
     u64 plane_id = geometry_system_create_geometry(&plane_config, true);
     destroy_geometry_config(&plane_config);
 

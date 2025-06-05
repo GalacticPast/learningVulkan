@@ -106,7 +106,7 @@ int main()
     {
         dstring cube_obj = "cube.obj";
         geometry_config parent_config = *geometry_system_generate_config(cube_obj);
-        dstring mat_name = "orange_lines_512.json";
+        dstring mat_name = "cobblestone.conf";
         parent_config.material = material_system_acquire_from_config_file(&mat_name);
 
         dstring sphere_obj = "sphere.obj";

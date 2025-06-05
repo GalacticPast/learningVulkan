@@ -219,23 +219,23 @@ dstring::dstring(const char *c_string)
 }
 
 // @param: ch-> keep searching till the first occurecne of the character
-bool string_to_vec4(const char *string, math::vec4 *vector, const char ch)
+bool string_to_vec4(const char *string, math::vec4 *vector)
 {
     char  floats[64] = {};
     char *ptr        = const_cast<char *>(string);
 
-    s32 occurence = string_first_char_occurence(ptr, '[');
+    s32 occurence = string_first_char_occurence(ptr, '{');
     if (occurence == -1)
     {
-        DERROR("Couldnt find %s in %s", ch, string);
+        DERROR("Couldnt find opening brace '{' in %s",string);
         return false;
     }
     ptr += occurence + 1;
 
-    occurence = string_first_char_occurence(string, ']');
+    occurence = string_first_char_occurence(string, '}');
     if (occurence == -1)
     {
-        DERROR("Couldnt find %s in %s", ch, string);
+        DERROR("Couldnt find closing brace '}' in %s",string);
         return false;
     }
 
