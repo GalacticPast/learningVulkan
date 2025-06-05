@@ -86,7 +86,7 @@ int main()
     scene_ubo.projection = mat4_perspective(fov_rad, aspect_ratio, 0.01f, 1000.0f);
 
     light_global_uniform_buffer_object light_ubo{};
-    light_ubo.color    = {1.0f, 0.0f, 0.0f};
+    light_ubo.color    = {1.0f, 1.0f, 1.0f};
 
 
     render_data triangle{};
