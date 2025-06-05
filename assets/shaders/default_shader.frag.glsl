@@ -12,6 +12,7 @@ layout(set = 0, binding = 1)uniform uniform_light_object
 layout(set = 1, binding = 0) uniform sampler2D albedo_map;
 layout(set = 1, binding = 1) uniform sampler2D alpha_map;
 layout(set = 1, binding = 2) uniform sampler2D normal_map;
+layout(set = 1, binding = 3) uniform sampler2D specular_map;
 
 layout(location = 0) in vec3 frag_color;
 layout(location = 1) in vec3 frag_normal;
@@ -34,6 +35,7 @@ void main() {
     vec3 norm_light_dir = normalize(light_dir);
 	float diffuse = max(dot(frag_normal, norm_light_dir), 0.0f);
 
+
     //specular ligthing
     float specular_strength = 0.5;
 
@@ -50,6 +52,7 @@ void main() {
         specular = 0.0f;
     }
 
-    vec3 result = (ambient + diffuse + specular) * ulo.color;
-    out_color = texture(albedo_map, frag_tex_coord) * vec4(result, 1.0f);
+    specular = texture(specular_map, frag_tex_coord).r * specular;
+    vec4 result = (ambient + diffuse ) * texture(albedo_map, frag_tex_coord) + specular;
+    out_color = result * vec4(ulo.color,0.0f);
 }

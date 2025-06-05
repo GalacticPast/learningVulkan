@@ -1,10 +1,10 @@
-#include "material_system.hpp"
 #include "containers/darray.hpp"
 #include "containers/dhashtable.hpp"
 #include "core/dfile_system.hpp"
 #include "core/dmemory.hpp"
 #include "core/logger.hpp"
 #include "defines.hpp"
+#include "material_system.hpp"
 
 #include "renderer/vulkan/vulkan_backend.hpp"
 #include "texture_system.hpp"
@@ -24,7 +24,7 @@ static material_system_state *mat_sys_state_ptr;
 
 bool        material_system_create_material(material_config *config);
 bool        material_system_create_default_material();
-static bool material_system_parse_configuration_file(dstring *conf_file_name, material_config* out_config);
+static bool material_system_parse_configuration_file(dstring *conf_file_name, material_config *out_config);
 
 bool material_system_initialize(u64 *material_system_mem_requirements, void *state)
 {
@@ -95,6 +95,7 @@ bool material_system_create_material(material_config *config)
     mat.map.albedo      = texture_system_get_texture(config->albedo_map);
     mat.map.alpha       = texture_system_get_texture(config->alpha_map);
     mat.map.normal      = texture_system_get_texture(config->normal_map);
+    mat.map.specular    = texture_system_get_texture(config->specular_map);
     mat.diffuse_color   = config->diffuse_color;
 
     bool result = vulkan_create_material(&mat);
@@ -117,6 +118,7 @@ bool material_system_create_default_material()
         default_mat.map.albedo      = texture_system_get_texture(DEFAULT_ALBEDO_TEXTURE_HANDLE);
         default_mat.map.alpha       = texture_system_get_texture(DEFAULT_ALPHA_TEXTURE_HANDLE);
         default_mat.map.normal      = texture_system_get_texture(DEFAULT_NORMAL_TEXTURE_HANDLE);
+        default_mat.map.specular    = texture_system_get_texture(DEFAULT_ALBEDO_TEXTURE_HANDLE);
         default_mat.diffuse_color   = {1.0f, 1.0f, 1.0f, 1.0f};
 
         bool result = vulkan_create_material(&default_mat);
@@ -133,6 +135,7 @@ bool material_system_create_default_material()
         default_light_mat.map.albedo      = texture_system_get_texture(DEFAULT_ALPHA_TEXTURE_HANDLE);
         default_light_mat.map.alpha       = texture_system_get_texture(DEFAULT_ALPHA_TEXTURE_HANDLE);
         default_light_mat.map.normal      = texture_system_get_texture(DEFAULT_NORMAL_TEXTURE_HANDLE);
+        default_light_mat.map.specular    = texture_system_get_texture(DEFAULT_ALPHA_TEXTURE_HANDLE);
         default_light_mat.diffuse_color   = {1.0f, 1.0f, 1.0f, 1.0f};
 
         bool result = vulkan_create_material(&default_light_mat);
@@ -292,19 +295,18 @@ bool material_system_parse_mtl_file(const char *mtl_file_name)
     return true;
 }
 
-static bool material_system_parse_configuration_file(dstring *conf_file_name, material_config* out_config)
+static bool material_system_parse_configuration_file(dstring *conf_file_name, material_config *out_config)
 {
     DASSERT(conf_file_name);
     DASSERT(out_config);
 
-    dstring conf_full_path;
-    const char* prefix = "../assets/materials/";
-    string_copy_format(conf_full_path.string, "%s%s",0, prefix, conf_file_name->c_str());
+    dstring     conf_full_path;
+    const char *prefix = "../assets/materials/";
+    string_copy_format(conf_full_path.string, "%s%s", 0, prefix, conf_file_name->c_str());
 
     std::ifstream file;
-    bool result = file_open(conf_full_path, &file, false);
+    bool          result = file_open(conf_full_path, &file, false);
     DASSERT(result);
-
 
     auto go_to_colon = [](const char *line) -> const char * {
         u32 index = 0;
@@ -319,25 +321,24 @@ static bool material_system_parse_configuration_file(dstring *conf_file_name, ma
         return line + index + 1;
     };
 
-    auto extract_identifier = [](const char* line, char* dst)
-        {
-            u32 index = 0;
-            u32 j     = 0;
+    auto extract_identifier = [](const char *line, char *dst) {
+        u32 index = 0;
+        u32 j     = 0;
 
-            while (line[index] != ':' && line[index] != '\0')
+        while (line[index] != ':' && line[index] != '\0')
+        {
+            if (line[index] == ' ')
             {
-                if (line[index] == ' ')
-                {
-                    index++;
-                    continue;
-                }
-                dst[j++] = line[index++];
+                index++;
+                continue;
             }
-            dst[j++] = '\0';
-        };
+            dst[j++] = line[index++];
+        }
+        dst[j++] = '\0';
+    };
 
     dstring line;
-    while(file_get_line(file, &line))
+    while (file_get_line(file, &line))
     {
         // INFO: if comment skip line
         if (line[0] == '#' || line[0] == '\0')
@@ -351,21 +352,25 @@ static bool material_system_parse_configuration_file(dstring *conf_file_name, ma
         DASSERT(str);
         dstring string = str;
 
-        if(string_compare(identifier.c_str(), "name"))
+        if (string_compare(identifier.c_str(), "name"))
         {
             extract_identifier(str, out_config->mat_name);
         }
-        else if(string_compare(identifier.c_str(), "diffuse_color"))
+        else if (string_compare(identifier.c_str(), "diffuse_color"))
         {
             string_to_vec4(string.c_str(), &out_config->diffuse_color);
         }
-        else if(string_compare(identifier.c_str(), "albedo_map"))
+        else if (string_compare(identifier.c_str(), "albedo_map"))
         {
             extract_identifier(str, out_config->albedo_map);
         }
-        else if(string_compare(identifier.c_str(), "normal_map"))
+        else if (string_compare(identifier.c_str(), "normal_map"))
         {
             extract_identifier(str, out_config->normal_map);
+        }
+        else if (string_compare(identifier.c_str(), "specular_map"))
+        {
+            extract_identifier(str, out_config->specular_map);
         }
         else
         {

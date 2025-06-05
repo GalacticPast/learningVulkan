@@ -295,8 +295,8 @@ bool vulkan_update_materials_descriptor_set(vulkan_shader *shader, material *mat
 
     DTRACE("Updataing descriptor_set_index: %d", descriptor_set_index);
 
-    u32 image_count = 3;
-    VkDescriptorImageInfo image_infos[3] = {};
+    u32 image_count = 4;
+    VkDescriptorImageInfo image_infos[4] = {};
 
     // INFO: in case
     // I dont get the default material in the start because the default material might not be initialized yet.
@@ -353,10 +353,11 @@ bool vulkan_update_materials_descriptor_set(vulkan_shader *shader, material *mat
         image_infos[1].imageView   = tex_state->image.view;
         image_infos[1].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
     }
+    //normal
     {
         vulkan_texture *tex_state = nullptr;
 
-        if (material->map.alpha)
+        if (material->map.normal)
         {
             tex_state = static_cast<vulkan_texture *>(material->map.normal->vulkan_texture_state);
         }
@@ -377,8 +378,33 @@ bool vulkan_update_materials_descriptor_set(vulkan_shader *shader, material *mat
         image_infos[2].imageView   = tex_state->image.view;
         image_infos[2].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
     }
+    //specular
+    {
+        vulkan_texture *tex_state = nullptr;
 
-    VkWriteDescriptorSet desc_writes[3]{};
+        if (material->map.specular)
+        {
+            tex_state = static_cast<vulkan_texture *>(material->map.specular->vulkan_texture_state);
+        }
+        if (!tex_state)
+        {
+            if (default_mat)
+            {
+                DERROR("No alpha map found for material interal_id: %d", descriptor_set_index);
+            }
+            else
+            {
+                default_mat = material_system_get_default_material();
+            }
+            tex_state = static_cast<vulkan_texture *>(default_mat->map.specular->vulkan_texture_state);
+        }
+
+        image_infos[3].sampler     = tex_state->sampler;
+        image_infos[3].imageView   = tex_state->image.view;
+        image_infos[3].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    }
+
+    VkWriteDescriptorSet desc_writes[4]{};
     // albdeo
     for (u32 i = 0; i < image_count; i++)
     {

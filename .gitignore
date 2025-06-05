@@ -10,6 +10,9 @@
 *.userosscache
 *.sln.docstates
 
+#ignore compiled shaders
+*.spv
+
 # Rider IDE
 .idea/
 

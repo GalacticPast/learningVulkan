@@ -88,9 +88,9 @@ struct shader
     void *internal_vulkan_shader_state;
 };
 
-#define DEFAULT_ALBEDO_TEXTURE_HANDLE   "DEFAULT_ALBDEO_TEXTURE"
-#define DEFAULT_ALPHA_TEXTURE_HANDLE    "DEFAULT_ALPHA_TEXTURE"
-#define DEFAULT_NORMAL_TEXTURE_HANDLE   "DEFAULT_NORMAL_TEXTURE"
+#define DEFAULT_ALBEDO_TEXTURE_HANDLE "DEFAULT_ALBDEO_TEXTURE"
+#define DEFAULT_ALPHA_TEXTURE_HANDLE "DEFAULT_ALPHA_TEXTURE"
+#define DEFAULT_NORMAL_TEXTURE_HANDLE "DEFAULT_NORMAL_TEXTURE"
 #define MAX_TEXTURES_LOADED 1024
 #define TEXTURE_NAME_MAX_LENGTH 512
 
@@ -114,9 +114,10 @@ struct texture
 
 struct texture_map
 {
-    texture *albedo = nullptr;
-    texture *alpha  = nullptr;
-    texture *normal = nullptr;
+    texture *albedo   = nullptr;
+    texture *normal   = nullptr;
+    texture *specular = nullptr;
+    texture *alpha    = nullptr;
 };
 
 struct material_config
@@ -125,6 +126,7 @@ struct material_config
     char       albedo_map[TEXTURE_NAME_MAX_LENGTH];      // 512
     char       alpha_map[TEXTURE_NAME_MAX_LENGTH];       // 512
     char       normal_map[TEXTURE_NAME_MAX_LENGTH];      // 512
+    char       specular_map[TEXTURE_NAME_MAX_LENGTH];    // 512
     math::vec4 diffuse_color = {1.0f, 1.0f, 1.0f, 1.0f}; //                 32 * 4 =    128
     // TODO: add normal maps, heightmap etc..
 };

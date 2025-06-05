@@ -104,12 +104,12 @@ int main()
 
 #if true
     {
-        dstring cube_obj = "cube.obj";
-        geometry_config parent_config = *geometry_system_generate_config(cube_obj);
-        dstring mat_name = "cobblestone.conf";
+        dstring sphere_obj = "sphere.obj";
+        geometry_config parent_config = *geometry_system_generate_config(sphere_obj);
+        dstring mat_name = "orange_lines_512.conf";
+
         parent_config.material = material_system_acquire_from_config_file(&mat_name);
 
-        dstring sphere_obj = "sphere.obj";
         geometry_config child_config = *geometry_system_generate_config(sphere_obj);
 
         mat_name.clear();
@@ -156,7 +156,7 @@ int main()
         update_camera(&triangle.scene_ubo,&triangle.light_ubo, frame_elapsed_time);
 
         f32 z = sinf(frame_elapsed_time);
-        //geos[0]->ubo.model *= mat4_euler_y(z);
+        geos[0]->ubo.model *= mat4_euler_y(z);
         //geos[1]->ubo.model *= mat4_euler_y(z);
         math::vec3 pos = mat4_position(geos[1]->ubo.model);
         triangle.light_ubo.position = pos;
