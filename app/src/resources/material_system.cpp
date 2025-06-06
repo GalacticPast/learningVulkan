@@ -304,8 +304,8 @@ static bool material_system_parse_configuration_file(dstring *conf_file_name, ma
     const char *prefix = "../assets/materials/";
     string_copy_format(conf_full_path.string, "%s%s", 0, prefix, conf_file_name->c_str());
 
-    std::ifstream file;
-    bool          result = file_open(conf_full_path, &file, false);
+    std::fstream file;
+    bool          result = file_open(conf_full_path, &file, false, false);
     DASSERT(result);
 
     auto go_to_colon = [](const char *line) -> const char * {

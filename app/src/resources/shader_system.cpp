@@ -131,8 +131,8 @@ static void shader_parse_configuration_file(dstring conf_file_name, shader_confi
     const char *prefix = "../assets/shaders/";
     string_copy_format(full_file_path.string, "%s%s", 0, prefix, conf_file_name.c_str());
 
-    std::ifstream file;
-    bool          result = file_open(full_file_path, &file, false);
+    std::fstream file;
+    bool          result = file_open(full_file_path, &file, false, false);
     DASSERT(result);
 
     // NOTE:  this is literraly an adhoc aproach. So future me learn to write a proper parser :)

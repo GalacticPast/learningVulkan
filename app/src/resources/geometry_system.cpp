@@ -32,6 +32,7 @@ bool                          geometry_system_create_default_geometry();
 // this will allocate and write size back, assumes the caller will call free once the data is processed
 void geometry_system_parse_obj(const char *obj_file_full_path, u32 *num_of_objects, geometry_config **geo_configs);
 bool destroy_geometry_config(geometry_config *config);
+bool geometry_system_write_configs_to_file( dstring* file_name, u32 geometry_config_count, geometry_config* configs);
 
 bool geometry_system_initialize(u64 *geometry_system_mem_requirements, void *state)
 {
@@ -89,13 +90,13 @@ u64 geometry_system_create_geometry(geometry_config *config, bool use_name)
 
     if (!result)
     {
-        DERROR("Couldnt create geometry %s.", config->name);
+        DERROR("Couldnt create geometry %s.", config->name.c_str());
         return false;
     }
     // the hashtable will create a unique id for us
     if (use_name)
     {
-        geo_sys_state_ptr->hashtable.insert(config->name, geo);
+        geo_sys_state_ptr->hashtable.insert(config->name.c_str(), geo);
     }
     else
     {
@@ -218,7 +219,8 @@ geometry_config geometry_system_generate_plane_config(f32 width, f32 height, u32
         }
     }
 
-    string_ncopy(config.name, name, GEOMETRY_NAME_MAX_LENGTH);
+    string_ncopy(config.name.string, name, GEOMETRY_NAME_MAX_LENGTH);
+    config.name.str_len = strlen(name);
     dstring file_name = material_name;
     config.material   = material_system_acquire_from_config_file(&file_name);
 
@@ -253,6 +255,8 @@ bool geometry_system_create_default_geometry()
     {
         geo_sys_state_ptr->default_geo_id = geometry_system_create_geometry(&default_geo_configs[i], false);
     }
+    dstring file_name = "cube.bin";
+    geometry_system_write_configs_to_file(&file_name, 1, default_geo_configs);
 
     for (u32 i = 0; i < num_of_objects; i++)
     {
@@ -347,7 +351,8 @@ void geometry_system_copy_config(geometry_config *dst_config, const geometry_con
         return;
     }
 
-    dcopy_memory(dst_config->name, src_config->name, GEOMETRY_NAME_MAX_LENGTH);
+    dcopy_memory(dst_config->name.string, src_config->name.string, src_config->name.str_len);
+    dst_config->name.str_len = src_config->name.str_len;
 
     dst_config->vertex_count = src_config->vertex_count;
     dst_config->vertices =
@@ -376,7 +381,7 @@ static const char ascii_chars[95] = {'X', 'r', 'F', 'm', 'S', '{', 'K',  '5', 'T
 void get_random_string(char *out_string)
 {
     u32 index;
-    for (u32 i = 0; i < MAX_KEY_LENGTH - 1; i++)
+    for (u32 i = 0; i < MAX_KEY_LENGTH - 2; i++)
     {
         index         = drandom_in_range(0, 94);
         out_string[i] = ascii_chars[index];
@@ -467,14 +472,15 @@ void geometry_system_parse_obj(const char *obj_file_full_path, u32 *num_of_objec
                     dstring material_name  = {};
                     object_usemtl_name    += 6;
                     u32 size               = extract_name(material_name.string, object_usemtl_name);
-                    get_random_string((*geo_configs)[j].name);
+                    get_random_string((*geo_configs)[j].name.string);
+                    (*geo_configs)[j].name.str_len = MAX_KEY_LENGTH - 1;
                     (*geo_configs)[j++].material  = material_system_acquire_from_name(&material_name);
                     object_usemtl_name           += size;
                 }
             }
             else
             {
-                get_random_string((*geo_configs)[j++].name);
+                get_random_string((*geo_configs)[j++].name.string);
             }
         }
     }
@@ -860,6 +866,41 @@ bool destroy_geometry_config(geometry_config *config)
     config->indices      = nullptr;
     config->vertex_count = INVALID_ID;
     config->index_count  = INVALID_ID;
-    dzero_memory(config->name, GEOMETRY_NAME_MAX_LENGTH);
+    dzero_memory(config->name.string, GEOMETRY_NAME_MAX_LENGTH);
+    return true;
+}
+
+
+bool geometry_system_write_configs_to_file( dstring* file_name, u32 geometry_config_count, geometry_config* configs)
+{
+    DASSERT(file_name);
+    DASSERT(geometry_config_count);
+    DASSERT(configs);
+
+    dstring full_file_path;
+    dstring prefix = "../assets/meshes/";
+    string_copy_format(full_file_path.string, "%s%s", 0, prefix, file_name->c_str());
+
+    std::fstream f;
+    bool result = file_open(full_file_path, &f, true, true);
+    DASSERT_MSG(result, "Failed to open file");
+
+    for(u32 i = 0 ; i < geometry_config_count ; i++)
+    {
+        file_write(&f, "name", string_length("name"));
+        file_write(&f, configs[i].name.c_str(), configs[i].name.str_len);
+        //NOTE: thi&s is the material name and not the material itself.
+        file_write(&f, "material", string_length("material"));
+        file_write(&f, configs[i].material->name.c_str(), configs[i].material->name.str_len);
+        file_write(&f, "vertex_count", string_length("vertex_count"));
+        file_write(&f, reinterpret_cast<const char *>(&configs[i].vertex_count),sizeof(u32));
+        file_write(&f, "vertices", string_length("vertices"));
+        file_write(&f, reinterpret_cast<const char *>(&configs[i].vertices),configs[i].vertex_count * sizeof(u32));
+        file_write(&f, "index_count", string_length("index_count"));
+        file_write(&f, reinterpret_cast<const char *>(&configs[i].index_count),sizeof(u32));
+        file_write(&f, "indices", string_length("indices"));
+        file_write(&f, reinterpret_cast<const char *>(&configs[i].indices),configs[i].index_count * sizeof(u32));
+    }
+    file_close(&f);
     return true;
 }

@@ -151,7 +151,7 @@ struct material
 
 struct geometry_config
 {
-    char      name[GEOMETRY_NAME_MAX_LENGTH];
+    dstring   name;
     material *material     = nullptr;
     u32       vertex_count = INVALID_ID;
     vertex   *vertices     = nullptr;

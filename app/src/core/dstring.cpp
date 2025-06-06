@@ -65,6 +65,9 @@ char &dstring::operator[](u32 index)
 dstring &dstring::operator=(const dstring *in_string)
 {
     dcopy_memory(this, string, sizeof(dstring));
+    DASSERT_MSG(in_string->str_len, "The passed string cannot have a size 0");
+    DASSERT_MSG(in_string->str_len != MAX_STRING_LENGTH, "The passed string doesn't have a valid length");
+    str_len = in_string->str_len;
     return *this;
 }
 

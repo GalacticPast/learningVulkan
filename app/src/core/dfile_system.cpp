@@ -5,11 +5,21 @@
 #include "dstring.hpp"
 #include <string>
 
-bool file_open(dstring file_name, std::ifstream *out_file_handle, bool is_binary)
+bool file_open(dstring file_name, std::fstream *out_file_handle, bool for_writing, bool is_binary)
 {
     DASSERT(out_file_handle);
 
-    u32 io_stream_flags = std::ios::in;
+    u32 io_stream_flags;
+
+    if(for_writing)
+    {
+        io_stream_flags = std::ios::out | std::ios::app;
+    }
+    else
+    {
+        io_stream_flags = std::ios::in;
+    }
+
     if (is_binary)
     {
         io_stream_flags |= std::ios::binary;
@@ -25,14 +35,14 @@ bool file_open(dstring file_name, std::ifstream *out_file_handle, bool is_binary
     return true;
 }
 
-bool file_close(std::ifstream *f)
+bool file_close(std::fstream *f)
 {
     DASSERT(f);
     f->close();
     return true;
 }
 
-bool file_get_line(std::ifstream &f, dstring *out_line)
+bool file_get_line(std::fstream &f, dstring *out_line)
 {
     DASSERT(f);
     DASSERT(out_line);
@@ -65,13 +75,13 @@ bool file_get_line(std::ifstream &f, dstring *out_line)
 
 bool file_open_and_read(const char *file_name, u64 *buffer_size_requirements, char *buffer, bool is_binary)
 {
-    u32 io_stream_flags = std::ios::ate;
+    auto io_stream_flags = std::ios::ate;
     if (is_binary)
     {
         io_stream_flags |= std::ios::binary;
     }
 
-    std::ifstream file(file_name, static_cast<std::ios_base::openmode>(io_stream_flags));
+    std::ifstream file(file_name, io_stream_flags);
 
     if (!file.is_open())
     {
@@ -92,6 +102,16 @@ bool file_open_and_read(const char *file_name, u64 *buffer_size_requirements, ch
     file.read(buffer, file_size);
 
     file.close();
+
+    return true;
+}
+
+bool file_write(std::fstream* f, const char* buffer, u64 size)
+{
+    DASSERT_MSG(f, "Provided file handle is null ptr");
+    DASSERT_MSG(buffer, "Provided buffer is null ptr");
+
+    f->write(buffer, size);
 
     return true;
 }
