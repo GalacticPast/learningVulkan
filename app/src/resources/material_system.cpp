@@ -342,7 +342,7 @@ static bool material_system_parse_configuration_file(dstring *conf_file_name, ma
         return line + index + 1;
     };
 
-    auto extract_identifier = [](const char *line, dstring dst) {
+    auto extract_identifier = [](const char *line, dstring &dst) {
         u32 index = 0;
         u32 j     = 0;
 

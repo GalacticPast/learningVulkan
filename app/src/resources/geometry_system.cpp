@@ -276,7 +276,6 @@ bool geometry_system_create_default_geometry()
     u32              num_of_objects      = INVALID_ID;
     geometry_config *default_geo_configs = nullptr;
 
-    bool    write_to_file = false;
     dstring bin_file      = "../assets/meshes/cube.obj.bin";
 
     bool result = file_exists(&bin_file);
@@ -289,7 +288,8 @@ bool geometry_system_create_default_geometry()
     else
     {
         geometry_system_parse_obj("../assets/meshes/cube.obj", &num_of_objects, &default_geo_configs);
-        write_to_file = true;
+        DASSERT(num_of_objects != INVALID_ID);
+        geometry_system_write_configs_to_file(&bin_file, num_of_objects, default_geo_configs);
     }
 
     DASSERT(num_of_objects != INVALID_ID);
@@ -298,10 +298,6 @@ bool geometry_system_create_default_geometry()
         geo_sys_state_ptr->default_geo_id = geometry_system_create_geometry(&default_geo_configs[i], false);
     }
 
-    if (write_to_file)
-    {
-        geometry_system_write_configs_to_file(&bin_file, 1, default_geo_configs);
-    }
 
     for (u32 i = 0; i < num_of_objects; i++)
     {
@@ -965,9 +961,9 @@ bool geometry_system_write_configs_to_file(dstring *file_full_path, u32 geometry
         }
 
         // NOTE: thi&s is the material name and not the material itself.
-        size = configs[i].material->name.str_len;
-        if (size)
+        if (configs[i].material)
         {
+            size = configs[i].material->name.str_len;
             file_write(&f, "material:", string_length("material:"));
             file_write(&f, reinterpret_cast<const char *>(&size), sizeof(u32));
             file_write(&f, configs[i].material->name.c_str(), size);

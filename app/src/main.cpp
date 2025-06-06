@@ -94,7 +94,7 @@ int main()
     geometry **geos           = nullptr;
     u32        geometry_count = INVALID_ID;
 
-#if true
+#if false
     {
         const char *obj_file_name  = "sponza.obj";
         const char *mtl_file_name  = "sponza.mtl";
@@ -102,7 +102,7 @@ int main()
     }
 #endif
 
-#if false
+#if true
     {
         dstring sphere_obj = "sphere.obj";
         geometry_config parent_config = geometry_system_generate_plane_config(1000,1000,100,100,100,100,"it's a plane", "orange_lines_512.conf");
