@@ -1,7 +1,7 @@
-#include "dstring.hpp"
 #include "core/dasserts.hpp"
 #include "core/dmemory.hpp"
 #include "core/logger.hpp"
+#include "dstring.hpp"
 
 // TODO: temporary
 #include <cstdio>
@@ -152,7 +152,6 @@ void string_split(dstring *string, const char ch, darray<dstring> *split_strings
     a.str_len = a_ind;
     split_strings->push_back(a);
 
-
     return;
 }
 
@@ -171,37 +170,11 @@ s32 string_num_of_substring_occurence(const char *string, const char *sub_str)
     return count;
 }
 
-s32 string_first_string_occurence(const char *string, const char *sub_str)
+const char *string_first_string_occurence(const char *string, const char *sub_str)
 {
-    u32 str_len     = strlen(string);
-    u32 sub_str_len = strlen(sub_str);
-
-    if (str_len < sub_str_len)
-    {
-        DERROR("strlen:%d for string:%s is smaller than substring len: %d for substring:%s.", str_len, string,
-               sub_str_len, sub_str);
-        return 0;
-    }
-
-    // im trollin :)
-    char *ptr  = const_cast<char *>(string);
-    char  temp = ' ';
-    s32   ans  = -1;
-
-    for (u32 i = 0; i < str_len - sub_str_len && ans == -1; i++)
-    {
-        temp             = ptr[sub_str_len];
-        ptr[sub_str_len] = '\0';
-        if (string_compare(ptr, sub_str))
-        {
-            ans = i;
-        }
-        ptr[sub_str_len] = temp;
-        temp             = ' ';
-        ptr++;
-    }
-
-    return ans;
+    char *ptr   = const_cast<char *>(string);
+    char *found = strstr(ptr, sub_str);
+    return found;
 }
 
 dstring::dstring()
@@ -224,13 +197,13 @@ dstring::dstring(const char *c_string)
 // @param: ch-> keep searching till the first occurecne of the character
 bool string_to_vec4(const char *string, math::vec4 *vector)
 {
-    char  floats[64] = {};
-    char *ptr        = const_cast<char *>(string);
+    char        floats[64] = {};
+    const char *ptr        = string;
 
     s32 occurence = string_first_char_occurence(ptr, '{');
     if (occurence == -1)
     {
-        DERROR("Couldnt find opening brace '{' in %s",string);
+        DERROR("Couldnt find opening brace '{' in %s", string);
         return false;
     }
     ptr += occurence + 1;
@@ -238,7 +211,7 @@ bool string_to_vec4(const char *string, math::vec4 *vector)
     occurence = string_first_char_occurence(string, '}');
     if (occurence == -1)
     {
-        DERROR("Couldnt find closing brace '}' in %s",string);
+        DERROR("Couldnt find closing brace '}' in %s", string);
         return false;
     }
 
@@ -259,5 +232,18 @@ bool string_to_vec4(const char *string, math::vec4 *vector)
     sscanf(floats, "%f %f %f %f", &result.r, &result.g, &result.b, &result.a);
 #endif
     *vector = result;
+    return true;
+}
+
+bool string_to_u32(const char *string, u32 *integer)
+{
+    u32 res = INVALID_ID;
+
+#ifdef DPLATFORM_WINDOWS
+    sscanf_s(string, "%ld", &res);
+#elif DPLATFORM_LINUX
+    sscanf(string, "%ld", &res);
+#endif
+    DASSERT(res != INVALID_ID);
     return true;
 }

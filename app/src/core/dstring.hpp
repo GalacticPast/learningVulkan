@@ -44,8 +44,9 @@ void string_ncopy(char *dest, const char *src, u32 length);
 u32 string_copy_format(char *dest, const char *format, u32 offset_to_dest, ...);
 
 s32 string_first_char_occurence(const char *string, const char ch);
-s32 string_first_string_occurence(const char *string, const char *str);
+//INFO: this is super slow
+const char *string_first_string_occurence(const char *string, const char *sub_str);
 s32 string_num_of_substring_occurence(const char *string, const char *str);
 
-//WARN: This will modify the string provided just to let you know :)
 bool string_to_vec4(const char *string, math::vec4 *vector);
+bool string_to_u32(const char* string, u32* integer);

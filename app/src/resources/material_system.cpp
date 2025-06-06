@@ -213,9 +213,9 @@ bool material_system_parse_mtl_file(const char *mtl_file_name)
 
     for (s32 i = 0; i < num_materials; i++)
     {
-        u32 advance_ptr_by  = string_first_string_occurence(mtl_ptr, newmat_sub_string);
-        mtl_ptr            += advance_ptr_by + newmat_substring_size;
-        u32 next_material   = string_first_string_occurence(mtl_ptr, newmat_sub_string);
+        mtl_ptr              = const_cast<char *>(string_first_string_occurence(mtl_ptr, newmat_sub_string));
+        mtl_ptr             += newmat_substring_size;
+        char *next_material  = const_cast<char *>(string_first_string_occurence(mtl_ptr, newmat_sub_string));
 
         u32 material_name_length = string_first_char_occurence(mtl_ptr, '\n');
         while (*mtl_ptr == ' ')
@@ -224,12 +224,13 @@ bool material_system_parse_mtl_file(const char *mtl_file_name)
         }
         string_ncopy(configs[i].mat_name, mtl_ptr, material_name_length);
 
-        u32   albedo_map_occurence = string_first_string_occurence(mtl_ptr, albedo_map_sub_string);
-        u32   alpha_map_occurence  = string_first_string_occurence(mtl_ptr, alpha_map_sub_string);
+        char *albedo_map_occurence = const_cast<char *>(string_first_string_occurence(mtl_ptr, albedo_map_sub_string));
+        char *alpha_map_occurence  = const_cast<char *>(string_first_string_occurence(mtl_ptr, alpha_map_sub_string));
         char *albedo_map           = mtl_ptr;
+
         if (albedo_map_occurence < next_material)
         {
-            albedo_map += albedo_map_occurence + albedo_map_substring_size;
+            albedo_map += albedo_map_substring_size;
 
             while (*albedo_map == ' ')
             {
@@ -258,7 +259,7 @@ bool material_system_parse_mtl_file(const char *mtl_file_name)
         char *alpha_map = mtl_ptr;
         if (alpha_map_occurence < next_material)
         {
-            alpha_map += alpha_map_occurence + alpha_map_substring_size;
+            alpha_map += alpha_map_substring_size;
 
             while (*alpha_map == ' ')
             {
@@ -305,7 +306,7 @@ static bool material_system_parse_configuration_file(dstring *conf_file_name, ma
     string_copy_format(conf_full_path.string, "%s%s", 0, prefix, conf_file_name->c_str());
 
     std::fstream file;
-    bool          result = file_open(conf_full_path, &file, false, false);
+    bool         result = file_open(conf_full_path, &file, false, false);
     DASSERT(result);
 
     auto go_to_colon = [](const char *line) -> const char * {

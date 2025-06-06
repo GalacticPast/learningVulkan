@@ -30,9 +30,12 @@ static geometry_system_state *geo_sys_state_ptr;
 bool                          geometry_system_create_default_geometry();
 
 // this will allocate and write size back, assumes the caller will call free once the data is processed
-void geometry_system_parse_obj(const char *obj_file_full_path, u32 *num_of_objects, geometry_config **geo_configs);
-bool destroy_geometry_config(geometry_config *config);
-bool geometry_system_write_configs_to_file( dstring* file_name, u32 geometry_config_count, geometry_config* configs);
+static void geometry_system_parse_obj(const char *obj_file_full_path, u32 *num_of_objects,
+                                      geometry_config **geo_configs);
+static bool destroy_geometry_config(geometry_config *config);
+static bool geometry_system_write_configs_to_file(dstring *file_full_path, u32 geometry_config_count,
+                                                  geometry_config *configs);
+static bool geometry_system_parse_bin_file(dstring *file_name, u32 *geometry_config_count, geometry_config **configs);
 
 bool geometry_system_initialize(u64 *geometry_system_mem_requirements, void *state)
 {
@@ -178,33 +181,33 @@ geometry_config geometry_system_generate_plane_config(f32 width, f32 height, u32
 
             v0->position.x  = min_x;
             v0->position.z  = -min_z;
-            v0->normal.x = 0;
-            v0->normal.y = 1;
-            v0->normal.z = 0;
+            v0->normal.x    = 0;
+            v0->normal.y    = 1;
+            v0->normal.z    = 0;
             v0->tex_coord.x = min_uvx;
             v0->tex_coord.y = min_uvy;
 
             v1->position.x  = max_x;
             v1->position.z  = -max_z;
-            v1->normal.x = 0;
-            v1->normal.y = 1;
-            v1->normal.z = 0;
+            v1->normal.x    = 0;
+            v1->normal.y    = 1;
+            v1->normal.z    = 0;
             v1->tex_coord.x = max_uvx;
             v1->tex_coord.y = max_uvy;
 
             v2->position.x  = min_x;
             v2->position.z  = -max_z;
-            v2->normal.x = 0;
-            v2->normal.y = 1;
-            v2->normal.z = 0;
+            v2->normal.x    = 0;
+            v2->normal.y    = 1;
+            v2->normal.z    = 0;
             v2->tex_coord.x = min_uvx;
             v2->tex_coord.y = max_uvy;
 
             v3->position.x  = max_x;
             v3->position.z  = -min_z;
-            v3->normal.x = 0;
-            v3->normal.y = 1;
-            v3->normal.z = 0;
+            v3->normal.x    = 0;
+            v3->normal.y    = 1;
+            v3->normal.z    = 0;
             v3->tex_coord.x = max_uvx;
             v3->tex_coord.y = min_uvy;
 
@@ -221,22 +224,46 @@ geometry_config geometry_system_generate_plane_config(f32 width, f32 height, u32
 
     string_ncopy(config.name.string, name, GEOMETRY_NAME_MAX_LENGTH);
     config.name.str_len = strlen(name);
-    dstring file_name = material_name;
-    config.material   = material_system_acquire_from_config_file(&file_name);
+    dstring file_name   = material_name;
+    config.material     = material_system_acquire_from_config_file(&file_name);
 
     return config;
 }
 
 geometry_config *geometry_system_generate_config(dstring obj_file_name)
 {
-    dstring     file_full_path;
+    dstring file_full_path;
+    dstring bin_file_full_path;
+
     const char *prefix = "../assets/meshes/";
+    const char *suffix = ".bin";
+
     string_copy_format(file_full_path.string, "%s%s", 0, prefix, obj_file_name.c_str());
+    string_copy_format(bin_file_full_path.string, "%s%s", 0, file_full_path.c_str(), suffix);
 
     geometry_config *config      = nullptr;
     u32              num_objects = INVALID_ID;
 
-    geometry_system_parse_obj(file_full_path.c_str(), &num_objects, &config);
+    bool write_to_file = false;
+
+    bool result = file_exists(&bin_file_full_path);
+
+    if (result)
+    {
+        result = geometry_system_parse_bin_file(&bin_file_full_path, &num_objects, &config);
+        DASSERT(result);
+    }
+    else
+    {
+        geometry_system_parse_obj(file_full_path.c_str(), &num_objects, &config);
+        write_to_file = true;
+    }
+
+    if (write_to_file)
+    {
+        geometry_system_write_configs_to_file(&bin_file_full_path, 1, config);
+    }
+
     DASSERT(config);
     config[0].material = material_system_get_default_material();
 
@@ -249,21 +276,38 @@ bool geometry_system_create_default_geometry()
     u32              num_of_objects      = INVALID_ID;
     geometry_config *default_geo_configs = nullptr;
 
-    geometry_system_parse_obj("../assets/meshes/cube.obj", &num_of_objects, &default_geo_configs);
+    bool    write_to_file = false;
+    dstring bin_file      = "../assets/meshes/cube.obj.bin";
 
+    bool result = file_exists(&bin_file);
+
+    if (result)
+    {
+        result = geometry_system_parse_bin_file(&bin_file, &num_of_objects, &default_geo_configs);
+        DASSERT(result);
+    }
+    else
+    {
+        geometry_system_parse_obj("../assets/meshes/cube.obj", &num_of_objects, &default_geo_configs);
+        write_to_file = true;
+    }
+
+    DASSERT(num_of_objects != INVALID_ID);
     for (u32 i = 0; i < num_of_objects; i++)
     {
         geo_sys_state_ptr->default_geo_id = geometry_system_create_geometry(&default_geo_configs[i], false);
     }
-    dstring file_name = "cube.bin";
-    geometry_system_write_configs_to_file(&file_name, 1, default_geo_configs);
+
+    if (write_to_file)
+    {
+        geometry_system_write_configs_to_file(&bin_file, 1, default_geo_configs);
+    }
 
     for (u32 i = 0; i < num_of_objects; i++)
     {
         destroy_geometry_config(&default_geo_configs[i]);
     }
     dfree(default_geo_configs, num_of_objects * sizeof(geometry_config), MEM_TAG_GEOMETRY);
-
 
     return true;
 }
@@ -300,8 +344,8 @@ geometry *geometry_system_get_geometry_by_name(dstring geometry_name)
 geometry *geometry_system_get_default_geometry()
 {
 
-    u64 default_id = geo_sys_state_ptr->default_geo_id;
-    geometry *geo = geo_sys_state_ptr->hashtable.find(default_id);
+    u64       default_id = geo_sys_state_ptr->default_geo_id;
+    geometry *geo        = geo_sys_state_ptr->hashtable.find(default_id);
     if (!geo)
     {
         DERROR("Default geometry is not loaded yet. How is this possible?? Make sure that you have initialzed the "
@@ -473,14 +517,15 @@ void geometry_system_parse_obj(const char *obj_file_full_path, u32 *num_of_objec
                     object_usemtl_name    += 6;
                     u32 size               = extract_name(material_name.string, object_usemtl_name);
                     get_random_string((*geo_configs)[j].name.string);
-                    (*geo_configs)[j].name.str_len = MAX_KEY_LENGTH - 1;
-                    (*geo_configs)[j++].material  = material_system_acquire_from_name(&material_name);
-                    object_usemtl_name           += size;
+                    (*geo_configs)[j].name.str_len  = MAX_KEY_LENGTH - 1;
+                    (*geo_configs)[j++].material    = material_system_acquire_from_name(&material_name);
+                    object_usemtl_name             += size;
                 }
             }
             else
             {
                 get_random_string((*geo_configs)[j++].name.string);
+                (*geo_configs)[i].material = material_system_get_default_material();
             }
         }
     }
@@ -496,8 +541,8 @@ void geometry_system_parse_obj(const char *obj_file_full_path, u32 *num_of_objec
     char *vert_            = buffer;
     u32   vertex_count_obj = string_num_of_substring_occurence(vert_, vert_substring) + 1;
 
-    u32 v     = string_first_string_occurence(vert_ptr, vert_substring);
-    vert_ptr += v + vert_substring_size;
+    vert_ptr  = const_cast<char *>(string_first_string_occurence(vert_ptr, vert_substring));
+    vert_ptr += vert_substring_size;
 
     math::vec3 *vert_coords =
         static_cast<math::vec3 *>(dallocate(sizeof(math::vec3) * vertex_count_obj, MEM_TAG_GEOMETRY));
@@ -540,8 +585,8 @@ void geometry_system_parse_obj(const char *obj_file_full_path, u32 *num_of_objec
 
     math::vec3 *normals = static_cast<math::vec3 *>(dallocate(sizeof(math::vec3) * normal_count_obj, MEM_TAG_GEOMETRY));
 
-    u32 vn    = string_first_string_occurence(norm_ptr, vert_normal);
-    norm_ptr += vn + vert_normal_substring_size;
+    norm_ptr  = const_cast<char *>(string_first_string_occurence(norm_ptr, vert_normal));
+    norm_ptr += vert_normal_substring_size;
 
     u32 normal_processed = 0;
     clock_update(&telemetry);
@@ -582,8 +627,8 @@ void geometry_system_parse_obj(const char *obj_file_full_path, u32 *num_of_objec
     math::vec_2d *textures =
         static_cast<math::vec_2d *>(dallocate(sizeof(math::vec_2d) * texture_count_obj, MEM_TAG_GEOMETRY));
 
-    u32 vt   = string_first_string_occurence(tex_ptr, vert_texture);
-    tex_ptr += vt + vert_texture_substring_size;
+    tex_ptr  = const_cast<char *>(string_first_string_occurence(tex_ptr, vert_texture));
+    tex_ptr += vert_texture_substring_size;
 
     u32 texture_processed = 0;
     clock_update(&telemetry);
@@ -624,8 +669,8 @@ void geometry_system_parse_obj(const char *obj_file_full_path, u32 *num_of_objec
     u32  offsets_size = (offsets_count * 9) + (7 * objects);
     u32 *offsets      = static_cast<u32 *>(dallocate(sizeof(u32) * (offsets_size), MEM_TAG_GEOMETRY));
 
-    u32   object_index = string_first_string_occurence(buffer, "o ");
-    char *object_ptr   = buffer + object_index + 2;
+    char *object_ptr  = const_cast<char *>(string_first_string_occurence(buffer, "o "));
+    object_ptr       += 2;
 
     const char *usemtl_substring      = "usemtl";
     u32         usemtl_substring_size = 6;
@@ -637,29 +682,29 @@ void geometry_system_parse_obj(const char *obj_file_full_path, u32 *num_of_objec
     u32         use_string_size = INVALID_ID;
     if (usemtl_name)
     {
-        object_index    = string_first_string_occurence(buffer, usemtl_substring);
-        object_ptr      = buffer + object_index + 6;
-        use_string      = usemtl_substring;
-        use_string_size = usemtl_substring_size;
+        object_ptr       = const_cast<char *>(string_first_string_occurence(buffer, usemtl_substring));
+        object_ptr      += 6;
+        use_string       = usemtl_substring;
+        use_string_size  = usemtl_substring_size;
     }
     else
     {
-        object_index    = string_first_string_occurence(buffer, obj_substring);
-        object_ptr      = buffer + object_index + obj_substring_size;
+        object_ptr      = const_cast<char *>(string_first_string_occurence(buffer, obj_substring));
+        object_ptr      += obj_substring_size;
         use_string      = obj_substring;
         use_string_size = obj_substring_size;
     }
 
     char *indices_ptr = object_ptr;
 
-    s32 object_next_index = string_first_string_occurence(object_ptr, use_string);
-    if (object_next_index == EOF)
+    object_ptr = const_cast<char *>(string_first_string_occurence(object_ptr, use_string));
+    if (object_ptr == nullptr)
     {
         object_ptr = buffer + buffer_mem_requirements;
     }
     else
     {
-        object_ptr += object_next_index + use_string_size;
+        object_ptr += use_string_size;
     }
 
     // move the pointer to the next object's offsets
@@ -710,14 +755,14 @@ void geometry_system_parse_obj(const char *obj_file_full_path, u32 *num_of_objec
             min_normal_for_obj    = INVALID_ID;
             offsets_count_for_obj = 0;
 
-            s32 object_next_index = string_first_string_occurence(object_ptr, use_string);
-            if (object_next_index == EOF)
+            object_ptr = const_cast<char *>(string_first_string_occurence(object_ptr, use_string));
+            if (object_ptr == nullptr)
             {
                 object_ptr = buffer + buffer_mem_requirements;
             }
             else
             {
-                object_ptr += object_next_index + use_string_size;
+                object_ptr += use_string_size;
             }
             object_processed++;
             if (found == NULL)
@@ -870,37 +915,197 @@ bool destroy_geometry_config(geometry_config *config)
     return true;
 }
 
-
-bool geometry_system_write_configs_to_file( dstring* file_name, u32 geometry_config_count, geometry_config* configs)
+bool geometry_system_write_configs_to_file(dstring *file_full_path, u32 geometry_config_count, geometry_config *configs)
 {
-    DASSERT(file_name);
+    DASSERT(file_full_path);
     DASSERT(geometry_config_count);
     DASSERT(configs);
 
-    dstring full_file_path;
-    dstring prefix = "../assets/meshes/";
-    string_copy_format(full_file_path.string, "%s%s", 0, prefix, file_name->c_str());
-
     std::fstream f;
-    bool result = file_open(full_file_path, &f, true, true);
+    bool         result = file_open(file_full_path->c_str(), &f, true, true);
     DASSERT_MSG(result, "Failed to open file");
 
-    for(u32 i = 0 ; i < geometry_config_count ; i++)
+    char new_line = '\n';
+
+    // INFO: file header
+    file_write(&f, "geometry_config_count:", string_length("geometry_config_count:"));
+    file_write(&f, reinterpret_cast<const char *>(&geometry_config_count), sizeof(u32));
+    file_write(&f, reinterpret_cast<const char *>(&new_line), 1);
+
+    u32 size = 0;
+    for (u32 i = 0; i < geometry_config_count; i++)
     {
-        file_write(&f, "name", string_length("name"));
-        file_write(&f, configs[i].name.c_str(), configs[i].name.str_len);
-        //NOTE: thi&s is the material name and not the material itself.
-        file_write(&f, "material", string_length("material"));
-        file_write(&f, configs[i].material->name.c_str(), configs[i].material->name.str_len);
-        file_write(&f, "vertex_count", string_length("vertex_count"));
-        file_write(&f, reinterpret_cast<const char *>(&configs[i].vertex_count),sizeof(u32));
-        file_write(&f, "vertices", string_length("vertices"));
-        file_write(&f, reinterpret_cast<const char *>(&configs[i].vertices),configs[i].vertex_count * sizeof(u32));
-        file_write(&f, "index_count", string_length("index_count"));
-        file_write(&f, reinterpret_cast<const char *>(&configs[i].index_count),sizeof(u32));
-        file_write(&f, "indices", string_length("indices"));
-        file_write(&f, reinterpret_cast<const char *>(&configs[i].indices),configs[i].index_count * sizeof(u32));
+
+        size = configs[i].name.str_len;
+        if (size)
+        {
+            file_write(&f, "name:", string_length("name:"));
+            file_write(&f, reinterpret_cast<const char *>(&size), sizeof(u32));
+            file_write(&f, configs[i].name.c_str(), size);
+            file_write(&f, reinterpret_cast<const char *>(&new_line), 1);
+        }
+
+        // NOTE: thi&s is the material name and not the material itself.
+        size = configs[i].material->name.str_len;
+        if (size)
+        {
+            file_write(&f, "material:", string_length("material:"));
+            file_write(&f, reinterpret_cast<const char *>(&size), sizeof(u32));
+            file_write(&f, configs[i].material->name.c_str(), size);
+            file_write(&f, reinterpret_cast<const char *>(&new_line), 1);
+        }
+
+        file_write(&f, "vertex_count:", string_length("vertex_count:"));
+        file_write(&f, reinterpret_cast<const char *>(&configs[i].vertex_count), sizeof(u32));
+        file_write(&f, reinterpret_cast<const char *>(&new_line), 1);
+
+        file_write(&f, "vertices:", string_length("vertices:"));
+        file_write(&f, reinterpret_cast<const char *>(configs[i].vertices), configs[i].vertex_count * sizeof(vertex));
+        file_write(&f, reinterpret_cast<const char *>(&new_line), 1);
+
+        file_write(&f, "index_count:", string_length("index_count:"));
+        file_write(&f, reinterpret_cast<const char *>(&configs[i].index_count), sizeof(u32));
+        file_write(&f, reinterpret_cast<const char *>(&new_line), 1);
+
+        file_write(&f, "indices:", string_length("indices:"));
+        file_write(&f, reinterpret_cast<const char *>(configs[i].indices), configs[i].index_count * sizeof(u32));
+        file_write(&f, reinterpret_cast<const char *>(&new_line), 1);
     }
     file_close(&f);
+    return true;
+}
+// NOTE: count and configs should be nullptr because the function will allocate it dynamically based on the bin file
+// header
+bool geometry_system_parse_bin_file(dstring *file_full_path, u32 *geometry_config_count, geometry_config **configs)
+{
+    DASSERT(file_full_path);
+
+    u64 buff_size = INVALID_ID_64;
+    file_open_and_read(file_full_path->c_str(), &buff_size, 0, 1);
+
+    char *buffer = static_cast<char *>(dallocate(buff_size + 1, MEM_TAG_GEOMETRY));
+    bool  result = file_open_and_read(file_full_path->c_str(), &buff_size, buffer, 1);
+    DASSERT(result);
+
+    buffer[buff_size] = EOF;
+    const char *eof   = buffer + buff_size;
+
+    auto go_to_colon = [](const char *line) -> const char * {
+        u32 index = 0;
+        while (line[index] != ':')
+        {
+            if (line[index] == '\n' || line[index] == '\0')
+            {
+                return nullptr;
+            }
+            index++;
+        }
+        return line + index + 1;
+    };
+
+    auto extract_identifier = [](const char *line, char *dst) {
+        u32 index = 0;
+        u32 j     = 0;
+
+        while (line[index] != ':' && line[index] != '\0' && line[index] != '\n')
+        {
+            if (line[index] == ' ')
+            {
+                index++;
+                continue;
+            }
+            dst[j++] = line[index++];
+        }
+        dst[j++] = '\0';
+    };
+
+    const char *ptr = buffer;
+    dstring     identifier;
+    u32         index = 0;
+
+    while (ptr < eof && ptr != nullptr)
+    {
+        extract_identifier(ptr, identifier.string);
+        ptr = go_to_colon(ptr);
+        if (!ptr)
+        {
+            break;
+        }
+
+        if (string_compare(identifier.c_str(), "geometry_config_count"))
+        {
+            u32 config_count;
+            dcopy_memory(&config_count, ptr, sizeof(u32));
+            *geometry_config_count = config_count;
+            (*configs) =
+                static_cast<geometry_config *>(dallocate(sizeof(geometry_config) * config_count, MEM_TAG_GEOMETRY));
+            ptr += sizeof(u32) + 1;
+        }
+        else if (string_compare(identifier.c_str(), "name"))
+        {
+            u32 name_len;
+            dcopy_memory(&name_len, ptr, sizeof(u32));
+            ptr           += sizeof(u32);
+            dstring &name  = (*configs)[index].name;
+            string_ncopy(name.string, ptr, name_len);
+            ptr += name_len + 1;
+        }
+        else if (string_compare(identifier.c_str(), "material"))
+        {
+            u32 name_len;
+            dcopy_memory(&name_len, ptr, sizeof(u32));
+            ptr += sizeof(u32);
+
+            dstring mat_name;
+            string_ncopy(mat_name.string, ptr, name_len);
+            mat_name.str_len = name_len;
+            ptr += name_len + 1;
+
+            (*configs)[index].material = material_system_acquire_from_name(&mat_name);
+        }
+        else if (string_compare(identifier.c_str(), "vertex_count"))
+        {
+            u32 vertex_count;
+            dcopy_memory(&vertex_count, ptr, sizeof(u32));
+
+            (*configs)[index].vertex_count = vertex_count;
+
+            u32 size                   = sizeof(vertex) * vertex_count;
+            (*configs)[index].vertices = static_cast<vertex *>(dallocate(size, MEM_TAG_GEOMETRY));
+            ptr += sizeof(u32) + 1;
+        }
+        else if (string_compare(identifier.c_str(), "vertices"))
+        {
+            void *dst  = (*configs)[index].vertices;
+            u32   size = sizeof(vertex) * (*configs)[index].vertex_count;
+            dcopy_memory(dst, ptr, size);
+            ptr += size + 1;
+        }
+        else if (string_compare(identifier.c_str(), "index_count"))
+        {
+            u32 index_count;
+            dcopy_memory(&index_count, ptr, sizeof(u32));
+
+            (*configs)[index].index_count = index_count;
+
+            u32 size                  = sizeof(u32) * index_count;
+            (*configs)[index].indices = static_cast<u32 *>(dallocate(size, MEM_TAG_GEOMETRY));
+            ptr += sizeof(u32) + 1;
+        }
+        else if (string_compare(identifier.c_str(), "indices"))
+        {
+            void *dst  = (*configs)[index].indices;
+            u32   size = sizeof(u32) * (*configs)[index].index_count;
+            dcopy_memory(dst, ptr, size);
+            // flush the config
+            {
+                index++;
+            }
+            ptr += size + 1;
+        }
+    }
+
+    dfree(buffer, buff_size + 1, MEM_TAG_GEOMETRY);
+
     return true;
 }

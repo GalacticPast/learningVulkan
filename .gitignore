@@ -16,6 +16,9 @@
 # Rider IDE
 .idea/
 
+#binary files
+*.bin
+
 # Build configuration files
 *.VC.db
 *.VC.VC.opendb

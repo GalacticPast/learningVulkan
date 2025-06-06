@@ -3,7 +3,9 @@
 #include "core/dasserts.hpp"
 #include "core/logger.hpp"
 #include "dstring.hpp"
-#include <string>
+
+// HACK:
+#include <direct.h>
 
 bool file_open(dstring file_name, std::fstream *out_file_handle, bool for_writing, bool is_binary)
 {
@@ -11,9 +13,9 @@ bool file_open(dstring file_name, std::fstream *out_file_handle, bool for_writin
 
     u32 io_stream_flags;
 
-    if(for_writing)
+    if (for_writing)
     {
-        io_stream_flags = std::ios::out | std::ios::app;
+        io_stream_flags = std::ios::out;
     }
     else
     {
@@ -33,6 +35,13 @@ bool file_open(dstring file_name, std::fstream *out_file_handle, bool for_writin
         return false;
     }
     return true;
+}
+
+bool file_exists(dstring *path)
+{
+    DASSERT(path);
+    std::ifstream file(path->c_str());
+    return file.good();
 }
 
 bool file_close(std::fstream *f)
@@ -106,7 +115,7 @@ bool file_open_and_read(const char *file_name, u64 *buffer_size_requirements, ch
     return true;
 }
 
-bool file_write(std::fstream* f, const char* buffer, u64 size)
+bool file_write(std::fstream *f, const char *buffer, u64 size)
 {
     DASSERT_MSG(f, "Provided file handle is null ptr");
     DASSERT_MSG(buffer, "Provided buffer is null ptr");
