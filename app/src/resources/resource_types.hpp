@@ -122,12 +122,12 @@ struct texture_map
 
 struct material_config
 {
-    char       mat_name[MATERIAL_NAME_MAX_LENGTH];       //        256
-    char       albedo_map[TEXTURE_NAME_MAX_LENGTH];      // 512
-    char       alpha_map[TEXTURE_NAME_MAX_LENGTH];       // 512
-    char       normal_map[TEXTURE_NAME_MAX_LENGTH];      // 512
-    char       specular_map[TEXTURE_NAME_MAX_LENGTH];    // 512
-    math::vec4 diffuse_color = {1.0f, 1.0f, 1.0f, 1.0f}; //                 32 * 4 =    128
+    dstring    mat_name;
+    dstring    albedo_map;
+    dstring    alpha_map;
+    dstring    normal_map;
+    dstring    specular_map;
+    math::vec4 diffuse_color = {1.0f, 1.0f, 1.0f, 1.0f};
     // TODO: add normal maps, heightmap etc..
 };
 

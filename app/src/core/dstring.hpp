@@ -19,11 +19,12 @@ class dstring
 
     dstring();
     dstring(const char *c_string);
-    char    &operator[](u32 index);
-    dstring &operator=(const char *c_string);
-    dstring &operator=(const dstring *str);
-    dstring &operator=(const char ch);
-    void     clear();
+    char       &operator[](u32 index);
+    const char &operator[](u32 index) const;
+    dstring    &operator=(const char *c_string);
+    dstring    &operator=(const dstring *str);
+    dstring    &operator=(const char ch);
+    void        clear();
 
     const char *c_str();
 };
@@ -43,10 +44,10 @@ void string_ncopy(char *dest, const char *src, u32 length);
 
 u32 string_copy_format(char *dest, const char *format, u32 offset_to_dest, ...);
 
-s32 string_first_char_occurence(const char *string, const char ch);
-//INFO: this is super slow
+s32         string_first_char_occurence(const char *string, const char ch);
 const char *string_first_string_occurence(const char *string, const char *sub_str);
+
 s32 string_num_of_substring_occurence(const char *string, const char *str);
 
 bool string_to_vec4(const char *string, math::vec4 *vector);
-bool string_to_u32(const char* string, u32* integer);
+bool string_to_u32(const char *string, u32 *integer);

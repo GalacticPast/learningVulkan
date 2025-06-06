@@ -61,6 +61,11 @@ char &dstring::operator[](u32 index)
     DASSERT_MSG(index < MAX_STRING_LENGTH, "Index should be less than MAX_STRING_LENGTH");
     return string[index];
 }
+const char &dstring::operator[](u32 index) const
+{
+    DASSERT_MSG(index < MAX_STRING_LENGTH, "Index should be less than MAX_STRING_LENGTH");
+    return string[index];
+}
 
 dstring &dstring::operator=(const dstring *in_string)
 {
@@ -70,7 +75,6 @@ dstring &dstring::operator=(const dstring *in_string)
     str_len = in_string->str_len;
     return *this;
 }
-
 dstring &dstring::operator=(const char *c_string)
 {
     u64 len = strlen(c_string);

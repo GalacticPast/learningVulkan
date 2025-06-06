@@ -525,7 +525,7 @@ void geometry_system_parse_obj(const char *obj_file_full_path, u32 *num_of_objec
             else
             {
                 get_random_string((*geo_configs)[j++].name.string);
-                (*geo_configs)[i].material = material_system_get_default_material();
+                //(*geo_configs)[i].material = material_system_get_default_material();
             }
         }
     }
@@ -871,21 +871,40 @@ void geometry_system_parse_obj(const char *obj_file_full_path, u32 *num_of_objec
 void geometry_system_get_geometries_from_file(const char *obj_file_name, const char *mtl_file_name, geometry ***geos,
                                               u32 *geometry_count)
 {
+    DASSERT(obj_file_name);
+    DASSERT(mtl_file_name);
+
     const char *file_prefix     = "../assets/meshes/";
     const char *file_mtl_prefix = "../assets/materials/";
 
     char obj_file_full_path[GEOMETRY_NAME_MAX_LENGTH];
     string_copy_format(obj_file_full_path, "%s%s", 0, file_prefix, obj_file_name);
 
-    char file_mtl_full_path[GEOMETRY_NAME_MAX_LENGTH];
-    string_copy_format(file_mtl_full_path, "%s%s", 0, file_mtl_prefix, mtl_file_name);
+    dstring file_mtl_full_path;
+    string_copy_format(file_mtl_full_path.string, "%s%s", 0, file_mtl_prefix, mtl_file_name);
+    material_system_parse_mtl_file(&file_mtl_full_path);
 
     u32              objects     = INVALID_ID;
     geometry_config *geo_configs = nullptr;
 
-    material_system_parse_mtl_file(static_cast<const char *>(file_mtl_full_path));
-    geometry_system_parse_obj(obj_file_full_path, &objects, &geo_configs);
 
+    dstring bin_file_full_path;
+    const char* suffix = ".bin";
+    string_copy_format(bin_file_full_path.string, "%s%s",0,obj_file_full_path, suffix);
+
+    bool result = file_exists(&bin_file_full_path);
+
+    if(result)
+    {
+        geometry_system_parse_bin_file(&bin_file_full_path, &objects, &geo_configs);
+    }
+    else
+    {
+        geometry_system_parse_obj(obj_file_full_path, &objects, &geo_configs);
+        geometry_system_write_configs_to_file(&bin_file_full_path, objects, geo_configs);
+    }
+
+    DASSERT(objects != INVALID_ID);
     *geos = static_cast<geometry **>(dallocate(sizeof(geometry *) * objects, MEM_TAG_GEOMETRY));
 
     // HACK:
