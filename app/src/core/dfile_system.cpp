@@ -85,11 +85,15 @@ bool file_get_line(std::fstream &f, dstring *out_line)
 bool file_open_and_read(const char *file_name, u64 *buffer_size_requirements, char *buffer, bool is_binary)
 {
     auto io_stream_flags = std::ios::ate;
+
     if (is_binary)
     {
         io_stream_flags |= std::ios::binary;
     }
-
+//NOTE: because the /r/n endings are causing the buffer size to mismatch
+#if DPLATFORM_WINDOWS
+        io_stream_flags |= std::ios::binary;
+#endif
     std::ifstream file(file_name, io_stream_flags);
 
     if (!file.is_open())
@@ -105,7 +109,7 @@ bool file_open_and_read(const char *file_name, u64 *buffer_size_requirements, ch
         return true;
     }
 
-    file.seekg(0);
+    file.seekg(0, std::ios::beg);
 
     // read entire file into a buffer
     file.read(buffer, file_size);

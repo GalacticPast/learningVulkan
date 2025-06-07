@@ -102,6 +102,7 @@ static void shader_system_calculate_offsets(shader_config *out_config)
                 }
             }
             out_config->per_frame_uniform_offsets.push_back(offset);
+            offset = 0;
         }
         else if (configs[i].scope == SHADER_PER_GROUP_UNIFORM)
         {
@@ -118,6 +119,7 @@ static void shader_system_calculate_offsets(shader_config *out_config)
                 }
             }
             out_config->per_group_uniform_offsets.push_back(offset);
+            offset = 0;
         }
     }
 }

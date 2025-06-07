@@ -1,37 +1,33 @@
 #version 450
 #extension GL_EXT_debug_printf : enable
 
-layout(set = 0, binding = 0) uniform uniform_global_object{
-    mat4 view;
-    mat4 proj;
-} ugo;
-
-layout(push_constant) uniform push_constants{
-    mat4 model;
-    vec4 diffuse_color;
-    vec4 padding1;
-    vec4 padding2;
-    vec4 padding3;
-} pc;
-
-//attributes
 layout(location = 0) in vec3 in_position;
 layout(location = 1) in vec3 in_normal;
-layout(location = 2) in vec2 in_tex_coord;
+layout(location = 2) in vec2 in_texcoord;
 
+layout(set = 0, binding = 0) uniform global_uniform_object {
+	mat4 view;
+    mat4 projection;
+	vec4 ambient_colour;
+} global_ubo;
 
-layout(location = 0) out vec3   frag_color;
-layout(location = 1) out vec3   frag_normal;
-layout(location = 2) out vec2   frag_tex_coord;
-layout(location = 3) out vec3   frag_position;
+layout(push_constant) uniform push_constants {
+	mat4 model; // 64 bytes
+    vec4 diffuse_color;
+} u_push_constants;
 
+// Data Transfer Object
+layout(location = 1) out struct dto {
+	vec4 ambient;
+    vec4 diffuse_color;
+	vec2 tex_coord;
+	vec3 normal;
+} out_dto;
 
 void main() {
-    frag_color      = vec3(pc.diffuse_color);
-    frag_normal     = mat3(transpose(inverse(pc.model))) * in_normal;
-    frag_tex_coord  = in_tex_coord;
-    frag_position   = vec3(pc.model * vec4(in_position, 1.0f));
-
-
-    gl_Position = ugo.proj * ugo.view * pc.model * vec4(in_position, 1.0);
+	out_dto.tex_coord = in_texcoord;
+	out_dto.normal = mat3(u_push_constants.model) * in_normal;
+	out_dto.ambient = global_ubo.ambient_colour;
+    out_dto.diffuse_color = u_push_constants.diffuse_color;
+    gl_Position = global_ubo.projection * global_ubo.view * u_push_constants.model * vec4(in_position, 1.0);
 }

@@ -133,7 +133,7 @@ struct vulkan_shader
     u32           per_frame_stride;
     vulkan_buffer per_frame_uniform_buffer;
     void         *per_frame_mapped_data;
-    darray<u32>   per_frame_uniform_offsets;
+    darray<u32>   per_frame_uniforms_size;
 
     u32            per_group_ubo_size;
     vulkan_buffer  per_group_uniform_buffer;

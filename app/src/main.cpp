@@ -24,7 +24,7 @@
 #include "../tests/linear_allocator/linear_allocator_test.hpp"
 #include "../tests/test_manager.hpp"
 
-void update_camera(scene_global_uniform_buffer_object *ubo,light_global_uniform_buffer_object* lbo, f64 start_time);
+void update_camera(scene_global_uniform_buffer_object *ubo, light_global_uniform_buffer_object *lbo, f64 start_time);
 
 void run_tests()
 {
@@ -82,12 +82,12 @@ int main()
     f32 aspect_ratio = static_cast<f32>(s_width) / static_cast<f32>(s_height);
 
     scene_global_uniform_buffer_object scene_ubo{};
-    scene_ubo.view       = mat4_look_at({2, 2, 2}, {0, 0, 0}, {0, 0, 1.0f});
-    scene_ubo.projection = mat4_perspective(fov_rad, aspect_ratio, 0.01f, 1000.0f);
+    scene_ubo.view          = mat4_look_at({2, 2, 2}, {0, 0, 0}, {0, 0, 1.0f});
+    scene_ubo.projection    = mat4_perspective(fov_rad, aspect_ratio, 0.01f, 1000.0f);
+    scene_ubo.ambient_color = {0.2, 0.2, 0.2, 1.0f};
 
     light_global_uniform_buffer_object light_ubo{};
-    light_ubo.color    = {1.0f, 1.0f, 1.0f};
-
+    light_ubo.color = {0.8, 0.8, 0.8, 1.0};
 
     render_data triangle{};
 
@@ -104,12 +104,13 @@ int main()
 
 #if true
     {
-        dstring sphere_obj = "sphere.obj";
-        geometry_config parent_config = geometry_system_generate_plane_config(1000,1000,100,100,100,100,"it's a plane", "orange_lines_512.conf");
+        geometry_config parent_config = geometry_system_generate_plane_config(1000, 1000, 100, 100, 100, 100,
+                                                                              "it's a plane", "orange_lines_512.conf");
 
+        dstring         sphere_obj   = "sphere.obj";
         geometry_config child_config = *geometry_system_generate_config(sphere_obj);
 
-        dstring mat_name = DEFAULT_LIGHT_MATERIAL_HANDLE;
+        dstring mat_name      = DEFAULT_LIGHT_MATERIAL_HANDLE;
         child_config.material = material_system_acquire_from_name(&mat_name);
 
         scale_geometries(&child_config, {0.3f, 0.3f, 0.3f});
@@ -120,13 +121,14 @@ int main()
         geos    = static_cast<geometry **>(dallocate(sizeof(geometry *) * 3, MEM_TAG_UNKNOWN));
         geos[0] = geometry_system_get_geometry(id1);
         geos[1] = geometry_system_get_geometry(id2);
+        geos[2] = geometry_system_get_default_geometry();
 
-        light_ubo.position = {3.0f, 1.0f, 0.0f};
-        math::vec3 xyz = light_ubo.position;
-        geos[0]->ubo.model = mat4_translation({0.0f,-1.0f,0.0f});
-        geos[1]->ubo.model = mat4_translation(light_ubo.position);
+        light_ubo.direction = {-0.57735, -0.57735, -0.57735};
+        math::vec3 xyz     = light_ubo.direction;
+        geos[0]->ubo.model = mat4_translation({0.0f, -1.0f, 0.0f});
+        geos[1]->ubo.model = mat4_translation(light_ubo.direction);
 
-        geometry_count = 2;
+        geometry_count = 3;
     }
 #endif
 
@@ -150,7 +152,7 @@ int main()
         ZoneScoped;
         frame_start_time = platform_get_absolute_time();
 
-        update_camera(&triangle.scene_ubo,&triangle.light_ubo, frame_elapsed_time);
+        update_camera(&triangle.scene_ubo, &triangle.light_ubo, frame_elapsed_time);
 
         application_run(&triangle);
 
@@ -174,7 +176,7 @@ int main()
     application_shutdown();
 }
 
-void update_camera(scene_global_uniform_buffer_object *ubo,light_global_uniform_buffer_object* lbo, f64 start_time)
+void update_camera(scene_global_uniform_buffer_object *ubo, light_global_uniform_buffer_object *lbo, f64 start_time)
 {
     // ubo->model = mat4_euler_z((start_time * (90.0f * D_DEG2RAD_MULTIPLIER)));
     u32 s_width;
@@ -191,7 +193,6 @@ void update_camera(scene_global_uniform_buffer_object *ubo,light_global_uniform_
 
     static math::vec3 camera_pos   = math::vec3(0, 0, 6);
     static math::vec3 camera_euler = math::vec3(0, 0, 0);
-
 
     if (input_is_key_down(KEY_A) || input_is_key_down(KEY_LEFT))
     {

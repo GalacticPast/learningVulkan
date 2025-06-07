@@ -336,11 +336,12 @@ struct scene_global_uniform_buffer_object
 {
     math::mat4 view;
     math::mat4 projection;
+    math::vec4 ambient_color;
 };
 struct light_global_uniform_buffer_object
 {
-    alignas(16) math::vec3 position;
-    alignas(16) math::vec3 color;
+    alignas(16) math::vec3 direction;
+    alignas(16) math::vec4 color;
     alignas(16) math::vec3 camera_pos;
 };
 

@@ -201,6 +201,8 @@ bool material_system_parse_mtl_file(dstring *mtl_file_name)
 
     DASSERT(file_buffer_mem_requirements != INVALID_ID_64);
 
+    u32 real_size = string_length(file);
+
     const char* eof = file + file_buffer_mem_requirements;
 
     s32 num_materials = string_num_of_substring_occurence(file, "newmtl");
@@ -213,7 +215,7 @@ bool material_system_parse_mtl_file(dstring *mtl_file_name)
 
     auto go_to_next_line = [](const char *ptr) -> const char * {
 
-        while(*ptr != '\n')
+        while(*ptr != '\n' && *ptr != '\r')
         {
             ptr++;
         }
@@ -223,7 +225,7 @@ bool material_system_parse_mtl_file(dstring *mtl_file_name)
         u32 index = 0;
         u32 j     = 0;
 
-        while (line[index] != ' ' && line[index] != '\0' && line[index] != '\n')
+        while (line[index] != ' ' && line[index] != '\0' && line[index] != '\n' && line[index] != '\r')
         {
             dst[j++] = line[index++];
         }
@@ -237,9 +239,9 @@ bool material_system_parse_mtl_file(dstring *mtl_file_name)
 
     s32 index = -1;
 
-    while (ptr != nullptr && ptr < eof)
+    while (ptr < eof && ptr != nullptr)
     {
-        if(*ptr == '#' || *ptr == '\n')
+        if(*ptr == '#' || *ptr == '\n' || *ptr == '\r')
         {
             ptr = go_to_next_line(ptr);
             continue;
@@ -333,7 +335,7 @@ static bool material_system_parse_configuration_file(dstring *conf_file_name, ma
         u32 index = 0;
         while (line[index] != ':')
         {
-            if (line[index] == '\n' || line[index] == '\0')
+            if (line[index] == '\n' || line[index] == '\0' || line[index] == '\r')
             {
                 return nullptr;
             }
@@ -363,7 +365,7 @@ static bool material_system_parse_configuration_file(dstring *conf_file_name, ma
     while (file_get_line(file, &line))
     {
         // INFO: if comment skip line
-        if (line[0] == '#' || line[0] == '\0')
+        if (line[0] == '#' || line[0] == '\0' || line[0] == '\n' || line[0] == '\r')
         {
             continue;
         }

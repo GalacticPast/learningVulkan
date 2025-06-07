@@ -475,7 +475,7 @@ void geometry_system_parse_obj(const char *obj_file_full_path, u32 *num_of_objec
 
         auto extract_name = [](char *dest, const char *src) -> u32 {
             u32 j = 0;
-            while (*src != '\n')
+            while (*src != '\n' && *src != '\r')
             {
                 if (*src == ' ')
                 {
@@ -1009,7 +1009,7 @@ bool geometry_system_parse_bin_file(dstring *file_full_path, u32 *geometry_confi
         u32 index = 0;
         while (line[index] != ':')
         {
-            if (line[index] == '\n' || line[index] == '\0')
+            if (line[index] == '\n' && line[index] == '\r' && line[index] == '\0' )
             {
                 return nullptr;
             }
@@ -1022,7 +1022,7 @@ bool geometry_system_parse_bin_file(dstring *file_full_path, u32 *geometry_confi
         u32 index = 0;
         u32 j     = 0;
 
-        while (line[index] != ':' && line[index] != '\0' && line[index] != '\n')
+        while (line[index] != ':' && line[index] != '\0' && line[index] != '\n' && line[index] != '\r')
         {
             if (line[index] == ' ')
             {
