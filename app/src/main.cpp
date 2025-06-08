@@ -104,13 +104,16 @@ int main()
 
 #if true
     {
-        geometry_config parent_config = geometry_system_generate_plane_config(1000, 1000, 100, 100, 100, 100,
-                                                                              "it's a plane", "orange_lines_512.conf");
+        dstring         cube_obj      = "cube.obj";
+        geometry_config parent_config = *geometry_system_generate_config(cube_obj);
+        dstring         mat_name      = "orange_lines_512.conf";
+        parent_config.material        = material_system_acquire_from_config_file(&mat_name);
 
-        dstring         arrow_obj    = "arrow.obj";
-        geometry_config child_config = *geometry_system_generate_config(arrow_obj);
+        dstring         sphere_obj   = "sphere.obj";
+        geometry_config child_config = *geometry_system_generate_config(sphere_obj);
 
-        dstring mat_name      = DEFAULT_LIGHT_MATERIAL_HANDLE;
+        mat_name.clear();
+        mat_name              = DEFAULT_LIGHT_MATERIAL_HANDLE;
         child_config.material = material_system_acquire_from_name(&mat_name);
 
         scale_geometries(&child_config, {0.3f, 0.3f, 0.3f});
@@ -121,18 +124,10 @@ int main()
         geos    = static_cast<geometry **>(dallocate(sizeof(geometry *) * 3, MEM_TAG_UNKNOWN));
         geos[0] = geometry_system_get_geometry(id1);
         geos[1] = geometry_system_get_geometry(id2);
-        //geos[2] = geometry_system_get_default_geometry();
 
-        geos[0]->ubo.model = mat4_translation({0.0f, -1.0f, 0.0f});
+        light_ubo.direction = {-0.578f, -0.578f, -0.578f};
 
-        light_ubo.direction  = {-0.57735, -0.57735, -0.57735};
-        math::vec3 xyz       = light_ubo.direction * -1;
-        xyz                 *= 5;
-        geos[1]->ubo.model   = mat4_euler_xyz(0.57, 0.57, 0.57);
-        //geos[1]->ubo.model   += mat4_translation(xyz);
-        //geos[1]->ubo.model  *= mat4_scale({10, 10, 10});
-
-        geometry_count = 2;
+        geometry_count = 1;
     }
 #endif
 
@@ -157,6 +152,8 @@ int main()
         frame_start_time = platform_get_absolute_time();
 
         update_camera(&triangle.scene_ubo, &triangle.light_ubo, frame_elapsed_time);
+        z = sinf(frame_elapsed_time);
+        geos[0]->ubo.model *= mat4_euler_y(z);
 
         application_run(&triangle);
 
