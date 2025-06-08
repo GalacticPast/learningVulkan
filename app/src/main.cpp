@@ -106,15 +106,15 @@ int main()
     {
         dstring         cube_obj      = "cube.obj";
         geometry_config parent_config = *geometry_system_generate_config(cube_obj);
-        dstring         mat_name      = "orange_lines_512.conf";
+        dstring         mat_name      = "cobblestone.conf";
         parent_config.material        = material_system_acquire_from_config_file(&mat_name);
 
         dstring         sphere_obj   = "sphere.obj";
         geometry_config child_config = *geometry_system_generate_config(sphere_obj);
 
         mat_name.clear();
-        mat_name               = DEFAULT_LIGHT_MATERIAL_HANDLE;
-        child_config.material  = material_system_acquire_from_name(&mat_name);
+        mat_name              = DEFAULT_LIGHT_MATERIAL_HANDLE;
+        child_config.material = material_system_acquire_from_name(&mat_name);
 
         scale_geometries(&child_config, {0.3f, 0.3f, 0.3f});
 
@@ -125,7 +125,7 @@ int main()
         geos[0] = geometry_system_get_geometry(id1);
         geos[1] = geometry_system_get_geometry(id2);
 
-        light_ubo.direction = {-0.578f, -0.578f,-0.578f};
+        light_ubo.direction = {-0.578f, -0.578f, -0.578f};
         light_ubo.color     = {1.0f, 1.0f, 1.0f, 1.0f};
 
         geometry_count = 1;
@@ -251,3 +251,4 @@ void update_camera(scene_global_uniform_buffer_object *ubo, light_global_uniform
     ubo->view = rotation * translation;
     ubo->view = mat4_inverse(ubo->view);
 }
+

@@ -23,14 +23,19 @@ layout(location = 1) in struct dto {
 	vec2 frag_tex_coord;
 	vec3 normal;
     vec3 frag_position;
+    mat3 TBN;
 } in_dto;
 
 vec4 calculate_directional_light(vec3 view_direction, vec3 normal);
 
 void main() {
     vec3 view_direction = normalize(dir_light.camera_pos - in_dto.frag_position);
-    vec3 normalized_normal = normalize(in_dto.normal);
-    out_colour = calculate_directional_light(view_direction, normalized_normal);
+
+    vec3 normal = in_dto.normal;
+    normal = texture(normal_map, in_dto.frag_tex_coord).rgb;
+    normal = normal * 2.0 - 1.0;
+    normal = normalize(in_dto.TBN * normal);
+    out_colour = calculate_directional_light(view_direction, normal);
 }
 
 vec4 calculate_directional_light(vec3 view_direction, vec3 normal) {

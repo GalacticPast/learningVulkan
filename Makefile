@@ -11,7 +11,7 @@ DIR := $(subst /,\,${CURDIR})
 
 assembly := learningVulkan
 extension := .exe
-defines := -DDPLATFORM_WINDOWS
+defines := -DDEBUG -DDPLATFORM_WINDOWS
 # Turn this on if you want tracy profiler
 #defines += -DTRACY_ENABLE
 includes := -Iapp/tests -I$(src_dir)/src -I$(vulkan_sdk)/Include

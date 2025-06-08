@@ -322,6 +322,7 @@ struct vertex
 {
     math::vec3   position;
     math::vec3   normal;
+    math::vec4   tangent;
     math::vec_2d tex_coord;
 };
 

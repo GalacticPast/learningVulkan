@@ -36,6 +36,7 @@ static bool destroy_geometry_config(geometry_config *config);
 static bool geometry_system_write_configs_to_file(dstring *file_full_path, u32 geometry_config_count,
                                                   geometry_config *configs);
 static bool geometry_system_parse_bin_file(dstring *file_name, u32 *geometry_config_count, geometry_config **configs);
+static void calculate_tangents(geometry_config *config);
 
 bool geometry_system_initialize(u64 *geometry_system_mem_requirements, void *state)
 {
@@ -79,7 +80,7 @@ bool geometry_system_shutdowm(void *state)
 
 u64 geometry_system_create_geometry(geometry_config *config, bool use_name)
 {
-
+    calculate_tangents(config);
     geometry geo{};
     u32      tris_count    = config->vertex_count;
     u32      indices_count = config->index_count;
@@ -276,7 +277,7 @@ bool geometry_system_create_default_geometry()
     u32              num_of_objects      = INVALID_ID;
     geometry_config *default_geo_configs = nullptr;
 
-    dstring bin_file      = "../assets/meshes/cube.obj.bin";
+    dstring bin_file = "../assets/meshes/cube.obj.bin";
 
     bool result = file_exists(&bin_file);
 
@@ -297,7 +298,6 @@ bool geometry_system_create_default_geometry()
     {
         geo_sys_state_ptr->default_geo_id = geometry_system_create_geometry(&default_geo_configs[i], false);
     }
-
 
     for (u32 i = 0; i < num_of_objects; i++)
     {
@@ -685,10 +685,10 @@ void geometry_system_parse_obj(const char *obj_file_full_path, u32 *num_of_objec
     }
     else
     {
-        object_ptr      = const_cast<char *>(string_first_string_occurence(buffer, obj_substring));
+        object_ptr       = const_cast<char *>(string_first_string_occurence(buffer, obj_substring));
         object_ptr      += obj_substring_size;
-        use_string      = obj_substring;
-        use_string_size = obj_substring_size;
+        use_string       = obj_substring;
+        use_string_size  = obj_substring_size;
     }
 
     char *indices_ptr = object_ptr;
@@ -883,14 +883,13 @@ void geometry_system_get_geometries_from_file(const char *obj_file_name, const c
     u32              objects     = INVALID_ID;
     geometry_config *geo_configs = nullptr;
 
-
-    dstring bin_file_full_path;
-    const char* suffix = ".bin";
-    string_copy_format(bin_file_full_path.string, "%s%s",0,obj_file_full_path, suffix);
+    dstring     bin_file_full_path;
+    const char *suffix = ".bin";
+    string_copy_format(bin_file_full_path.string, "%s%s", 0, obj_file_full_path, suffix);
 
     bool result = file_exists(&bin_file_full_path);
 
-    if(result)
+    if (result)
     {
         geometry_system_parse_bin_file(&bin_file_full_path, &objects, &geo_configs);
     }
@@ -1009,7 +1008,7 @@ bool geometry_system_parse_bin_file(dstring *file_full_path, u32 *geometry_confi
         u32 index = 0;
         while (line[index] != ':')
         {
-            if (line[index] == '\n' && line[index] == '\r' && line[index] == '\0' )
+            if (line[index] == '\n' && line[index] == '\r' && line[index] == '\0')
             {
                 return nullptr;
             }
@@ -1073,8 +1072,8 @@ bool geometry_system_parse_bin_file(dstring *file_full_path, u32 *geometry_confi
 
             dstring mat_name;
             string_ncopy(mat_name.string, ptr, name_len);
-            mat_name.str_len = name_len;
-            ptr += name_len + 1;
+            mat_name.str_len  = name_len;
+            ptr              += name_len + 1;
 
             (*configs)[index].material = material_system_acquire_from_name(&mat_name);
         }
@@ -1085,9 +1084,9 @@ bool geometry_system_parse_bin_file(dstring *file_full_path, u32 *geometry_confi
 
             (*configs)[index].vertex_count = vertex_count;
 
-            u32 size                   = sizeof(vertex) * vertex_count;
-            (*configs)[index].vertices = static_cast<vertex *>(dallocate(size, MEM_TAG_GEOMETRY));
-            ptr += sizeof(u32) + 1;
+            u32 size                    = sizeof(vertex) * vertex_count;
+            (*configs)[index].vertices  = static_cast<vertex *>(dallocate(size, MEM_TAG_GEOMETRY));
+            ptr                        += sizeof(u32) + 1;
         }
         else if (string_compare(identifier.c_str(), "vertices"))
         {
@@ -1103,9 +1102,9 @@ bool geometry_system_parse_bin_file(dstring *file_full_path, u32 *geometry_confi
 
             (*configs)[index].index_count = index_count;
 
-            u32 size                  = sizeof(u32) * index_count;
-            (*configs)[index].indices = static_cast<u32 *>(dallocate(size, MEM_TAG_GEOMETRY));
-            ptr += sizeof(u32) + 1;
+            u32 size                   = sizeof(u32) * index_count;
+            (*configs)[index].indices  = static_cast<u32 *>(dallocate(size, MEM_TAG_GEOMETRY));
+            ptr                       += sizeof(u32) + 1;
         }
         else if (string_compare(identifier.c_str(), "indices"))
         {
@@ -1123,4 +1122,49 @@ bool geometry_system_parse_bin_file(dstring *file_full_path, u32 *geometry_confi
     dfree(buffer, buff_size + 1, MEM_TAG_GEOMETRY);
 
     return true;
+}
+
+static void calculate_tangents(geometry_config *config)
+{
+    DASSERT(config);
+
+    u32 size = config->index_count;
+    DASSERT(size);
+    for (u32 i = 0; i < size - 3; i += 3)
+    {
+        u32 ind_a = config->indices[i];
+        u32 ind_b = config->indices[i + 1];
+        u32 ind_c = config->indices[i + 2];
+
+        vertex *a = &config->vertices[ind_a];
+        vertex *b = &config->vertices[ind_b];
+        vertex *c = &config->vertices[ind_c];
+
+        // Because the winding is clockwise
+        //  verify if this is correct
+        math::vec3 edge0 = a->position - b->position;
+        math::vec3 edge1 = c->position - b->position;
+
+        math::vec_2d delta_uv1 = a->tex_coord - b->tex_coord;
+        math::vec_2d delta_uv2 = c->tex_coord - b->tex_coord;
+
+        float determinant = 1 / (delta_uv1.x * delta_uv2.y - delta_uv2.x * delta_uv1.y);
+
+        math::vec4 tangent;
+        tangent.x = determinant * (delta_uv2.y * edge0.x - delta_uv1.y * edge1.x);
+        tangent.y = determinant * (delta_uv2.y * edge0.y - delta_uv1.y * edge1.y);
+        tangent.z = determinant * (delta_uv2.y * edge0.z - delta_uv1.y * edge1.z);
+        tangent.normalize();
+
+        f32  sx         = delta_uv1.x;
+        f32  sy         = delta_uv2.x;
+        f32  tx         = delta_uv1.y;
+        f32  ty         = delta_uv2.y;
+        f32  handedness = ((tx * sy - ty * sx) < 0.0f) ? -1.0f : 1.0f;
+        tangent.w = handedness;
+
+        a->tangent = tangent;
+        b->tangent = tangent;
+        c->tangent = tangent;
+    }
 }
