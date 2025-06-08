@@ -113,8 +113,8 @@ int main()
         geometry_config child_config = *geometry_system_generate_config(sphere_obj);
 
         mat_name.clear();
-        mat_name              = DEFAULT_LIGHT_MATERIAL_HANDLE;
-        child_config.material = material_system_acquire_from_name(&mat_name);
+        mat_name               = DEFAULT_LIGHT_MATERIAL_HANDLE;
+        child_config.material  = material_system_acquire_from_name(&mat_name);
 
         scale_geometries(&child_config, {0.3f, 0.3f, 0.3f});
 
@@ -125,7 +125,8 @@ int main()
         geos[0] = geometry_system_get_geometry(id1);
         geos[1] = geometry_system_get_geometry(id2);
 
-        light_ubo.direction = {-0.578f, -0.578f, -0.578f};
+        light_ubo.direction = {-0.578f, -0.578f,-0.578f};
+        light_ubo.color     = {1.0f, 1.0f, 1.0f, 1.0f};
 
         geometry_count = 1;
     }
@@ -152,7 +153,7 @@ int main()
         frame_start_time = platform_get_absolute_time();
 
         update_camera(&triangle.scene_ubo, &triangle.light_ubo, frame_elapsed_time);
-        z = sinf(frame_elapsed_time);
+        z                   = sinf(frame_elapsed_time);
         geos[0]->ubo.model *= mat4_euler_y(z);
 
         application_run(&triangle);

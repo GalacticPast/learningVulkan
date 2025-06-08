@@ -29,24 +29,28 @@ vec4 calculate_directional_light(vec3 view_direction, vec3 normal);
 
 void main() {
     vec3 view_direction = normalize(dir_light.camera_pos - in_dto.frag_position);
-
-    out_colour = calculate_directional_light(view_direction, in_dto.normal);
+    vec3 normalized_normal = normalize(in_dto.normal);
+    out_colour = calculate_directional_light(view_direction, normalized_normal);
 }
 
 vec4 calculate_directional_light(vec3 view_direction, vec3 normal) {
-    float diffuse_factor = max(dot(normal, -dir_light.direction), 0.0);
 
-    vec3 half_direction = normalize(view_direction - dir_light.direction);
-    float specular_factor = pow(max(dot(half_direction, normal), 0.0), 32);
+    // negate the direction vector because if not the dot product will come out as negative
+    float diffuse_factor = dot(-dir_light.direction, normal);
+    // remove negative values (ie the pixel is facing the away from the light)
+    diffuse_factor    = max(diffuse_factor, 0.0f);
+    vec4 base_sampler = texture(albedo_map, in_dto.frag_tex_coord);
 
-    vec4 diff_samp = texture(albedo_map, in_dto.frag_tex_coord);
-    vec4 ambient = vec4(vec3(in_dto.ambient * in_dto.diffuse_color), diff_samp.a);
-    vec4 diffuse = vec4(vec3(dir_light.color * diffuse_factor), diff_samp.a);
-    vec4 specular = vec4(vec3(dir_light.color * specular_factor), diff_samp.a);
+    vec3 reflect_dir    = reflect(dir_light.direction, normal);
+    float spec_strength = pow(max(dot(view_direction, reflect_dir),0.0),32);
 
-    diffuse *= diff_samp;
-    ambient *= diff_samp;
-    specular *= vec4(texture(specular_map, in_dto.frag_tex_coord).rgb, diffuse.a);
+    vec4 specular     = (spec_strength * dir_light.color);
+    vec4 diffuse      = (diffuse_factor * dir_light.color );
+    vec4 ambient      = (in_dto.ambient * dir_light.color);
 
-    return (ambient + diffuse + specular);
+    diffuse  *= base_sampler;
+    ambient  *= base_sampler;
+    specular *= texture(specular_map, in_dto.frag_tex_coord);
+
+    return (diffuse + ambient + specular);
 }
