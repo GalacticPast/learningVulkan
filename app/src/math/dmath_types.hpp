@@ -120,6 +120,12 @@ struct vec3
         this->y += vec.y;
         this->z += vec.z;
     }
+    inline void operator-=(const f32 n)
+    {
+        this->x -= n;
+        this->y -= n;
+        this->z -= n;
+    }
     inline void operator-=(const vec3 &vec)
     {
         this->x -= vec.x;

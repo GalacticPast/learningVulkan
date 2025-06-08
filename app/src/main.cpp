@@ -157,6 +157,7 @@ int main()
 
         application_run(&triangle);
 
+
         // Figure out how long the frame took and, if below
         f64 frame_end_time    = platform_get_absolute_time();
         frame_elapsed_time    = frame_end_time - frame_start_time;
