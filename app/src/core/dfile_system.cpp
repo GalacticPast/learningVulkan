@@ -4,8 +4,6 @@
 #include "core/logger.hpp"
 #include "dstring.hpp"
 
-// HACK:
-#include <direct.h>
 
 bool file_open(dstring file_name, std::fstream *out_file_handle, bool for_writing, bool is_binary)
 {

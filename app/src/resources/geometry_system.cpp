@@ -887,6 +887,13 @@ void geometry_system_parse_obj(const char *obj_file_full_path, u32 *num_of_objec
             index_ind++;
         }
         DASSERT(index_ind == (*geo_configs)[object].index_count);
+
+        for (u32 j = 0; j <= index_ind - 3; j += 3)
+        {
+            u32 temp = (*geo_configs)[object].indices[j];
+            (*geo_configs)[object].indices[j] = (*geo_configs)[object].indices[j + 2];
+            (*geo_configs)[object].indices[j + 2] = temp;
+        }
     }
 
     clock_update(&telemetry);
@@ -922,7 +929,7 @@ void geometry_system_get_geometries_from_file(const char *obj_file_name, const c
     material_system_parse_mtl_file(&file_mtl_full_path);
 
     u32              objects     = INVALID_ID;
-    geometry_config *geo_configs = nullptr;
+    geometry_co(*geo_configs)[object].indices[j] = nfig *geo_configs = nullptr;
 
     dstring     bin_file_full_path;
     const char *suffix = ".bin";
