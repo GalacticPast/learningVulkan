@@ -104,25 +104,24 @@ int main()
 
 #if true
     {
-        dstring         cube_obj      = "cube.obj";
-        geometry_config parent_config = *geometry_system_generate_config(cube_obj);
-        dstring         mat_name      = "cobblestone.conf";
-        parent_config.material        = material_system_acquire_from_config_file(&mat_name);
 
         dstring         sphere_obj   = "sphere.obj";
         geometry_config child_config = *geometry_system_generate_config(sphere_obj);
 
-        mat_name.clear();
-        mat_name              = DEFAULT_LIGHT_MATERIAL_HANDLE;
+        dstring mat_name              = DEFAULT_LIGHT_MATERIAL_HANDLE;
         child_config.material = material_system_acquire_from_name(&mat_name);
 
         scale_geometries(&child_config, {0.3f, 0.3f, 0.3f});
 
-        u64 id1 = geometry_system_create_geometry(&parent_config, false);
         u64 id2 = geometry_system_create_geometry(&child_config, false);
 
         geos    = static_cast<geometry **>(dallocate(sizeof(geometry *) * 3, MEM_TAG_UNKNOWN));
-        geos[0] = geometry_system_get_geometry(id1);
+        geos[0] = geometry_system_get_default_geometry();
+        mat_name.clear();
+
+        mat_name      = "orange_lines_512.conf";
+        geos[0]->material = material_system_acquire_from_config_file(&mat_name);
+
         geos[1] = geometry_system_get_geometry(id2);
 
         light_ubo.direction = {-0.578f, -0.578f, -0.578f};
