@@ -126,7 +126,7 @@ int main()
         geos[1] = geometry_system_get_geometry(id2);
 
         light_ubo.direction = {-0.578f, -0.578f, -0.578f};
-        light_ubo.color     = {1.0f, 1.0f, 1.0f, 1.0f};
+        light_ubo.color     = {0.8f, 0.8f, 0.8f, 1.0f};
 
         geometry_count = 1;
     }

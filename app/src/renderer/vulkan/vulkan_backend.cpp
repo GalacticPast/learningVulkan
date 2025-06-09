@@ -752,7 +752,7 @@ bool vulkan_initialize_shader(shader_config *config, shader *in_shader)
             }
             else if (config->attributes[i].type == VEC_4)
             {
-                vertex_input_attribute_descriptions[i].format = VK_FORMAT_R32G32_SFLOAT;
+                vertex_input_attribute_descriptions[i].format = VK_FORMAT_R32G32B32A32_SFLOAT;
             }
             else
             {

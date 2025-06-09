@@ -24,7 +24,7 @@ layout(location = 1) out struct dto {
 	vec2 tex_coord;
 	vec3 normal;
     vec3 frag_position;
-    mat3 TBN;
+    vec4 tangent;
 } out_dto;
 
 void main() {
@@ -35,14 +35,8 @@ void main() {
 	out_dto.normal        = normalize(model_vec * in_normal);
 	out_dto.ambient       = global_ubo.ambient_colour;
     out_dto.diffuse_color = u_push_constants.diffuse_color;
+    out_dto.tangent       = vec4(normalize(model_vec * in_tangent.xyz), in_tangent.w);
 
-    vec3 bitangent = cross(out_dto.normal, in_tangent.xyz) * in_tangent.w;
-
-    vec3 T = normalize(model_vec * in_tangent.xyz);
-    vec3 B = normalize(model_vec * bitangent .xyz);
-    vec3 N = normalize(model_vec * in_normal .xyz);
-
-    out_dto.TBN = mat3(T, B, N);
 
     gl_Position = global_ubo.projection * global_ubo.view * u_push_constants.model * vec4(in_position, 1.0);
 }

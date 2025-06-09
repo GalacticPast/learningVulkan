@@ -432,6 +432,47 @@ void get_random_string(char *out_string)
 }
 //
 // this will allocate and write size back, assumes the caller will call free once the data is processed
+
+void _geometry_system_parse_obj(const char *obj_file_full_path, u32 *num_of_objects, geometry_config **geo_configs)
+{
+    ZoneScoped;
+
+    DTRACE("parsing file %s.", obj_file_full_path);
+    dclock telemetry;
+    clock_start(&telemetry);
+
+    u64 buffer_mem_requirements = -1;
+    file_open_and_read(obj_file_full_path, &buffer_mem_requirements, 0, 0);
+    if (buffer_mem_requirements == INVALID_ID_64)
+    {
+        DERROR("Failed to get size requirements for %s", obj_file_full_path);
+        return;
+    }
+    DASSERT(buffer_mem_requirements != INVALID_ID_64);
+    char *buffer = static_cast<char *>(dallocate(buffer_mem_requirements + 1, MEM_TAG_GEOMETRY));
+    char *start  = buffer;
+
+    file_open_and_read(obj_file_full_path, &buffer_mem_requirements, buffer, 0);
+
+    u32 objects        = string_num_of_substring_occurence(buffer, "o ");
+    u32 usemtl_objects = string_num_of_substring_occurence(buffer, "usemtl");
+
+    bool usemtl_name = true;
+    if (usemtl_objects < objects)
+    {
+        usemtl_name = false;
+    }
+    objects = DMAX(objects, usemtl_objects);
+
+    *num_of_objects = objects;
+
+    *geo_configs = static_cast<geometry_config *>(dallocate(sizeof(geometry_config) * objects, MEM_TAG_GEOMETRY));
+
+
+
+
+}
+
 void geometry_system_parse_obj(const char *obj_file_full_path, u32 *num_of_objects, geometry_config **geo_configs)
 {
     DTRACE("parsing file %s.", obj_file_full_path);
