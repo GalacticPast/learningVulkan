@@ -152,8 +152,8 @@ int main()
         frame_start_time = platform_get_absolute_time();
 
         update_camera(&triangle.scene_ubo, &triangle.light_ubo, frame_elapsed_time);
-        z = sinf(frame_elapsed_time);
-        geos[0]->ubo.model *= mat4_euler_y(z);
+        //z = sinf(frame_elapsed_time);
+        //geos[0]->ubo.model *= mat4_euler_y(z);
 
         application_run(&triangle);
 
