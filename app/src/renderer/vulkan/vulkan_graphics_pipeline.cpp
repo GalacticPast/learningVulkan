@@ -5,37 +5,36 @@
 
 VkShaderModule create_shader_module(vulkan_context *vk_context, const char *shader_code, u64 shader_code_size);
 
-bool vulkan_create_pipeline(vulkan_context *vk_context, vulkan_shader* shader)
+bool vulkan_create_pipeline(vulkan_context *vk_context, vulkan_shader *shader)
 {
     DDEBUG("Creating vulkan graphics pipeline");
 
-    VkShaderModule frag_shader_module = create_shader_module(
-        vk_context, reinterpret_cast<const char *>(shader->fragment_shader_code.data), shader->fragment_shader_code.size());
+    VkShaderModule frag_shader_module =
+        create_shader_module(vk_context, reinterpret_cast<const char *>(shader->fragment_shader_code.data),
+                             shader->fragment_shader_code.size());
 
     // create the pipeline shader stage
-    u32                   shader_stage_count = 0;
-    darray<VkShaderStageFlagBits> stage_flag_bits = {};
+    u32                           shader_stage_count = 0;
+    darray<VkShaderStageFlagBits> stage_flag_bits    = {};
 
     VkShaderModule vert_shader_module = create_shader_module(
         vk_context, reinterpret_cast<const char *>(shader->vertex_shader_code.data), shader->vertex_shader_code.size());
 
-    //INFO: this is redundant
+    // INFO: this is redundant
     u32 num_stages = shader->stages.size();
-    for(u32 i = 0 ; i < num_stages ; i++)
+    for (u32 i = 0; i < num_stages; i++)
     {
-        if(shader->stages[i] & STAGE_VERTEX)
+        if (shader->stages[i] & STAGE_VERTEX)
         {
             shader_stage_count++;
             stage_flag_bits.push_back(VK_SHADER_STAGE_VERTEX_BIT);
-
         }
-        else if(shader->stages[i] & STAGE_FRAGMENT)
+        else if (shader->stages[i] & STAGE_FRAGMENT)
         {
             shader_stage_count++;
             stage_flag_bits.push_back(VK_SHADER_STAGE_FRAGMENT_BIT);
         }
     }
-
 
     DASSERT_MSG(shader_stage_count, "There cannot be 0 shader stages for a pipeline");
 
@@ -109,20 +108,18 @@ bool vulkan_create_pipeline(vulkan_context *vk_context, vulkan_shader* shader)
     viewport_state_create_info.scissorCount  = 1;
     viewport_state_create_info.pScissors     = &scissor;
 
-    VkPipelineRasterizationStateCreateInfo rasterization_state_create_info{};
-    rasterization_state_create_info.sType            = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
-    rasterization_state_create_info.pNext            = 0;
-    rasterization_state_create_info.flags            = 0;
-    rasterization_state_create_info.depthClampEnable = VK_FALSE;
-    rasterization_state_create_info.rasterizerDiscardEnable = VK_FALSE;
-    rasterization_state_create_info.polygonMode             = VK_POLYGON_MODE_FILL;
-    rasterization_state_create_info.cullMode                = VK_CULL_MODE_BACK_BIT;
-    rasterization_state_create_info.frontFace               = VK_FRONT_FACE_COUNTER_CLOCKWISE;
-    rasterization_state_create_info.depthBiasEnable         = VK_FALSE;
-    rasterization_state_create_info.depthBiasConstantFactor = 0.0f;
-    rasterization_state_create_info.depthBiasClamp          = 0.0f;
-    rasterization_state_create_info.depthBiasSlopeFactor    = 0.0f;
-    rasterization_state_create_info.lineWidth               = 1.0f;
+    VkPipelineRasterizationStateCreateInfo rasterizer_create_info = {
+        VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO};
+    rasterizer_create_info.depthClampEnable        = VK_FALSE;
+    rasterizer_create_info.rasterizerDiscardEnable = VK_FALSE;
+    rasterizer_create_info.polygonMode             = VK_POLYGON_MODE_FILL;
+    rasterizer_create_info.lineWidth               = 1.0f;
+    rasterizer_create_info.cullMode                = VK_CULL_MODE_BACK_BIT;
+    rasterizer_create_info.frontFace               = VK_FRONT_FACE_COUNTER_CLOCKWISE;
+    rasterizer_create_info.depthBiasEnable         = VK_FALSE;
+    rasterizer_create_info.depthBiasConstantFactor = 0.0f;
+    rasterizer_create_info.depthBiasClamp          = 0.0f;
+    rasterizer_create_info.depthBiasSlopeFactor    = 0.0f;
 
     VkPipelineMultisampleStateCreateInfo multisampling_state_create_info{};
     multisampling_state_create_info.sType                 = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
@@ -177,8 +174,7 @@ bool vulkan_create_pipeline(vulkan_context *vk_context, vulkan_shader* shader)
 
     // material_descriptor_set_layout_binding
 
-    VkDescriptorSetLayout set_layouts[2] = {shader->per_frame_descriptor_layout,
-                                            shader->per_group_descriptor_layout};
+    VkDescriptorSetLayout set_layouts[2] = {shader->per_frame_descriptor_layout, shader->per_group_descriptor_layout};
 
     // object specific push constants
     VkPushConstantRange object_push_constant_range{};
@@ -199,7 +195,7 @@ bool vulkan_create_pipeline(vulkan_context *vk_context, vulkan_shader* shader)
     pipeline_layout_create_info.pPushConstantRanges    = &object_push_constant_range;
 
     VkResult result = vkCreatePipelineLayout(vk_context->vk_device.logical, &pipeline_layout_create_info,
-                                    vk_context->vk_allocator, &shader->pipeline.layout);
+                                             vk_context->vk_allocator, &shader->pipeline.layout);
     VK_CHECK(result);
 
     VkGraphicsPipelineCreateInfo pipeline_create_info{};
@@ -212,7 +208,7 @@ bool vulkan_create_pipeline(vulkan_context *vk_context, vulkan_shader* shader)
     pipeline_create_info.pInputAssemblyState = &input_assembly_state_create_info;
     pipeline_create_info.pTessellationState  = nullptr;
     pipeline_create_info.pViewportState      = &viewport_state_create_info;
-    pipeline_create_info.pRasterizationState = &rasterization_state_create_info;
+    pipeline_create_info.pRasterizationState = &rasterizer_create_info;
     pipeline_create_info.pMultisampleState   = &multisampling_state_create_info;
     pipeline_create_info.pDepthStencilState  = &depth_stencil_state_create_info;
     pipeline_create_info.pColorBlendState    = &color_blend_state_create_info;

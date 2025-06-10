@@ -1276,7 +1276,7 @@ bool vulkan_draw_geometries(render_data *data, VkCommandBuffer *curr_command_buf
                                 &vk_shader->per_group_descriptor_sets[descriptor_set_index], 0, nullptr);
 
         pc.model         = data->test_geometry[i]->ubo.model;
-        pc.diffuse_color = mat->diffuse_color;
+        pc.diffuse_color = {0.5,0.5,0.5,1.0f};
         vkCmdPushConstants(*curr_command_buffer, vk_shader->pipeline.layout, VK_SHADER_STAGE_VERTEX_BIT, 0,
                            sizeof(vk_push_constant), &pc);
 
