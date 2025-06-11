@@ -810,7 +810,15 @@ bool vulkan_create_texture(texture *in_texture, u8 *pixels)
     vulkan_image *image = &vk_texture->image;
     image->width        = tex_width;
     image->height       = tex_height;
-    image->format       = VK_FORMAT_R8G8B8A8_SRGB;
+    //INFO: use the correct colorspace for the image, if the texture is a default texture then it should not be mapping to sRGB colorspace. There was a bug before when the final color of a default normal map was (0.25, 0.25,1,1) even though the actual value was (0.5,0.5,1,1) because I used the sRGB format
+    if(tex_height ==  DEFAULT_TEXTURE_WIDTH && tex_height == DEFAULT_TEXTURE_HEIGHT)
+    {
+        image->format       = VK_FORMAT_R8G8B8A8_UNORM;
+    }
+    else
+    {
+        image->format       = VK_FORMAT_R8G8B8A8_SRGB;
+    }
 
     u32 max           = DMAX(tex_width, tex_height);
     u32 mip_level     = floor(log2(max)) + 1;

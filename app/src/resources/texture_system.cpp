@@ -113,8 +113,8 @@ bool texture_system_create_default_textures()
         // INFO:black and white grids albedo texutre
         texture default_albedo_texture{};
         default_albedo_texture.name         = DEFAULT_ALBEDO_TEXTURE_HANDLE;
-        default_albedo_texture.width        = 512;
-        default_albedo_texture.height       = 512;
+        default_albedo_texture.width        = DEFAULT_TEXTURE_WIDTH;
+        default_albedo_texture.height       = DEFAULT_TEXTURE_HEIGHT;
         default_albedo_texture.num_channels = 4;
 
         u32 tex_width    = default_albedo_texture.width;
@@ -147,8 +147,8 @@ bool texture_system_create_default_textures()
     {
         texture default_normal_texture{};
         default_normal_texture.name         = DEFAULT_NORMAL_TEXTURE_HANDLE;
-        default_normal_texture.width        = 512;
-        default_normal_texture.height       = 512;
+        default_normal_texture.width        = DEFAULT_TEXTURE_WIDTH;
+        default_normal_texture.height       = DEFAULT_TEXTURE_HEIGHT;
         default_normal_texture.num_channels = 4;
 
         u32 tex_width    = default_normal_texture.width;

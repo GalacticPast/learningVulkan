@@ -105,6 +105,8 @@ struct texture
     void *vulkan_texture_state = nullptr;
 };
 
+#define DEFAULT_TEXTURE_WIDTH 16
+#define DEFAULT_TEXTURE_HEIGHT 16
 #define DEFAULT_MATERIAL_HANDLE "default_material"
 // INFO: maybe name it differenlty
 #define DEFAULT_LIGHT_MATERIAL_HANDLE "default_light_material"

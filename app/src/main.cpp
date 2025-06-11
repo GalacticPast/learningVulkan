@@ -119,7 +119,7 @@ int main()
         geos[0] = geometry_system_get_default_geometry();
         mat_name.clear();
 
-        mat_name           = "orange_lines_512.conf";
+        mat_name           = "cobblestone.conf";
         geos[0]->material  = material_system_acquire_from_config_file(&mat_name);
         geos[1]            = geometry_system_get_geometry(id2);
         geos[1]->ubo.model = mat4_translation({1, 0, 0});
