@@ -105,30 +105,52 @@ int main()
 #if true
     {
 
-        dstring         sphere_obj   = "sphere.obj";
-        geometry_config child_config = *geometry_system_generate_config(sphere_obj);
+        dstring         sphere_obj  = "sphere.obj";
+        geometry_config red_light   = *geometry_system_generate_config(sphere_obj);
+        geometry_config green_light = *geometry_system_generate_config(sphere_obj);
+        geometry_config blue_light  = *geometry_system_generate_config(sphere_obj);
 
-        dstring mat_name      = DEFAULT_LIGHT_MATERIAL_HANDLE;
-        child_config.material = material_system_acquire_from_name(&mat_name);
+        dstring mat_name   = DEFAULT_LIGHT_MATERIAL_HANDLE;
+        red_light.material = material_system_acquire_from_name(&mat_name);
+        scale_geometries(&red_light, {0.2f, 0.2f, 0.2f});
+        green_light.material = material_system_acquire_from_name(&mat_name);
+        scale_geometries(&green_light, {0.2f, 0.2f, 0.2f});
+        blue_light.material = material_system_acquire_from_name(&mat_name);
+        scale_geometries(&blue_light, {0.2f, 0.2f, 0.2f});
 
-        scale_geometries(&child_config, {0.2f, 0.2f, 0.2f});
+        u64 red   = geometry_system_create_geometry(&red_light, false);
+        u64 green = geometry_system_create_geometry(&green_light, false);
+        u64 blue  = geometry_system_create_geometry(&blue_light, false);
 
-        u64 id2 = geometry_system_create_geometry(&child_config, false);
-
-        geos    = static_cast<geometry **>(dallocate(sizeof(geometry *) * 3, MEM_TAG_UNKNOWN));
+        geos    = static_cast<geometry **>(dallocate(sizeof(geometry *) * 6, MEM_TAG_UNKNOWN));
         geos[0] = geometry_system_get_default_geometry();
         mat_name.clear();
 
-        mat_name           = "cobblestone.conf";
-        geos[0]->material  = material_system_acquire_from_config_file(&mat_name);
-        geos[1]            = geometry_system_get_geometry(id2);
-        geos[1]->ubo.model = mat4_translation({1, 0, 0});
+        //mat_name = "orange_lines_512.conf";
+        //geos[0]->material = material_system_acquire_from_config_file(&mat_name);
+
+        geos[1]            = geometry_system_get_geometry(red);
+        geos[1]->ubo.model = mat4_translation({2,0,0});
+
+        geos[2]            = geometry_system_get_geometry(green);
+        geos[2]->ubo.model = mat4_translation({0,2,0});
+
+        geos[3]            = geometry_system_get_geometry(blue);
+        geos[3]->ubo.model = mat4_translation({0,0,2});
 
         light_ubo.direction  = {-0.578f, -0.578f, -0.578f};
         light_ubo.color      = {0.8f, 0.8f, 0.8f, 1.0f};
         light_ubo.camera_pos = light_ubo.direction;
 
-        geometry_count = 1;
+        geometry_config plane_config =
+            geometry_system_generate_plane_config(10, 10, 1, 1, 1, 1, "its a plane", DEFAULT_LIGHT_MATERIAL_HANDLE);
+        u64 id3             = geometry_system_create_geometry(&plane_config, false);
+
+        geos[4]             = geometry_system_get_geometry(id3);
+        geos[4]->ubo.model *= mat4_scale(math::vec3(100, 100, 100));
+        geos[4]->ubo.model *= mat4_translation(math::vec3(0, -2, 0));
+
+        geometry_count = 5;
     }
 #endif
 
@@ -153,8 +175,6 @@ int main()
         frame_start_time = platform_get_absolute_time();
 
         update_camera(&triangle.scene_ubo, &triangle.light_ubo, frame_elapsed_time);
-        z                   = sinf(req_frame_time);
-        geos[0]->ubo.model *= mat4_euler_y(z);
 
         application_run(&triangle);
 

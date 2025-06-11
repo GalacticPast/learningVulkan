@@ -110,7 +110,7 @@ bool texture_system_create_texture(dstring *file_base_name)
 bool texture_system_create_default_textures()
 {
     {
-        // INFO:black and white grids albedo texutre
+        //gray albedo texture
         texture default_albedo_texture{};
         default_albedo_texture.name         = DEFAULT_ALBEDO_TEXTURE_HANDLE;
         default_albedo_texture.width        = DEFAULT_TEXTURE_WIDTH;
@@ -131,11 +131,10 @@ bool texture_system_create_default_textures()
             for (u32 x = 0; x < tex_width; x++)
             {
                 u32 pixel_index = (y * tex_width + x) * tex_channels;
-                u8  color       = ((x / 32 + y / 32) % 2) ? 255 : 0;
 
-                pixels[pixel_index + 0] = color;
-                pixels[pixel_index + 1] = color;
-                pixels[pixel_index + 2] = color;
+                pixels[pixel_index + 0] = 105;
+                pixels[pixel_index + 1] = 105;
+                pixels[pixel_index + 2] = 105;
                 pixels[pixel_index + 3] = 255;
             }
         }

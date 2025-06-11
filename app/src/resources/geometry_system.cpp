@@ -225,8 +225,8 @@ geometry_config geometry_system_generate_plane_config(f32 width, f32 height, u32
 
     string_ncopy(config.name.string, name, GEOMETRY_NAME_MAX_LENGTH);
     config.name.str_len = strlen(name);
-    dstring file_name   = material_name;
-    config.material     = material_system_acquire_from_config_file(&file_name);
+    dstring mat_name    = material_name;
+    config.material     = material_system_acquire_from_name(&mat_name);
 
     return config;
 }
@@ -889,11 +889,10 @@ void geometry_system_parse_obj(const char *obj_file_full_path, u32 *num_of_objec
         {
             u32 temp = (*geo_configs)[object].indices[j];
 
-            (*geo_configs)[object].indices[j] = (*geo_configs)[object].indices[j + 2];
+            (*geo_configs)[object].indices[j]     = (*geo_configs)[object].indices[j + 2];
             (*geo_configs)[object].indices[j + 2] = temp;
         }
         DASSERT(index_ind == (*geo_configs)[object].index_count);
-
     }
 
     clock_update(&telemetry);
