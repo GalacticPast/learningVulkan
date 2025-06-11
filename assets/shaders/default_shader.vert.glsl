@@ -30,25 +30,16 @@ layout(location = 1) out struct dto {
 } out_dto;
 
 void main() {
-    mat4 model = u_push_constants.model;
-    mat3 normal_matrix = transpose(inverse(mat3(model)));
 
-    // Transform vertex position to world space
-    vec4 world_pos = model * vec4(in_position, 1.0);
-    out_dto.frag_position = world_pos.xyz;
-
-    // Transform normal and tangent to world space
-    out_dto.normal = normalize(normal_matrix * in_normal);
-
-    vec3 world_tangent = normalize(normal_matrix * in_tangent.xyz);
-    out_dto.tangent = vec4(world_tangent, in_tangent.w); // Preserve handedness
-
-    // Pass through texture coordinates and colors
     out_dto.tex_coord = in_texcoord;
-    out_dto.diffuse_color = u_push_constants.diffuse_color;
+	// Fragment position in world space.
+	out_dto.frag_position = vec3(u_push_constants.model * vec4(in_position, 1.0));
+	// Copy the normal over.
+	mat3 m3_model = mat3(u_push_constants.model);
+	out_dto.normal = m3_model * in_normal;
+	out_dto.tangent = vec4(normalize(m3_model * in_tangent.xyz), in_tangent.w);
     out_dto.ambient = global_ubo.ambient_color;
+    out_dto.diffuse_color = u_push_constants.diffuse_color;
 
-    // Compute clip-space position
-    gl_Position = global_ubo.projection * global_ubo.view * world_pos;
+    gl_Position = global_ubo.projection * global_ubo.view * u_push_constants.model * vec4(in_position, 1.0);
 }
-

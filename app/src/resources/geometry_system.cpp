@@ -885,7 +885,15 @@ void geometry_system_parse_obj(const char *obj_file_full_path, u32 *num_of_objec
             (*geo_configs)[object].indices[index_ind]            = index_ind;
             index_ind++;
         }
+        for (u32 j = 0; j <= count - 3; j += 3)
+        {
+            u32 temp = (*geo_configs)[object].indices[j];
+
+            (*geo_configs)[object].indices[j] = (*geo_configs)[object].indices[j + 2];
+            (*geo_configs)[object].indices[j + 2] = temp;
+        }
         DASSERT(index_ind == (*geo_configs)[object].index_count);
+
     }
 
     clock_update(&telemetry);

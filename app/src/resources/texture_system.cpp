@@ -144,42 +144,6 @@ bool texture_system_create_default_textures()
         DASSERT(result == true);
         dfree(pixels, texture_size, MEM_TAG_UNKNOWN);
     }
-
-    {
-        // INFO: fully opaque alpha texutre
-        texture default_alpha_texture{};
-        default_alpha_texture.name         = DEFAULT_ALPHA_TEXTURE_HANDLE;
-        default_alpha_texture.width        = 512;
-        default_alpha_texture.height       = 512;
-        default_alpha_texture.num_channels = 4;
-
-        u32 tex_width    = default_alpha_texture.width;
-        u32 tex_height   = default_alpha_texture.height;
-        u32 tex_channels = default_alpha_texture.num_channels;
-
-        u32 texture_size =
-            default_alpha_texture.width * default_alpha_texture.height * default_alpha_texture.num_channels;
-
-        u8 *pixels = static_cast<u8 *>(dallocate(texture_size, MEM_TAG_UNKNOWN));
-
-        for (u32 y = 0; y < tex_height; y++)
-        {
-            for (u32 x = 0; x < tex_width; x++)
-            {
-                u32 pixel_index = (y * tex_width + x) * tex_channels;
-                u8  color       = 255;
-
-                pixels[pixel_index + 0] = color;
-                pixels[pixel_index + 1] = color;
-                pixels[pixel_index + 2] = color;
-                pixels[pixel_index + 3] = 255;
-            }
-        }
-
-        bool result = create_texture(&default_alpha_texture, pixels);
-        DASSERT(result == true);
-        dfree(pixels, texture_size, MEM_TAG_UNKNOWN);
-    }
     {
         texture default_normal_texture{};
         default_normal_texture.name         = DEFAULT_NORMAL_TEXTURE_HANDLE;

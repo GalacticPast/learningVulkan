@@ -1,10 +1,10 @@
+#include "material_system.hpp"
 #include "containers/darray.hpp"
 #include "containers/dhashtable.hpp"
 #include "core/dfile_system.hpp"
 #include "core/dmemory.hpp"
 #include "core/logger.hpp"
 #include "defines.hpp"
-#include "material_system.hpp"
 
 #include "renderer/vulkan/vulkan_backend.hpp"
 #include "texture_system.hpp"
@@ -92,8 +92,7 @@ bool material_system_create_material(material_config *config)
     mat.name            = config->mat_name;
     mat.id              = mat_sys_state_ptr->hashtable.size();
     mat.reference_count = 0;
-    mat.map.albedo      = texture_system_get_texture(config->albedo_map.c_str());
-    mat.map.alpha       = texture_system_get_texture(config->alpha_map.c_str());
+    mat.map.diffuse     = texture_system_get_texture(config->albedo_map.c_str());
     mat.map.normal      = texture_system_get_texture(config->normal_map.c_str());
     mat.map.specular    = texture_system_get_texture(config->specular_map.c_str());
     mat.diffuse_color   = config->diffuse_color;
@@ -115,8 +114,7 @@ bool material_system_create_default_material()
         default_mat.name            = DEFAULT_MATERIAL_HANDLE;
         default_mat.id              = 0;
         default_mat.reference_count = 0;
-        default_mat.map.albedo      = texture_system_get_texture(DEFAULT_ALBEDO_TEXTURE_HANDLE);
-        default_mat.map.alpha       = texture_system_get_texture(DEFAULT_ALPHA_TEXTURE_HANDLE);
+        default_mat.map.diffuse     = texture_system_get_texture(DEFAULT_ALBEDO_TEXTURE_HANDLE);
         default_mat.map.normal      = texture_system_get_texture(DEFAULT_NORMAL_TEXTURE_HANDLE);
         default_mat.map.specular    = texture_system_get_texture(DEFAULT_ALBEDO_TEXTURE_HANDLE);
         default_mat.diffuse_color   = {1.0f, 1.0f, 1.0f, 1.0f};
@@ -132,11 +130,11 @@ bool material_system_create_default_material()
         default_light_mat.name            = DEFAULT_LIGHT_MATERIAL_HANDLE;
         default_light_mat.id              = 0;
         default_light_mat.reference_count = 0;
-        default_light_mat.map.albedo      = texture_system_get_texture(DEFAULT_ALPHA_TEXTURE_HANDLE);
-        default_light_mat.map.alpha       = texture_system_get_texture(DEFAULT_ALPHA_TEXTURE_HANDLE);
+        default_light_mat.map.diffuse     = texture_system_get_texture(DEFAULT_ALBEDO_TEXTURE_HANDLE);
         default_light_mat.map.normal      = texture_system_get_texture(DEFAULT_NORMAL_TEXTURE_HANDLE);
-        default_light_mat.map.specular    = texture_system_get_texture(DEFAULT_ALPHA_TEXTURE_HANDLE);
-        default_light_mat.diffuse_color   = {1.0f, 1.0f, 1.0f, 1.0f};
+        default_light_mat.map.specular    = texture_system_get_texture(DEFAULT_ALBEDO_TEXTURE_HANDLE);
+
+        default_light_mat.diffuse_color = {1.0f, 1.0f, 1.0f, 1.0f};
 
         bool result = vulkan_create_material(&default_light_mat);
         DASSERT(result);
@@ -203,7 +201,7 @@ bool material_system_parse_mtl_file(dstring *mtl_file_name)
 
     u32 real_size = string_length(file);
 
-    const char* eof = file + file_buffer_mem_requirements;
+    const char *eof = file + file_buffer_mem_requirements;
 
     s32 num_materials = string_num_of_substring_occurence(file, "newmtl");
     if (num_materials <= 0)
@@ -214,8 +212,7 @@ bool material_system_parse_mtl_file(dstring *mtl_file_name)
     configs = static_cast<material_config *>(dallocate(sizeof(material_config) * (num_materials), MEM_TAG_RENDERER));
 
     auto go_to_next_line = [](const char *ptr) -> const char * {
-
-        while(*ptr != '\n' && *ptr != '\r')
+        while (*ptr != '\n' && *ptr != '\r')
         {
             ptr++;
         }
@@ -229,43 +226,42 @@ bool material_system_parse_mtl_file(dstring *mtl_file_name)
         {
             dst[j++] = line[index++];
         }
-        dst[j++] = '\0';
+        dst[j++]    = '\0';
         dst.str_len = j;
     };
 
-
     const char *ptr = file;
-    dstring identifier;
+    dstring     identifier;
 
     s32 index = -1;
 
     while (ptr < eof && ptr != nullptr)
     {
-        if(*ptr == '#' || *ptr == '\n' || *ptr == '\r')
+        if (*ptr == '#' || *ptr == '\n' || *ptr == '\r')
         {
             ptr = go_to_next_line(ptr);
             continue;
         }
         extract_identifier(ptr, identifier);
 
-        if(string_compare(identifier.c_str(), "newmtl"))
+        if (string_compare(identifier.c_str(), "newmtl"))
         {
             index++;
             ptr += identifier.str_len;
             extract_identifier(ptr, configs[index].mat_name);
         }
-        else if(string_compare(identifier.c_str(), "map_Kd"))
+        else if (string_compare(identifier.c_str(), "map_Kd"))
         {
             ptr += identifier.str_len;
             dstring full_path;
             extract_identifier(ptr, full_path);
             u32 size = full_path.str_len - 1;
 
-            u32 i = 0;
+            u32     i = 0;
             dstring stack;
-            while(size--)
+            while (size--)
             {
-                if(full_path[size] == '/')
+                if (full_path[size] == '/')
                 {
                     break;
                 }
@@ -274,24 +270,24 @@ bool material_system_parse_mtl_file(dstring *mtl_file_name)
             stack.str_len = i;
 
             u32 j = 0;
-            for(; i > 0 ; i--)
+            for (; i > 0; i--)
             {
                 configs[index].albedo_map[j++] = stack[i - 1];
             }
             configs[index].albedo_map.str_len = j;
         }
-        else if(string_compare(identifier.c_str(), "map_d"))
+        else if (string_compare(identifier.c_str(), "map_d"))
         {
             ptr += identifier.str_len;
             dstring full_path;
             extract_identifier(ptr, full_path);
             u32 size = full_path.str_len - 1;
 
-            u32 i = 0;
+            u32     i = 0;
             dstring stack;
-            while(size--)
+            while (size--)
             {
-                if(full_path[size] == '/')
+                if (full_path[size] == '/')
                 {
                     break;
                 }
@@ -300,7 +296,7 @@ bool material_system_parse_mtl_file(dstring *mtl_file_name)
             stack.str_len = i;
 
             u32 j = 0;
-            for(; i > 0 ; i--)
+            for (; i > 0; i--)
             {
                 configs[index].alpha_map[j++] = stack[i - 1];
             }
@@ -309,14 +305,13 @@ bool material_system_parse_mtl_file(dstring *mtl_file_name)
         ptr = go_to_next_line(ptr);
     }
 
-    for(s32 i = 0 ; i < num_materials ; i++)
+    for (s32 i = 0; i < num_materials; i++)
     {
         material_system_create_material(&configs[i]);
     }
 
     return true;
 }
-
 
 static bool material_system_parse_configuration_file(dstring *conf_file_name, material_config *out_config)
 {
@@ -357,7 +352,7 @@ static bool material_system_parse_configuration_file(dstring *conf_file_name, ma
             }
             dst[j++] = line[index++];
         }
-        dst[j++] = '\0';
+        dst[j++]    = '\0';
         dst.str_len = j;
     };
 
