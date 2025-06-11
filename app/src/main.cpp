@@ -84,7 +84,7 @@ int main()
     scene_global_uniform_buffer_object scene_ubo{};
     scene_ubo.view          = mat4_look_at({2, 2, 2}, {0, 0, 0}, {0, 0, 1.0f});
     scene_ubo.projection    = mat4_perspective(fov_rad, aspect_ratio, 0.01f, 1000.0f);
-    scene_ubo.ambient_color = {0.2, 0.2, 0.2, 1.0f};
+    scene_ubo.ambient_color = {0.3, 0.3, 0.3, 1.0f};
 
     light_global_uniform_buffer_object light_ubo{};
     light_ubo.color = {0.6, 0.6, 0.6, 1.0};
@@ -111,7 +111,7 @@ int main()
         dstring mat_name      = DEFAULT_LIGHT_MATERIAL_HANDLE;
         child_config.material = material_system_acquire_from_name(&mat_name);
 
-        scale_geometries(&child_config, {0.3f, 0.3f, 0.3f});
+        scale_geometries(&child_config, {0.2f, 0.2f, 0.2f});
 
         u64 id2 = geometry_system_create_geometry(&child_config, false);
 
@@ -119,10 +119,10 @@ int main()
         geos[0] = geometry_system_get_default_geometry();
         mat_name.clear();
 
-        mat_name          = "cobblestone.conf";
-        geos[0]->material = material_system_acquire_from_config_file(&mat_name);
-
-        geos[1] = geometry_system_get_geometry(id2);
+        mat_name           = "orange_lines_512.conf";
+        geos[0]->material  = material_system_acquire_from_config_file(&mat_name);
+        geos[1]            = geometry_system_get_geometry(id2);
+        geos[1]->ubo.model = mat4_translation({1, 0, 0});
 
         light_ubo.direction  = {-0.578f, -0.578f, -0.578f};
         light_ubo.color      = {0.8f, 0.8f, 0.8f, 1.0f};
@@ -153,7 +153,7 @@ int main()
         frame_start_time = platform_get_absolute_time();
 
         update_camera(&triangle.scene_ubo, &triangle.light_ubo, frame_elapsed_time);
-        z                   = sinf(frame_elapsed_time);
+        z                   = sinf(req_frame_time);
         geos[0]->ubo.model *= mat4_euler_y(z);
 
         application_run(&triangle);
@@ -193,7 +193,7 @@ void update_camera(scene_global_uniform_buffer_object *ubo, light_global_uniform
 
     ubo->projection = mat4_perspective(fov_rad, aspect_ratio, 0.01f, 1000.0f);
 
-    static math::vec3 camera_pos   = math::vec3(0, 0, 30);
+    static math::vec3 camera_pos   = math::vec3(0, 0, 6);
     static math::vec3 camera_euler = math::vec3(0, 0, 0);
 
     if (input_is_key_down(KEY_A) || input_is_key_down(KEY_LEFT))
