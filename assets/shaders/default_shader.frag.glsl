@@ -34,12 +34,13 @@ void main() {
     tangent = (tangent - dot(tangent, normal) *  normal);
     vec3 bitangent = cross(in_dto.normal, in_dto.tangent.xyz) * in_dto.tangent.w;
     mat3 TBN = mat3(tangent, bitangent, normal);
-    debugPrintfEXT("Tangent: %v3f, Bitangent: %v3f, Normals: %v3f",tangent,bitangent, normal);
+    //debugPrintfEXT("Tangent: %v3f, Bitangent: %v3f, Normals: %v3f",tangent,bitangent, normal);
 
     // Update the normal to use a sample from the normal map.
-    vec3 localNormal = 2.0 * texture(normal_map, in_dto.tex_coord).rgb - 1.0;
+    vec3 local_normal = 2.0 * texture(normal_map, in_dto.tex_coord).rgb - 1.0;
 
-    normal = normalize(TBN * localNormal);
+    normal = normalize(TBN * local_normal);
+    debugPrintfEXT("local_normal %v3f",normal);
 
     vec3 view_direction = normalize(dir_light.camera_pos - in_dto.frag_position);
 

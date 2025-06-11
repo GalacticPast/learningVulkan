@@ -165,11 +165,10 @@ bool texture_system_create_default_textures()
             for (u32 x = 0; x < tex_width; x++)
             {
                 u32 pixel_index = (y * tex_width + x) * tex_channels;
-                u8  color       = 255;
 
-                pixels[pixel_index + 0] = 0;
-                pixels[pixel_index + 1] = 0;
-                pixels[pixel_index + 2] = color;
+                pixels[pixel_index + 0] = 128;
+                pixels[pixel_index + 1] = 128;
+                pixels[pixel_index + 2] = 255;
                 pixels[pixel_index + 3] = 255;
             }
         }
