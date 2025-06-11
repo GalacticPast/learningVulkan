@@ -36,6 +36,7 @@ static bool destroy_geometry_config(geometry_config *config);
 static bool geometry_system_write_configs_to_file(dstring *file_full_path, u32 geometry_config_count,
                                                   geometry_config *configs);
 static bool geometry_system_parse_bin_file(dstring *file_name, u32 *geometry_config_count, geometry_config **configs);
+static void calculate_tangents(geometry_config *config);
 
 bool geometry_system_initialize(u64 *geometry_system_mem_requirements, void *state)
 {
@@ -79,7 +80,7 @@ bool geometry_system_shutdowm(void *state)
 
 u64 geometry_system_create_geometry(geometry_config *config, bool use_name)
 {
-
+    calculate_tangents(config);
     geometry geo{};
     u32      tris_count    = config->vertex_count;
     u32      indices_count = config->index_count;
@@ -224,8 +225,8 @@ geometry_config geometry_system_generate_plane_config(f32 width, f32 height, u32
 
     string_ncopy(config.name.string, name, GEOMETRY_NAME_MAX_LENGTH);
     config.name.str_len = strlen(name);
-    dstring file_name   = material_name;
-    config.material     = material_system_acquire_from_config_file(&file_name);
+    dstring mat_name    = material_name;
+    config.material     = material_system_acquire_from_name(&mat_name);
 
     return config;
 }
@@ -276,7 +277,7 @@ bool geometry_system_create_default_geometry()
     u32              num_of_objects      = INVALID_ID;
     geometry_config *default_geo_configs = nullptr;
 
-    dstring bin_file      = "../assets/meshes/cube.obj.bin";
+    dstring bin_file = "../assets/meshes/cube.obj.bin";
 
     bool result = file_exists(&bin_file);
 
@@ -290,14 +291,16 @@ bool geometry_system_create_default_geometry()
         geometry_system_parse_obj("../assets/meshes/cube.obj", &num_of_objects, &default_geo_configs);
         DASSERT(num_of_objects != INVALID_ID);
         geometry_system_write_configs_to_file(&bin_file, num_of_objects, default_geo_configs);
+        // there is only one thats why
+        calculate_tangents(default_geo_configs);
     }
 
     DASSERT(num_of_objects != INVALID_ID);
+
     for (u32 i = 0; i < num_of_objects; i++)
     {
         geo_sys_state_ptr->default_geo_id = geometry_system_create_geometry(&default_geo_configs[i], false);
     }
-
 
     for (u32 i = 0; i < num_of_objects; i++)
     {
@@ -432,6 +435,43 @@ void get_random_string(char *out_string)
 }
 //
 // this will allocate and write size back, assumes the caller will call free once the data is processed
+
+void _geometry_system_parse_obj(const char *obj_file_full_path, u32 *num_of_objects, geometry_config **geo_configs)
+{
+    ZoneScoped;
+
+    DTRACE("parsing file %s.", obj_file_full_path);
+    dclock telemetry;
+    clock_start(&telemetry);
+
+    u64 buffer_mem_requirements = -1;
+    file_open_and_read(obj_file_full_path, &buffer_mem_requirements, 0, 0);
+    if (buffer_mem_requirements == INVALID_ID_64)
+    {
+        DERROR("Failed to get size requirements for %s", obj_file_full_path);
+        return;
+    }
+    DASSERT(buffer_mem_requirements != INVALID_ID_64);
+    char *buffer = static_cast<char *>(dallocate(buffer_mem_requirements + 1, MEM_TAG_GEOMETRY));
+    char *start  = buffer;
+
+    file_open_and_read(obj_file_full_path, &buffer_mem_requirements, buffer, 0);
+
+    u32 objects        = string_num_of_substring_occurence(buffer, "o ");
+    u32 usemtl_objects = string_num_of_substring_occurence(buffer, "usemtl");
+
+    bool usemtl_name = true;
+    if (usemtl_objects < objects)
+    {
+        usemtl_name = false;
+    }
+    objects = DMAX(objects, usemtl_objects);
+
+    *num_of_objects = objects;
+
+    *geo_configs = static_cast<geometry_config *>(dallocate(sizeof(geometry_config) * objects, MEM_TAG_GEOMETRY));
+}
+
 void geometry_system_parse_obj(const char *obj_file_full_path, u32 *num_of_objects, geometry_config **geo_configs)
 {
     DTRACE("parsing file %s.", obj_file_full_path);
@@ -685,10 +725,10 @@ void geometry_system_parse_obj(const char *obj_file_full_path, u32 *num_of_objec
     }
     else
     {
-        object_ptr      = const_cast<char *>(string_first_string_occurence(buffer, obj_substring));
+        object_ptr       = const_cast<char *>(string_first_string_occurence(buffer, obj_substring));
         object_ptr      += obj_substring_size;
-        use_string      = obj_substring;
-        use_string_size = obj_substring_size;
+        use_string       = obj_substring;
+        use_string_size  = obj_substring_size;
     }
 
     char *indices_ptr = object_ptr;
@@ -845,6 +885,13 @@ void geometry_system_parse_obj(const char *obj_file_full_path, u32 *num_of_objec
             (*geo_configs)[object].indices[index_ind]            = index_ind;
             index_ind++;
         }
+        for (u32 j = 0; j <= count - 3; j += 3)
+        {
+            u32 temp = (*geo_configs)[object].indices[j];
+
+            (*geo_configs)[object].indices[j]     = (*geo_configs)[object].indices[j + 2];
+            (*geo_configs)[object].indices[j + 2] = temp;
+        }
         DASSERT(index_ind == (*geo_configs)[object].index_count);
     }
 
@@ -883,14 +930,13 @@ void geometry_system_get_geometries_from_file(const char *obj_file_name, const c
     u32              objects     = INVALID_ID;
     geometry_config *geo_configs = nullptr;
 
-
-    dstring bin_file_full_path;
-    const char* suffix = ".bin";
-    string_copy_format(bin_file_full_path.string, "%s%s",0,obj_file_full_path, suffix);
+    dstring     bin_file_full_path;
+    const char *suffix = ".bin";
+    string_copy_format(bin_file_full_path.string, "%s%s", 0, obj_file_full_path, suffix);
 
     bool result = file_exists(&bin_file_full_path);
 
-    if(result)
+    if (result)
     {
         geometry_system_parse_bin_file(&bin_file_full_path, &objects, &geo_configs);
     }
@@ -1009,7 +1055,7 @@ bool geometry_system_parse_bin_file(dstring *file_full_path, u32 *geometry_confi
         u32 index = 0;
         while (line[index] != ':')
         {
-            if (line[index] == '\n' && line[index] == '\r' && line[index] == '\0' )
+            if (line[index] == '\n' && line[index] == '\r' && line[index] == '\0')
             {
                 return nullptr;
             }
@@ -1073,8 +1119,8 @@ bool geometry_system_parse_bin_file(dstring *file_full_path, u32 *geometry_confi
 
             dstring mat_name;
             string_ncopy(mat_name.string, ptr, name_len);
-            mat_name.str_len = name_len;
-            ptr += name_len + 1;
+            mat_name.str_len  = name_len;
+            ptr              += name_len + 1;
 
             (*configs)[index].material = material_system_acquire_from_name(&mat_name);
         }
@@ -1085,9 +1131,9 @@ bool geometry_system_parse_bin_file(dstring *file_full_path, u32 *geometry_confi
 
             (*configs)[index].vertex_count = vertex_count;
 
-            u32 size                   = sizeof(vertex) * vertex_count;
-            (*configs)[index].vertices = static_cast<vertex *>(dallocate(size, MEM_TAG_GEOMETRY));
-            ptr += sizeof(u32) + 1;
+            u32 size                    = sizeof(vertex) * vertex_count;
+            (*configs)[index].vertices  = static_cast<vertex *>(dallocate(size, MEM_TAG_GEOMETRY));
+            ptr                        += sizeof(u32) + 1;
         }
         else if (string_compare(identifier.c_str(), "vertices"))
         {
@@ -1103,9 +1149,9 @@ bool geometry_system_parse_bin_file(dstring *file_full_path, u32 *geometry_confi
 
             (*configs)[index].index_count = index_count;
 
-            u32 size                  = sizeof(u32) * index_count;
-            (*configs)[index].indices = static_cast<u32 *>(dallocate(size, MEM_TAG_GEOMETRY));
-            ptr += sizeof(u32) + 1;
+            u32 size                   = sizeof(u32) * index_count;
+            (*configs)[index].indices  = static_cast<u32 *>(dallocate(size, MEM_TAG_GEOMETRY));
+            ptr                       += sizeof(u32) + 1;
         }
         else if (string_compare(identifier.c_str(), "indices"))
         {
@@ -1125,3 +1171,45 @@ bool geometry_system_parse_bin_file(dstring *file_full_path, u32 *geometry_confi
     return true;
 }
 
+static void calculate_tangents(geometry_config *config)
+{
+    DASSERT(config);
+
+    u32 index_count = config->index_count;
+    DASSERT(index_count);
+
+    for (u32 i = 0; i < index_count; i += 3)
+    {
+        u32 i0 = config->indices[i + 0];
+        u32 i1 = config->indices[i + 1];
+        u32 i2 = config->indices[i + 2];
+
+        math::vec3 edge1 = config->vertices[i1].position - config->vertices[i0].position;
+        math::vec3 edge2 = config->vertices[i2].position - config->vertices[i0].position;
+
+        f32 deltaU1 = config->vertices[i1].tex_coord.x - config->vertices[i0].tex_coord.x;
+        f32 deltaV1 = config->vertices[i1].tex_coord.y - config->vertices[i0].tex_coord.y;
+
+        f32 deltaU2 = config->vertices[i2].tex_coord.x - config->vertices[i0].tex_coord.x;
+        f32 deltaV2 = config->vertices[i2].tex_coord.y - config->vertices[i0].tex_coord.y;
+
+        f32 dividend = (deltaU1 * deltaV2 - deltaU2 * deltaV1);
+        f32 fc       = 1.0f / dividend;
+
+        math::vec3 tangent =
+            (math::vec3){(fc * (deltaV2 * edge1.x - deltaV1 * edge2.x)), (fc * (deltaV2 * edge1.y - deltaV1 * edge2.y)),
+                         (fc * (deltaV2 * edge1.z - deltaV1 * edge2.z))};
+
+        tangent = vec3_normalized(tangent);
+
+        f32 sx = deltaU1, sy = deltaU2;
+        f32 tx = deltaV1, ty = deltaV2;
+        f32 handedness = ((tx * sy - ty * sx) < 0.0f) ? -1.0f : 1.0f;
+
+        math::vec4 t4 = {tangent.x, tangent.y, tangent.z, handedness};
+
+        config->vertices[i0].tangent = t4;
+        config->vertices[i1].tangent = t4;
+        config->vertices[i2].tangent = t4;
+    }
+}

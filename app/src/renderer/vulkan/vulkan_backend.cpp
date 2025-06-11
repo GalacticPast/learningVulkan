@@ -14,7 +14,7 @@
 #include "vulkan_buffers.hpp"
 #include "vulkan_device.hpp"
 #include "vulkan_framebuffer.hpp"
-#include "vulkan_graphics_pipeline.hpp"
+#include "vulkan_pipeline.hpp"
 #include "vulkan_image.hpp"
 #include "vulkan_platform.hpp"
 #include "vulkan_renderpass.hpp"
@@ -295,8 +295,8 @@ bool vulkan_update_materials_descriptor_set(vulkan_shader *shader, material *mat
 
     DTRACE("Updataing descriptor_set_index: %d", descriptor_set_index);
 
-    u32 image_count = 4;
-    VkDescriptorImageInfo image_infos[4] = {};
+    u32 image_count = 3;
+    VkDescriptorImageInfo image_infos[3] = {};
 
     // INFO: in case
     // I dont get the default material in the start because the default material might not be initialized yet.
@@ -307,9 +307,9 @@ bool vulkan_update_materials_descriptor_set(vulkan_shader *shader, material *mat
     {
         vulkan_texture *tex_state = nullptr;
 
-        if (material->map.albedo)
+        if (material->map.diffuse )
         {
-            tex_state = static_cast<vulkan_texture *>(material->map.albedo->vulkan_texture_state);
+            tex_state = static_cast<vulkan_texture *>(material->map.diffuse ->vulkan_texture_state);
         }
         if (!tex_state)
         {
@@ -321,37 +321,12 @@ bool vulkan_update_materials_descriptor_set(vulkan_shader *shader, material *mat
             {
                 default_mat = material_system_get_default_material();
             }
-            tex_state = static_cast<vulkan_texture *>(default_mat->map.albedo->vulkan_texture_state);
+            tex_state = static_cast<vulkan_texture *>(default_mat->map.diffuse ->vulkan_texture_state);
         }
 
         image_infos[0].sampler     = tex_state->sampler;
         image_infos[0].imageView   = tex_state->image.view;
         image_infos[0].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-    }
-    // alpha
-    {
-        vulkan_texture *tex_state = nullptr;
-
-        if (material->map.alpha)
-        {
-            tex_state = static_cast<vulkan_texture *>(material->map.alpha->vulkan_texture_state);
-        }
-        if (!tex_state)
-        {
-            if (default_mat)
-            {
-                DERROR("No alpha map found for material interal_id: %d", descriptor_set_index);
-            }
-            else
-            {
-                default_mat = material_system_get_default_material();
-            }
-            tex_state = static_cast<vulkan_texture *>(default_mat->map.alpha->vulkan_texture_state);
-        }
-
-        image_infos[1].sampler     = tex_state->sampler;
-        image_infos[1].imageView   = tex_state->image.view;
-        image_infos[1].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
     }
     //normal
     {
@@ -374,9 +349,9 @@ bool vulkan_update_materials_descriptor_set(vulkan_shader *shader, material *mat
             tex_state = static_cast<vulkan_texture *>(default_mat->map.normal->vulkan_texture_state);
         }
 
-        image_infos[2].sampler     = tex_state->sampler;
-        image_infos[2].imageView   = tex_state->image.view;
-        image_infos[2].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+        image_infos[1].sampler     = tex_state->sampler;
+        image_infos[1].imageView   = tex_state->image.view;
+        image_infos[1].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
     }
     //specular
     {
@@ -399,12 +374,12 @@ bool vulkan_update_materials_descriptor_set(vulkan_shader *shader, material *mat
             tex_state = static_cast<vulkan_texture *>(default_mat->map.specular->vulkan_texture_state);
         }
 
-        image_infos[3].sampler     = tex_state->sampler;
-        image_infos[3].imageView   = tex_state->image.view;
-        image_infos[3].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+        image_infos[2].sampler     = tex_state->sampler;
+        image_infos[2].imageView   = tex_state->image.view;
+        image_infos[2].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
     }
 
-    VkWriteDescriptorSet desc_writes[4]{};
+    VkWriteDescriptorSet desc_writes[3]{};
     // albdeo
     for (u32 i = 0; i < image_count; i++)
     {
@@ -750,6 +725,10 @@ bool vulkan_initialize_shader(shader_config *config, shader *in_shader)
             {
                 vertex_input_attribute_descriptions[i].format = VK_FORMAT_R32G32_SFLOAT;
             }
+            else if (config->attributes[i].type == VEC_4)
+            {
+                vertex_input_attribute_descriptions[i].format = VK_FORMAT_R32G32B32A32_SFLOAT;
+            }
             else
             {
                 DERROR("No support currently for %d type for shader_attributes.", config->attributes[i].type);
@@ -831,7 +810,15 @@ bool vulkan_create_texture(texture *in_texture, u8 *pixels)
     vulkan_image *image = &vk_texture->image;
     image->width        = tex_width;
     image->height       = tex_height;
-    image->format       = VK_FORMAT_R8G8B8A8_SRGB;
+    //INFO: use the correct colorspace for the image, if the texture is a default texture then it should not be mapping to sRGB colorspace. There was a bug before when the final color of a default normal map was (0.25, 0.25,1,1) even though the actual value was (0.5,0.5,1,1) because I used the sRGB format
+    if(tex_height ==  DEFAULT_TEXTURE_WIDTH && tex_height == DEFAULT_TEXTURE_HEIGHT)
+    {
+        image->format       = VK_FORMAT_R8G8B8A8_UNORM;
+    }
+    else
+    {
+        image->format       = VK_FORMAT_R8G8B8A8_SRGB;
+    }
 
     u32 max           = DMAX(tex_width, tex_height);
     u32 mip_level     = floor(log2(max)) + 1;
@@ -1258,8 +1245,6 @@ bool vulkan_draw_geometries(render_data *data, VkCommandBuffer *curr_command_buf
     {
 
         material *mat = data->test_geometry[i]->material;
-
-        texture *instance_texture = static_cast<texture *>(mat->map.albedo);
 
         u32                   index_offset  = vulkan_calculate_index_offset(vk_context, data->test_geometry[i]->id);
         u32                   vertex_offset = vulkan_calculate_vertex_offset(vk_context, data->test_geometry[i]->id);

@@ -1,7 +1,11 @@
 #include "core/dasserts.hpp"
 #include "core/logger.hpp"
-#include "platform.hpp"
+#include "core/application.hpp"
+#include "core/event.hpp"
+#include "core/input.hpp"
 
+#include "platform.hpp"
+//
 // Linux platform layer.
 #ifdef DPLATFORM_LINUX
 
@@ -52,7 +56,7 @@ static platform_state *platform_state_ptr;
 // Key translation
 keys translate_keycode(u32 wl_keycode);
 
-bool platform_system_startup(u64 *platform_mem_requirements, void *plat_state, struct application_config *config)
+bool platform_system_startup(u64 *platform_mem_requirements, void *plat_state, application_config *config)
 {
     *platform_mem_requirements = sizeof(platform_state);
     if (plat_state == 0)
@@ -592,9 +596,6 @@ keys translate_keycode(u32 xk_keycode)
         DASSERT(expr != 0);                                                                                            \
     }
 //
-#include "core/application.hpp"
-#include "core/event.hpp"
-#include "core/input.hpp"
 
 #include "wayland/xdg-decoration-unstable-v1.h"
 #include "wayland/xdg-shell-client-protocol.h"

@@ -89,7 +89,6 @@ struct shader
 };
 
 #define DEFAULT_ALBEDO_TEXTURE_HANDLE "DEFAULT_ALBDEO_TEXTURE"
-#define DEFAULT_ALPHA_TEXTURE_HANDLE "DEFAULT_ALPHA_TEXTURE"
 #define DEFAULT_NORMAL_TEXTURE_HANDLE "DEFAULT_NORMAL_TEXTURE"
 #define MAX_TEXTURES_LOADED 1024
 #define TEXTURE_NAME_MAX_LENGTH 512
@@ -106,6 +105,8 @@ struct texture
     void *vulkan_texture_state = nullptr;
 };
 
+#define DEFAULT_TEXTURE_WIDTH 16
+#define DEFAULT_TEXTURE_HEIGHT 16
 #define DEFAULT_MATERIAL_HANDLE "default_material"
 // INFO: maybe name it differenlty
 #define DEFAULT_LIGHT_MATERIAL_HANDLE "default_light_material"
@@ -114,10 +115,9 @@ struct texture
 
 struct texture_map
 {
-    texture *albedo   = nullptr;
+    texture *diffuse  = nullptr;
     texture *normal   = nullptr;
     texture *specular = nullptr;
-    texture *alpha    = nullptr;
 };
 
 struct material_config
