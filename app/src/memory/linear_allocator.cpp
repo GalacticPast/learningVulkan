@@ -2,13 +2,13 @@
 #include "core/dmemory.hpp"
 #include "core/logger.hpp"
 
-bool linear_allocator_create(linear_allocator *out_allocator, u64 size)
+bool linear_allocator_create(arena* arena, linear_allocator *out_allocator, u64 size)
 {
     out_allocator->total_size      = size;
     out_allocator->total_allocated = 0;
     out_allocator->num_allocations = 0;
 
-    out_allocator->memory               = dallocate(size, MEM_TAG_LINEAR_ALLOCATOR);
+    out_allocator->memory               = dallocate(arena, size, MEM_TAG_LINEAR_ALLOCATOR);
     out_allocator->current_free_mem_ptr = out_allocator->memory;
 
     return true;

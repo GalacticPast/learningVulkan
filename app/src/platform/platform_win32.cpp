@@ -1,5 +1,6 @@
 #include "core/input.hpp"
 #include "defines.hpp"
+
 #ifdef DPLATFORM_WINDOWS
 #include "core/application.hpp"
 #include "platform/platform.hpp"
@@ -203,19 +204,49 @@ bool platform_pump_messages()
 void *platform_virtual_reserve(u64 size, bool aligned)
 {
     DASSERT(size != INVALID_ID_64);
-    void *ptr = VirtualAlloc(platform_state_ptr->info.min_app_address, size, MEM_RESERVE, PAGE_NOACCESS);
+    platform_info info = platform_get_info();
+    void         *ptr  = VirtualAlloc(info.min_app_address, size, MEM_RESERVE, PAGE_NOACCESS);
+    DASSERT_MSG(ptr == info.min_app_address,
+                "The returned ptr was not the same as the min application adress. This is an issue because we depend "
+                "on the returned ptr being at the same place as the min app adrees.");
     return ptr;
 }
-void platform_virtual_free(void *block, bool aligned)
+
+void platform_virtual_free(void *block,u64 size, bool aligned)
 {
+    bool result = VirtualFree( block, size, MEM_DECOMMIT);
+    if(!result)
+    {
+        DFATAL("Virtual free failed. Windows error_code: %d", GetLastError());
+    }
 }
 // this will commit page size
-void platform_virtual_commit(u64 mem_size,void* ptr,u32 num_pages, bool aligned)
+void *platform_virtual_commit(void *ptr, u32 num_pages)
 {
-    if(reinterpret_cast<uintptr_t>(ptr) % platform_state_ptr->info.page_size == 0)
+    void         *return_ptr = nullptr;
+    platform_info info;
+    if (platform_state_ptr)
     {
-
+        info = platform_state_ptr->info;
     }
+    else
+    {
+        info = platform_get_info();
+    }
+
+    if (reinterpret_cast<uintptr_t>(ptr) % info.page_size == 0)
+    {
+        u64 size = info.page_size * num_pages;
+        return_ptr = VirtualAlloc(ptr, size, MEM_COMMIT, PAGE_READWRITE);
+        // better error handling
+        DASSERT_MSG(return_ptr, "Coulnd't virtual Alloc");
+    }
+    else
+    {
+        DFATAL("The ptr %lld is not a multiple of the page size %d", reinterpret_cast<uintptr_t>(ptr), info.page_size);
+        return nullptr;
+    }
+    return return_ptr;
 }
 
 void *platform_allocate(u64 size, bool aligned)

@@ -1,5 +1,6 @@
 #pragma once
 #include "defines.hpp"
+#include "memory/arenas.hpp"
 
 struct linear_allocator
 {
@@ -11,7 +12,7 @@ struct linear_allocator
     void *current_free_mem_ptr;
 };
 
-bool linear_allocator_create(linear_allocator *out_allocator, u64 size);
+bool linear_allocator_create(arena* arena, linear_allocator *out_allocator, u64 size);
 void linear_allocator_destroy(linear_allocator *out_allocator);
 
 void linear_allocator_free_all(linear_allocator *allocator);

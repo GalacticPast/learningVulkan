@@ -3,6 +3,7 @@
 #include "defines.hpp"
 
 #include "containers/dfreelist.hpp"
+#include "memory/arenas.hpp"
 
 enum memory_tags
 {
@@ -21,7 +22,7 @@ enum memory_tags
 bool memory_system_startup(u64 *memory_system_memory_requirements, void *state);
 void memory_system_shutdown(void *state);
 
-void *dallocate(u64 mem_size, memory_tags tag);
+void *dallocate(arena* arena, u64 mem_size, memory_tags tag);
 void  dfree(void *block, u64 size, memory_tags tag);
 
 void dset_memory_value(void *block, u64 value, u64 size);

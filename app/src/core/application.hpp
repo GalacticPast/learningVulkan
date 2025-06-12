@@ -19,9 +19,9 @@ struct render_data
     scene_global_uniform_buffer_object scene_ubo;
     light_global_uniform_buffer_object light_ubo;
 
-    u32                          geometry_count = INVALID_ID;
+    u32 geometry_count       = INVALID_ID;
     // array of geometry pointers
-    geometry **test_geometry                    = nullptr;
+    geometry **test_geometry = nullptr;
 };
 
 struct application_state
@@ -32,6 +32,8 @@ struct application_state
 
     u64              application_system_linear_allocator_memory_requirements; // 1 mega bytes
     linear_allocator application_system_linear_allocator;
+
+    arena           *system_arena = nullptr;
 
     u64   platform_system_memory_requirements; // 1 mega bytes
     void *platform_system_state;

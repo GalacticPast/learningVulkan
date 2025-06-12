@@ -104,7 +104,6 @@ int main()
 
 #if true
     {
-
         dstring         sphere_obj  = "sphere.obj";
         geometry_config red_light   = *geometry_system_generate_config(sphere_obj);
         geometry_config green_light = *geometry_system_generate_config(sphere_obj);

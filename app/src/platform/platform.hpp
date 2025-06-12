@@ -23,8 +23,8 @@ void  platform_free(void *block, bool aligned);
 
 // virtual alloc
 void *platform_virtual_reserve(u64 size, bool aligned);
-void  platform_virtual_free(void *block, bool aligned);
-void  platform_virtual_commit(u64 mem_size, bool aligned);
+void  platform_virtual_free(void *block,u64 size,  bool aligned);
+void* platform_virtual_commit(void* ptr,u32 num_pages);
 
 void *platform_zero_memory(void *block, u64 size);
 void *platform_copy_memory(void *dest, const void *source, u64 size);

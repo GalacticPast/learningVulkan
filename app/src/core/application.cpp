@@ -46,9 +46,13 @@ bool application_initialize(application_state *state, application_config *config
     u32 num_arenas = 32;
     arena_allocate_arena_pool(arena_pool_size, num_arenas);
 
+    app_state_ptr->system_arena = arena_get_arena();
+    DASSERT(app_state_ptr->system_arena);
+    arena* system_arena = app_state_ptr->system_arena;
+
     u64 memory_system_memory_requirements = INVALID_ID_64;
     memory_system_startup(&memory_system_memory_requirements, 0);
-    app_state_ptr->memory_system_state = platform_allocate(memory_system_memory_requirements, false);
+    app_state_ptr->memory_system_state = dallocate(app_state_ptr->system_arena, memory_system_memory_requirements, MEM_TAG_APPLICATION);
     DDEBUG("Allocated %dbytes", memory_system_memory_requirements);
     bool result = memory_system_startup(&memory_system_memory_requirements, app_state_ptr->memory_system_state);
     DASSERT(result == true);
@@ -57,7 +61,7 @@ bool application_initialize(application_state *state, application_config *config
 
     result                                                                 = false;
     app_state_ptr->application_system_linear_allocator_memory_requirements = 10 * 1024 * 1024; // 1 mega bytes
-    result = linear_allocator_create(&app_state_ptr->application_system_linear_allocator,
+    result = linear_allocator_create(system_arena, &app_state_ptr->application_system_linear_allocator,
                                      app_state_ptr->application_system_linear_allocator_memory_requirements);
     DASSERT(result == true);
 
