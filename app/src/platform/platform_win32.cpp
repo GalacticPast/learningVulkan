@@ -1,4 +1,5 @@
 #include "core/input.hpp"
+#include "defines.hpp"
 #ifdef DPLATFORM_WINDOWS
 #include "core/application.hpp"
 #include "platform/platform.hpp"
@@ -7,9 +8,10 @@
 #include "core/logger.hpp"
 
 #define WIN32_LEAN_AND_MEAN
-#include <stdlib.h>
 #include <windows.h>
 #include <windowsx.h> // param input extraction
+
+#include <stdlib.h>
 #include <timeapi.h>
 
 /* VULKAN */
@@ -24,6 +26,9 @@ typedef struct platform_state
 
     u32 width;
     u32 height;
+
+    platform_info info;
+
 } platform_state;
 
 // Clock
@@ -163,8 +168,10 @@ bool platform_system_startup(u64 *platform_mem_requirements, void *plat_state, a
     clock_frequency = 1.0 / static_cast<f64>(frequency.QuadPart);
     QueryPerformanceCounter(&start_time);
 
-    //set the default timer resolution to the target fps
+    // set the default timer resolution to the target fps
     timeBeginPeriod(1.0);
+
+    platform_state_ptr->info = platform_get_info();
 
     return true;
 }
@@ -191,6 +198,24 @@ bool platform_pump_messages()
     }
 
     return true;
+}
+
+void *platform_virtual_reserve(u64 size, bool aligned)
+{
+    DASSERT(size != INVALID_ID_64);
+    void *ptr = VirtualAlloc(platform_state_ptr->info.min_app_address, size, MEM_RESERVE, PAGE_NOACCESS);
+    return ptr;
+}
+void platform_virtual_free(void *block, bool aligned)
+{
+}
+// this will commit page size
+void platform_virtual_commit(u64 mem_size,void* ptr,u32 num_pages, bool aligned)
+{
+    if(reinterpret_cast<uintptr_t>(ptr) % platform_state_ptr->info.page_size == 0)
+    {
+
+    }
 }
 
 void *platform_allocate(u64 size, bool aligned)
@@ -425,6 +450,21 @@ bool vulkan_platform_create_surface(vulkan_context *vk_context)
     VK_CHECK(result);
 
     return true;
+}
+
+platform_info platform_get_info()
+{
+    platform_info info{};
+
+    SYSTEM_INFO win32_sys_info{};
+    GetSystemInfo(&win32_sys_info);
+
+    info.page_size               = win32_sys_info.dwPageSize;
+    info.allocation_granualarity = win32_sys_info.dwAllocationGranularity;
+    info.min_app_address         = win32_sys_info.lpMinimumApplicationAddress;
+    info.max_app_address         = win32_sys_info.lpMaximumApplicationAddress;
+
+    return info;
 }
 
 #endif // DPLATFORM_WINDOWS

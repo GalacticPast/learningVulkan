@@ -6,6 +6,7 @@
 #include "core/logger.hpp"
 
 #include "defines.hpp"
+#include "memory/arenas.hpp"
 #include "platform/platform.hpp"
 
 #include "renderer/renderer.hpp"
@@ -40,6 +41,10 @@ bool application_initialize(application_state *state, application_config *config
     app_state_ptr->application_config = config;
     app_state_ptr->is_running         = true;
     app_state_ptr->is_minimized       = false;
+
+    u64 arena_pool_size = GB(1);
+    u32 num_arenas = 32;
+    arena_allocate_arena_pool(arena_pool_size, num_arenas);
 
     u64 memory_system_memory_requirements = INVALID_ID_64;
     memory_system_startup(&memory_system_memory_requirements, 0);
