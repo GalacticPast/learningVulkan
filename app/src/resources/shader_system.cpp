@@ -35,7 +35,7 @@ bool shader_system_startup(u64 *shader_system_mem_requirements, void *state)
     shader_sys_state_ptr = static_cast<shader_system_state *>(state);
 
     shader_sys_state_ptr->hashtable.c_init(MAX_SHADER_COUNT);
-    shader_sys_state_ptr->loaded_shaders.c_init(MAX_SHADER_COUNT);
+    shader_sys_state_ptr->loaded_shaders.reserve(MAX_SHADER_COUNT);
 
     return true;
 }

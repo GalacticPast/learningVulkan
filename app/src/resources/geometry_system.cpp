@@ -49,7 +49,7 @@ bool geometry_system_initialize(u64 *geometry_system_mem_requirements, void *sta
 
     geo_sys_state_ptr->hashtable.c_init(MAX_GEOMETRIES_LOADED);
     geo_sys_state_ptr->hashtable.is_non_resizable = true;
-    geo_sys_state_ptr->loaded_geometry.c_init();
+    geo_sys_state_ptr->loaded_geometry.reserve();
 
     geometry_system_create_default_geometry();
 

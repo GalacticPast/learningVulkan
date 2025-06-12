@@ -38,7 +38,7 @@ bool material_system_initialize(u64 *material_system_mem_requirements, void *sta
 
     mat_sys_state_ptr = static_cast<material_system_state *>(state);
 
-    mat_sys_state_ptr->loaded_materials.c_init();
+    mat_sys_state_ptr->loaded_materials.reserve();
     mat_sys_state_ptr->hashtable.c_init(MAX_MATERIALS_LOADED);
 
     material_system_create_default_material();

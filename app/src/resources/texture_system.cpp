@@ -63,7 +63,8 @@ bool create_texture(texture *texture, u8 *pixels)
     const char *file_base_name = texture->name.c_str();
 
     tex_sys_state_ptr->hashtable.insert(file_base_name, *texture);
-    tex_sys_state_ptr->loaded_textures.push_back(texture->name);
+    u32 ind =
+    tex_sys_state_ptr->loaded_textures[] = texture->name;
     DDEBUG("Texture %s loaded in hastable.", file_base_name);
 
     return true;

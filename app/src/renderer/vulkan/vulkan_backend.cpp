@@ -43,7 +43,7 @@ bool vulkan_backend_initialize(u64 *vulkan_backend_memory_requirements, applicat
     vk_context               = reinterpret_cast<vulkan_context *>(state);
     vk_context->vk_allocator = nullptr;
     {
-        vk_context->command_buffers.c_init(MAX_FRAMES_IN_FLIGHT);
+        vk_context->command_buffers.reserve(MAX_FRAMES_IN_FLIGHT);
     }
     DDEBUG("Creating vulkan instance...");
 
@@ -476,7 +476,7 @@ bool vulkan_initialize_shader(shader_config *config, shader *in_shader)
             u32                                   per_frame_descriptor_binding_count = 0;
             darray<VkDescriptorSetLayoutBinding> &per_frame_descriptor_set_layout_bindings =
                 vk_shader->per_frame_descriptor_sets_layout_bindings;
-            per_frame_descriptor_set_layout_bindings.c_init();
+            per_frame_descriptor_set_layout_bindings.reserve();
 
             darray<VkShaderStageFlags> per_frame_stage_flags{};
             darray<VkDescriptorType>   des_types{};
@@ -623,7 +623,7 @@ bool vulkan_initialize_shader(shader_config *config, shader *in_shader)
 
             darray<VkDescriptorSetLayoutBinding> &per_group_descriptor_set_layout_bindings =
                 vk_shader->per_group_descriptor_sets_layout_bindings;
-            per_group_descriptor_set_layout_bindings.c_init();
+            per_group_descriptor_set_layout_bindings.reserve();
 
             for (u32 i = 0; i < per_group_descriptors_binding_count; i++)
             {
@@ -668,7 +668,7 @@ bool vulkan_initialize_shader(shader_config *config, shader *in_shader)
                                             vk_context->vk_allocator, &vk_shader->per_group_descriptor_pool);
             VK_CHECK(result);
 
-            vk_shader->per_group_descriptor_sets.c_init(max_descriptors);
+            vk_shader->per_group_descriptor_sets.reserve(max_descriptors);
 
             u32 &per_group_ubo_size = vk_shader->per_group_ubo_size;
             per_group_ubo_size      = 0;
@@ -705,7 +705,7 @@ bool vulkan_initialize_shader(shader_config *config, shader *in_shader)
         u32 vertex_input_attribute_descriptions_count = config->attributes.size();
         darray<VkVertexInputAttributeDescription> &vertex_input_attribute_descriptions =
             vk_shader->input_attribute_descriptions;
-        vertex_input_attribute_descriptions.c_init(vertex_input_attribute_descriptions_count);
+        vertex_input_attribute_descriptions.reserve(vertex_input_attribute_descriptions_count);
 
         u32 offset = 0;
 
@@ -746,7 +746,7 @@ bool vulkan_initialize_shader(shader_config *config, shader *in_shader)
     file_open_and_read(config->vert_spv_full_path.c_str(), &vert_shader_code__size_requirements, 0, 1);
     DASSERT(vert_shader_code__size_requirements != INVALID_ID_64);
 
-    vk_shader->vertex_shader_code.c_init(vert_shader_code__size_requirements);
+    vk_shader->vertex_shader_code.reserve(vert_shader_code__size_requirements);
     file_open_and_read(config->vert_spv_full_path.c_str(), &vert_shader_code__size_requirements,
                        vk_shader->vertex_shader_code.data, 1);
 
@@ -754,7 +754,7 @@ bool vulkan_initialize_shader(shader_config *config, shader *in_shader)
     file_open_and_read(config->frag_spv_full_path.c_str(), &frag_shader_code__size_requirements, 0, 1);
     DASSERT(frag_shader_code__size_requirements != INVALID_ID_64);
 
-    vk_shader->fragment_shader_code.c_init(frag_shader_code__size_requirements);
+    vk_shader->fragment_shader_code.reserve(frag_shader_code__size_requirements);
     file_open_and_read(config->frag_spv_full_path.c_str(), &frag_shader_code__size_requirements,
                        vk_shader->fragment_shader_code.data, 1);
 

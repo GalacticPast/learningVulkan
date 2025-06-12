@@ -27,9 +27,15 @@ template <typename T> class darray
 
     T &operator[](u64 index);
 
+    //c_init will make the array length to 0 so this is for pushing back
     void c_init();
     void c_init(u64 size);
+    // resrve will reserve the speciefied size
+    void reserve(u64 size);
+    void reserve();
+
     void resize(u64 size);
+
     void push_back(T a);
     T    pop_back();
     T    pop_at(u32 index);
@@ -72,9 +78,42 @@ template <typename T> void darray<T>::c_init()
     }
     element_size = sizeof(T);
     capacity     = DEFAULT_DARRAY_SIZE * element_size;
-    length       = DEFAULT_DARRAY_SIZE;
+    length       = 0;
     data         = static_cast<T *>(dallocate(capacity, MEM_TAG_DARRAY));
 }
+
+template <typename T> void darray<T>::reserve(u64 size)
+{
+    if (data)
+    {
+        DASSERT_MSG(!data, "THE ARRAY HAS BEEN ALREADY INITIALIZED.");
+    }
+    element_size = sizeof(T);
+    capacity     = size * element_size;
+    if (capacity < DEFAULT_DARRAY_SIZE * element_size)
+    {
+        capacity = DEFAULT_DARRAY_SIZE * element_size;
+    }
+    length = size;
+    data   = static_cast<T *>(dallocate(capacity, MEM_TAG_DARRAY));
+}
+
+template <typename T> void darray<T>::reserve()
+{
+    if (data)
+    {
+        DASSERT_MSG(!data, "THE ARRAY HAS BEEN ALREADY INITIALIZED.");
+    }
+    element_size = sizeof(T);
+    capacity     = element_size;
+    if (capacity < DEFAULT_DARRAY_SIZE * element_size)
+    {
+        capacity = DEFAULT_DARRAY_SIZE * element_size;
+    }
+    length = DEFAULT_DARRAY_SIZE;
+    data   = static_cast<T *>(dallocate(capacity, MEM_TAG_DARRAY));
+}
+
 
 template <typename T> void darray<T>::c_init(u64 size)
 {
@@ -84,7 +123,7 @@ template <typename T> void darray<T>::c_init(u64 size)
     {
         capacity = DEFAULT_DARRAY_SIZE * element_size;
     }
-    length = size;
+    length = 0;
     data   = static_cast<T *>(dallocate(capacity, MEM_TAG_DARRAY));
 }
 
