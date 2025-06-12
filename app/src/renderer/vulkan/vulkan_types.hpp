@@ -137,7 +137,6 @@ struct vulkan_shader
 
     u32            per_group_ubo_size;
     vulkan_buffer  per_group_uniform_buffer;
-    darray<void *> per_group_buffer_data;
 
     // INFO: for now first will always be vertex and second will always be fragment
     darray<shader_stage> stages;

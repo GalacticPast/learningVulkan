@@ -108,8 +108,8 @@ bool vulkan_create_pipeline(vulkan_context *vk_context, vulkan_shader *shader)
     viewport_state_create_info.scissorCount  = 1;
     viewport_state_create_info.pScissors     = &scissor;
 
-    VkPipelineRasterizationStateCreateInfo rasterizer_create_info = {
-        VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO};
+    VkPipelineRasterizationStateCreateInfo rasterizer_create_info = {};
+    rasterizer_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
     rasterizer_create_info.depthClampEnable        = VK_FALSE;
     rasterizer_create_info.rasterizerDiscardEnable = VK_FALSE;
     rasterizer_create_info.polygonMode             = VK_POLYGON_MODE_FILL;

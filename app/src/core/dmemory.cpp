@@ -9,6 +9,18 @@
 #include <cstdio>
 #include <cstring>
 
+struct memory_system_stats
+{
+    u64 total_allocated;
+    u64 tagged_allocations[MEM_TAG_MAX_TAGS];
+};
+
+struct memory_system
+{
+    dfreelist          *dfreelist = nullptr;
+    memory_system_stats stats;
+};
+
 static memory_system *memory_system_ptr;
 // clang-format off
 static const char *memory_tag_strings[MEM_TAG_MAX_TAGS] = {
@@ -38,11 +50,14 @@ bool memory_system_startup(u64 *memory_system_memory_requirements, void *state)
 
     dzero_memory(memory_system_ptr, *memory_system_memory_requirements);
 
-    void* raw_ptr = reinterpret_cast<void *>(static_cast<char *>(state) + sizeof(memory_system));
-    void* freelist_mem = reinterpret_cast<void *>DALIGN_UP(raw_ptr, sizeof(memory_system));
+    void* raw_ptr = reinterpret_cast<void *>(reinterpret_cast<u8 *>(memory_system_ptr) + sizeof(memory_system));
+    void* freelist_ptr = reinterpret_cast<void *>(DALIGN_UP(raw_ptr, 8));
 
-    u64 freelist_memory_size = (freelist_mem_requirements + GB(1)) - (reinterpret_cast<uintptr_t>(freelist_mem) - reinterpret_cast<uintptr_t>(raw_ptr));
-    memory_system_ptr->dfreelist = dfreelist_create(&freelist_mem_requirements, freelist_memory_size,freelist_mem);
+    s32 diff_bytes = reinterpret_cast<uintptr_t>(freelist_ptr) - reinterpret_cast<uintptr_t>(raw_ptr);
+    DASSERT(diff_bytes >= 0);
+    u64 freelist_mem_size = freelist_mem_requirements + GB(1) - diff_bytes;
+
+    memory_system_ptr->dfreelist = dfreelist_create(&freelist_mem_requirements, freelist_mem_size,freelist_ptr);
 
     return true;
 }

@@ -1,29 +1,26 @@
 #pragma once
 #include "defines.hpp"
 
-// Unlike our trivial stack allocator, this header needs to store the
-// block size along with the padding meaning the header is a bit
-// larger than the trivial stack allocator
-
+// 24 bytes
 struct dfreelist_allocation_header
 {
     u64 block_size;
+    u64 allocation_id;
     u64 padding;
 };
 
-// An intrusive linked list for the free memory blocks
-typedef struct dfreelist_node dfreelist_node;
 struct dfreelist_node
 {
     dfreelist_node *next;
-    u64     block_size;
+    u64             block_size;
+    u64             padding;
 };
 
 struct dfreelist
 {
-    void       *data;
-    u64 size;
-    u64 used;
+    void *data;
+    u64   size;
+    u64   used;
 
     dfreelist_node *head;
 };
@@ -40,5 +37,5 @@ struct dfreelist
 dfreelist *dfreelist_create(u64 *dfreelist_mem_requirements, u64 memory_size, void *memory);
 bool       dfreelist_destroy(dfreelist *freelist);
 
-void *dfreelist_allocate(dfreelist *dfree_list, u64 mem_size);
-bool  dfreelist_dealocate(dfreelist *dfree_list, void *ptr);
+void *dfreelist_allocate(dfreelist *dfreelist, u64 mem_size);
+bool  dfreelist_dealocate(dfreelist *dfreelist, void *ptr);

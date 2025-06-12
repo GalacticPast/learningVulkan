@@ -60,6 +60,10 @@ template <typename T> class dhashtable
     void c_init();
     void c_init(u64 size);
 
+    u64 get_size_requirements(u64 size);
+    //WARN: before you call this function you have to call the get size requirements function so that you can get the correct memory size to pass to this fucntion!!!! WARNING IF YOU DONT THEN YOU WILL HAVE A SERIOUS BUG.
+    void c_init(void*block, u64 size);
+
     ~dhashtable();
 
     u64 max_capacity();
@@ -69,6 +73,7 @@ template <typename T> class dhashtable
     void clear();
 
     bool erase(const char *key);
+    bool erase(u64 key);
 
     T *find(const u64 key);
     T *find(const char *key);
@@ -147,6 +152,11 @@ template <typename T> void dhashtable<T>::_print_hashtable()
     }
 }
 
+template <typename T> u64 dhashtable<T>::get_size_requirements(u64 table_size)
+{
+    return sizeof(entry) * table_size;
+}
+
 template <typename T> u64 dhashtable<T>::hash_func(const u64 key)
 {
     // SplitMix64 (used in PCG and others)
@@ -201,6 +211,16 @@ template <typename T> void dhashtable<T>::c_init()
     default_entry         = nullptr;
     table                 = static_cast<entry *>(dallocate(capacity, MEM_TAG_DHASHTABLE));
 }
+template <typename T> void dhashtable<T>::c_init(void* block, u64 table_size)
+{
+    element_size          = sizeof(entry);
+    capacity              = table_size * element_size;
+    max_length            = table_size;
+    num_elements_in_table = 0;
+    table                 = static_cast<entry *>(block);
+    default_entry         = nullptr;
+}
+
 template <typename T> void dhashtable<T>::c_init(u64 table_size)
 {
     element_size          = sizeof(entry);
@@ -436,6 +456,43 @@ template <typename T> T *dhashtable<T>::find(const char *key)
     return type_ref;
 }
 
+template <typename T> bool dhashtable<T>::erase(u64 key)
+{
+    if (key == INVALID_ID_64)
+    {
+        DFATAL("Key is invalid_id_64");
+    }
+
+    u32 high = static_cast<u32>(key >> 32);
+    u32 low  = static_cast<u32>(key);
+
+    entry *entry_ptr = &table[low];
+
+    if (!table[low].is_initialized)
+    {
+        DERROR("The provided key %llu high: %d , low: %d, doesnt map to a entry. Cannot erase with incorrect id.", key, high, low);
+        return false;
+    }
+    if (entry_ptr->unique_identifier != high)
+    {
+        if (is_non_resizable)
+        {
+            DFATAL("The provided key %llu high: %d , low: %d, maps to a incorrent entry. You mayhave resized a "
+                   "un-resizable array so that the hash codes were changed.",
+                   key, high, low);
+        }
+        else
+        {
+            DFATAL(
+                "The provided key %llu high: %d , low: %d, maps to a incorrent entry. Something is really wrong here.",
+                key, high, low);
+        }
+    }
+
+    dset_memory_value(entry_ptr, 0, element_size);
+    num_elements_in_table--;
+    return true;
+}
 template <typename T> bool dhashtable<T>::erase(const char *key)
 {
     u64 hash_code  = hash_func(key);

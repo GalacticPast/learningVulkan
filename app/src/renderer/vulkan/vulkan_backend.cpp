@@ -780,7 +780,6 @@ bool vulkan_destroy_shader(shader *shader)
 
     vkDestroyDescriptorPool(device, vk_shader->per_group_descriptor_pool, allocator);
     vkDestroyDescriptorSetLayout(device, vk_shader->per_group_descriptor_layout, allocator);
-    vk_shader->per_group_buffer_data.~darray();
     vk_shader->per_group_descriptor_sets.~darray();
 
     vulkan_destroy_buffer(vk_context, &vk_shader->per_frame_uniform_buffer);

@@ -17,17 +17,6 @@ enum memory_tags
     MEM_TAG_MAX_TAGS,
 };
 
-struct memory_system_stats
-{
-    u64 total_allocated;
-    u64 tagged_allocations[MEM_TAG_MAX_TAGS];
-};
-
-struct memory_system
-{
-    dfreelist          *dfreelist = nullptr;
-    memory_system_stats stats;
-};
 
 bool memory_system_startup(u64 *memory_system_memory_requirements, void *state);
 void memory_system_shutdown(void *state);
