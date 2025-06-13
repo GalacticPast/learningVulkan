@@ -135,9 +135,6 @@ int main()
         geos[0] = geometry_system_get_default_geometry();
         mat_name.clear();
 
-        //mat_name = "orange_lines_512.conf";
-        //geos[0]->material = material_system_acquire_from_config_file(&mat_name);
-
         geos[1]            = geometry_system_get_geometry(red);
         geos[1]->ubo.model = mat4_translation({2,0,0});
 

@@ -5,8 +5,7 @@ bool vulkan_create_image(vulkan_context *vk_context, vulkan_image *out_image, u3
                          VkFormat img_format, VkMemoryPropertyFlags mem_properties_flags, VkImageUsageFlags img_usage,
                          VkImageTiling img_tiling);
 
-bool vulkan_create_image_view(vulkan_context *vk_context, VkImage *image, VkImageView *out_view, VkFormat img_format,
-                              VkImageAspectFlags img_aspect_flags, u32 mip_levels);
+bool vulkan_create_image_view(vulkan_context *vk_context, VkImage *image, VkImageView *out_view, VkImageViewType img_view_type, VkFormat img_format, VkImageAspectFlags img_aspect_flags, u32 mip_levels);
 
 bool vulkan_destroy_image(vulkan_context *vk_context, vulkan_image *image);
 

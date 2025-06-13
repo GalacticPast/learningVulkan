@@ -56,10 +56,14 @@ struct vulkan_device
 
 struct vulkan_image
 {
-    VkImage        handle;
-    VkImageView    view;
-    VkFormat       format;
-    VkDeviceMemory memory;
+    // INFO: this is needed for cube maps. set to VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT if its a cubemap aka skybox. if
+    // not set it to 0
+    VkImageCreateFlags img_create_flags = 0;
+    VkImage            handle;
+    VkImageViewType    view_type;
+    VkImageView        view;
+    VkFormat           format;
+    VkDeviceMemory     memory;
 
     u32 width;
     u32 height;
@@ -135,8 +139,8 @@ struct vulkan_shader
     void         *per_frame_mapped_data;
     darray<u32>   per_frame_uniforms_size;
 
-    u32            per_group_ubo_size;
-    vulkan_buffer  per_group_uniform_buffer;
+    u32           per_group_ubo_size;
+    vulkan_buffer per_group_uniform_buffer;
 
     // INFO: for now first will always be vertex and second will always be fragment
     darray<shader_stage> stages;
@@ -203,5 +207,5 @@ struct vulkan_context
 
     bool swapchain_recreated[MAX_FRAMES_IN_FLIGHT];
 
-    arena* arena = nullptr;
+    arena *arena = nullptr;
 };

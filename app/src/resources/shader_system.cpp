@@ -219,6 +219,10 @@ static void shader_parse_configuration_file(dstring conf_file_name, shader_confi
         {
             return SAMPLER_2D;
         }
+        else if (string_compare(str, "sampler_cube"))
+        {
+            return SAMPLER_CUBE;
+        }
         return MAX_SHADER_ATTRIBUTE_TYPE;
     };
 

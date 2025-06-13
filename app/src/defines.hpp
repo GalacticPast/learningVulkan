@@ -31,6 +31,7 @@ typedef double f64;
  */
 #define INVALID_ID 4294967295U
 #define INVALID_ID_64 18446744073709551615LLU
+#define INVALID_ID_S32 2147483647
 
 // Platform detection
 #if defined(WIN32) || defined(_WIN32) || defined(__WIN32__)

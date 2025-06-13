@@ -30,6 +30,7 @@ enum shader_scope
 enum attribute_types
 {
     // sampler doesnt have a size
+    SAMPLER_CUBE              = 88,
     SAMPLER_2D                = 8,
     MAT_4                     = 64,
     VEC_4                     = 16,
@@ -99,6 +100,7 @@ struct shader
 
 #define DEFAULT_ALBEDO_TEXTURE_HANDLE "DEFAULT_ALBDEO_TEXTURE"
 #define DEFAULT_NORMAL_TEXTURE_HANDLE "DEFAULT_NORMAL_TEXTURE"
+#define DEFAULT_CUBEMAP_TEXTURE_HANDLE "DEFAULT_CUBEMAP_TEXTURE"
 #define MAX_TEXTURES_LOADED 1024
 #define TEXTURE_NAME_MAX_LENGTH 512
 
@@ -106,12 +108,12 @@ struct texture
 {
 
     dstring name;
-    u32     id           = INVALID_ID;
-    u32     width        = INVALID_ID;
-    u32     height       = INVALID_ID;
-    u32     num_channels = INVALID_ID;
-
-    void *vulkan_texture_state = nullptr;
+    u32     id                   = INVALID_ID;
+    u32     width                = INVALID_ID;
+    u32     height               = INVALID_ID;
+    u32     num_channels         = INVALID_ID;
+    u64     texure_size          = INVALID_ID_64;
+    void   *vulkan_texture_state = nullptr;
 };
 
 #define DEFAULT_TEXTURE_WIDTH 16

@@ -13,11 +13,19 @@ bool vulkan_create_image(vulkan_context *vk_context, vulkan_image *out_image, u3
 
     image_create_info.sType         = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
     image_create_info.imageType     = VK_IMAGE_TYPE_2D;
+    image_create_info.flags         = out_image->img_create_flags;
     image_create_info.extent.width  = img_width;
     image_create_info.extent.height = img_height;
     image_create_info.extent.depth  = 1; // TODO: Support configurable depth.
     image_create_info.mipLevels     = out_image->mip_levels;
-    image_create_info.arrayLayers   = 1; // TODO: Support number of layers in the image.
+    if(out_image->img_create_flags)
+    {
+        image_create_info.arrayLayers   = 6; // TODO: Support number of layers in the image.
+    }
+    else
+    {
+        image_create_info.arrayLayers   = 1; // TODO: Support number of layers in the image.
+    }
     image_create_info.format        = img_format;
     image_create_info.tiling        = img_tiling;
     image_create_info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
@@ -44,8 +52,9 @@ bool vulkan_create_image(vulkan_context *vk_context, vulkan_image *out_image, u3
     return true;
 }
 
-bool vulkan_create_image_view(vulkan_context *vk_context, VkImage *image, VkImageView *out_view, VkFormat img_format,
-                              VkImageAspectFlags img_aspect_flags, u32 mip_levels)
+bool vulkan_create_image_view(vulkan_context *vk_context, VkImage *image, VkImageView *out_view,
+                              VkImageViewType img_view_type, VkFormat img_format, VkImageAspectFlags img_aspect_flags,
+                              u32 mip_levels)
 {
     VkImageViewCreateInfo image_view_create_info{};
 
@@ -53,7 +62,7 @@ bool vulkan_create_image_view(vulkan_context *vk_context, VkImage *image, VkImag
     image_view_create_info.pNext                           = 0;
     image_view_create_info.flags                           = 0;
     image_view_create_info.image                           = *image;
-    image_view_create_info.viewType                        = VK_IMAGE_VIEW_TYPE_2D;
+    image_view_create_info.viewType                        = img_view_type;
     image_view_create_info.format                          = img_format;
     image_view_create_info.components.r                    = VK_COMPONENT_SWIZZLE_IDENTITY;
     image_view_create_info.components.g                    = VK_COMPONENT_SWIZZLE_IDENTITY;
@@ -64,6 +73,11 @@ bool vulkan_create_image_view(vulkan_context *vk_context, VkImage *image, VkImag
     image_view_create_info.subresourceRange.levelCount     = mip_levels;
     image_view_create_info.subresourceRange.baseArrayLayer = 0;
     image_view_create_info.subresourceRange.layerCount     = 1;
+
+    if(img_view_type == VK_IMAGE_VIEW_TYPE_CUBE)
+    {
+        image_view_create_info.subresourceRange.layerCount     = 6;
+    }
 
     VkResult result =
         vkCreateImageView(vk_context->vk_device.logical, &image_view_create_info, vk_context->vk_allocator, out_view);
@@ -84,7 +98,7 @@ bool vulkan_destroy_image(vulkan_context *vk_context, vulkan_image *image)
     image->memory = 0;
     return true;
 }
-// NOTE: for now we use graphics command pool to allocate. Maybe we have to make it a function parameter??
+
 bool vulkan_transition_image_layout(vulkan_context *vk_context, VkCommandPool *cmd_pool, VkQueue *queue,
                                     vulkan_image *image, VkImageLayout old_layout, VkImageLayout new_layout)
 {
@@ -110,6 +124,11 @@ bool vulkan_transition_image_layout(vulkan_context *vk_context, VkCommandPool *c
     img_barrier.subresourceRange.levelCount     = image->mip_levels;
     img_barrier.subresourceRange.baseArrayLayer = 0;
     img_barrier.subresourceRange.layerCount     = 1;
+
+    if(image->img_create_flags == VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT)
+    {
+        img_barrier.subresourceRange.layerCount     = 6;
+    }
 
     VkPipelineStageFlags source_stage_flags;
     VkPipelineStageFlags destination_stage_flags;
@@ -185,22 +204,34 @@ bool vulkan_copy_buffer_data_to_image(vulkan_context *vk_context, VkCommandPool 
 {
     VkCommandBuffer staging_command_buffer{};
     vulkan_allocate_command_buffers(vk_context, cmd_pool, &staging_command_buffer, 1, true);
+    u32 repeat = 1;
 
-    VkBufferImageCopy buffer_img_cpy_region{};
-    buffer_img_cpy_region.bufferOffset      = 0;
-    buffer_img_cpy_region.bufferRowLength   = 0;
-    buffer_img_cpy_region.bufferImageHeight = 0;
+    if(image->img_create_flags == VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT)
+    {
+        repeat = 6;
+    }
+    VkBufferImageCopy buffer_img_cpy_region[6]{};
 
-    buffer_img_cpy_region.imageSubresource.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT;
-    buffer_img_cpy_region.imageSubresource.mipLevel       = 0;
-    buffer_img_cpy_region.imageSubresource.baseArrayLayer = 0;
-    buffer_img_cpy_region.imageSubresource.layerCount     = 1;
+    //WARN: maybe our images wont always be RGBA. Specify the num channels.
+    u32 image_size = image->height * image->width * 4;
 
-    buffer_img_cpy_region.imageOffset = {0, 0, 0};
-    buffer_img_cpy_region.imageExtent = {image->width, image->height, 1};
+    for(u32 i = 0 ; i < repeat ; i++)
+    {
+        buffer_img_cpy_region[i].bufferOffset      = i * image_size;
+        buffer_img_cpy_region[i].bufferRowLength   = 0;
+        buffer_img_cpy_region[i].bufferImageHeight = 0;
+
+        buffer_img_cpy_region[i].imageSubresource.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT;
+        buffer_img_cpy_region[i].imageSubresource.mipLevel       = 0;
+        buffer_img_cpy_region[i].imageSubresource.baseArrayLayer = i;
+        buffer_img_cpy_region[i].imageSubresource.layerCount     = 1;
+
+        buffer_img_cpy_region[i].imageOffset = {0, 0, 0};
+        buffer_img_cpy_region[i].imageExtent = {image->width, image->height, 1};
+    }
 
     vkCmdCopyBufferToImage(staging_command_buffer, src_buffer->handle, image->handle,
-                           VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &buffer_img_cpy_region);
+                           VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, repeat, buffer_img_cpy_region);
 
     vulkan_end_command_buffer_single_use(vk_context, staging_command_buffer, false);
 

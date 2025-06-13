@@ -143,7 +143,7 @@ bool create_swapchain(vulkan_context *vk_context)
 
     for (u32 i = 0; i < swapchain_images_count; i++)
     {
-        vulkan_create_image_view(vk_context, &vk_swapchain->images[i], &vk_swapchain->img_views[i],
+        vulkan_create_image_view(vk_context, &vk_swapchain->images[i], &vk_swapchain->img_views[i],VK_IMAGE_VIEW_TYPE_2D,
                                  vk_swapchain->img_format, VK_IMAGE_ASPECT_COLOR_BIT, DEFAULT_MIP_LEVEL);
     }
 
@@ -158,7 +158,7 @@ bool create_swapchain(vulkan_context *vk_context)
                               VK_IMAGE_TILING_OPTIMAL);
     DASSERT(res == true);
     res = vulkan_create_image_view(
-        vk_context, &vk_context->vk_swapchain.depth_image.handle, &vk_context->vk_swapchain.depth_image.view,
+        vk_context, &vk_context->vk_swapchain.depth_image.handle, &vk_context->vk_swapchain.depth_image.view,VK_IMAGE_VIEW_TYPE_2D,
         vk_context->vk_swapchain.depth_image.format, VK_IMAGE_ASPECT_DEPTH_BIT, DEFAULT_MIP_LEVEL);
     DASSERT(res == true);
 

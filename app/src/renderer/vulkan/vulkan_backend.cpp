@@ -9,13 +9,14 @@
 #include "resources/resource_types.hpp"
 #include "resources/shader_system.hpp"
 
+#include "resources/texture_system.hpp"
 #include "vulkan/vulkan_core.h"
 #include "vulkan_backend.hpp"
 #include "vulkan_buffers.hpp"
 #include "vulkan_device.hpp"
 #include "vulkan_framebuffer.hpp"
-#include "vulkan_pipeline.hpp"
 #include "vulkan_image.hpp"
+#include "vulkan_pipeline.hpp"
 #include "vulkan_platform.hpp"
 #include "vulkan_renderpass.hpp"
 #include "vulkan_swapchain.hpp"
@@ -32,7 +33,8 @@ bool vulkan_create_debug_messenger(VkDebugUtilsMessengerCreateInfoEXT *dbg_messe
 bool vulkan_create_default_texture();
 bool vulkan_allocate_descriptor_set(VkDescriptorPool *desc_pool, VkDescriptorSetLayout *set_layout,
                                     u32 descriptor_count);
-bool vulkan_backend_initialize(arena* arena, u64 *vulkan_backend_memory_requirements, application_config *app_config, void *state)
+bool vulkan_backend_initialize(arena *arena, u64 *vulkan_backend_memory_requirements, application_config *app_config,
+                               void *state)
 {
     *vulkan_backend_memory_requirements = sizeof(vulkan_context);
     if (!state)
@@ -42,7 +44,7 @@ bool vulkan_backend_initialize(arena* arena, u64 *vulkan_backend_memory_requirem
     DDEBUG("Initializing Vulkan backend...");
     vk_context               = reinterpret_cast<vulkan_context *>(state);
     vk_context->vk_allocator = nullptr;
-    vk_context->arena = arena;
+    vk_context->arena        = arena;
 
     {
         vk_context->command_buffers.reserve(arena, MAX_FRAMES_IN_FLIGHT);
@@ -93,7 +95,7 @@ bool vulkan_backend_initialize(arena* arena, u64 *vulkan_backend_memory_requirem
     // INFO: get platform specifig extensions and extensions count
     darray<const char *> vulkan_instance_extensions;
     vulkan_instance_extensions.c_init(arena);
-    const char          *vk_generic_surface_ext = VK_KHR_SURFACE_EXTENSION_NAME;
+    const char *vk_generic_surface_ext = VK_KHR_SURFACE_EXTENSION_NAME;
 
     vulkan_instance_extensions.push_back(vk_generic_surface_ext);
     vulkan_platform_get_required_vulkan_extensions(vulkan_instance_extensions);
@@ -299,8 +301,8 @@ bool vulkan_update_materials_descriptor_set(vulkan_shader *shader, material *mat
 
     DTRACE("Updataing descriptor_set_index: %d", descriptor_set_index);
 
-    u32 image_count = 3;
-    VkDescriptorImageInfo image_infos[3] = {};
+    u32                   image_count    = 4;
+    VkDescriptorImageInfo image_infos[4] = {};
 
     // INFO: in case
     // I dont get the default material in the start because the default material might not be initialized yet.
@@ -311,9 +313,9 @@ bool vulkan_update_materials_descriptor_set(vulkan_shader *shader, material *mat
     {
         vulkan_texture *tex_state = nullptr;
 
-        if (material->map.diffuse )
+        if (material->map.diffuse)
         {
-            tex_state = static_cast<vulkan_texture *>(material->map.diffuse ->vulkan_texture_state);
+            tex_state = static_cast<vulkan_texture *>(material->map.diffuse->vulkan_texture_state);
         }
         if (!tex_state)
         {
@@ -325,14 +327,14 @@ bool vulkan_update_materials_descriptor_set(vulkan_shader *shader, material *mat
             {
                 default_mat = material_system_get_default_material();
             }
-            tex_state = static_cast<vulkan_texture *>(default_mat->map.diffuse ->vulkan_texture_state);
+            tex_state = static_cast<vulkan_texture *>(default_mat->map.diffuse->vulkan_texture_state);
         }
 
         image_infos[0].sampler     = tex_state->sampler;
         image_infos[0].imageView   = tex_state->image.view;
         image_infos[0].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
     }
-    //normal
+    // normal
     {
         vulkan_texture *tex_state = nullptr;
 
@@ -357,7 +359,7 @@ bool vulkan_update_materials_descriptor_set(vulkan_shader *shader, material *mat
         image_infos[1].imageView   = tex_state->image.view;
         image_infos[1].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
     }
-    //specular
+    // specular
     {
         vulkan_texture *tex_state = nullptr;
 
@@ -382,9 +384,17 @@ bool vulkan_update_materials_descriptor_set(vulkan_shader *shader, material *mat
         image_infos[2].imageView   = tex_state->image.view;
         image_infos[2].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
     }
+    // skybox
+    {
+        texture        *skybox    = texture_system_get_texture(DEFAULT_CUBEMAP_TEXTURE_HANDLE);
+        vulkan_texture *tex_state = static_cast<vulkan_texture *>(skybox->vulkan_texture_state);
 
-    VkWriteDescriptorSet desc_writes[3]{};
-    // albdeo
+        image_infos[3].sampler     = tex_state->sampler;
+        image_infos[3].imageView   = tex_state->image.view;
+        image_infos[3].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    }
+
+    VkWriteDescriptorSet desc_writes[4]{};
     for (u32 i = 0; i < image_count; i++)
     {
         desc_writes[i].sType            = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
@@ -467,7 +477,7 @@ bool vulkan_initialize_shader(shader_config *config, shader *in_shader)
         DERROR("Provided parameters to vulkan_create_shader were nullptr.");
         return false;
     }
-    arena* arena = vk_context->arena;
+    arena         *arena     = vk_context->arena;
     vulkan_shader *vk_shader = static_cast<vulkan_shader *>(dallocate(arena, sizeof(vulkan_shader), MEM_TAG_RENDERER));
 
     u32 uniforms_size = config->uniforms.size();
@@ -484,7 +494,7 @@ bool vulkan_initialize_shader(shader_config *config, shader *in_shader)
 
             darray<VkShaderStageFlags> per_frame_stage_flags{};
             per_frame_stage_flags.c_init(arena);
-            darray<VkDescriptorType>   des_types{};
+            darray<VkDescriptorType> des_types{};
             des_types.c_init(arena);
 
             u32 uniforms_count = config->uniforms.size();
@@ -558,7 +568,7 @@ bool vulkan_initialize_shader(shader_config *config, shader *in_shader)
             VK_CHECK(result);
 
             // get the uniform_size
-            //NOTE: this is the unalgined sizes of the bindings for set 0 aka global aka per_frame
+            // NOTE: this is the unalgined sizes of the bindings for set 0 aka global aka per_frame
             vk_shader->per_frame_uniforms_size = config->per_frame_uniform_offsets;
 
             u32 &per_frame_ubo_size = vk_shader->per_frame_stride;
@@ -571,7 +581,7 @@ bool vulkan_initialize_shader(shader_config *config, shader *in_shader)
             for (u32 i = 0; i < size; i++)
             {
                 per_frame_ubo_size += config->per_frame_uniform_offsets[i];
-                per_frame_ubo_size = (per_frame_ubo_size + required_alignment - 1) & ~(required_alignment - 1);
+                per_frame_ubo_size  = (per_frame_ubo_size + required_alignment - 1) & ~(required_alignment - 1);
                 vk_shader->per_frame_uniforms_size[i] = per_frame_ubo_size;
             }
 
@@ -609,7 +619,7 @@ bool vulkan_initialize_shader(shader_config *config, shader *in_shader)
 
             darray<VkShaderStageFlags> stage_flags{};
             stage_flags.c_init(arena);
-            darray<VkDescriptorType>   des_types{};
+            darray<VkDescriptorType> des_types{};
             des_types.c_init(arena);
 
             for (u32 i = 0; i < uniforms_count; i++)
@@ -627,6 +637,14 @@ bool vulkan_initialize_shader(shader_config *config, shader *in_shader)
                     {
                         des_types.push_back(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
                     }
+                    else if (type == SAMPLER_CUBE)
+                    {
+                        des_types.push_back(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
+                    }
+                    else
+                    {
+                        DERROR("Unknown descriptor Types %d", type);
+                    };
                 }
             }
 
@@ -807,7 +825,7 @@ bool vulkan_create_texture(texture *in_texture, u8 *pixels)
 {
     DASSERT(pixels);
     DASSERT(in_texture);
-    arena* arena = vk_context->arena;
+    arena *arena = vk_context->arena;
 
     in_texture->vulkan_texture_state =
         static_cast<vulkan_texture *>(dallocate(arena, sizeof(vulkan_texture), MEM_TAG_RENDERER));
@@ -816,20 +834,38 @@ bool vulkan_create_texture(texture *in_texture, u8 *pixels)
     u32 tex_width    = in_texture->width;
     u32 tex_height   = in_texture->height;
     u32 tex_channel  = 4;
-    u32 texture_size = tex_width * tex_height * 4;
-
+    u64 texture_size = INVALID_ID_64;
+    //HACK: this should be more explicit. For now we know that we set the value of texture size only when we uplaod a cubemap to the gpu.
+    bool is_cube_map = false;
     vulkan_buffer staging_buffer{};
     vulkan_image *image = &vk_texture->image;
     image->width        = tex_width;
     image->height       = tex_height;
-    //INFO: use the correct colorspace for the image, if the texture is a default texture then it should not be mapping to sRGB colorspace. There was a bug before when the final color of a default normal map was (0.25, 0.25,1,1) even though the actual value was (0.5,0.5,1,1) because I used the sRGB format
-    if(tex_height ==  DEFAULT_TEXTURE_WIDTH && tex_height == DEFAULT_TEXTURE_HEIGHT)
+
+    if (in_texture->texure_size != INVALID_ID_64)
     {
-        image->format       = VK_FORMAT_R8G8B8A8_UNORM;
+        texture_size = in_texture->texure_size;
+        image->view_type = VK_IMAGE_VIEW_TYPE_CUBE;
+        image->img_create_flags = VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
+        is_cube_map = true;
     }
     else
     {
-        image->format       = VK_FORMAT_R8G8B8A8_SRGB;
+        image->view_type = VK_IMAGE_VIEW_TYPE_2D;
+        image->img_create_flags = 0;
+        texture_size = tex_width * tex_height * 4;
+    }
+
+    // INFO: use the correct colorspace for the image, if the texture is a default texture then it should not be mapping
+    // to sRGB colorspace. There was a bug before when the final color of a default normal map was (0.25, 0.25,1,1) even
+    // though the actual value was (0.5,0.5,1,1) because I used the sRGB format
+    if (tex_height == DEFAULT_TEXTURE_WIDTH && tex_height == DEFAULT_TEXTURE_HEIGHT)
+    {
+        image->format = VK_FORMAT_R8G8B8A8_UNORM;
+    }
+    else
+    {
+        image->format = VK_FORMAT_R8G8B8A8_SRGB;
     }
 
     u32 max           = DMAX(tex_width, tex_height);
@@ -857,13 +893,13 @@ bool vulkan_create_texture(texture *in_texture, u8 *pixels)
                                    VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
     vulkan_copy_buffer_data_to_image(vk_context, &vk_context->transfer_command_pool,
-                                     &vk_context->vk_device.transfer_queue, &staging_buffer, image);
+                                    &vk_context->vk_device.transfer_queue, &staging_buffer, image);
 
     vulkan_generate_mipmaps(vk_context, image);
 
     vulkan_destroy_buffer(vk_context, &staging_buffer);
 
-    result = vulkan_create_image_view(vk_context, &image->handle, &image->view, image->format,
+    result = vulkan_create_image_view(vk_context, &image->handle, &image->view,image->view_type, image->format,
                                       VK_IMAGE_ASPECT_COLOR_BIT, image->mip_levels);
     DASSERT(result == true);
 
@@ -1043,7 +1079,7 @@ bool vulkan_check_validation_layer_support()
 {
     u32 inst_layer_properties_count = 0;
     vkEnumerateInstanceLayerProperties(&inst_layer_properties_count, 0);
-    arena* arena = vk_context->arena;
+    arena *arena = vk_context->arena;
 
     darray<VkLayerProperties> inst_layer_properties;
     inst_layer_properties.reserve(arena, inst_layer_properties_count);
@@ -1114,8 +1150,8 @@ void vulkan_update_global_uniform_buffer(vulkan_shader *shader, scene_global_uni
     u8 *addr = static_cast<u8 *>(shader->per_frame_mapped_data) + ((shader->per_frame_stride * current_frame_index));
     dcopy_memory(addr, scene_ubo, scene_aligned);
 
-    u32 size           = shader->per_frame_uniforms_size[1] - scene_aligned;
-    addr              += scene_aligned;
+    u32 size  = shader->per_frame_uniforms_size[1] - scene_aligned;
+    addr     += scene_aligned;
     dcopy_memory(addr, light_ubo, size);
 }
 
@@ -1185,7 +1221,7 @@ bool vulkan_create_geometry(geometry *out_geometry, u32 vertex_count, vertex *ve
 
     vulkan_destroy_buffer(vk_context, &index_staging_buffer);
 
-    arena* arena = vk_context->arena;
+    arena *arena                        = vk_context->arena;
     out_geometry->vulkan_geometry_state = dallocate(arena, sizeof(vulkan_geometry_data), MEM_TAG_RENDERER);
     vulkan_geometry_data *geo_data      = static_cast<vulkan_geometry_data *>(out_geometry->vulkan_geometry_state);
 
@@ -1307,18 +1343,18 @@ bool vulkan_draw_frame(render_data *render_data)
     swapchain_img.view   = vk_context->vk_swapchain.img_views[image_index];
 
     // transition it
-    if(vk_context->swapchain_recreated[current_frame])
+    if (vk_context->swapchain_recreated[current_frame])
     {
         vulkan_transition_image_layout(vk_context, &vk_context->graphics_command_pool,
-                                       &vk_context->vk_device.graphics_queue, &swapchain_img,
-                                       VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+                                       &vk_context->vk_device.graphics_queue, &swapchain_img, VK_IMAGE_LAYOUT_UNDEFINED,
+                                       VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
         vk_context->swapchain_recreated[current_frame] = false;
     }
     else
     {
         vulkan_transition_image_layout(vk_context, &vk_context->graphics_command_pool,
                                        &vk_context->vk_device.graphics_queue, &swapchain_img,
-                                       VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+                                       VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
     }
 
     if (result & VK_ERROR_OUT_OF_DATE_KHR)
