@@ -2,7 +2,7 @@
 
 #include "resource_types.hpp"
 
-bool geometry_system_initialize(u64 *geometry_system_mem_requirements, void *state);
+bool geometry_system_initialize(arena* arena, u64 *geometry_system_mem_requirements, void *state);
 bool geometry_system_shutdowm(void *state);
 
 // call this first

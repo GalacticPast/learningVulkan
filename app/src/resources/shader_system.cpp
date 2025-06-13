@@ -13,6 +13,7 @@
 
 struct shader_system_state
 {
+    arena             *arena = nullptr;
     darray<dstring>    loaded_shaders;
     dhashtable<shader> hashtable;
     u64                default_shader_id = INVALID_ID_64;
@@ -24,18 +25,20 @@ static void shader_system_add_uniform(shader_config *out_config, dstring *name, 
 static void shader_system_add_attributes(shader_config *out_config, const char *name, u32 location,
                                          attribute_types type);
 
-bool shader_system_startup(u64 *shader_system_mem_requirements, void *state)
+bool shader_system_startup(arena *arena, u64 *shader_system_mem_requirements, void *state)
 {
     *shader_system_mem_requirements = sizeof(shader_system_state);
     if (!state)
     {
         return true;
     }
+    DASSERT(arena);
 
-    shader_sys_state_ptr = static_cast<shader_system_state *>(state);
+    shader_sys_state_ptr        = static_cast<shader_system_state *>(state);
+    shader_sys_state_ptr->arena = arena;
 
-    shader_sys_state_ptr->hashtable.c_init(MAX_SHADER_COUNT);
-    shader_sys_state_ptr->loaded_shaders.reserve(MAX_SHADER_COUNT);
+    shader_sys_state_ptr->hashtable.c_init(arena, MAX_SHADER_COUNT);
+    shader_sys_state_ptr->loaded_shaders.reserve(arena, MAX_SHADER_COUNT);
 
     return true;
 }
@@ -133,8 +136,10 @@ static void shader_parse_configuration_file(dstring conf_file_name, shader_confi
     const char *prefix = "../assets/shaders/";
     string_copy_format(full_file_path.string, "%s%s", 0, prefix, conf_file_name.c_str());
 
+    arena* arena = shader_sys_state_ptr->arena;
+
     std::fstream file;
-    bool          result = file_open(full_file_path, &file, false, false);
+    bool         result = file_open(full_file_path, &file, false, false);
     DASSERT(result);
 
     // NOTE:  this is literraly an adhoc aproach. So future me learn to write a proper parser :)
@@ -244,6 +249,7 @@ static void shader_parse_configuration_file(dstring conf_file_name, shader_confi
         if (string_compare(identifier.c_str(), "stages"))
         {
             darray<dstring> stages;
+            stages.c_init(arena);
 
             const char *str = go_to_colon(line.c_str());
             DASSERT(str);
@@ -271,6 +277,7 @@ static void shader_parse_configuration_file(dstring conf_file_name, shader_confi
         else if (string_compare(identifier.c_str(), "filepaths"))
         {
             darray<dstring> filepaths;
+            filepaths.c_init(arena);
 
             const char *str = go_to_colon(line.c_str());
             DASSERT(str);
@@ -311,6 +318,8 @@ static void shader_parse_configuration_file(dstring conf_file_name, shader_confi
         else if (string_compare(identifier.c_str(), "attribute"))
         {
             darray<dstring> list;
+            list.c_init(arena);
+
             const char     *str = go_to_colon(line.c_str());
             DASSERT(str);
 
@@ -327,6 +336,8 @@ static void shader_parse_configuration_file(dstring conf_file_name, shader_confi
         else if (string_compare(identifier.c_str(), "uniform"))
         {
             darray<dstring> list;
+            list.c_init(arena);
+
             const char     *str = go_to_colon(line.c_str());
             DASSERT(str);
 
@@ -364,10 +375,13 @@ bool shader_system_create_default_shader(shader *out_shader, u64 *out_shader_id)
 {
     DASSERT_MSG(out_shader, "out shader is nullptr.");
     DASSERT_MSG(out_shader_id, "out_shader_id is nullptr");
+    arena* arena = shader_sys_state_ptr->arena;
 
     shader_config default_shader_conf{};
+    default_shader_conf.init(arena);
 
     dstring conf_file = "default_shader.conf";
+
     shader_parse_configuration_file(conf_file, &default_shader_conf);
 
     *out_shader_id                          = _create_shader(&default_shader_conf, out_shader);

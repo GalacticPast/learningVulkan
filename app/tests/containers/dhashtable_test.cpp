@@ -17,13 +17,13 @@ struct test_struct
     u32     value;
 };
 
-bool hashtable_create_and_destroy()
+bool hashtable_create_and_destroy(arena* arena)
 {
-    dhashtable<u32> num_table;
+    dhashtable<u32> num_table(arena);
 
     u64             size     = 64000;
     u64             capacity = size * sizeof(u64);
-    dhashtable<u64> int_table(size);
+    dhashtable<u64> int_table(arena, size);
 
     expect_should_be(20, num_table.size());
     expect_should_be(size, int_table.size());
@@ -48,15 +48,16 @@ void get_random_string(dstring *out_string)
 
     return;
 }
-bool hashtable_insert_rehash_and_find()
+bool hashtable_insert_rehash_and_find(arena* arena)
 {
     u64                     size     = 4096;
     u64                     capacity = size * sizeof(u64);
-    dhashtable<test_struct> int_table(size);
+    dhashtable<test_struct> int_table(arena, size);
 
     // lol
     u64                 double_size = size * 10;
-    darray<test_struct> keys(double_size);
+    darray<test_struct> keys;
+    keys.c_init(arena, double_size);
 
     for (u64 i = 0; i < double_size; i++)
     {
@@ -87,13 +88,14 @@ bool hashtable_insert_rehash_and_find()
     return true;
 }
 
-bool hashtable_insert_and_find()
+bool hashtable_insert_and_find(arena* arena)
 {
     u64             size     = 4096;
     u64             capacity = size * sizeof(u64);
-    dhashtable<u64> int_table(size);
+    dhashtable<u64> int_table(arena, size);
 
-    darray<dstring> keys(size);
+    darray<dstring> keys;
+    keys.c_init(arena, size);
 
     for (u64 i = 0; i < size; i++)
     {
@@ -124,13 +126,14 @@ bool hashtable_insert_and_find()
     return true;
 }
 
-bool hashtable_erase_test()
+bool hashtable_erase_test(arena* arena)
 {
     u64             size     = 4096;
     u64             capacity = size * sizeof(u64);
-    dhashtable<u64> int_table(size);
+    dhashtable<u64> int_table(arena, size);
 
-    darray<dstring> keys(size);
+    darray<dstring> keys;
+    keys.c_init(arena, size);
 
     for (u64 i = 0; i < size; i++)
     {

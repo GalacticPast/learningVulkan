@@ -5,12 +5,12 @@
 bool vulkan_create_framebuffers(vulkan_context *vk_context)
 {
     DINFO("Creating vulkan framebuffers...");
-
+    arena* arena = vk_context->arena;
     u32 framebuffers_count = vk_context->vk_swapchain.images_count;
     if (vk_context->vk_swapchain.buffers == nullptr)
     {
         vk_context->vk_swapchain.buffers =
-            static_cast<VkFramebuffer *>(dallocate(sizeof(VkFramebuffer) * framebuffers_count, MEM_TAG_RENDERER));
+            static_cast<VkFramebuffer *>(dallocate(arena, sizeof(VkFramebuffer) * framebuffers_count, MEM_TAG_RENDERER));
     }
     else
     {

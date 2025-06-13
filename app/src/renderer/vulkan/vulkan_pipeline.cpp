@@ -14,8 +14,10 @@ bool vulkan_create_pipeline(vulkan_context *vk_context, vulkan_shader *shader)
                              shader->fragment_shader_code.size());
 
     // create the pipeline shader stage
+    arena* arena = vk_context->arena;
     u32                           shader_stage_count = 0;
     darray<VkShaderStageFlagBits> stage_flag_bits    = {};
+    stage_flag_bits.c_init(arena);
 
     VkShaderModule vert_shader_module = create_shader_module(
         vk_context, reinterpret_cast<const char *>(shader->vertex_shader_code.data), shader->vertex_shader_code.size());

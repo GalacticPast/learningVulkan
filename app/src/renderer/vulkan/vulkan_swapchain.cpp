@@ -119,11 +119,12 @@ bool create_swapchain(vulkan_context *vk_context)
 
     result = vkGetSwapchainImagesKHR(vk_context->vk_device.logical, vk_swapchain->handle, &swapchain_images_count, 0);
     VK_CHECK(result);
+    arena* arena = vk_context->arena;
 
     if (vk_swapchain->images == nullptr)
     {
         vk_swapchain->images =
-            static_cast<VkImage *>(dallocate(sizeof(VkImage) * swapchain_images_count, MEM_TAG_RENDERER));
+            static_cast<VkImage *>(dallocate(arena, sizeof(VkImage) * swapchain_images_count, MEM_TAG_RENDERER));
     }
     vkGetSwapchainImagesKHR(vk_context->vk_device.logical, vk_swapchain->handle, &swapchain_images_count,
                             vk_swapchain->images);
@@ -137,7 +138,7 @@ bool create_swapchain(vulkan_context *vk_context)
     if (vk_context->vk_swapchain.img_views == nullptr)
     {
         vk_context->vk_swapchain.img_views =
-            static_cast<VkImageView *>(dallocate(sizeof(VkImageView) * swapchain_images_count, MEM_TAG_RENDERER));
+            static_cast<VkImageView *>(dallocate(arena, sizeof(VkImageView) * swapchain_images_count, MEM_TAG_RENDERER));
     }
 
     for (u32 i = 0; i < swapchain_images_count; i++)

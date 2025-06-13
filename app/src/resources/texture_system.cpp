@@ -1,9 +1,9 @@
-#include "texture_system.hpp"
 #include "containers/dhashtable.hpp"
 #include "core/dmemory.hpp"
 #include "defines.hpp"
 #include "renderer/vulkan/vulkan_backend.hpp"
 #include "resources/resource_types.hpp"
+#include "texture_system.hpp"
 
 #define STB_IMAGE_IMPLEMENTATION
 #include "vendor/stb_image.h"
@@ -12,6 +12,7 @@ struct texture_system_state
 {
     darray<dstring>     loaded_textures;
     dhashtable<texture> hashtable;
+    arena              *arena;
 };
 
 static texture_system_state *tex_sys_state_ptr;
@@ -19,7 +20,7 @@ bool                         texture_system_create_default_textures();
 
 static bool texture_system_release_textures(dstring *texture_name);
 
-bool texture_system_initialize(u64 *texture_system_mem_requirements, void *state)
+bool texture_system_initialize(arena *arena, u64 *texture_system_mem_requirements, void *state)
 {
     *texture_system_mem_requirements = sizeof(texture_system_state);
     if (!state)
@@ -27,10 +28,12 @@ bool texture_system_initialize(u64 *texture_system_mem_requirements, void *state
         return true;
     }
     DINFO("Initializing texture system...");
+    DASSERT(arena);
     tex_sys_state_ptr = static_cast<texture_system_state *>(state);
 
-    tex_sys_state_ptr->hashtable.c_init(MAX_TEXTURES_LOADED);
-    tex_sys_state_ptr->loaded_textures.c_init();
+    tex_sys_state_ptr->hashtable.c_init(arena, MAX_TEXTURES_LOADED);
+    tex_sys_state_ptr->loaded_textures.c_init(arena);
+    tex_sys_state_ptr->arena = arena;
 
     stbi_set_flip_vertically_on_load(true);
     texture_system_create_default_textures();
@@ -109,8 +112,9 @@ bool texture_system_create_texture(dstring *file_base_name)
 
 bool texture_system_create_default_textures()
 {
+    arena* arena = tex_sys_state_ptr->arena;
     {
-        //gray albedo texture
+        // gray albedo texture
         texture default_albedo_texture{};
         default_albedo_texture.name         = DEFAULT_ALBEDO_TEXTURE_HANDLE;
         default_albedo_texture.width        = DEFAULT_TEXTURE_WIDTH;
@@ -124,7 +128,7 @@ bool texture_system_create_default_textures()
         u32 texture_size =
             default_albedo_texture.width * default_albedo_texture.height * default_albedo_texture.num_channels;
 
-        u8 *pixels = static_cast<u8 *>(dallocate(texture_size, MEM_TAG_UNKNOWN));
+        u8 *pixels = static_cast<u8 *>(dallocate(arena, texture_size, MEM_TAG_UNKNOWN));
 
         for (u32 y = 0; y < tex_height; y++)
         {
@@ -157,7 +161,7 @@ bool texture_system_create_default_textures()
         u32 texture_size =
             default_normal_texture.width * default_normal_texture.height * default_normal_texture.num_channels;
 
-        u8 *pixels = static_cast<u8 *>(dallocate(texture_size, MEM_TAG_UNKNOWN));
+        u8 *pixels = static_cast<u8 *>(dallocate(arena, texture_size, MEM_TAG_UNKNOWN));
 
         for (u32 y = 0; y < tex_height; y++)
         {

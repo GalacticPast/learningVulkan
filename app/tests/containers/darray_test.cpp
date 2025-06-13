@@ -14,12 +14,13 @@ static void print_array(darray<s32> &array)
     printf("-------------------------------------------\n");
 }
 
-bool darray_create_and_destroy()
+bool darray_create_and_destroy(arena* arena)
 {
     darray<s32> array;
 
     u64         huge_size = 64 * 1024 * 1024;
-    darray<s32> huge_array(huge_size);
+    darray<s32> huge_array;
+    huge_array.c_init(arena, huge_size);
 
     expect_should_be(array.size(), 0);
     expect_should_be(huge_array.size(), huge_size);
@@ -27,9 +28,11 @@ bool darray_create_and_destroy()
     return true;
 }
 
-bool darray_create_and_resize()
+bool darray_create_and_resize(arena* arena)
 {
     darray<s32> array;
+    array.reserve(arena);
+
     s32         size = 100000;
     for (s32 i = 0; i < size; i++)
     {
@@ -45,7 +48,7 @@ bool darray_create_and_resize()
     return true;
 }
 
-bool darray_pop_back_test()
+bool darray_pop_back_test(arena* arena)
 {
     darray<s32> array;
     s32         size = 100000;
@@ -63,10 +66,10 @@ bool darray_pop_back_test()
     return true;
 }
 
-bool darray_pop_at_test()
+bool darray_pop_at_test(arena* arena)
 {
-    darray<s32> array(10);
-
+    darray<s32> array;
+    array.c_init(arena, 10);
     for (s32 i = 0; i < 10; i++)
     {
         array[i] = i;

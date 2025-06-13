@@ -202,4 +202,6 @@ struct vulkan_context
     const char *enabled_extension_names[4];
 
     bool swapchain_recreated[MAX_FRAMES_IN_FLIGHT];
+
+    arena* arena = nullptr;
 };

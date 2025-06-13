@@ -35,11 +35,18 @@ void run_tests()
     void *block = platform_allocate(memory_mem_requirements, false);
     memory_system_startup(&memory_mem_requirements, block);
 
-    test_manager_initialize(&test_manager_mem_requirements, nullptr);
+    u64 arena_pool_size = 32;
+    u32 num_arenas      = 1;
+    arena_allocate_arena_pool(arena_pool_size, num_arenas);
+
+    arena* arena = arena_get_arena();
+    DASSERT(arena);
+
+    test_manager_initialize(arena, &test_manager_mem_requirements, nullptr);
     test_manager *test_instance = static_cast<test_manager *>(malloc(test_manager_mem_requirements));
     darray<test>  test_array;
     test_instance->tests = &test_array;
-    test_manager_initialize(&test_manager_mem_requirements, test_instance);
+    test_manager_initialize(arena, &test_manager_mem_requirements, test_instance);
 
     linear_allocator_register_tests();
     event_system_register_tests();
@@ -94,11 +101,16 @@ int main()
     geometry **geos           = nullptr;
     u32        geometry_count = INVALID_ID;
 
+    light_ubo.direction  = {-0.578f, -0.578f, -0.578f};
+    light_ubo.color      = {0.8f, 0.8f, 0.8f, 1.0f};
+    light_ubo.camera_pos = light_ubo.direction;
+
 #if false
     {
         const char *obj_file_name  = "sponza.obj";
         const char *mtl_file_name  = "sponza.mtl";
         geometry_system_get_geometries_from_file(obj_file_name, mtl_file_name, &geos, &geometry_count);
+
     }
 #endif
 
@@ -121,7 +133,7 @@ int main()
         u64 green = geometry_system_create_geometry(&green_light, false);
         u64 blue  = geometry_system_create_geometry(&blue_light, false);
 
-        geos    = static_cast<geometry **>(dallocate(sizeof(geometry *) * 6, MEM_TAG_UNKNOWN));
+        geos    = static_cast<geometry **>(dallocate(app_state.system_arena, sizeof(geometry *) * 6, MEM_TAG_UNKNOWN));
         geos[0] = geometry_system_get_default_geometry();
         mat_name.clear();
 
@@ -136,10 +148,6 @@ int main()
 
         geos[3]            = geometry_system_get_geometry(blue);
         geos[3]->ubo.model = mat4_translation({0,0,2});
-
-        light_ubo.direction  = {-0.578f, -0.578f, -0.578f};
-        light_ubo.color      = {0.8f, 0.8f, 0.8f, 1.0f};
-        light_ubo.camera_pos = light_ubo.direction;
 
         geometry_config plane_config =
             geometry_system_generate_plane_config(10, 10, 1, 1, 1, 1, "its a plane", DEFAULT_LIGHT_MATERIAL_HANDLE);

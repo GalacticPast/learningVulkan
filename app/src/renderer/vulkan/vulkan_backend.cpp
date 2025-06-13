@@ -32,7 +32,7 @@ bool vulkan_create_debug_messenger(VkDebugUtilsMessengerCreateInfoEXT *dbg_messe
 bool vulkan_create_default_texture();
 bool vulkan_allocate_descriptor_set(VkDescriptorPool *desc_pool, VkDescriptorSetLayout *set_layout,
                                     u32 descriptor_count);
-bool vulkan_backend_initialize(u64 *vulkan_backend_memory_requirements, application_config *app_config, void *state)
+bool vulkan_backend_initialize(arena* arena, u64 *vulkan_backend_memory_requirements, application_config *app_config, void *state)
 {
     *vulkan_backend_memory_requirements = sizeof(vulkan_context);
     if (!state)
@@ -42,9 +42,12 @@ bool vulkan_backend_initialize(u64 *vulkan_backend_memory_requirements, applicat
     DDEBUG("Initializing Vulkan backend...");
     vk_context               = reinterpret_cast<vulkan_context *>(state);
     vk_context->vk_allocator = nullptr;
+    vk_context->arena = arena;
+
     {
-        vk_context->command_buffers.reserve(MAX_FRAMES_IN_FLIGHT);
+        vk_context->command_buffers.reserve(arena, MAX_FRAMES_IN_FLIGHT);
     }
+
     DDEBUG("Creating vulkan instance...");
 
     VkApplicationInfo app_info{};
@@ -89,6 +92,7 @@ bool vulkan_backend_initialize(u64 *vulkan_backend_memory_requirements, applicat
 
     // INFO: get platform specifig extensions and extensions count
     darray<const char *> vulkan_instance_extensions;
+    vulkan_instance_extensions.c_init(arena);
     const char          *vk_generic_surface_ext = VK_KHR_SURFACE_EXTENSION_NAME;
 
     vulkan_instance_extensions.push_back(vk_generic_surface_ext);
@@ -193,7 +197,7 @@ bool vulkan_backend_initialize(u64 *vulkan_backend_memory_requirements, applicat
         return false;
     }
     // NOTE: I do think this is a hack but oh well
-    vk_context->default_shader = static_cast<shader *>(dallocate(sizeof(shader), MEM_TAG_RENDERER));
+    vk_context->default_shader = static_cast<shader *>(dallocate(arena, sizeof(shader), MEM_TAG_RENDERER));
     if (!shader_system_create_default_shader(vk_context->default_shader, &vk_context->default_shader_id))
     {
         DERROR("Vulkan default shader creation failed.");
@@ -315,7 +319,7 @@ bool vulkan_update_materials_descriptor_set(vulkan_shader *shader, material *mat
         {
             if (default_mat)
             {
-                DERROR("No aldbedo map found for material interal_id: %d", descriptor_set_index);
+                DTRACE("No aldbedo map found for material interal_id: %d", descriptor_set_index);
             }
             else
             {
@@ -340,7 +344,7 @@ bool vulkan_update_materials_descriptor_set(vulkan_shader *shader, material *mat
         {
             if (default_mat)
             {
-                DERROR("No alpha map found for material interal_id: %d", descriptor_set_index);
+                DTRACE("No alpha map found for material interal_id: %d", descriptor_set_index);
             }
             else
             {
@@ -365,7 +369,7 @@ bool vulkan_update_materials_descriptor_set(vulkan_shader *shader, material *mat
         {
             if (default_mat)
             {
-                DERROR("No alpha map found for material interal_id: %d", descriptor_set_index);
+                DTRACE("No alpha map found for material interal_id: %d", descriptor_set_index);
             }
             else
             {
@@ -463,8 +467,8 @@ bool vulkan_initialize_shader(shader_config *config, shader *in_shader)
         DERROR("Provided parameters to vulkan_create_shader were nullptr.");
         return false;
     }
-
-    vulkan_shader *vk_shader = static_cast<vulkan_shader *>(dallocate(sizeof(vulkan_shader), MEM_TAG_RENDERER));
+    arena* arena = vk_context->arena;
+    vulkan_shader *vk_shader = static_cast<vulkan_shader *>(dallocate(arena, sizeof(vulkan_shader), MEM_TAG_RENDERER));
 
     u32 uniforms_size = config->uniforms.size();
 
@@ -476,10 +480,12 @@ bool vulkan_initialize_shader(shader_config *config, shader *in_shader)
             u32                                   per_frame_descriptor_binding_count = 0;
             darray<VkDescriptorSetLayoutBinding> &per_frame_descriptor_set_layout_bindings =
                 vk_shader->per_frame_descriptor_sets_layout_bindings;
-            per_frame_descriptor_set_layout_bindings.reserve();
+            per_frame_descriptor_set_layout_bindings.reserve(arena);
 
             darray<VkShaderStageFlags> per_frame_stage_flags{};
+            per_frame_stage_flags.c_init(arena);
             darray<VkDescriptorType>   des_types{};
+            des_types.c_init(arena);
 
             u32 uniforms_count = config->uniforms.size();
 
@@ -532,7 +538,8 @@ bool vulkan_initialize_shader(shader_config *config, shader *in_shader)
                                             vk_context->vk_allocator, &vk_shader->per_frame_descriptor_pool);
             VK_CHECK(result);
 
-            darray<VkDescriptorSetLayout> per_frame_desc_set_layout(MAX_FRAMES_IN_FLIGHT);
+            darray<VkDescriptorSetLayout> per_frame_desc_set_layout;
+            per_frame_desc_set_layout.reserve(arena, MAX_FRAMES_IN_FLIGHT);
             for (u32 i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
             {
                 per_frame_desc_set_layout[i] = vk_shader->per_frame_descriptor_layout;
@@ -601,7 +608,9 @@ bool vulkan_initialize_shader(shader_config *config, shader *in_shader)
             u32 uniforms_count                      = config->uniforms.size();
 
             darray<VkShaderStageFlags> stage_flags{};
+            stage_flags.c_init(arena);
             darray<VkDescriptorType>   des_types{};
+            des_types.c_init(arena);
 
             for (u32 i = 0; i < uniforms_count; i++)
             {
@@ -623,7 +632,7 @@ bool vulkan_initialize_shader(shader_config *config, shader *in_shader)
 
             darray<VkDescriptorSetLayoutBinding> &per_group_descriptor_set_layout_bindings =
                 vk_shader->per_group_descriptor_sets_layout_bindings;
-            per_group_descriptor_set_layout_bindings.reserve();
+            per_group_descriptor_set_layout_bindings.reserve(arena);
 
             for (u32 i = 0; i < per_group_descriptors_binding_count; i++)
             {
@@ -668,7 +677,7 @@ bool vulkan_initialize_shader(shader_config *config, shader *in_shader)
                                             vk_context->vk_allocator, &vk_shader->per_group_descriptor_pool);
             VK_CHECK(result);
 
-            vk_shader->per_group_descriptor_sets.reserve(max_descriptors);
+            vk_shader->per_group_descriptor_sets.reserve(arena, max_descriptors);
 
             u32 &per_group_ubo_size = vk_shader->per_group_ubo_size;
             per_group_ubo_size      = 0;
@@ -705,7 +714,7 @@ bool vulkan_initialize_shader(shader_config *config, shader *in_shader)
         u32 vertex_input_attribute_descriptions_count = config->attributes.size();
         darray<VkVertexInputAttributeDescription> &vertex_input_attribute_descriptions =
             vk_shader->input_attribute_descriptions;
-        vertex_input_attribute_descriptions.reserve(vertex_input_attribute_descriptions_count);
+        vertex_input_attribute_descriptions.reserve(arena, vertex_input_attribute_descriptions_count);
 
         u32 offset = 0;
 
@@ -746,7 +755,7 @@ bool vulkan_initialize_shader(shader_config *config, shader *in_shader)
     file_open_and_read(config->vert_spv_full_path.c_str(), &vert_shader_code__size_requirements, 0, 1);
     DASSERT(vert_shader_code__size_requirements != INVALID_ID_64);
 
-    vk_shader->vertex_shader_code.reserve(vert_shader_code__size_requirements);
+    vk_shader->vertex_shader_code.reserve(arena, vert_shader_code__size_requirements);
     file_open_and_read(config->vert_spv_full_path.c_str(), &vert_shader_code__size_requirements,
                        vk_shader->vertex_shader_code.data, 1);
 
@@ -754,7 +763,7 @@ bool vulkan_initialize_shader(shader_config *config, shader *in_shader)
     file_open_and_read(config->frag_spv_full_path.c_str(), &frag_shader_code__size_requirements, 0, 1);
     DASSERT(frag_shader_code__size_requirements != INVALID_ID_64);
 
-    vk_shader->fragment_shader_code.reserve(frag_shader_code__size_requirements);
+    vk_shader->fragment_shader_code.reserve(arena, frag_shader_code__size_requirements);
     file_open_and_read(config->frag_spv_full_path.c_str(), &frag_shader_code__size_requirements,
                        vk_shader->fragment_shader_code.data, 1);
 
@@ -796,8 +805,12 @@ bool vulkan_destroy_shader(shader *shader)
 }
 bool vulkan_create_texture(texture *in_texture, u8 *pixels)
 {
+    DASSERT(pixels);
+    DASSERT(in_texture);
+    arena* arena = vk_context->arena;
+
     in_texture->vulkan_texture_state =
-        static_cast<vulkan_texture *>(dallocate(sizeof(vulkan_texture), MEM_TAG_RENDERER));
+        static_cast<vulkan_texture *>(dallocate(arena, sizeof(vulkan_texture), MEM_TAG_RENDERER));
     vulkan_texture *vk_texture = static_cast<vulkan_texture *>(in_texture->vulkan_texture_state);
 
     u32 tex_width    = in_texture->width;
@@ -1030,8 +1043,10 @@ bool vulkan_check_validation_layer_support()
 {
     u32 inst_layer_properties_count = 0;
     vkEnumerateInstanceLayerProperties(&inst_layer_properties_count, 0);
+    arena* arena = vk_context->arena;
 
-    darray<VkLayerProperties> inst_layer_properties(inst_layer_properties_count);
+    darray<VkLayerProperties> inst_layer_properties;
+    inst_layer_properties.reserve(arena, inst_layer_properties_count);
     vkEnumerateInstanceLayerProperties(&inst_layer_properties_count,
                                        static_cast<VkLayerProperties *>(inst_layer_properties.data));
 
@@ -1170,7 +1185,8 @@ bool vulkan_create_geometry(geometry *out_geometry, u32 vertex_count, vertex *ve
 
     vulkan_destroy_buffer(vk_context, &index_staging_buffer);
 
-    out_geometry->vulkan_geometry_state = dallocate(sizeof(vulkan_geometry_data), MEM_TAG_RENDERER);
+    arena* arena = vk_context->arena;
+    out_geometry->vulkan_geometry_state = dallocate(arena, sizeof(vulkan_geometry_data), MEM_TAG_RENDERER);
     vulkan_geometry_data *geo_data      = static_cast<vulkan_geometry_data *>(out_geometry->vulkan_geometry_state);
 
     geo_data->indices_count = index_count;

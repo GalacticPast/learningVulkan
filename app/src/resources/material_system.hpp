@@ -2,7 +2,7 @@
 
 #include "resource_types.hpp"
 
-bool material_system_initialize(u64 *material_system_mem_requirements, void *state);
+bool material_system_initialize(arena* arena, u64 *material_system_mem_requirements, void *state);
 bool material_system_shutdown(void *state);
 
 material *material_system_get_default_material();

@@ -64,7 +64,8 @@ bool file_get_line(std::fstream &f, dstring *out_line)
         // Check for specific error bits
         if (state & std::ios_base::eofbit)
         {
-            DERROR("End of file reached.");
+            DDEBUG("End of file reached.");
+            return false;
         }
         if (state & std::ios_base::failbit)
         {

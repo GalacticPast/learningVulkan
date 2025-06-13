@@ -17,7 +17,7 @@ bool event_code_test_A_callback(event_context context, void *data)
     return true;
 }
 
-bool event_system_register_and_unregister_test()
+bool event_system_register_and_unregister_test(arena* arena)
 {
     event_system_state *event_state;
     u64                 event_system_memory_requirements = 0;

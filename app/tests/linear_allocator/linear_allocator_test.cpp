@@ -2,12 +2,12 @@
 #include "../expect.hpp"
 #include "memory/linear_allocator.hpp"
 
-bool linear_allocator_allocate_and_destroy_test()
+bool linear_allocator_allocate_and_destroy_test(arena* arena)
 {
     linear_allocator test_allocator;
 
     u64 size = 64 * 1024 * 1024; // 64 mbs
-    linear_allocator_create(&test_allocator, size);
+    linear_allocator_create(arena,&test_allocator, size);
 
     expect_should_be(size, test_allocator.total_size);
     expect_should_be(0, test_allocator.total_allocated);
@@ -24,12 +24,12 @@ bool linear_allocator_allocate_and_destroy_test()
     return true;
 }
 
-bool linear_allocator_allocate_overallocate_space_test()
+bool linear_allocator_allocate_overallocate_space_test(struct arena* arena)
 {
     linear_allocator test_allocator;
 
     u64 size = 64 * 1024 * 1024; // 64 mbs
-    linear_allocator_create(&test_allocator, size);
+    linear_allocator_create(arena, &test_allocator, size);
 
     DWARN("Intentionlly casusing the following error.");
     void *memory = linear_allocator_allocate(&test_allocator, size + size);
@@ -42,12 +42,12 @@ bool linear_allocator_allocate_overallocate_space_test()
     return true;
 }
 
-bool linear_allocator_allocate_all_space_in_single_test()
+bool linear_allocator_allocate_all_space_in_single_test(struct arena* arena)
 {
     linear_allocator test_allocator;
 
     u64 size = 64 * 1024 * 1024; // 64 mbs
-    linear_allocator_create(&test_allocator, size);
+    linear_allocator_create(arena, &test_allocator, size);
 
     void *memory = static_cast<u8 *>((linear_allocator_allocate(&test_allocator, size)));
 
@@ -60,12 +60,12 @@ bool linear_allocator_allocate_all_space_in_single_test()
     return true;
 }
 
-bool linear_allocator_allocate_all_test()
+bool linear_allocator_allocate_all_test(arena* arena)
 {
     linear_allocator test_allocator;
 
     u64 size = 64 * 1024 * 1024; // 64 mbs
-    linear_allocator_create(&test_allocator, size);
+    linear_allocator_create(arena, &test_allocator, size);
 
     u64 chunk_length = 1024;
     u64 length       = size / chunk_length;

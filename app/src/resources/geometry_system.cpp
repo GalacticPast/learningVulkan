@@ -12,6 +12,7 @@
 
 #include "math/dmath.hpp"
 
+#include "memory/arenas.hpp"
 #include "renderer/vulkan/vulkan_backend.hpp"
 #include "resources/material_system.hpp"
 #include "resources/resource_types.hpp"
@@ -24,13 +25,14 @@ struct geometry_system_state
     darray<dstring>      loaded_geometry;
     dhashtable<geometry> hashtable;
     u64                  default_geo_id;
+    arena               *arena;
 };
 
 static geometry_system_state *geo_sys_state_ptr;
 bool                          geometry_system_create_default_geometry();
 
 // this will allocate and write size back, assumes the caller will call free once the data is processed
-static void geometry_system_parse_obj(const char *obj_file_full_path, u32 *num_of_objects,
+static void geometry_system_parse_obj(arena* arena, const char *obj_file_full_path, u32 *num_of_objects,
                                       geometry_config **geo_configs);
 static bool destroy_geometry_config(geometry_config *config);
 static bool geometry_system_write_configs_to_file(dstring *file_full_path, u32 geometry_config_count,
@@ -38,18 +40,20 @@ static bool geometry_system_write_configs_to_file(dstring *file_full_path, u32 g
 static bool geometry_system_parse_bin_file(dstring *file_name, u32 *geometry_config_count, geometry_config **configs);
 static void calculate_tangents(geometry_config *config);
 
-bool geometry_system_initialize(u64 *geometry_system_mem_requirements, void *state)
+bool geometry_system_initialize(arena *arena, u64 *geometry_system_mem_requirements, void *state)
 {
     *geometry_system_mem_requirements = sizeof(geometry_system_state);
     if (!state)
     {
         return true;
     }
+    DASSERT(arena);
     geo_sys_state_ptr = static_cast<geometry_system_state *>(state);
 
-    geo_sys_state_ptr->hashtable.c_init(MAX_GEOMETRIES_LOADED);
+    geo_sys_state_ptr->hashtable.c_init(arena, MAX_GEOMETRIES_LOADED);
     geo_sys_state_ptr->hashtable.is_non_resizable = true;
-    geo_sys_state_ptr->loaded_geometry.reserve();
+    geo_sys_state_ptr->loaded_geometry.reserve(arena);
+    geo_sys_state_ptr->arena = arena;
 
     geometry_system_create_default_geometry();
 
@@ -148,12 +152,13 @@ geometry_config geometry_system_generate_plane_config(f32 width, f32 height, u32
         tile_y = 1.0f;
     }
 
+    arena* arena = geo_sys_state_ptr->arena;
     geometry_config config;
 
     config.vertex_count = x_segment_count * y_segment_count * 4;
-    config.vertices     = static_cast<vertex *>(dallocate(sizeof(vertex) * config.vertex_count, MEM_TAG_GEOMETRY));
+    config.vertices     = static_cast<vertex *>(dallocate(arena, sizeof(vertex) * config.vertex_count, MEM_TAG_GEOMETRY));
     config.index_count  = x_segment_count * y_segment_count * 6;
-    config.indices      = static_cast<u32 *>(dallocate(sizeof(u32) * config.index_count, MEM_TAG_GEOMETRY));
+    config.indices      = static_cast<u32 *>(dallocate(arena, sizeof(u32) * config.index_count, MEM_TAG_GEOMETRY));
 
     // TODO: This generates extra vertices, but we can always deduplicate them later.
     f32 seg_width   = width / x_segment_count;
@@ -256,7 +261,8 @@ geometry_config *geometry_system_generate_config(dstring obj_file_name)
     }
     else
     {
-        geometry_system_parse_obj(file_full_path.c_str(), &num_objects, &config);
+
+        geometry_system_parse_obj(geo_sys_state_ptr->arena, file_full_path.c_str(), &num_objects, &config);
         write_to_file = true;
     }
 
@@ -288,7 +294,7 @@ bool geometry_system_create_default_geometry()
     }
     else
     {
-        geometry_system_parse_obj("../assets/meshes/cube.obj", &num_of_objects, &default_geo_configs);
+        geometry_system_parse_obj(geo_sys_state_ptr->arena, "../assets/meshes/cube.obj", &num_of_objects, &default_geo_configs);
         DASSERT(num_of_objects != INVALID_ID);
         geometry_system_write_configs_to_file(&bin_file, num_of_objects, default_geo_configs);
         // there is only one thats why
@@ -393,17 +399,18 @@ void geometry_system_copy_config(geometry_config *dst_config, const geometry_con
         DERROR("Dst_config already has some data in it. Should destroy the data first before calling the function");
         return;
     }
+    arena* arena = geo_sys_state_ptr->arena;
 
     dcopy_memory(dst_config->name.string, src_config->name.string, src_config->name.str_len);
     dst_config->name.str_len = src_config->name.str_len;
 
     dst_config->vertex_count = src_config->vertex_count;
     dst_config->vertices =
-        static_cast<vertex *>(dallocate(sizeof(vertex) * src_config->vertex_count, MEM_TAG_GEOMETRY));
+        static_cast<vertex *>(dallocate(arena, sizeof(vertex) * src_config->vertex_count, MEM_TAG_GEOMETRY));
     dcopy_memory(dst_config->vertices, src_config->vertices, src_config->vertex_count * sizeof(vertex));
 
     dst_config->index_count = src_config->index_count;
-    dst_config->indices     = static_cast<u32 *>(dallocate(sizeof(u32) * src_config->index_count, MEM_TAG_GEOMETRY));
+    dst_config->indices     = static_cast<u32 *>(dallocate(arena, sizeof(u32) * src_config->index_count, MEM_TAG_GEOMETRY));
     dcopy_memory(dst_config->indices, src_config->indices, src_config->index_count * sizeof(u32));
 
     if (src_config->material)
@@ -436,43 +443,8 @@ void get_random_string(char *out_string)
 //
 // this will allocate and write size back, assumes the caller will call free once the data is processed
 
-void _geometry_system_parse_obj(const char *obj_file_full_path, u32 *num_of_objects, geometry_config **geo_configs)
-{
-    ZoneScoped;
 
-    DTRACE("parsing file %s.", obj_file_full_path);
-    dclock telemetry;
-    clock_start(&telemetry);
-
-    u64 buffer_mem_requirements = -1;
-    file_open_and_read(obj_file_full_path, &buffer_mem_requirements, 0, 0);
-    if (buffer_mem_requirements == INVALID_ID_64)
-    {
-        DERROR("Failed to get size requirements for %s", obj_file_full_path);
-        return;
-    }
-    DASSERT(buffer_mem_requirements != INVALID_ID_64);
-    char *buffer = static_cast<char *>(dallocate(buffer_mem_requirements + 1, MEM_TAG_GEOMETRY));
-    char *start  = buffer;
-
-    file_open_and_read(obj_file_full_path, &buffer_mem_requirements, buffer, 0);
-
-    u32 objects        = string_num_of_substring_occurence(buffer, "o ");
-    u32 usemtl_objects = string_num_of_substring_occurence(buffer, "usemtl");
-
-    bool usemtl_name = true;
-    if (usemtl_objects < objects)
-    {
-        usemtl_name = false;
-    }
-    objects = DMAX(objects, usemtl_objects);
-
-    *num_of_objects = objects;
-
-    *geo_configs = static_cast<geometry_config *>(dallocate(sizeof(geometry_config) * objects, MEM_TAG_GEOMETRY));
-}
-
-void geometry_system_parse_obj(const char *obj_file_full_path, u32 *num_of_objects, geometry_config **geo_configs)
+void geometry_system_parse_obj(arena* arena, const char *obj_file_full_path, u32 *num_of_objects, geometry_config **geo_configs)
 {
     DTRACE("parsing file %s.", obj_file_full_path);
     dclock telemetry;
@@ -486,7 +458,8 @@ void geometry_system_parse_obj(const char *obj_file_full_path, u32 *num_of_objec
         return;
     }
     DASSERT(buffer_mem_requirements != INVALID_ID_64);
-    char *buffer = static_cast<char *>(dallocate(buffer_mem_requirements + 1, MEM_TAG_GEOMETRY));
+
+    char *buffer = static_cast<char *>(dallocate(arena, buffer_mem_requirements + 1, MEM_TAG_GEOMETRY));
     char *start  = buffer;
 
     file_open_and_read(obj_file_full_path, &buffer_mem_requirements, buffer, 0);
@@ -504,7 +477,7 @@ void geometry_system_parse_obj(const char *obj_file_full_path, u32 *num_of_objec
 
     *num_of_objects = objects;
 
-    *geo_configs = static_cast<geometry_config *>(dallocate(sizeof(geometry_config) * objects, MEM_TAG_GEOMETRY));
+    *geo_configs = static_cast<geometry_config *>(dallocate(arena, sizeof(geometry_config) * objects, MEM_TAG_GEOMETRY));
 
     clock_update(&telemetry);
     f64 names_proccesing_start_time = telemetry.time_elapsed;
@@ -581,7 +554,7 @@ void geometry_system_parse_obj(const char *obj_file_full_path, u32 *num_of_objec
     vert_ptr += vert_substring_size;
 
     math::vec3 *vert_coords =
-        static_cast<math::vec3 *>(dallocate(sizeof(math::vec3) * vertex_count_obj, MEM_TAG_GEOMETRY));
+        static_cast<math::vec3 *>(dallocate(arena, sizeof(math::vec3) * vertex_count_obj, MEM_TAG_GEOMETRY));
 
     u32 vert_processed = 0;
     clock_update(&telemetry);
@@ -619,7 +592,7 @@ void geometry_system_parse_obj(const char *obj_file_full_path, u32 *num_of_objec
     char *norm_ptr         = buffer;
     u32   normal_count_obj = string_num_of_substring_occurence(norm_ptr, "vn");
 
-    math::vec3 *normals = static_cast<math::vec3 *>(dallocate(sizeof(math::vec3) * normal_count_obj, MEM_TAG_GEOMETRY));
+    math::vec3 *normals = static_cast<math::vec3 *>(dallocate(arena, sizeof(math::vec3) * normal_count_obj, MEM_TAG_GEOMETRY));
 
     norm_ptr  = const_cast<char *>(string_first_string_occurence(norm_ptr, vert_normal));
     norm_ptr += vert_normal_substring_size;
@@ -661,7 +634,7 @@ void geometry_system_parse_obj(const char *obj_file_full_path, u32 *num_of_objec
     u32   texture_count_obj = string_num_of_substring_occurence(tex_ptr, "vt");
 
     math::vec_2d *textures =
-        static_cast<math::vec_2d *>(dallocate(sizeof(math::vec_2d) * texture_count_obj, MEM_TAG_GEOMETRY));
+        static_cast<math::vec_2d *>(dallocate(arena, sizeof(math::vec_2d) * texture_count_obj, MEM_TAG_GEOMETRY));
 
     tex_ptr  = const_cast<char *>(string_first_string_occurence(tex_ptr, vert_texture));
     tex_ptr += vert_texture_substring_size;
@@ -703,7 +676,7 @@ void geometry_system_parse_obj(const char *obj_file_full_path, u32 *num_of_objec
     // array (i.e) 0 , 1 and 2 .. 6 . From 7 till vertices count onwards are the actual
     // global offsets for the object.
     u32  offsets_size = (offsets_count * 9) + (7 * objects);
-    u32 *offsets      = static_cast<u32 *>(dallocate(sizeof(u32) * (offsets_size), MEM_TAG_GEOMETRY));
+    u32 *offsets      = static_cast<u32 *>(dallocate(arena, sizeof(u32) * (offsets_size), MEM_TAG_GEOMETRY));
 
     char *object_ptr  = const_cast<char *>(string_first_string_occurence(buffer, "o "));
     object_ptr       += 2;
@@ -867,9 +840,9 @@ void geometry_system_parse_obj(const char *obj_file_full_path, u32 *num_of_objec
         u32 vertex_count_per_obj  = vert_max - vert_min + 1;
 
         (*geo_configs)[object].vertices =
-            static_cast<vertex *>(dallocate(sizeof(vertex) * (count / 3), MEM_TAG_GEOMETRY));
+            static_cast<vertex *>(dallocate(arena, sizeof(vertex) * (count / 3), MEM_TAG_GEOMETRY));
         (*geo_configs)[object].vertex_count = count / 3;
-        (*geo_configs)[object].indices     = static_cast<u32 *>(dallocate(sizeof(u32) * (count / 3), MEM_TAG_GEOMETRY));
+        (*geo_configs)[object].indices     = static_cast<u32 *>(dallocate(arena, sizeof(u32) * (count / 3), MEM_TAG_GEOMETRY));
         (*geo_configs)[object].index_count = count / 3;
 
         u32 index_ind = 0;
@@ -884,13 +857,6 @@ void geometry_system_parse_obj(const char *obj_file_full_path, u32 *num_of_objec
             (*geo_configs)[object].vertices[index_ind].normal    = normals[norm_ind];
             (*geo_configs)[object].indices[index_ind]            = index_ind;
             index_ind++;
-        }
-        for (u32 j = 0; j <= count - 3; j += 3)
-        {
-            u32 temp = (*geo_configs)[object].indices[j];
-
-            (*geo_configs)[object].indices[j]     = (*geo_configs)[object].indices[j + 2];
-            (*geo_configs)[object].indices[j + 2] = temp;
         }
         DASSERT(index_ind == (*geo_configs)[object].index_count);
     }
@@ -936,18 +902,22 @@ void geometry_system_get_geometries_from_file(const char *obj_file_name, const c
 
     bool result = file_exists(&bin_file_full_path);
 
+    arena* temp_arena = nullptr;
+
     if (result)
     {
         geometry_system_parse_bin_file(&bin_file_full_path, &objects, &geo_configs);
     }
     else
     {
-        geometry_system_parse_obj(obj_file_full_path, &objects, &geo_configs);
+        temp_arena = arena_get_arena();
+        geometry_system_parse_obj(temp_arena, obj_file_full_path, &objects, &geo_configs);
         geometry_system_write_configs_to_file(&bin_file_full_path, objects, geo_configs);
     }
 
     DASSERT(objects != INVALID_ID);
-    *geos = static_cast<geometry **>(dallocate(sizeof(geometry *) * objects, MEM_TAG_GEOMETRY));
+    arena* arena = geo_sys_state_ptr->arena;
+    *geos = static_cast<geometry **>(dallocate(arena, sizeof(geometry *) * objects, MEM_TAG_GEOMETRY));
 
     // HACK:
     math::vec3 scale = {0.5, 0.5, 0.5};
@@ -960,6 +930,12 @@ void geometry_system_get_geometries_from_file(const char *obj_file_name, const c
         (*geos)[i] = geometry_system_get_geometry(id);
     }
     *geometry_count = objects;
+
+    if(temp_arena)
+    {
+        arena_free_arena(temp_arena);
+        temp_arena = nullptr;
+    }
 
     return;
 }
@@ -1043,8 +1019,9 @@ bool geometry_system_parse_bin_file(dstring *file_full_path, u32 *geometry_confi
 
     u64 buff_size = INVALID_ID_64;
     file_open_and_read(file_full_path->c_str(), &buff_size, 0, 1);
+    arena* arena = geo_sys_state_ptr->arena;
 
-    char *buffer = static_cast<char *>(dallocate(buff_size + 1, MEM_TAG_GEOMETRY));
+    char *buffer = static_cast<char *>(dallocate(arena, buff_size + 1, MEM_TAG_GEOMETRY));
     bool  result = file_open_and_read(file_full_path->c_str(), &buff_size, buffer, 1);
     DASSERT(result);
 
@@ -1099,7 +1076,7 @@ bool geometry_system_parse_bin_file(dstring *file_full_path, u32 *geometry_confi
             dcopy_memory(&config_count, ptr, sizeof(u32));
             *geometry_config_count = config_count;
             (*configs) =
-                static_cast<geometry_config *>(dallocate(sizeof(geometry_config) * config_count, MEM_TAG_GEOMETRY));
+                static_cast<geometry_config *>(dallocate(arena, sizeof(geometry_config) * config_count, MEM_TAG_GEOMETRY));
             ptr += sizeof(u32) + 1;
         }
         else if (string_compare(identifier.c_str(), "name"))
@@ -1132,7 +1109,7 @@ bool geometry_system_parse_bin_file(dstring *file_full_path, u32 *geometry_confi
             (*configs)[index].vertex_count = vertex_count;
 
             u32 size                    = sizeof(vertex) * vertex_count;
-            (*configs)[index].vertices  = static_cast<vertex *>(dallocate(size, MEM_TAG_GEOMETRY));
+            (*configs)[index].vertices  = static_cast<vertex *>(dallocate(arena, size, MEM_TAG_GEOMETRY));
             ptr                        += sizeof(u32) + 1;
         }
         else if (string_compare(identifier.c_str(), "vertices"))
@@ -1150,7 +1127,7 @@ bool geometry_system_parse_bin_file(dstring *file_full_path, u32 *geometry_confi
             (*configs)[index].index_count = index_count;
 
             u32 size                   = sizeof(u32) * index_count;
-            (*configs)[index].indices  = static_cast<u32 *>(dallocate(size, MEM_TAG_GEOMETRY));
+            (*configs)[index].indices  = static_cast<u32 *>(dallocate(arena, size, MEM_TAG_GEOMETRY));
             ptr                       += sizeof(u32) + 1;
         }
         else if (string_compare(identifier.c_str(), "indices"))

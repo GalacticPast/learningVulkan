@@ -17,7 +17,7 @@ struct memory_system_stats
 
 struct memory_system
 {
-    dfreelist          *dfreelist = nullptr;
+    //dfreelist          *dfreelist = nullptr;
     memory_system_stats stats;
 };
 
@@ -39,7 +39,7 @@ bool memory_system_startup(u64 *memory_system_memory_requirements, void *state)
 {
     u64 freelist_mem_requirements = INVALID_ID_64;
     dfreelist_create(&freelist_mem_requirements, 0, 0);
-    *memory_system_memory_requirements = sizeof(memory_system) + freelist_mem_requirements + GB(1);
+    *memory_system_memory_requirements = sizeof(memory_system);
 
     if (!state)
     {
@@ -50,14 +50,14 @@ bool memory_system_startup(u64 *memory_system_memory_requirements, void *state)
 
     dzero_memory(memory_system_ptr, *memory_system_memory_requirements);
 
-    void* raw_ptr = reinterpret_cast<void *>(reinterpret_cast<u8 *>(memory_system_ptr) + sizeof(memory_system));
-    void* freelist_ptr = reinterpret_cast<void *>(DALIGN_UP(raw_ptr, 8));
+    //void* raw_ptr = reinterpret_cast<void *>(reinterpret_cast<u8 *>(memory_system_ptr) + sizeof(memory_system));
+    //void* freelist_ptr = reinterpret_cast<void *>(DALIGN_UP(raw_ptr, 8));
 
-    s32 diff_bytes = reinterpret_cast<uintptr_t>(freelist_ptr) - reinterpret_cast<uintptr_t>(raw_ptr);
-    DASSERT(diff_bytes >= 0);
-    u64 freelist_mem_size = freelist_mem_requirements + GB(1) - diff_bytes;
+    //s32 diff_bytes = reinterpret_cast<uintptr_t>(freelist_ptr) - reinterpret_cast<uintptr_t>(raw_ptr);
+    //DASSERT(diff_bytes >= 0);
+    //u64 freelist_mem_size = freelist_mem_requirements + GB(1) - diff_bytes;
 
-    memory_system_ptr->dfreelist = dfreelist_create(&freelist_mem_requirements, freelist_mem_size,freelist_ptr);
+    //memory_system_ptr->dfreelist = dfreelist_create(&freelist_mem_requirements, freelist_mem_size,freelist_ptr);
 
     return true;
 }
@@ -65,26 +65,24 @@ bool memory_system_startup(u64 *memory_system_memory_requirements, void *state)
 void memory_system_shutdown(void *state)
 {
     DINFO("Shutting down memory system...");
-    dfreelist_destroy(memory_system_ptr->dfreelist);
+    //dfreelist_destroy(memory_system_ptr->dfreelist);
     memory_system_ptr = 0;
 }
 
 void *dallocate(arena* arena, u64 mem_size, memory_tags tag)
 {
-    if (!memory_system_ptr)
-    {
-        DFATAL("Memory subsystem hasnt been initialized yet. Initialize it");
-        debugBreak();
-        return nullptr;
-    }
-    if (tag == MEM_TAG_UNKNOWN)
-    {
-        DWARN("dallocate() called with MEM_TAG_UNKNOWN. Classify the allocation.");
-    }
+    // we might not be tracking it accuretly though;
     if (memory_system_ptr)
     {
-        memory_system_ptr->stats.tagged_allocations[tag] += mem_size;
-        memory_system_ptr->stats.total_allocated++;
+        if (tag == MEM_TAG_UNKNOWN)
+        {
+            DWARN("dallocate() called with MEM_TAG_UNKNOWN. Classify the allocation.");
+        }
+        if (memory_system_ptr)
+        {
+            memory_system_ptr->stats.tagged_allocations[tag] += mem_size;
+            memory_system_ptr->stats.total_allocated++;
+        }
     }
     //void *block = platform_allocate(mem_size, false);
     //void *block = dfreelist_allocate(memory_system_ptr->dfreelist, mem_size);

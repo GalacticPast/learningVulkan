@@ -3,6 +3,8 @@
 #include "core/dasserts.hpp"
 #include "core/dmemory.hpp"
 #include "core/logger.hpp"
+#include "memory/arenas.hpp"
+
 #include "defines.hpp"
 
 #define DEFAULT_DARRAY_SIZE 10
@@ -11,14 +13,14 @@
 template <typename T> class darray
 {
   public:
-    u64 capacity;
-    u64 element_size;
-    u64 length;
+    u64    capacity;
+    u64    element_size;
+    u64    length;
+    arena *arena = nullptr;
 
     T *data;
-
+    // this actually does nothing, this is just here so that the compiler doesnt complain about it
     darray();
-    darray(u64 size);
     ~darray();
 
     // returns a copy of the value
@@ -27,12 +29,15 @@ template <typename T> class darray
 
     T &operator[](u64 index);
 
-    //c_init will make the array length to 0 so this is for pushing back
-    void c_init();
-    void c_init(u64 size);
+    // c_init will make the array length to 0 so this is for pushing back
+    // call this wehn you are pushing stuff into the array
+    void c_init(struct arena *arena);
+    void c_init(struct arena *arena, u64 size);
+
     // resrve will reserve the speciefied size
-    void reserve(u64 size);
-    void reserve();
+    // call this for when you want to index into the array like [] this
+    void reserve(struct arena *arena, u64 size);
+    void reserve(struct arena *arena);
 
     void resize(u64 size);
 
@@ -43,34 +48,26 @@ template <typename T> class darray
     void clear();
 };
 
-template <typename T> darray<T>::darray(u64 size)
-{
-    element_size = sizeof(T);
-    capacity     = size * element_size;
-    if (capacity < DEFAULT_DARRAY_SIZE * element_size)
-    {
-        capacity = DEFAULT_DARRAY_SIZE * element_size;
-    }
-    length = size;
-    data   = static_cast<T *>(dallocate(capacity, MEM_TAG_DARRAY));
-}
 template <typename T> darray<T>::darray()
 {
     element_size = sizeof(T);
-    capacity     = DEFAULT_DARRAY_SIZE * element_size;
+    capacity     = 0;
     length       = 0;
-    data         = static_cast<T *>(dallocate(capacity, MEM_TAG_DARRAY));
+    data         = 0;
+    arena        = nullptr;
+    DWARN("This doesnt do anything, this should not be called by anyone except the compiler.");
 }
 template <typename T> darray<T>::~darray()
 {
-    dfree(data, capacity, MEM_TAG_DARRAY);
-    capacity     = 0;
     element_size = 0;
+    capacity     = 0;
     length       = 0;
     data         = 0;
+    arena        = nullptr;
+    DWARN("This doesnt do anything, this should not be called by anyone except the compiler.");
 }
 
-template <typename T> void darray<T>::c_init()
+template <typename T> void darray<T>::c_init(struct arena *in_arena)
 {
     if (data)
     {
@@ -79,10 +76,11 @@ template <typename T> void darray<T>::c_init()
     element_size = sizeof(T);
     capacity     = DEFAULT_DARRAY_SIZE * element_size;
     length       = 0;
-    data         = static_cast<T *>(dallocate(capacity, MEM_TAG_DARRAY));
+    arena        = in_arena;
+    data         = static_cast<T *>(dallocate(arena, capacity, MEM_TAG_DARRAY));
 }
 
-template <typename T> void darray<T>::reserve(u64 size)
+template <typename T> void darray<T>::reserve(struct arena *in_arena, u64 size)
 {
     if (data)
     {
@@ -95,10 +93,11 @@ template <typename T> void darray<T>::reserve(u64 size)
         capacity = DEFAULT_DARRAY_SIZE * element_size;
     }
     length = size;
-    data   = static_cast<T *>(dallocate(capacity, MEM_TAG_DARRAY));
+    arena  = in_arena;
+    data   = static_cast<T *>(dallocate(arena, capacity, MEM_TAG_DARRAY));
 }
 
-template <typename T> void darray<T>::reserve()
+template <typename T> void darray<T>::reserve(struct arena *in_arena)
 {
     if (data)
     {
@@ -111,11 +110,11 @@ template <typename T> void darray<T>::reserve()
         capacity = DEFAULT_DARRAY_SIZE * element_size;
     }
     length = DEFAULT_DARRAY_SIZE;
-    data   = static_cast<T *>(dallocate(capacity, MEM_TAG_DARRAY));
+    arena  = in_arena;
+    data   = static_cast<T *>(dallocate(arena, capacity, MEM_TAG_DARRAY));
 }
 
-
-template <typename T> void darray<T>::c_init(u64 size)
+template <typename T> void darray<T>::c_init(struct arena *in_arena, u64 size)
 {
     element_size = sizeof(T);
     capacity     = size * element_size;
@@ -124,7 +123,8 @@ template <typename T> void darray<T>::c_init(u64 size)
         capacity = DEFAULT_DARRAY_SIZE * element_size;
     }
     length = 0;
-    data   = static_cast<T *>(dallocate(capacity, MEM_TAG_DARRAY));
+    arena  = in_arena;
+    data   = static_cast<T *>(dallocate(arena, capacity, MEM_TAG_DARRAY));
 }
 
 template <typename T> void darray<T>::operator=(const darray<T> &in_darray)
@@ -137,8 +137,9 @@ template <typename T> void darray<T>::operator=(const darray<T> &in_darray)
         dfree(data, capacity, MEM_TAG_DARRAY);
         capacity = in_darray.capacity;
     }
+    arena        = in_darray.arena;
 
-    data = static_cast<T *>(dallocate(in_darray.capacity, MEM_TAG_DARRAY));
+    data = static_cast<T *>(dallocate(arena, in_darray.capacity, MEM_TAG_DARRAY));
 
     dcopy_memory(data, in_darray.data, in_darray.capacity);
     length       = in_darray.length;
@@ -185,7 +186,7 @@ template <typename T> void darray<T>::resize(u64 out_size)
             }
             DERROR("Resizing array from %ldbytes to smaller %ldBytes", capacity, out_size);
         }
-        void *buffer = dallocate(element_size * out_size, MEM_TAG_DARRAY);
+        void *buffer = dallocate(arena, element_size * out_size, MEM_TAG_DARRAY);
         if (!buffer)
         {
             DFATAL("Darray coulnd't allocate block for ::resize()");
@@ -198,7 +199,7 @@ template <typename T> void darray<T>::resize(u64 out_size)
     }
     else
     {
-        DFATAL("Array hasnt been initialized yet.");
+        DERROR("Array hasn't been initialized properly. Call c_init, reserve or plain old constructor with arenas to initalize it.");
         debugBreak();
     }
 }
@@ -219,21 +220,29 @@ template <typename T> u64 darray<T>::size()
 
 template <typename T> void darray<T>::push_back(T element)
 {
-    if (length + 1 >= (capacity / element_size))
+    if(data)
     {
-        DWARN("Array size is not large enough to accomadate another element. Resizing....");
-        void *buffer = dallocate(DEFAULT_DARRAY_RESIZE_FACTOR * capacity, MEM_TAG_DARRAY);
-        if (!buffer)
+        if (length + 1 >= (capacity / element_size))
         {
-            DFATAL("Darray coulnd't allocate block for ::push_back()");
+            DWARN("Array size is not large enough to accomadate another element. Resizing....");
+            void *buffer = dallocate(arena, DEFAULT_DARRAY_RESIZE_FACTOR * capacity, MEM_TAG_DARRAY);
+            if (!buffer)
+            {
+                DFATAL("Darray coulnd't allocate block for ::push_back()");
+            }
+
+            dcopy_memory(buffer, data, capacity);
+            dfree(data, capacity, MEM_TAG_DARRAY);
+
+            capacity = capacity * DEFAULT_DARRAY_RESIZE_FACTOR;
+            data     = static_cast<T *>(buffer);
+            buffer   = 0;
         }
-
-        dcopy_memory(buffer, data, capacity);
-        dfree(data, capacity, MEM_TAG_DARRAY);
-
-        capacity = capacity * DEFAULT_DARRAY_RESIZE_FACTOR;
-        data     = static_cast<T *>(buffer);
-        buffer   = 0;
+    }
+    else
+    {
+        DERROR("Array hasn't been initialized properly. Call c_init, reserve or plain old constructor with arenas to initalize it.");
+        return;
     }
 
     T *last_index = &data[length];
@@ -275,7 +284,7 @@ template <typename T> T darray<T>::pop_at(u32 index)
 
     T *next_element = &data[index + 1];
 
-    T *new_array = static_cast<T *>(dallocate(capacity, MEM_TAG_DARRAY));
+    T *new_array = static_cast<T *>(dallocate(arena, capacity, MEM_TAG_DARRAY));
     if (!new_array)
     {
         DFATAL("Darray coulnd't allocate block for ::pop_at()");

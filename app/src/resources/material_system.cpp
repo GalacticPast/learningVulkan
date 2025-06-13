@@ -17,7 +17,7 @@ struct material_system_state
 {
     darray<dstring>      loaded_materials;
     dhashtable<material> hashtable;
-    // material material_table[MAX_MATERIALS_LOADED];
+    arena* arena;
 };
 
 static material_system_state *mat_sys_state_ptr;
@@ -26,7 +26,7 @@ bool        material_system_create_material(material_config *config);
 bool        material_system_create_default_material();
 static bool material_system_parse_configuration_file(dstring *conf_file_name, material_config *out_config);
 
-bool material_system_initialize(u64 *material_system_mem_requirements, void *state)
+bool material_system_initialize(arena* arena, u64 *material_system_mem_requirements, void *state)
 {
     *material_system_mem_requirements = sizeof(material_system_state);
 
@@ -35,11 +35,13 @@ bool material_system_initialize(u64 *material_system_mem_requirements, void *sta
         return true;
     }
     DINFO("Initializing material system...");
+    DASSERT(arena);
 
     mat_sys_state_ptr = static_cast<material_system_state *>(state);
 
-    mat_sys_state_ptr->loaded_materials.reserve();
-    mat_sys_state_ptr->hashtable.c_init(MAX_MATERIALS_LOADED);
+    mat_sys_state_ptr->loaded_materials.reserve(arena);
+    mat_sys_state_ptr->hashtable.c_init(arena, MAX_MATERIALS_LOADED);
+    mat_sys_state_ptr->arena = arena;
 
     material_system_create_default_material();
 
@@ -190,11 +192,13 @@ bool material_system_parse_mtl_file(dstring *mtl_file_name)
     dstring full_file_path;
     string_copy_format(full_file_path.string, "%s%s", 0, prefix, mtl_file_name->c_str());
 
+    arena* arena = mat_sys_state_ptr->arena;
+
     char *file                         = nullptr;
     u64   file_buffer_mem_requirements = INVALID_ID_64;
 
     file_open_and_read(full_file_path.c_str(), &file_buffer_mem_requirements, 0, 0);
-    file = static_cast<char *>(dallocate(file_buffer_mem_requirements + 1, MEM_TAG_RENDERER));
+    file = static_cast<char *>(dallocate(arena, file_buffer_mem_requirements + 1, MEM_TAG_RENDERER));
     file_open_and_read(full_file_path.c_str(), &file_buffer_mem_requirements, file, 0);
 
     DASSERT(file_buffer_mem_requirements != INVALID_ID_64);
@@ -209,7 +213,7 @@ bool material_system_parse_mtl_file(dstring *mtl_file_name)
         DERROR("No newmtl defined in %s file", mtl_file_name);
         return false;
     }
-    configs = static_cast<material_config *>(dallocate(sizeof(material_config) * (num_materials), MEM_TAG_RENDERER));
+    configs = static_cast<material_config *>(dallocate(arena, sizeof(material_config) * (num_materials), MEM_TAG_RENDERER));
 
     auto go_to_next_line = [](const char *ptr) -> const char * {
         while (*ptr != '\n' && *ptr != '\r')

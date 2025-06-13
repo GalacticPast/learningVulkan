@@ -7,7 +7,7 @@
 #include "containers/darray.hpp"
 #include "containers/dfreelist.hpp"
 
-bool dfreelist_create_and_destroy_test()
+bool dfreelist_create_and_destroy_test(arena* arena)
 {
     u64 freelist_mem_requirements = INVALID_ID_64;
     dfreelist_create(&freelist_mem_requirements, 0, 0);
@@ -30,7 +30,7 @@ static u32 fib_sequence(u32 *array, u32 index)
     return array[index - 1] + array[index - 2];
 }
 
-bool dfreelist_allocate_and_deallocate_test()
+bool dfreelist_allocate_and_deallocate_test(arena* arena)
 {
     u64 freelist_mem_requirements = INVALID_ID_64;
     dfreelist_create(&freelist_mem_requirements, 0, 0);
@@ -41,6 +41,7 @@ bool dfreelist_allocate_and_deallocate_test()
     dfreelist *freelist = dfreelist_create(&freelist_mem_requirements, size, memory);
 
     darray<u32 *> blocks;
+    blocks.reserve(arena);
 
     u32 array_size      = 10000;
     u32 array_byte_size = array_size * sizeof(u32);

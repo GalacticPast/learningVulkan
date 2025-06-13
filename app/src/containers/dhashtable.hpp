@@ -46,23 +46,25 @@ template <typename T> class dhashtable
 
     void _resize_and_rehash();
 
-    u64 capacity;
-    u64 element_size;
-    u64 max_length;
-    u64 num_elements_in_table;
+    u64    capacity;
+    u64    element_size;
+    u64    max_length;
+    u64    num_elements_in_table;
+    arena *arena = nullptr;
 
   public:
     bool is_non_resizable = false;
 
-    dhashtable();
-    dhashtable(u64 table_size);
+    dhashtable(struct arena* arena);
+    dhashtable(struct arena* arena,u64 table_size);
 
-    void c_init();
-    void c_init(u64 size);
+    void c_init(struct arena* arena);
+    void c_init(struct arena* arena, u64 size);
 
     u64 get_size_requirements(u64 size);
-    //WARN: before you call this function you have to call the get size requirements function so that you can get the correct memory size to pass to this fucntion!!!! WARNING IF YOU DONT THEN YOU WILL HAVE A SERIOUS BUG.
-    void c_init(void*block, u64 size);
+    // WARN: before you call this function you have to call the get size requirements function so that you can get the
+    // correct memory size to pass to this fucntion!!!! WARNING IF YOU DONT THEN YOU WILL HAVE A SERIOUS BUG.
+    void c_init(void *block, u64 size);
 
     ~dhashtable();
 
@@ -115,7 +117,7 @@ template <typename T> void dhashtable<T>::_resize_and_rehash()
     u64    old_capacity   = capacity;
     u64    old_max_length = max_length;
 
-    entry *new_table = static_cast<entry *>(dallocate(capacity * DEFAULT_HASH_TABLE_RESIZE_FACTOR, MEM_TAG_DHASHTABLE));
+    entry *new_table = static_cast<entry *>(dallocate(arena, capacity * DEFAULT_HASH_TABLE_RESIZE_FACTOR, MEM_TAG_DHASHTABLE));
     table            = new_table;
     capacity   *= DEFAULT_HASH_TABLE_RESIZE_FACTOR;
     max_length  = capacity / element_size;
@@ -182,36 +184,36 @@ template <typename T> u64 dhashtable<T>::hash_func(const char *key)
     return hash;
 }
 
-template <typename T> dhashtable<T>::dhashtable()
+template <typename T> dhashtable<T>::dhashtable(struct arena* arena)
 {
     element_size          = sizeof(entry);
     capacity              = DEFAULT_HASH_TABLE_SIZE * element_size;
     max_length            = DEFAULT_HASH_TABLE_SIZE;
     num_elements_in_table = 0;
     default_entry         = nullptr;
-    table                 = static_cast<entry *>(dallocate(capacity, MEM_TAG_DHASHTABLE));
+    table                 = static_cast<entry *>(dallocate(arena, capacity, MEM_TAG_DHASHTABLE));
 }
 
-template <typename T> dhashtable<T>::dhashtable(u64 table_size)
+template <typename T> dhashtable<T>::dhashtable(struct arena* arena, u64 table_size)
 {
     element_size          = sizeof(entry);
     capacity              = table_size * element_size;
     max_length            = table_size;
     num_elements_in_table = 0;
-    table                 = static_cast<entry *>(dallocate(capacity, MEM_TAG_DHASHTABLE));
+    table                 = static_cast<entry *>(dallocate(arena, capacity, MEM_TAG_DHASHTABLE));
     default_entry         = nullptr;
 }
 
-template <typename T> void dhashtable<T>::c_init()
+template <typename T> void dhashtable<T>::c_init(struct arena* arena)
 {
     element_size          = sizeof(entry);
     capacity              = DEFAULT_HASH_TABLE_SIZE * element_size;
     max_length            = DEFAULT_HASH_TABLE_SIZE;
     num_elements_in_table = 0;
     default_entry         = nullptr;
-    table                 = static_cast<entry *>(dallocate(capacity, MEM_TAG_DHASHTABLE));
+    table                 = static_cast<entry *>(dallocate(arena, capacity, MEM_TAG_DHASHTABLE));
 }
-template <typename T> void dhashtable<T>::c_init(void* block, u64 table_size)
+template <typename T> void dhashtable<T>::c_init(void *block, u64 table_size)
 {
     element_size          = sizeof(entry);
     capacity              = table_size * element_size;
@@ -221,13 +223,13 @@ template <typename T> void dhashtable<T>::c_init(void* block, u64 table_size)
     default_entry         = nullptr;
 }
 
-template <typename T> void dhashtable<T>::c_init(u64 table_size)
+template <typename T> void dhashtable<T>::c_init(struct arena* arena,u64 table_size)
 {
     element_size          = sizeof(entry);
     capacity              = table_size * element_size;
     max_length            = table_size;
     num_elements_in_table = 0;
-    table                 = static_cast<entry *>(dallocate(capacity, MEM_TAG_DHASHTABLE));
+    table                 = static_cast<entry *>(dallocate(arena, capacity, MEM_TAG_DHASHTABLE));
     default_entry         = nullptr;
 }
 
@@ -244,7 +246,7 @@ template <typename T> void dhashtable<T>::set_default_value(T default_val)
 {
     if (!default_entry)
     {
-        default_entry = static_cast<entry *>(dallocate(sizeof(entry), MEM_TAG_DHASHTABLE));
+        default_entry = static_cast<entry *>(dallocate(arena, sizeof(entry), MEM_TAG_DHASHTABLE));
     }
     default_entry->type = default_val;
 }
@@ -470,7 +472,8 @@ template <typename T> bool dhashtable<T>::erase(u64 key)
 
     if (!table[low].is_initialized)
     {
-        DERROR("The provided key %llu high: %d , low: %d, doesnt map to a entry. Cannot erase with incorrect id.", key, high, low);
+        DERROR("The provided key %llu high: %d , low: %d, doesnt map to a entry. Cannot erase with incorrect id.", key,
+               high, low);
         return false;
     }
     if (entry_ptr->unique_identifier != high)

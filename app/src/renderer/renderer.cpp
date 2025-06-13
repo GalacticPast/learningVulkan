@@ -15,7 +15,7 @@ struct renderer_system_state
 
 static renderer_system_state *renderer_system_state_ptr;
 
-bool renderer_system_startup(u64 *renderer_system_memory_requirements, struct application_config *app_config,
+bool renderer_system_startup(arena* arena, u64 *renderer_system_memory_requirements, struct application_config *app_config,
                              linear_allocator *linear_systems_allocator, void *state)
 {
     *renderer_system_memory_requirements = sizeof(renderer_system_state);
@@ -26,10 +26,10 @@ bool renderer_system_startup(u64 *renderer_system_memory_requirements, struct ap
     DINFO("Initializing renderer system...");
     renderer_system_state_ptr = reinterpret_cast<renderer_system_state *>(state);
 
-    vulkan_backend_initialize(&renderer_system_state_ptr->vulkan_backend_memory_requirements, 0, 0);
+    vulkan_backend_initialize(arena, &renderer_system_state_ptr->vulkan_backend_memory_requirements, 0, 0);
     renderer_system_state_ptr->vulkan_backend_state = linear_allocator_allocate(
         linear_systems_allocator, renderer_system_state_ptr->vulkan_backend_memory_requirements);
-    bool result = vulkan_backend_initialize(&renderer_system_state_ptr->vulkan_backend_memory_requirements, app_config,
+    bool result = vulkan_backend_initialize(arena, &renderer_system_state_ptr->vulkan_backend_memory_requirements, app_config,
                                             renderer_system_state_ptr->vulkan_backend_state);
 
     if (!result)
@@ -76,7 +76,7 @@ bool renderer_resize()
     }
     else
     {
-        DERROR("Vulkan Backend doesnt exist to accept resize");
+        DDEBUG("Vulkan Backend doesnt exist to accept resize");
         return false;
     }
 }

@@ -33,7 +33,8 @@ struct application_state
     u64              application_system_linear_allocator_memory_requirements; // 1 mega bytes
     linear_allocator application_system_linear_allocator;
 
-    arena           *system_arena = nullptr;
+    arena *system_arena  = nullptr;
+    arena *resource_arena = nullptr;
 
     u64   platform_system_memory_requirements; // 1 mega bytes
     void *platform_system_state;

@@ -79,6 +79,15 @@ struct shader_config
 
     dstring vert_spv_full_path;
     dstring frag_spv_full_path;
+
+    void init(arena *arena)
+    {
+        stages.c_init(arena);
+        per_frame_uniform_offsets.c_init(arena);
+        per_group_uniform_offsets.c_init(arena);
+        uniforms.c_init(arena);
+        attributes.c_init(arena);
+    };
 };
 
 struct shader

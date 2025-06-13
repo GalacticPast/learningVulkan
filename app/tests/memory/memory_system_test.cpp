@@ -2,7 +2,7 @@
 #include "../test_manager.hpp"
 #include "core/dmemory.hpp"
 
-bool memory_system_test()
+bool memory_system_test(arena* arena)
 {
     void *test_inst;
 
@@ -14,7 +14,8 @@ bool memory_system_test()
 
     u64 buffer_usg_mem_requirements = 0;
     get_memory_usg_str(&buffer_usg_mem_requirements, static_cast<char *>(0));
-    darray<char *> buffer(buffer_usg_mem_requirements);
+    darray<char *> buffer;
+    buffer.c_init(arena, buffer_usg_mem_requirements);
     get_memory_usg_str(&buffer_usg_mem_requirements, reinterpret_cast<char *>(buffer.data));
 
     return true;

@@ -211,6 +211,18 @@ void *platform_virtual_reserve(u64 size, bool aligned)
                 "on the returned ptr being at the same place as the min app adrees.");
     return ptr;
 }
+void platform_virtual_unreserve(void* ptr, u64 size)
+{
+    DASSERT(size != INVALID_ID_64);
+    platform_info info = platform_get_info();
+    bool result  = VirtualFree(ptr, size, MEM_RELEASE);
+    if(!result)
+    {
+        DFATAL("Virtual unreserve failed. Windows error_code: %d", GetLastError());
+    }
+
+}
+
 
 void platform_virtual_free(void *block,u64 size, bool aligned)
 {
@@ -239,7 +251,10 @@ void *platform_virtual_commit(void *ptr, u32 num_pages)
         u64 size = info.page_size * num_pages;
         return_ptr = VirtualAlloc(ptr, size, MEM_COMMIT, PAGE_READWRITE);
         // better error handling
-        DASSERT_MSG(return_ptr, "Coulnd't virtual Alloc");
+        if(!return_ptr)
+        {
+            DFATAL("Virtual alloc failed. Windows error_code: %d", GetLastError());
+        }
     }
     else
     {

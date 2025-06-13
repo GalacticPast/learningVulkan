@@ -45,10 +45,12 @@ bool vulkan_create_logical_device(vulkan_context *vk_context)
     required_device_extensions[0]                = VK_KHR_SWAPCHAIN_EXTENSION_NAME;
     required_device_extensions[1]                = VK_KHR_SHADER_NON_SEMANTIC_INFO_EXTENSION_NAME;
 
+    arena* arena = vk_context->arena;
+
     vk_context->vk_device.physical_properties =
-        static_cast<VkPhysicalDeviceProperties *>(dallocate(sizeof(VkPhysicalDeviceProperties), MEM_TAG_RENDERER));
+        static_cast<VkPhysicalDeviceProperties *>(dallocate(arena, sizeof(VkPhysicalDeviceProperties), MEM_TAG_RENDERER));
     vk_context->vk_device.physical_features =
-        static_cast<VkPhysicalDeviceFeatures *>(dallocate(sizeof(VkPhysicalDeviceFeatures), MEM_TAG_RENDERER));
+        static_cast<VkPhysicalDeviceFeatures *>(dallocate(arena, sizeof(VkPhysicalDeviceFeatures), MEM_TAG_RENDERER));
 
     bool result = vulkan_choose_physical_device(vk_context, &physical_device_requirements,
                                                 required_device_extensions_count, required_device_extensions);
@@ -61,6 +63,7 @@ bool vulkan_create_logical_device(vulkan_context *vk_context)
 
     u32 queue_family_count           = 0;
     darray<u32> vulkan_queue_family_index;
+    vulkan_queue_family_index.c_init(arena);
 
     if (physical_device_requirements.has_graphics_queue_family &&
         vk_context->vk_device.graphics_family_index != INVALID_ID)
@@ -240,6 +243,7 @@ bool vulkan_is_physical_device_suitable(vulkan_context *vk_context, VkPhysicalDe
 
     u32                     queue_family_count = INVALID_ID;
     VkQueueFamilyProperties queue_family_properties[8];
+    arena* arena = vk_context->arena;
 
     u32 graphics_family_index = INVALID_ID;
     u32 present_family_index  = INVALID_ID;
@@ -361,7 +365,7 @@ bool vulkan_is_physical_device_suitable(vulkan_context *vk_context, VkPhysicalDe
 
             vkEnumerateDeviceExtensionProperties(physical_device, 0, &device_extension_properties_count, 0);
             device_extension_properties = static_cast<VkExtensionProperties *>(
-                dallocate(sizeof(VkExtensionProperties) * device_extension_properties_count, MEM_TAG_RENDERER));
+                dallocate(arena, sizeof(VkExtensionProperties) * device_extension_properties_count, MEM_TAG_RENDERER));
             vkEnumerateDeviceExtensionProperties(physical_device, 0, &device_extension_properties_count,
                                                  device_extension_properties);
 #ifdef DEBUG
@@ -437,6 +441,7 @@ void vulkan_device_query_swapchain_support(vulkan_context *vk_context, VkPhysica
                                            vulkan_swapchain *out_swapchain)
 {
 
+    arena* arena = vk_context->arena;
     vkGetPhysicalDeviceSurfaceCapabilitiesKHR(physical_device, vk_context->vk_surface,
                                               &out_swapchain->surface_capabilities);
 
@@ -444,7 +449,7 @@ void vulkan_device_query_swapchain_support(vulkan_context *vk_context, VkPhysica
                                          0);
 
     out_swapchain->surface_formats = static_cast<VkSurfaceFormatKHR *>(
-        dallocate(sizeof(VkSurfaceFormatKHR) * out_swapchain->surface_formats_count, MEM_TAG_RENDERER));
+        dallocate(arena, sizeof(VkSurfaceFormatKHR) * out_swapchain->surface_formats_count, MEM_TAG_RENDERER));
 
     vkGetPhysicalDeviceSurfaceFormatsKHR(physical_device, vk_context->vk_surface, &out_swapchain->surface_formats_count,
                                          out_swapchain->surface_formats);
@@ -452,7 +457,7 @@ void vulkan_device_query_swapchain_support(vulkan_context *vk_context, VkPhysica
     vkGetPhysicalDeviceSurfacePresentModesKHR(physical_device, vk_context->vk_surface,
                                               &out_swapchain->present_modes_count, 0);
     out_swapchain->present_modes = static_cast<VkPresentModeKHR *>(
-        dallocate(sizeof(VkPresentModeKHR) * out_swapchain->present_modes_count, MEM_TAG_RENDERER));
+        dallocate(arena, sizeof(VkPresentModeKHR) * out_swapchain->present_modes_count, MEM_TAG_RENDERER));
 
     vkGetPhysicalDeviceSurfacePresentModesKHR(physical_device, vk_context->vk_surface,
                                               &out_swapchain->present_modes_count, out_swapchain->present_modes);
@@ -471,14 +476,15 @@ bool vulkan_create_sync_objects(vulkan_context *vk_context)
     fence_create_info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
     fence_create_info.pNext = 0;
     fence_create_info.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+    arena* arena = vk_context->arena;
 
     vk_context->image_available_semaphores =
-        static_cast<VkSemaphore *>(dallocate(sizeof(VkSemaphore) * MAX_FRAMES_IN_FLIGHT, MEM_TAG_RENDERER));
+        static_cast<VkSemaphore *>(dallocate(arena, sizeof(VkSemaphore) * MAX_FRAMES_IN_FLIGHT, MEM_TAG_RENDERER));
     vk_context->render_finished_semaphores =
-        static_cast<VkSemaphore *>(dallocate(sizeof(VkSemaphore) * MAX_FRAMES_IN_FLIGHT, MEM_TAG_RENDERER));
+        static_cast<VkSemaphore *>(dallocate(arena, sizeof(VkSemaphore) * MAX_FRAMES_IN_FLIGHT, MEM_TAG_RENDERER));
 
     vk_context->in_flight_fences =
-        static_cast<VkFence *>(dallocate(sizeof(VkFence) * MAX_FRAMES_IN_FLIGHT, MEM_TAG_RENDERER));
+        static_cast<VkFence *>(dallocate(arena, sizeof(VkFence) * MAX_FRAMES_IN_FLIGHT, MEM_TAG_RENDERER));
 
     for (u32 i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
     {
