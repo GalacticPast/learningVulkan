@@ -1,9 +1,9 @@
+#include "texture_system.hpp"
 #include "containers/dhashtable.hpp"
 #include "core/dmemory.hpp"
 #include "defines.hpp"
 #include "renderer/vulkan/vulkan_backend.hpp"
 #include "resources/resource_types.hpp"
-#include "texture_system.hpp"
 
 #define STB_IMAGE_IMPLEMENTATION
 #include "vendor/stb_image.h"
@@ -37,6 +37,8 @@ bool texture_system_initialize(arena *arena, u64 *texture_system_mem_requirement
 
     stbi_set_flip_vertically_on_load(true);
     texture_system_create_default_textures();
+    dstring conf_file_base_name = "cubemap.jpg";
+    texture_system_load_default_cubemap(&conf_file_base_name);
     return true;
 }
 
@@ -63,25 +65,25 @@ bool create_texture(texture *texture, u8 *pixels)
         return false;
     }
 
-    const char *file_base_name = texture->name.c_str();
+    const char *conf_file_base_name = texture->name.c_str();
 
-    tex_sys_state_ptr->hashtable.insert(file_base_name, *texture);
+    tex_sys_state_ptr->hashtable.insert(conf_file_base_name, *texture);
     tex_sys_state_ptr->loaded_textures.push_back(texture->name);
-    DDEBUG("Texture %s loaded in hastable.", file_base_name);
+    DDEBUG("Texture %s loaded in hastable.", conf_file_base_name);
 
     return true;
 }
 
-bool texture_system_create_texture(dstring *file_base_name)
+bool texture_system_create_texture(dstring *conf_file_base_name)
 {
     texture texture{};
-    texture.name = *file_base_name;
+    texture.name = *conf_file_base_name;
 
     char full_path_name[TEXTURE_NAME_MAX_LENGTH] = {0};
 
     const char *prefix = "../assets/textures/";
 
-    string_copy_format(static_cast<char *>(full_path_name), "%s%s", 0, prefix, file_base_name->c_str());
+    string_copy_format(static_cast<char *>(full_path_name), "%s%s", 0, prefix, conf_file_base_name->c_str());
 
     s32 tex_width    = -1;
     s32 tex_height   = -1;
@@ -112,7 +114,7 @@ bool texture_system_create_texture(dstring *file_base_name)
 
 bool texture_system_create_default_textures()
 {
-    arena* arena = tex_sys_state_ptr->arena;
+    arena *arena = tex_sys_state_ptr->arena;
     {
         // gray albedo texture
         texture default_albedo_texture{};
@@ -217,4 +219,16 @@ bool texture_system_release_textures(dstring *tex_name)
     }
 
     return true;
+}
+
+bool texture_system_load_cubemap(dstring *conf_file_base_name)
+{
+    DASSERT(conf_file_base_name);
+    dstring full_file_path;
+    dstring prefix = "../assets/textures/";
+    string_copy_format(full_file_path.string, "%s%s", 0, prefix.c_str(), conf_file_base_name->c_str());
+
+    texture cubemap_faces[6];
+    char   *texture_data[6];
+
 }
