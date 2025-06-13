@@ -30,20 +30,18 @@ bool arena_allocate_arena_pool(u64 size, u32 num_arenas)
 
     // check if our assumption was correct. I think I can avoid this by finding a better way but oh well.
     DASSERT(arena_sys_ptr->info.page_size == page_size);
-    void *pool_start_ptr = static_cast<u8 *>(start_ptr) + page_size;
 
     arena_pool *pool       = &arena_sys_ptr->pool;
     // for now allocate only one page
-    pool->start_ptr        = platform_virtual_commit(pool_start_ptr, 1);
-    pool->pool_size        = size - (2 * page_size);
+    pool->pool_size        = size - page_size;
     pool->num_arenas       = num_arenas;
     pool->arena_size_bytes = pool->pool_size / num_arenas;
     pool->arena_size_pages = floor(pool->arena_size_bytes / arena_sys_ptr->info.page_size);
 
-    void *array_ptr = reinterpret_cast<u8 *>(pool_start_ptr) + sizeof(arena_pool);
+    void *array_ptr = reinterpret_cast<u8 *>(start_ptr) + sizeof(arena_system_state);
     pool->arenas    = reinterpret_cast<arena *>(DALIGN_UP(array_ptr, sizeof(arena)));
 
-    u8 *arena_start_ptr = static_cast<u8 *>(pool_start_ptr) + page_size;
+    u8 *arena_start_ptr = static_cast<u8 *>(start_ptr) + page_size;
     u64 arena_size      = size / num_arenas;
 
     for (u32 i = 0; i < num_arenas; i++)
@@ -61,7 +59,7 @@ bool arena_allocate_arena_pool(u64 size, u32 num_arenas)
 
 bool arena_free_arena_pool()
 {
-    platform_virtual_unreserve(arena_sys_ptr,0);
+    platform_virtual_unreserve(arena_sys_ptr, 0);
     arena_sys_ptr = nullptr;
     return true;
 }
@@ -143,7 +141,11 @@ void arena_free_arena(arena *in_arena)
         arena *ptr = &arenas_arr[i];
         if (ptr == in_arena && arenas_arr[i].total_size != INVALID_ID_64)
         {
+#ifdef DPLATFORM_WINDOWS
             platform_virtual_free(in_arena->start_ptr, arena_size_bytes, true);
+#elif DPLATFORM_LINUX
+            platform_virtual_free(in_arena->start_ptr, arena_size_pages, true);
+#endif
             in_arena->start_ptr  = nullptr;
             in_arena->free_ptr   = nullptr;
             in_arena->total_size = INVALID_ID_64;

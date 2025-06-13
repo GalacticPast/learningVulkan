@@ -14,7 +14,6 @@ struct arena
 
 struct arena_pool
 {
-    const void *start_ptr        = nullptr;       // 8
     u64         pool_size        = INVALID_ID_64; // 8
     u32         arena_size_bytes = INVALID_ID;    // 4
     u32         arena_size_pages = INVALID_ID;    // 4

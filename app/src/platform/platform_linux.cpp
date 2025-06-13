@@ -1,14 +1,15 @@
-#include "core/dasserts.hpp"
-#include "core/logger.hpp"
 #include "core/application.hpp"
+#include "core/dasserts.hpp"
 #include "core/event.hpp"
 #include "core/input.hpp"
+#include "core/logger.hpp"
 
 #include "platform.hpp"
 //
 // Linux platform layer.
 #ifdef DPLATFORM_LINUX
 
+#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -49,6 +50,8 @@ typedef struct platform_state
 
     u32 width;
     u32 height;
+
+    platform_info info;
 } platform_state;
 
 static platform_state *platform_state_ptr;
@@ -163,6 +166,8 @@ bool platform_system_startup(u64 *platform_mem_requirements, void *plat_state, a
         DFATAL("An error occurred when flusing the stream: %d", stream_result);
         return false;
     }
+
+    platform_state_ptr->info = platform_get_info;
 
     return true;
 }
@@ -642,6 +647,9 @@ typedef struct platform_state
     /* dimensions */
     u32 width;
     u32 height;
+
+    // platform info
+    platform_info info;
 } platform_state;
 
 static struct platform_state *platform_state_ptr;
@@ -965,6 +973,7 @@ bool platform_system_startup(u64 *platform_mem_requirements, void *plat_state, a
     xdg_toplevel_set_app_id(platform_state_ptr->xdg_toplevel, app_config->application_name);
 
     wl_surface_commit(platform_state_ptr->wl_surface);
+    platform_state_ptr->info = platform_get_info();
 
     return true;
 }
@@ -1178,6 +1187,77 @@ keys translate_keycode(xkb_keysym_t xkb_sym)
 }
 
 #endif
+
+void *platform_virtual_reserve(u64 size, bool aligned)
+{
+    DASSERT(size != INVALID_ID_64);
+    platform_info info = platform_get_info();
+    void         *ptr  = mmap(NULL, size, PROT_NONE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+    if (ptr == MAP_FAILED)
+    {
+        const char *error = strerror(errno);
+        DFATAL("Linux Virtual reserve failed. %s", error);
+    }
+    return ptr;
+}
+void platform_virtual_unreserve(void *ptr, u64 size)
+{
+    DASSERT(size != INVALID_ID_64);
+    platform_info info   = platform_get_info();
+    s32           result = munmap(ptr, size);
+    if (result == -1)
+    {
+        const char *error = strerror(errno);
+        DFATAL("Virtual unreserve failed. Linux error_code: %d", error);
+    }
+}
+void platform_virtual_free(void *block, u64 size, bool aligned)
+{
+    s32 result = munmap(block, size);
+    if (!result)
+    {
+        const char *error = strerror(errno);
+        DFATAL("Virtual free failed. Linux error_code: %d", error);
+    }
+}
+void *platform_virtual_commit(void *ptr, u32 num_pages)
+{
+    void         *return_ptr = nullptr;
+    platform_info info;
+    if (platform_state_ptr)
+    {
+        info = platform_state_ptr->info;
+    }
+    else
+    {
+        info = platform_get_info();
+    }
+
+    if (reinterpret_cast<uintptr_t>(ptr) % info.page_size == 0)
+    {
+        u64 size   = info.page_size * num_pages;
+        return_ptr = mmap(ptr, size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+        // better error handling
+        if (return_ptr == MAP_FAILED)
+        {
+            const char *error = strerror(errno);
+            DFATAL("Linux Virtual alloc failed. %s", error);
+        }
+    }
+    else
+    {
+        DFATAL("The ptr %lld is not a multiple of the page size %d", reinterpret_cast<uintptr_t>(ptr), info.page_size);
+        return nullptr;
+    }
+    return return_ptr;
+}
+
+platform_info platform_get_info()
+{
+    platform_info info;
+    info.page_size = getpagesize();
+    return info;
+}
 
 void *platform_allocate(u64 size, bool aligned)
 {
