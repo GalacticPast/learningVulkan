@@ -14,6 +14,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/time.h>
+#include <sys/mman.h>
+#include <unistd.h>
 
 #if _POSIX_C_SOURCE >= 199309L
 #include <time.h> // nanosleep
@@ -167,7 +169,7 @@ bool platform_system_startup(u64 *platform_mem_requirements, void *plat_state, a
         return false;
     }
 
-    platform_state_ptr->info = platform_get_info;
+    platform_state_ptr->info = platform_get_info();
 
     return true;
 }
@@ -1192,32 +1194,42 @@ void *platform_virtual_reserve(u64 size, bool aligned)
 {
     DASSERT(size != INVALID_ID_64);
     platform_info info = platform_get_info();
+
+
     void         *ptr  = mmap(NULL, size, PROT_NONE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
     if (ptr == MAP_FAILED)
     {
-        const char *error = strerror(errno);
+        s32 error_code = errno;
+        const char *error = strerror(error_code);
         DFATAL("Linux Virtual reserve failed. %s", error);
     }
+    DASSERT(reinterpret_cast<uintptr_t>(ptr) % info.page_size == 0);
     return ptr;
 }
 void platform_virtual_unreserve(void *ptr, u64 size)
 {
     DASSERT(size != INVALID_ID_64);
     platform_info info   = platform_get_info();
+    DASSERT(reinterpret_cast<uintptr_t>(ptr) % info.page_size == 0);
+
     s32           result = munmap(ptr, size);
     if (result == -1)
     {
-        const char *error = strerror(errno);
-        DFATAL("Virtual unreserve failed. Linux error_code: %d", error);
+        s32 error_code = errno;
+        const char *error = strerror(error_code);
+        DFATAL("Linux Virtual unreserve failed. %s", error);
     }
 }
 void platform_virtual_free(void *block, u64 size, bool aligned)
 {
+    platform_info info   = platform_get_info();
+    DASSERT(reinterpret_cast<uintptr_t>(block) % info.page_size == 0);
     s32 result = munmap(block, size);
-    if (!result)
+    if (result == -1)
     {
-        const char *error = strerror(errno);
-        DFATAL("Virtual free failed. Linux error_code: %d", error);
+        s32 error_code = errno;
+        const char *error = strerror(error_code);
+        DFATAL("Linux Virtual free failed. %s", error);
     }
 }
 void *platform_virtual_commit(void *ptr, u32 num_pages)
@@ -1235,13 +1247,20 @@ void *platform_virtual_commit(void *ptr, u32 num_pages)
 
     if (reinterpret_cast<uintptr_t>(ptr) % info.page_size == 0)
     {
+        DASSERT(num_pages);
         u64 size   = info.page_size * num_pages;
-        return_ptr = mmap(ptr, size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+        return_ptr = mmap(ptr, size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED , -1, 0);
         // better error handling
+
         if (return_ptr == MAP_FAILED)
         {
-            const char *error = strerror(errno);
+            s32 error_code = errno;
+            const char *error = strerror(error_code);
             DFATAL("Linux Virtual alloc failed. %s", error);
+        }
+        if(ptr != return_ptr)
+        {
+            DFATAL("Returned ptr is different from passed page ptr. ");
         }
     }
     else

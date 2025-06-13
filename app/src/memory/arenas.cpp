@@ -38,8 +38,9 @@ bool arena_allocate_arena_pool(u64 size, u32 num_arenas)
     pool->arena_size_bytes = pool->pool_size / num_arenas;
     pool->arena_size_pages = floor(pool->arena_size_bytes / arena_sys_ptr->info.page_size);
 
-    void *array_ptr = reinterpret_cast<u8 *>(start_ptr) + sizeof(arena_system_state);
-    pool->arenas    = reinterpret_cast<arena *>(DALIGN_UP(array_ptr, sizeof(arena)));
+    u32 sys_size = sizeof(arena_system_state);
+    void *array_ptr = reinterpret_cast<u8 *>(start_ptr) + sys_size;
+    pool->arenas    = reinterpret_cast<arena *>(DALIGN_UP(array_ptr, ARENA_DEFAULT_ALIGNMENT));
 
     u8 *arena_start_ptr = static_cast<u8 *>(start_ptr) + page_size;
     u64 arena_size      = size / num_arenas;
@@ -59,7 +60,11 @@ bool arena_allocate_arena_pool(u64 size, u32 num_arenas)
 
 bool arena_free_arena_pool()
 {
+#ifdef DPLATFORM_WINDOWS
     platform_virtual_unreserve(arena_sys_ptr, 0);
+#elif DPLATFORM_LINUX
+    platform_virtual_unreserve(arena_sys_ptr, arena_sys_ptr->total_global_size);
+#endif
     arena_sys_ptr = nullptr;
     return true;
 }
@@ -141,11 +146,7 @@ void arena_free_arena(arena *in_arena)
         arena *ptr = &arenas_arr[i];
         if (ptr == in_arena && arenas_arr[i].total_size != INVALID_ID_64)
         {
-#ifdef DPLATFORM_WINDOWS
             platform_virtual_free(in_arena->start_ptr, arena_size_bytes, true);
-#elif DPLATFORM_LINUX
-            platform_virtual_free(in_arena->start_ptr, arena_size_pages, true);
-#endif
             in_arena->start_ptr  = nullptr;
             in_arena->free_ptr   = nullptr;
             in_arena->total_size = INVALID_ID_64;
