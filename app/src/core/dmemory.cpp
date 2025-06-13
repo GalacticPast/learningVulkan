@@ -1,5 +1,4 @@
 #include "dmemory.hpp"
-#include "containers/dfreelist.hpp"
 #include "core/dasserts.hpp"
 #include "core/logger.hpp"
 
@@ -38,7 +37,6 @@ static const char *memory_tag_strings[MEM_TAG_MAX_TAGS] = {
 bool memory_system_startup(u64 *memory_system_memory_requirements, void *state)
 {
     u64 freelist_mem_requirements = INVALID_ID_64;
-    dfreelist_create(&freelist_mem_requirements, 0, 0);
     *memory_system_memory_requirements = sizeof(memory_system);
 
     if (!state)
@@ -49,15 +47,6 @@ bool memory_system_startup(u64 *memory_system_memory_requirements, void *state)
     memory_system_ptr = reinterpret_cast<memory_system *>(state);
 
     dzero_memory(memory_system_ptr, *memory_system_memory_requirements);
-
-    //void* raw_ptr = reinterpret_cast<void *>(reinterpret_cast<u8 *>(memory_system_ptr) + sizeof(memory_system));
-    //void* freelist_ptr = reinterpret_cast<void *>(DALIGN_UP(raw_ptr, 8));
-
-    //s32 diff_bytes = reinterpret_cast<uintptr_t>(freelist_ptr) - reinterpret_cast<uintptr_t>(raw_ptr);
-    //DASSERT(diff_bytes >= 0);
-    //u64 freelist_mem_size = freelist_mem_requirements + GB(1) - diff_bytes;
-
-    //memory_system_ptr->dfreelist = dfreelist_create(&freelist_mem_requirements, freelist_mem_size,freelist_ptr);
 
     return true;
 }
