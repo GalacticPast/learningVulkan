@@ -405,6 +405,7 @@ bool shader_system_create_default_shaders(shader *material_shader, u64 *material
     return true;
 }
 
+//TODO:
 bool shader_system_create_shader(dstring *shader_config_file_path, shader *out_shader, u64 *out_shader_id)
 {
     if (!shader_config_file_path || !out_shader || !out_shader_id)
@@ -528,6 +529,7 @@ bool shader_system_update_per_frame(shader *shader, scene_global_uniform_buffer_
 {
     return false;
 }
+
 // HACK: this should be abstracted away to support more shaders
 bool shader_system_update_per_group(shader *shader, u64 offset, void *data)
 {

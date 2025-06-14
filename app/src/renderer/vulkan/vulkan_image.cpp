@@ -266,6 +266,10 @@ bool vulkan_generate_mipmaps(vulkan_context *vk_context, vulkan_image *image)
     barrier.subresourceRange.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT;
     barrier.subresourceRange.baseArrayLayer = 0;
     barrier.subresourceRange.layerCount     = 1;
+    if(image->view_type == VK_IMAGE_VIEW_TYPE_CUBE)
+    {
+        barrier.subresourceRange.layerCount     = 6;
+    }
     barrier.subresourceRange.levelCount     = 1;
 
     for (u32 i = 1; i < image->mip_levels; i++)

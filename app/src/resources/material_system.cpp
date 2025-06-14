@@ -144,7 +144,24 @@ bool material_system_create_default_material()
         mat_sys_state_ptr->hashtable.insert(DEFAULT_LIGHT_MATERIAL_HANDLE, default_light_mat);
         mat_sys_state_ptr->loaded_materials.push_back(DEFAULT_LIGHT_MATERIAL_HANDLE);
     }
+    //HACK:
+    //create skybox
+    {
+        material skybox{};
+        skybox.name = DEFAULT_CUBEMAP_TEXTURE_HANDLE;
+        skybox.id              = 0;
+        skybox.reference_count = 0;
+        skybox.map.diffuse     = texture_system_get_texture(DEFAULT_CUBEMAP_TEXTURE_HANDLE);
+        skybox.map.normal      = nullptr;
+        skybox.map.specular    = nullptr;
 
+        bool result = vulkan_create_cubemap(&skybox);
+        DASSERT(result);
+
+        mat_sys_state_ptr->hashtable.insert(DEFAULT_CUBEMAP_TEXTURE_HANDLE, skybox);
+        mat_sys_state_ptr->loaded_materials.push_back(DEFAULT_CUBEMAP_TEXTURE_HANDLE);
+
+    }
     return true;
 }
 

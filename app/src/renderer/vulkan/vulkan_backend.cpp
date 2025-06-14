@@ -293,6 +293,43 @@ bool vulkan_allocate_descriptor_set(VkDescriptorPool *desc_pool, VkDescriptorSet
 }
 
 // HACK: this is a hack
+bool vulkan_update_cubemap_descriptor_set(vulkan_shader *shader, material *material)
+{
+    VkDescriptorBufferInfo desc_buffer_info{};
+
+    u32 descriptor_set_index = material->internal_id;
+
+    vulkan_allocate_descriptor_set(&shader->per_group_descriptor_pool, &shader->per_group_descriptor_layout,
+                                   &shader->per_group_descriptor_sets[descriptor_set_index]);
+    shader->total_descriptors_allocated = descriptor_set_index;
+
+    DTRACE("Updataing descriptor_set_index: %d", descriptor_set_index);
+
+    u32                   image_count    = 1;
+    VkDescriptorImageInfo image_infos[1] = {};
+
+    vulkan_texture *tex_state  = static_cast<vulkan_texture *>(material->map.diffuse->vulkan_texture_state);
+    image_infos[0].sampler     = tex_state->sampler;
+    image_infos[0].imageView   = tex_state->image.view;
+    image_infos[0].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
+    VkWriteDescriptorSet desc_writes[1]{};
+
+    desc_writes[0].sType            = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    desc_writes[0].pNext            = 0;
+    desc_writes[0].dstSet           = shader->per_group_descriptor_sets[descriptor_set_index];
+    desc_writes[0].dstBinding       = 0;
+    desc_writes[0].dstArrayElement  = 0;
+    desc_writes[0].descriptorCount  = 1;
+    desc_writes[0].descriptorType   = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    desc_writes[0].pBufferInfo      = 0;
+    desc_writes[0].pImageInfo       = &image_infos[0];
+    desc_writes[0].pTexelBufferView = 0;
+
+    vkUpdateDescriptorSets(vk_context->vk_device.logical, image_count, desc_writes, 0, nullptr);
+    return true;
+}
+
 bool vulkan_update_materials_descriptor_set(vulkan_shader *shader, material *material)
 {
     VkDescriptorBufferInfo desc_buffer_info{};
@@ -408,7 +445,8 @@ bool vulkan_update_materials_descriptor_set(vulkan_shader *shader, material *mat
     return true;
 }
 
-bool vulkan_update_global_descriptor_sets(vulkan_shader *shader, scene_global_uniform_buffer_object *scene_global,
+bool vulkan_update_global_descriptor_sets(vulkan_shader *material_shader, vulkan_shader *skybox_shader,
+                                          scene_global_uniform_buffer_object *scene_global,
                                           light_global_uniform_buffer_object *light_global)
 {
     ZoneScoped;
@@ -420,13 +458,13 @@ bool vulkan_update_global_descriptor_sets(vulkan_shader *shader, scene_global_un
 
     for (u32 i = 0; i < 2; i++)
     {
-        desc_buffer_infos[i].buffer = shader->per_frame_uniform_buffer.handle;
+        desc_buffer_infos[i].buffer = material_shader->per_frame_uniform_buffer.handle;
         desc_buffer_infos[i].offset = 0;
         desc_buffer_infos[i].range  = ranges[i];
 
         desc_writes[i].sType            = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
         desc_writes[i].pNext            = 0;
-        desc_writes[i].dstSet           = shader->per_frame_descriptor_set;
+        desc_writes[i].dstSet           = material_shader->per_frame_descriptor_set;
         desc_writes[i].dstBinding       = i;
         desc_writes[i].dstArrayElement  = 0;
         desc_writes[i].descriptorCount  = 1;
@@ -436,6 +474,27 @@ bool vulkan_update_global_descriptor_sets(vulkan_shader *shader, scene_global_un
         desc_writes[i].pTexelBufferView = 0;
     }
     vkUpdateDescriptorSets(vk_context->vk_device.logical, 2, desc_writes, 0, nullptr);
+
+    desc_buffer_infos[0].buffer = skybox_shader->per_frame_uniform_buffer.handle;
+    desc_writes[0].dstSet       = skybox_shader->per_frame_descriptor_set;
+    desc_buffer_infos[0].range  = ranges[0] - sizeof(math::vec4);
+    vkUpdateDescriptorSets(vk_context->vk_device.logical, 1, desc_writes, 0, nullptr);
+
+    return true;
+}
+
+// TODO: destroy material
+bool vulkan_create_cubemap(material *cubemap_mat)
+{
+    DASSERT(cubemap_mat);
+    static u32 id            = 0;
+    cubemap_mat->internal_id = id;
+    id++;
+    vulkan_shader *shader =
+        static_cast<vulkan_shader *>(vk_context->default_skybox_shader->internal_vulkan_shader_state);
+    bool result = vulkan_update_cubemap_descriptor_set(shader, cubemap_mat);
+    DASSERT(result == true);
+
     return true;
 }
 
@@ -1140,16 +1199,21 @@ VkBool32 vulkan_dbg_msg_rprt_callback(VkDebugUtilsMessageSeverityFlagBitsEXT    
     return VK_FALSE;
 }
 
-void vulkan_update_global_uniform_buffer(vulkan_shader *shader, scene_global_uniform_buffer_object *scene_ubo,
+void vulkan_update_global_uniform_buffer(vulkan_shader *material_shader,vulkan_shader* skybox_shader, scene_global_uniform_buffer_object *scene_ubo,
                                          light_global_uniform_buffer_object *light_ubo, u32 current_frame_index)
 {
-    u64 scene_aligned = shader->per_frame_uniforms_size[0];
-    u8 *addr = static_cast<u8 *>(shader->per_frame_mapped_data) + ((shader->per_frame_stride * current_frame_index));
+    u64 scene_aligned = material_shader->per_frame_uniforms_size[0];
+    u8 *addr = static_cast<u8 *>(material_shader->per_frame_mapped_data) + ((material_shader->per_frame_stride * current_frame_index));
     dcopy_memory(addr, scene_ubo, scene_aligned);
 
-    u32 size  = shader->per_frame_uniforms_size[1] - scene_aligned;
+    u32 size  = material_shader->per_frame_uniforms_size[1] - scene_aligned;
     addr     += scene_aligned;
     dcopy_memory(addr, light_ubo, size);
+
+    addr = static_cast<u8 *>(skybox_shader->per_frame_mapped_data) + ((skybox_shader->per_frame_stride * current_frame_index));
+    scene_aligned -= sizeof(math::vec4);
+    dcopy_memory(addr, scene_ubo, scene_aligned);
+
 }
 
 u32 vulkan_calculate_vertex_offset(vulkan_context *vk_context, u32 geometry_id)
@@ -1268,7 +1332,6 @@ bool vulkan_draw_geometries(render_data *data, VkCommandBuffer *curr_command_buf
     vulkan_shader *vk_shader =
         static_cast<vulkan_shader *>(vk_context->default_material_shader->internal_vulkan_shader_state);
 
-    vulkan_begin_frame_renderpass(vk_context, *curr_command_buffer, &vk_shader->pipeline, curr_frame_index);
 
     // bind the globals
 
@@ -1309,7 +1372,6 @@ bool vulkan_draw_geometries(render_data *data, VkCommandBuffer *curr_command_buf
 
         vkCmdDrawIndexed(*curr_command_buffer, geo_data->indices_count, 1, index_offset, vertex_offset, 0);
     }
-    vulkan_end_frame_renderpass(curr_command_buffer);
     return true;
 }
 
@@ -1321,14 +1383,8 @@ bool vulkan_draw_skybox(render_data *data, VkCommandBuffer *curr_command_buffer,
         static_cast<vulkan_shader *>(vk_context->default_skybox_shader->internal_vulkan_shader_state);
     DASSERT(shader);
 
-    u64 scene_aligned = shader->per_frame_uniforms_size[0];
-    u8 *addr = static_cast<u8 *>(shader->per_frame_mapped_data) + ((shader->per_frame_stride * curr_frame_index));
-    dcopy_memory(addr, &data->scene_ubo, scene_aligned);
-    //
 
-    u32 aligned_global     = align_upto(sizeof(scene_global_uniform_buffer_object), shader->min_ubo_alignment);
     u32 dynamic_offsets[1] = {curr_frame_index * shader->per_frame_stride};
-
     vkCmdBindDescriptorSets(*curr_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, shader->pipeline.layout, 0, 1,
                             &shader->per_frame_descriptor_set, 1, dynamic_offsets);
 
@@ -1338,8 +1394,20 @@ bool vulkan_draw_skybox(render_data *data, VkCommandBuffer *curr_command_buffer,
     vkCmdBindVertexBuffers(*curr_command_buffer, 0, 1, vertex_buffers, offsets);
     vkCmdBindIndexBuffer(*curr_command_buffer, vk_context->index_buffer.handle, 0, VK_INDEX_TYPE_UINT32);
 
-    geometry* cube_geo = geometry_system_get_default_geometry();
+    geometry *cube_geo = geometry_system_get_default_geometry();
+    dstring   mat_name = DEFAULT_CUBEMAP_TEXTURE_HANDLE;
+    material *cube_mat = material_system_acquire_from_name(&mat_name);
 
+    u32                   index_offset  = vulkan_calculate_index_offset(vk_context, cube_geo->id);
+    u32                   vertex_offset = vulkan_calculate_vertex_offset(vk_context, cube_geo->id);
+    vulkan_geometry_data *geo_data      = static_cast<vulkan_geometry_data *>(cube_geo->vulkan_geometry_state);
+
+    u32 descriptor_set_index = cube_mat->internal_id;
+
+    vkCmdBindDescriptorSets(*curr_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, shader->pipeline.layout, 1, 1,
+                            &shader->per_group_descriptor_sets[descriptor_set_index], 0, nullptr);
+
+    vkCmdDrawIndexed(*curr_command_buffer, geo_data->indices_count, 1, index_offset, vertex_offset, 0);
 
     return true;
 }
@@ -1397,15 +1465,23 @@ bool vulkan_draw_frame(render_data *render_data)
     vkResetCommandBuffer(curr_command_buffer, 0);
     vulkan_begin_command_buffer_single_use(vk_context, curr_command_buffer);
 
-    vulkan_draw_skybox(render_data, &curr_command_buffer, current_frame);
-
     vulkan_shader *material_shader =
         static_cast<vulkan_shader *>(vk_context->default_material_shader->internal_vulkan_shader_state);
-    vulkan_update_global_uniform_buffer(material_shader, &render_data->scene_ubo, &render_data->light_ubo,
+    vulkan_shader *skybox_shader =
+        static_cast<vulkan_shader *>(vk_context->default_skybox_shader->internal_vulkan_shader_state);
+    vulkan_update_global_uniform_buffer(material_shader,skybox_shader, &render_data->scene_ubo, &render_data->light_ubo,
                                         current_frame);
-    vulkan_update_global_descriptor_sets(material_shader, &render_data->scene_ubo, &render_data->light_ubo);
+    vulkan_update_global_descriptor_sets(material_shader, skybox_shader, &render_data->scene_ubo,
+                                         &render_data->light_ubo);
 
+    vulkan_begin_frame_renderpass(vk_context, curr_command_buffer, current_frame);
+
+    vkCmdBindPipeline(curr_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, material_shader->pipeline.handle);
     vulkan_draw_geometries(render_data, &curr_command_buffer, current_frame);
+    vkCmdBindPipeline(curr_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, skybox_shader->pipeline.handle);
+    vulkan_draw_skybox(render_data, &curr_command_buffer, current_frame);
+
+    vulkan_end_frame_renderpass(&curr_command_buffer);
 
     vulkan_end_command_buffer_single_use(vk_context, curr_command_buffer, false);
     //

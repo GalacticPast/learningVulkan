@@ -21,6 +21,8 @@ bool vulkan_initialize_shader(shader_config *config, shader *in_shader);
 bool vulkan_create_material(material *in_material);
 bool vulkan_destroy_material(material *in_material);
 
+bool vulkan_create_cubemap(material *cubemap_mat);
+
 bool vulkan_create_texture(texture *in_texture, u8 *pixels);
 bool vulkan_destroy_texture(texture *in_texture);
 
@@ -38,4 +40,3 @@ bool vulkan_update_global_descriptor_sets(vulkan_shader *shader, scene_global_un
 bool vulkan_create_command_pools(vulkan_context *vk_context);
 bool vulkan_create_descriptor_command_pools(vulkan_context *vk_context);
 bool vulkan_update_materials_descriptor_set(vulkan_shader* shader, material *material);
-
