@@ -384,6 +384,7 @@ bool shader_system_create_default_shaders(shader *material_shader, u64 *material
     arena *arena = shader_sys_state_ptr->arena;
 
     shader_config material_shader_conf{};
+    material_shader_conf.pipeline_configuration.mode = CULL_BACK_BIT;
     material_shader_conf.init(arena);
 
     dstring conf_file = "material_shader.conf";
@@ -393,6 +394,7 @@ bool shader_system_create_default_shaders(shader *material_shader, u64 *material
     shader_sys_state_ptr->default_material_shader_id = *material_shader_id;
 
     shader_config skybox_shader_conf{};
+    skybox_shader_conf.pipeline_configuration.mode = CULL_NONE_BIT;
     skybox_shader_conf.init(arena);
 
     conf_file.clear();

@@ -160,6 +160,7 @@ struct vulkan_shader
     darray<VkDescriptorSet>              per_group_descriptor_sets;
 
     renderpass_types type;
+    shader_pipeline_configuration pipeline_configuration;
     vulkan_pipeline  pipeline;
 };
 

@@ -16,6 +16,7 @@ void main()
 {
     tex_coord = in_position;
     mat4 view = mat4(mat3(global_ubo.view));
-    view = global_ubo.view;
-    gl_Position = global_ubo.projection * view * vec4(in_position, 1.0);
+    //view = global_ubo.view;
+    vec4 position = global_ubo.projection * view * vec4(in_position, 1.0);
+    gl_Position = position.xyzz;  // Force w == z, "move this fragment to back"
 }

@@ -279,27 +279,27 @@ bool texture_system_load_cubemap(dstring *conf_file_base_name)
 
         if (string_compare(identifier.c_str(), "right"))
         {
-            extract_identifier(str, cubemap_faces[3]);
+            extract_identifier(str, cubemap_faces[0]);
         }
         else if (string_compare(identifier.c_str(), "left"))
         {
-            extract_identifier(str, cubemap_faces[2]);
+            extract_identifier(str, cubemap_faces[1]);
         }
         else if (string_compare(identifier.c_str(), "top"))
         {
-            extract_identifier(str, cubemap_faces[5]);
+            extract_identifier(str, cubemap_faces[2]);
         }
         else if (string_compare(identifier.c_str(), "bottom"))
         {
-            extract_identifier(str, cubemap_faces[4]);
+            extract_identifier(str, cubemap_faces[3]);
         }
         else if (string_compare(identifier.c_str(), "front"))
         {
-            extract_identifier(str, cubemap_faces[1]);
+            extract_identifier(str, cubemap_faces[4]);
         }
         else if (string_compare(identifier.c_str(), "back"))
         {
-            extract_identifier(str, cubemap_faces[0]);
+            extract_identifier(str, cubemap_faces[5]);
         }
         else
         {
@@ -315,6 +315,7 @@ bool texture_system_load_cubemap(dstring *conf_file_base_name)
     s32      prev_height       = INVALID_ID_S32;
     s32      prev_channel      = INVALID_ID_S32;
 
+    stbi_set_flip_vertically_on_load(false);
     for (s32 i = 0; i < 6; i++)
     {
         full_file_path.clear();
@@ -342,6 +343,7 @@ bool texture_system_load_cubemap(dstring *conf_file_base_name)
         prev_height  = height;
         prev_channel = channel;
     }
+    stbi_set_flip_vertically_on_load(true);
 
     texture cubemap_texture;
     // HACK:
@@ -364,6 +366,11 @@ bool texture_system_load_cubemap(dstring *conf_file_base_name)
     }
 
     create_texture(&cubemap_texture, pixels);
+
+    for(s32 i = 0 ; i < 6 ; i++)
+    {
+        stbi_image_free(cubemap_pixels[i]);
+    }
 
 
     return true;

@@ -91,7 +91,7 @@ void main()
     out_color += calculate_point_light(view_direction, normal, one);
     out_color += calculate_point_light(view_direction, normal, two);
     out_color += calculate_point_light(view_direction, normal, three);
-    out_color = texture(diffuse_map, in_dto.tex_coord);
+    //out_color = texture(diffuse_map, in_dto.tex_coord);
 }
 
 vec4 calculate_directional_light(vec3 view_direction, vec3 normal) {

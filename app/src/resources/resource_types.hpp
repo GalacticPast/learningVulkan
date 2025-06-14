@@ -63,6 +63,18 @@ struct shader_attribute_config
     attribute_types type;
 };
 
+enum pipeline_cull_mode
+{
+    CULL_FRONT_BIT,
+    CULL_BACK_BIT,
+    CULL_NONE_BIT,
+};
+
+struct shader_pipeline_configuration
+{
+    pipeline_cull_mode mode;
+};
+
 struct shader_config
 {
     // NOTE: for now
@@ -80,6 +92,8 @@ struct shader_config
 
     dstring vert_spv_full_path;
     dstring frag_spv_full_path;
+
+    shader_pipeline_configuration pipeline_configuration;
 
     void init(arena *arena)
     {

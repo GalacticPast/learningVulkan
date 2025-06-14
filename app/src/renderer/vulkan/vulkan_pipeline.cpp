@@ -2,6 +2,8 @@
 #include "containers/darray.hpp"
 #include "core/logger.hpp"
 #include "math/dmath_types.hpp"
+#include "resources/resource_types.hpp"
+#include "vulkan/vulkan_core.h"
 
 VkShaderModule create_shader_module(vulkan_context *vk_context, const char *shader_code, u64 shader_code_size);
 
@@ -116,7 +118,18 @@ bool vulkan_create_pipeline(vulkan_context *vk_context, vulkan_shader *shader)
     rasterizer_create_info.rasterizerDiscardEnable = VK_FALSE;
     rasterizer_create_info.polygonMode             = VK_POLYGON_MODE_FILL;
     rasterizer_create_info.lineWidth               = 1.0f;
-    rasterizer_create_info.cullMode                = VK_CULL_MODE_BACK_BIT;
+    if(shader->pipeline_configuration.mode == CULL_FRONT_BIT)
+    {
+        rasterizer_create_info.cullMode                = VK_CULL_MODE_FRONT_BIT;
+    }
+    else if(shader->pipeline_configuration.mode == CULL_BACK_BIT)
+    {
+        rasterizer_create_info.cullMode                = VK_CULL_MODE_BACK_BIT;
+    }
+    else
+    {
+        rasterizer_create_info.cullMode                = VK_CULL_MODE_NONE;
+    }
     rasterizer_create_info.frontFace               = VK_FRONT_FACE_COUNTER_CLOCKWISE;
     rasterizer_create_info.depthBiasEnable         = VK_FALSE;
     rasterizer_create_info.depthBiasConstantFactor = 0.0f;
@@ -165,6 +178,10 @@ bool vulkan_create_pipeline(vulkan_context *vk_context, vulkan_shader *shader)
     depth_stencil_state_create_info.depthTestEnable       = VK_TRUE;
     depth_stencil_state_create_info.depthWriteEnable      = VK_TRUE;
     depth_stencil_state_create_info.depthCompareOp        = VK_COMPARE_OP_LESS;
+    if(shader->pipeline_configuration.mode == CULL_NONE_BIT)
+    {
+        depth_stencil_state_create_info.depthCompareOp        = VK_COMPARE_OP_LESS_OR_EQUAL;
+    }
     depth_stencil_state_create_info.depthBoundsTestEnable = VK_FALSE;
     depth_stencil_state_create_info.minDepthBounds        = 0.0f;
     depth_stencil_state_create_info.maxDepthBounds        = 1.0f;

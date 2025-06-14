@@ -132,25 +132,25 @@ int main()
         u64 blue  = geometry_system_create_geometry(&blue_light, false);
 
         geos    = static_cast<geometry **>(dallocate(app_state.system_arena, sizeof(geometry *) * 6, MEM_TAG_UNKNOWN));
-        //geos[0] = geometry_system_get_default_geometry();
-        //mat_name.clear();
+        geos[0] = geometry_system_get_default_geometry();
+        mat_name.clear();
 
-        geos[0]            = geometry_system_get_geometry(red);
-        geos[0]->ubo.model = mat4_translation({2, 0, 0});
+        geos[1]            = geometry_system_get_geometry(red);
+        geos[1]->ubo.model = mat4_translation({2, 0, 0});
 
-        geos[1]            = geometry_system_get_geometry(green);
-        geos[1]->ubo.model = mat4_translation({0, 2, 0});
+        geos[2]            = geometry_system_get_geometry(green);
+        geos[2]->ubo.model = mat4_translation({0, 2, 0});
 
-        geos[2]            = geometry_system_get_geometry(blue);
-        geos[2]->ubo.model = mat4_translation({0, 0, 2});
+        geos[3]            = geometry_system_get_geometry(blue);
+        geos[3]->ubo.model = mat4_translation({0, 0, 2});
 
         geometry_config plane_config =
             geometry_system_generate_plane_config(10, 10, 1, 1, 1, 1, "its a plane", DEFAULT_LIGHT_MATERIAL_HANDLE);
         u64 id3 = geometry_system_create_geometry(&plane_config, false);
 
-        geos[3]             = geometry_system_get_geometry(id3);
-        geos[3]->ubo.model *= mat4_scale(math::vec3(100, 100, 100));
-        geos[3]->ubo.model *= mat4_translation(math::vec3(0, -2, 0));
+        //geos[4]             = geometry_system_get_geometry(id3);
+        //geos[4]->ubo.model *= mat4_scale(math::vec3(100, 100, 100));
+        //geos[4]->ubo.model *= mat4_translation(math::vec3(0, -2, 0));
 
         geometry_count = 4;
     }

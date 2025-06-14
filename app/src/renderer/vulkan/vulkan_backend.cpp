@@ -535,8 +535,8 @@ bool vulkan_initialize_shader(shader_config *config, shader *in_shader)
     arena         *arena     = vk_context->arena;
     vulkan_shader *vk_shader = static_cast<vulkan_shader *>(dallocate(arena, sizeof(vulkan_shader), MEM_TAG_RENDERER));
 
-    u32 uniforms_size = config->uniforms.size();
-
+    u32 uniforms_size                 = config->uniforms.size();
+    vk_shader->pipeline_configuration = config->pipeline_configuration;
     // per-frame resources aka (uniform_s, aka set 0)
     {
         if (config->has_per_frame)
@@ -901,12 +901,16 @@ bool vulkan_create_texture(texture *in_texture, u8 *pixels)
         image->view_type        = VK_IMAGE_VIEW_TYPE_CUBE;
         image->img_create_flags = VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
         is_cube_map             = true;
+        image->mip_levels       = 1;
     }
     else
     {
         image->view_type        = VK_IMAGE_VIEW_TYPE_2D;
         image->img_create_flags = 0;
         texture_size            = tex_width * tex_height * 4;
+        u32 max                 = DMAX(tex_width, tex_height);
+        u32 mip_level           = floor(log2(max)) + 1;
+        image->mip_levels       = mip_level;
     }
 
     // INFO: use the correct colorspace for the image, if the texture is a default texture then it should not be mapping
@@ -920,10 +924,6 @@ bool vulkan_create_texture(texture *in_texture, u8 *pixels)
     {
         image->format = VK_FORMAT_R8G8B8A8_SRGB;
     }
-
-    u32 max           = DMAX(tex_width, tex_height);
-    u32 mip_level     = floor(log2(max)) + 1;
-    image->mip_levels = mip_level;
 
     bool result =
         vulkan_create_buffer(vk_context, &staging_buffer, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
@@ -948,7 +948,19 @@ bool vulkan_create_texture(texture *in_texture, u8 *pixels)
     vulkan_copy_buffer_data_to_image(vk_context, &vk_context->transfer_command_pool,
                                      &vk_context->vk_device.transfer_queue, &staging_buffer, image);
 
-    vulkan_generate_mipmaps(vk_context, image);
+    if (!is_cube_map)
+    {
+        vulkan_generate_mipmaps(vk_context, image);
+    }
+    else
+    {
+        vulkan_transition_image_layout(vk_context, &vk_context->transfer_command_pool,
+                                       &vk_context->vk_device.transfer_queue, image,
+                                       VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+        vulkan_transition_image_layout(vk_context, &vk_context->graphics_command_pool,
+                                       &vk_context->vk_device.graphics_queue, image,
+                                       VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+    }
 
     vulkan_destroy_buffer(vk_context, &staging_buffer);
 
@@ -1199,22 +1211,24 @@ VkBool32 vulkan_dbg_msg_rprt_callback(VkDebugUtilsMessageSeverityFlagBitsEXT    
     return VK_FALSE;
 }
 
-void vulkan_update_global_uniform_buffer(vulkan_shader *material_shader,vulkan_shader* skybox_shader, scene_global_uniform_buffer_object *scene_ubo,
+void vulkan_update_global_uniform_buffer(vulkan_shader *material_shader, vulkan_shader *skybox_shader,
+                                         scene_global_uniform_buffer_object *scene_ubo,
                                          light_global_uniform_buffer_object *light_ubo, u32 current_frame_index)
 {
     u64 scene_aligned = material_shader->per_frame_uniforms_size[0];
-    u8 *addr = static_cast<u8 *>(material_shader->per_frame_mapped_data) + ((material_shader->per_frame_stride * current_frame_index));
+    u8 *addr          = static_cast<u8 *>(material_shader->per_frame_mapped_data) +
+               ((material_shader->per_frame_stride * current_frame_index));
     dcopy_memory(addr, scene_ubo, scene_aligned);
 
     u32 size  = material_shader->per_frame_uniforms_size[1] - scene_aligned;
     addr     += scene_aligned;
     dcopy_memory(addr, light_ubo, size);
 
-    addr = static_cast<u8 *>(skybox_shader->per_frame_mapped_data) + ((skybox_shader->per_frame_stride * current_frame_index));
+    addr = static_cast<u8 *>(skybox_shader->per_frame_mapped_data) +
+           ((skybox_shader->per_frame_stride * current_frame_index));
     scene_aligned -= sizeof(math::vec4);
 
     dcopy_memory(addr, scene_ubo, scene_aligned);
-
 }
 
 u32 vulkan_calculate_vertex_offset(vulkan_context *vk_context, u32 geometry_id)
@@ -1333,7 +1347,6 @@ bool vulkan_draw_geometries(render_data *data, VkCommandBuffer *curr_command_buf
     vulkan_shader *vk_shader =
         static_cast<vulkan_shader *>(vk_context->default_material_shader->internal_vulkan_shader_state);
 
-
     // bind the globals
 
     u32 aligned_global     = align_upto(sizeof(scene_global_uniform_buffer_object), vk_shader->min_ubo_alignment);
@@ -1383,7 +1396,6 @@ bool vulkan_draw_skybox(render_data *data, VkCommandBuffer *curr_command_buffer,
     vulkan_shader *shader =
         static_cast<vulkan_shader *>(vk_context->default_skybox_shader->internal_vulkan_shader_state);
     DASSERT(shader);
-
 
     u32 dynamic_offsets[1] = {curr_frame_index * shader->per_frame_stride};
     vkCmdBindDescriptorSets(*curr_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, shader->pipeline.layout, 0, 1,
@@ -1470,17 +1482,18 @@ bool vulkan_draw_frame(render_data *render_data)
         static_cast<vulkan_shader *>(vk_context->default_material_shader->internal_vulkan_shader_state);
     vulkan_shader *skybox_shader =
         static_cast<vulkan_shader *>(vk_context->default_skybox_shader->internal_vulkan_shader_state);
-    vulkan_update_global_uniform_buffer(material_shader,skybox_shader, &render_data->scene_ubo, &render_data->light_ubo,
-                                        current_frame);
+    vulkan_update_global_uniform_buffer(material_shader, skybox_shader, &render_data->scene_ubo,
+                                        &render_data->light_ubo, current_frame);
     vulkan_update_global_descriptor_sets(material_shader, skybox_shader, &render_data->scene_ubo,
                                          &render_data->light_ubo);
 
     vulkan_begin_frame_renderpass(vk_context, curr_command_buffer, current_frame);
 
-    vkCmdBindPipeline(curr_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, material_shader->pipeline.handle);
-    vulkan_draw_geometries(render_data, &curr_command_buffer, current_frame);
     vkCmdBindPipeline(curr_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, skybox_shader->pipeline.handle);
     vulkan_draw_skybox(render_data, &curr_command_buffer, current_frame);
+
+    vkCmdBindPipeline(curr_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, material_shader->pipeline.handle);
+    vulkan_draw_geometries(render_data, &curr_command_buffer, current_frame);
 
     vulkan_end_frame_renderpass(&curr_command_buffer);
 
