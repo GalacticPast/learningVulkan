@@ -1397,7 +1397,7 @@ bool vulkan_draw_frame(render_data *render_data)
     vkResetCommandBuffer(curr_command_buffer, 0);
     vulkan_begin_command_buffer_single_use(vk_context, curr_command_buffer);
 
-    vulkan_draw_skybox(render_data, current_frame);
+    vulkan_draw_skybox(render_data, &curr_command_buffer, current_frame);
 
     vulkan_shader *material_shader =
         static_cast<vulkan_shader *>(vk_context->default_material_shader->internal_vulkan_shader_state);
