@@ -458,6 +458,10 @@ bool vulkan_update_global_descriptor_sets(shader *shader)
     VkWriteDescriptorSet   desc_writes[16]{};
     //HACK:
     VkDeviceSize ranges[16]  = {sizeof(scene_global_uniform_buffer_object), sizeof(light_global_uniform_buffer_object)};
+    if(size == 1)
+    {
+        ranges[0] -= sizeof(math::vec4);
+    }
 
     DASSERT_MSG(size < 16, "Size is greater than 16 which was our previous assumtion");
 
@@ -1346,7 +1350,7 @@ bool vulkan_draw_geometries(render_data *data, VkCommandBuffer *curr_command_buf
 
     // bind the globals
 
-    u32 aligned_global     = align_upto(sizeof(scene_global_uniform_buffer_object), vk_shader->min_ubo_alignment);
+    u32 aligned_global     = vk_shader->per_frame_uniforms_size[0];
     u32 dynamic_offsets[2] = {curr_frame_index * vk_shader->per_frame_stride,
                               curr_frame_index * vk_shader->per_frame_stride + aligned_global};
 

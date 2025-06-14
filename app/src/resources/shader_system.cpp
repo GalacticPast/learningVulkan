@@ -83,10 +83,10 @@ static u64 _create_shader(shader_config *config, shader *out_shader, shader_type
     DASSERT(result);
 
     out_shader->type = type;
-    u64 id = shader_sys_state_ptr->shaders.insert(INVALID_ID_64, *out_shader);
+    u64 id           = shader_sys_state_ptr->shaders.insert(INVALID_ID_64, *out_shader);
     DASSERT(id != INVALID_ID_64);
 
-    u64 config_id  = shader_sys_state_ptr->shader_configs.insert(id, *config);
+    u64 config_id = shader_sys_state_ptr->shader_configs.insert(id, *config);
 
     return id;
 }
@@ -556,14 +556,13 @@ bool shader_system_update_per_frame(scene_global_uniform_buffer_object *scene_gl
             return false;
         }
         u32  scene_offset = 0;
-        bool scene        = renderer_update_global_data(shader, 0, sizeof(scene_global_uniform_buffer_object),scene_global);
+        bool scene = renderer_update_global_data(shader, 0, sizeof(scene_global_uniform_buffer_object), scene_global);
         DASSERT(scene);
 
         u32  light_offset = config->per_frame_uniform_offsets[0];
-        bool light        = renderer_update_global_data(shader,light_offset,sizeof(light_global_uniform_buffer_object) ,light_global);
+        bool light =
+            renderer_update_global_data(shader, light_offset, sizeof(light_global_uniform_buffer_object), light_global);
         DASSERT(light);
-
-
     }
     else if (shader->type == SHADER_TYPE_SKYBOX)
     {
@@ -573,7 +572,9 @@ bool shader_system_update_per_frame(scene_global_uniform_buffer_object *scene_gl
             return false;
         }
         u32  scene_offset = config->per_frame_uniform_offsets[0];
-        bool scene        = renderer_update_global_data(shader, 0,sizeof(scene_global_uniform_buffer_object), scene_global);
+        // this is because we are not sending the ambient color to the skybox shader;
+        u32  size         = sizeof(scene_global_uniform_buffer_object) - sizeof(math::vec4);
+        bool scene = renderer_update_global_data(shader, 0, size, scene_global);
         DASSERT(scene);
     }
 

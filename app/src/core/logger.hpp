@@ -37,6 +37,7 @@ void log_output(log_level level, const char *message, ...);
 #define DERROR(message, ...)                                                                                           \
     {                                                                                                                  \
         log_output(LOG_LEVEL_ERROR, message, ##__VA_ARGS__);                                                           \
+        debugBreak();                                                                                                  \
     }
 
 #endif
