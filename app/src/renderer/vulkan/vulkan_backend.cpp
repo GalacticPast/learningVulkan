@@ -5,6 +5,7 @@
 #include "defines.hpp"
 
 #include "math/dmath_types.hpp"
+#include "resources/geometry_system.hpp"
 #include "resources/material_system.hpp"
 #include "resources/resource_types.hpp"
 #include "resources/shader_system.hpp"
@@ -199,10 +200,13 @@ bool vulkan_backend_initialize(arena *arena, u64 *vulkan_backend_memory_requirem
         return false;
     }
     // NOTE: I do think this is a hack but oh well
-    vk_context->default_shader = static_cast<shader *>(dallocate(arena, sizeof(shader), MEM_TAG_RENDERER));
-    if (!shader_system_create_default_shader(vk_context->default_shader, &vk_context->default_shader_id))
+    vk_context->default_material_shader = static_cast<shader *>(dallocate(arena, sizeof(shader), MEM_TAG_RENDERER));
+    vk_context->default_skybox_shader   = static_cast<shader *>(dallocate(arena, sizeof(shader), MEM_TAG_RENDERER));
+    if (!shader_system_create_default_shaders(vk_context->default_material_shader,
+                                              &vk_context->default_material_shader_id,
+                                              vk_context->default_skybox_shader, &vk_context->default_skybox_shader_id))
     {
-        DERROR("Vulkan default shader creation failed.");
+        DERROR("Vulkan default_material shader creation failed.");
         return false;
     }
     if (!vulkan_create_framebuffers(vk_context))
@@ -301,8 +305,8 @@ bool vulkan_update_materials_descriptor_set(vulkan_shader *shader, material *mat
 
     DTRACE("Updataing descriptor_set_index: %d", descriptor_set_index);
 
-    u32                   image_count    = 4;
-    VkDescriptorImageInfo image_infos[4] = {};
+    u32                   image_count    = 3;
+    VkDescriptorImageInfo image_infos[3] = {};
 
     // INFO: in case
     // I dont get the default material in the start because the default material might not be initialized yet.
@@ -384,17 +388,8 @@ bool vulkan_update_materials_descriptor_set(vulkan_shader *shader, material *mat
         image_infos[2].imageView   = tex_state->image.view;
         image_infos[2].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
     }
-    // skybox
-    {
-        texture        *skybox    = texture_system_get_texture(DEFAULT_CUBEMAP_TEXTURE_HANDLE);
-        vulkan_texture *tex_state = static_cast<vulkan_texture *>(skybox->vulkan_texture_state);
 
-        image_infos[3].sampler     = tex_state->sampler;
-        image_infos[3].imageView   = tex_state->image.view;
-        image_infos[3].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-    }
-
-    VkWriteDescriptorSet desc_writes[4]{};
+    VkWriteDescriptorSet desc_writes[3]{};
     for (u32 i = 0; i < image_count; i++)
     {
         desc_writes[i].sType            = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
@@ -451,8 +446,9 @@ bool vulkan_create_material(material *in_mat)
     static u32 id       = 0;
     in_mat->internal_id = id;
     id++;
-    vulkan_shader *shader = static_cast<vulkan_shader *>(vk_context->default_shader->internal_vulkan_shader_state);
-    bool           result = vulkan_update_materials_descriptor_set(shader, in_mat);
+    vulkan_shader *shader =
+        static_cast<vulkan_shader *>(vk_context->default_material_shader->internal_vulkan_shader_state);
+    bool result = vulkan_update_materials_descriptor_set(shader, in_mat);
 
     DASSERT(result == true);
 
@@ -814,9 +810,6 @@ bool vulkan_destroy_shader(shader *shader)
 
     vkDestroyPipeline(device, vk_shader->pipeline.handle, allocator);
 
-    // NOTE: should the shaders be manging renderpasses??
-    vkDestroyRenderPass(device, vk_context->vk_renderpass, allocator);
-
     vkDestroyPipelineLayout(device, vk_shader->pipeline.layout, allocator);
 
     return true;
@@ -831,12 +824,13 @@ bool vulkan_create_texture(texture *in_texture, u8 *pixels)
         static_cast<vulkan_texture *>(dallocate(arena, sizeof(vulkan_texture), MEM_TAG_RENDERER));
     vulkan_texture *vk_texture = static_cast<vulkan_texture *>(in_texture->vulkan_texture_state);
 
-    u32 tex_width    = in_texture->width;
-    u32 tex_height   = in_texture->height;
-    u32 tex_channel  = 4;
-    u64 texture_size = INVALID_ID_64;
-    //HACK: this should be more explicit. For now we know that we set the value of texture size only when we uplaod a cubemap to the gpu.
-    bool is_cube_map = false;
+    u32 tex_width             = in_texture->width;
+    u32 tex_height            = in_texture->height;
+    u32 tex_channel           = 4;
+    u64 texture_size          = INVALID_ID_64;
+    // HACK: this should be more explicit. For now we know that we set the value of texture size only when we uplaod a
+    // cubemap to the gpu.
+    bool          is_cube_map = false;
     vulkan_buffer staging_buffer{};
     vulkan_image *image = &vk_texture->image;
     image->width        = tex_width;
@@ -844,16 +838,16 @@ bool vulkan_create_texture(texture *in_texture, u8 *pixels)
 
     if (in_texture->texure_size != INVALID_ID_64)
     {
-        texture_size = in_texture->texure_size;
-        image->view_type = VK_IMAGE_VIEW_TYPE_CUBE;
+        texture_size            = in_texture->texure_size;
+        image->view_type        = VK_IMAGE_VIEW_TYPE_CUBE;
         image->img_create_flags = VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
-        is_cube_map = true;
+        is_cube_map             = true;
     }
     else
     {
-        image->view_type = VK_IMAGE_VIEW_TYPE_2D;
+        image->view_type        = VK_IMAGE_VIEW_TYPE_2D;
         image->img_create_flags = 0;
-        texture_size = tex_width * tex_height * 4;
+        texture_size            = tex_width * tex_height * 4;
     }
 
     // INFO: use the correct colorspace for the image, if the texture is a default texture then it should not be mapping
@@ -893,13 +887,13 @@ bool vulkan_create_texture(texture *in_texture, u8 *pixels)
                                    VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
     vulkan_copy_buffer_data_to_image(vk_context, &vk_context->transfer_command_pool,
-                                    &vk_context->vk_device.transfer_queue, &staging_buffer, image);
+                                     &vk_context->vk_device.transfer_queue, &staging_buffer, image);
 
     vulkan_generate_mipmaps(vk_context, image);
 
     vulkan_destroy_buffer(vk_context, &staging_buffer);
 
-    result = vulkan_create_image_view(vk_context, &image->handle, &image->view,image->view_type, image->format,
+    result = vulkan_create_image_view(vk_context, &image->handle, &image->view, image->view_type, image->format,
                                       VK_IMAGE_ASPECT_COLOR_BIT, image->mip_levels);
     DASSERT(result == true);
 
@@ -1026,7 +1020,10 @@ void vulkan_backend_shutdown()
     dfree(vk_context->vk_swapchain.buffers, sizeof(VkFramebuffer) * vk_context->vk_swapchain.images_count,
           MEM_TAG_RENDERER);
 
-    vulkan_destroy_shader(vk_context->default_shader);
+    vulkan_destroy_shader(vk_context->default_material_shader);
+    vulkan_destroy_shader(vk_context->default_skybox_shader);
+
+    vkDestroyRenderPass(device, vk_context->vk_renderpass, allocator);
 
     for (u32 i = 0; i < vk_context->vk_swapchain.images_count; i++)
     {
@@ -1268,10 +1265,8 @@ bool vulkan_draw_geometries(render_data *data, VkCommandBuffer *curr_command_buf
 {
     ZoneScoped;
     // HACK: for now we are using the default shader cause thats the only shader we have
-    vulkan_shader *vk_shader = static_cast<vulkan_shader *>(vk_context->default_shader->internal_vulkan_shader_state);
-
-    vkResetCommandBuffer(*curr_command_buffer, 0);
-    vulkan_begin_command_buffer_single_use(vk_context, *curr_command_buffer);
+    vulkan_shader *vk_shader =
+        static_cast<vulkan_shader *>(vk_context->default_material_shader->internal_vulkan_shader_state);
 
     vulkan_begin_frame_renderpass(vk_context, *curr_command_buffer, &vk_shader->pipeline, curr_frame_index);
 
@@ -1315,7 +1310,37 @@ bool vulkan_draw_geometries(render_data *data, VkCommandBuffer *curr_command_buf
         vkCmdDrawIndexed(*curr_command_buffer, geo_data->indices_count, 1, index_offset, vertex_offset, 0);
     }
     vulkan_end_frame_renderpass(curr_command_buffer);
-    vulkan_end_command_buffer_single_use(vk_context, *curr_command_buffer, false);
+    return true;
+}
+
+bool vulkan_draw_skybox(render_data *data, VkCommandBuffer *curr_command_buffer, u32 curr_frame_index)
+{
+    // BIG HACK
+    // HACK:
+    vulkan_shader *shader =
+        static_cast<vulkan_shader *>(vk_context->default_skybox_shader->internal_vulkan_shader_state);
+    DASSERT(shader);
+
+    u64 scene_aligned = shader->per_frame_uniforms_size[0];
+    u8 *addr = static_cast<u8 *>(shader->per_frame_mapped_data) + ((shader->per_frame_stride * curr_frame_index));
+    dcopy_memory(addr, &data->scene_ubo, scene_aligned);
+    //
+
+    u32 aligned_global     = align_upto(sizeof(scene_global_uniform_buffer_object), shader->min_ubo_alignment);
+    u32 dynamic_offsets[1] = {curr_frame_index * shader->per_frame_stride};
+
+    vkCmdBindDescriptorSets(*curr_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, shader->pipeline.layout, 0, 1,
+                            &shader->per_frame_descriptor_set, 1, dynamic_offsets);
+
+    VkBuffer     vertex_buffers[] = {vk_context->vertex_buffer.handle};
+    VkDeviceSize offsets[]        = {0};
+
+    vkCmdBindVertexBuffers(*curr_command_buffer, 0, 1, vertex_buffers, offsets);
+    vkCmdBindIndexBuffer(*curr_command_buffer, vk_context->index_buffer.handle, 0, VK_INDEX_TYPE_UINT32);
+
+    geometry* cube_geo = geometry_system_get_default_geometry();
+
+
     return true;
 }
 
@@ -1368,12 +1393,22 @@ bool vulkan_draw_frame(render_data *render_data)
     VkCommandBuffer &curr_command_buffer = vk_context->command_buffers[current_frame];
 
     // HACK:
-    vulkan_shader *def_shader = static_cast<vulkan_shader *>(vk_context->default_shader->internal_vulkan_shader_state);
-    vulkan_update_global_uniform_buffer(def_shader, &render_data->scene_ubo, &render_data->light_ubo, current_frame);
-    vulkan_update_global_descriptor_sets(def_shader, &render_data->scene_ubo, &render_data->light_ubo);
-    //
+    // draw the skybox
+    vkResetCommandBuffer(curr_command_buffer, 0);
+    vulkan_begin_command_buffer_single_use(vk_context, curr_command_buffer);
+
+    vulkan_draw_skybox(render_data, current_frame);
+
+    vulkan_shader *material_shader =
+        static_cast<vulkan_shader *>(vk_context->default_material_shader->internal_vulkan_shader_state);
+    vulkan_update_global_uniform_buffer(material_shader, &render_data->scene_ubo, &render_data->light_ubo,
+                                        current_frame);
+    vulkan_update_global_descriptor_sets(material_shader, &render_data->scene_ubo, &render_data->light_ubo);
 
     vulkan_draw_geometries(render_data, &curr_command_buffer, current_frame);
+
+    vulkan_end_command_buffer_single_use(vk_context, curr_command_buffer, false);
+    //
 
     VkSemaphore          wait_semaphores[]   = {vk_context->image_available_semaphores[current_frame]};
     VkSemaphore          signal_semaphores[] = {vk_context->render_finished_semaphores[current_frame]};

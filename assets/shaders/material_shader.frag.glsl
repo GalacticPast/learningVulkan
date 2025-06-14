@@ -14,7 +14,6 @@ layout(set = 0, binding = 1)uniform directional_light
 layout(set = 1, binding = 0) uniform sampler2D diffuse_map;
 layout(set = 1, binding = 1) uniform sampler2D normal_map;
 layout(set = 1, binding = 2) uniform sampler2D specular_map;
-layout(set = 1, binding = 3) uniform samplerCube skybox;
 
 // Data Transfer Object
 layout(location = 1) in struct dto {

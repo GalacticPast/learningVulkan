@@ -38,7 +38,7 @@ void run_tests()
     u32 num_arenas      = 1;
     arena_allocate_arena_pool(arena_pool_size, num_arenas);
 
-    arena* arena = arena_get_arena();
+    arena *arena = arena_get_arena();
     DASSERT(arena);
 
     test_manager_initialize(arena, &test_manager_mem_requirements, nullptr);
@@ -136,17 +136,17 @@ int main()
         mat_name.clear();
 
         geos[1]            = geometry_system_get_geometry(red);
-        geos[1]->ubo.model = mat4_translation({2,0,0});
+        geos[1]->ubo.model = mat4_translation({2, 0, 0});
 
         geos[2]            = geometry_system_get_geometry(green);
-        geos[2]->ubo.model = mat4_translation({0,2,0});
+        geos[2]->ubo.model = mat4_translation({0, 2, 0});
 
         geos[3]            = geometry_system_get_geometry(blue);
-        geos[3]->ubo.model = mat4_translation({0,0,2});
+        geos[3]->ubo.model = mat4_translation({0, 0, 2});
 
         geometry_config plane_config =
             geometry_system_generate_plane_config(10, 10, 1, 1, 1, 1, "its a plane", DEFAULT_LIGHT_MATERIAL_HANDLE);
-        u64 id3             = geometry_system_create_geometry(&plane_config, false);
+        u64 id3 = geometry_system_create_geometry(&plane_config, false);
 
         geos[4]             = geometry_system_get_geometry(id3);
         geos[4]->ubo.model *= mat4_scale(math::vec3(100, 100, 100));
@@ -178,8 +178,8 @@ int main()
 
         update_camera(&triangle.scene_ubo, &triangle.light_ubo, frame_elapsed_time);
 
+        // HACK: fix this hack
         application_run(&triangle);
-
 
         // Figure out how long the frame took and, if below
         f64 frame_end_time    = platform_get_absolute_time();

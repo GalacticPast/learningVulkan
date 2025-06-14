@@ -29,7 +29,7 @@ bool file_open(dstring file_name, std::fstream *out_file_handle, bool for_writin
 
     if (!out_file_handle->is_open())
     {
-        DFATAL("Failed to open file %s", file_name);
+        DFATAL("Failed to open file %s", file_name.c_str());
         return false;
     }
     return true;

@@ -179,8 +179,11 @@ struct vulkan_context
     vulkan_buffer vertex_buffer;
     vulkan_buffer index_buffer;
 
-    u64     default_shader_id = INVALID_ID_64;
-    shader *default_shader;
+    u64     default_material_shader_id = INVALID_ID_64;
+    shader *default_material_shader;
+
+    u64     default_skybox_shader_id = INVALID_ID_64;
+    shader *default_skybox_shader;
 
     VkCommandPool graphics_command_pool;
     VkCommandPool transfer_command_pool;

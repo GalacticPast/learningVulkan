@@ -16,7 +16,8 @@ struct shader_system_state
     arena             *arena = nullptr;
     darray<dstring>    loaded_shaders;
     dhashtable<shader> hashtable;
-    u64                default_shader_id = INVALID_ID_64;
+    u64                default_material_shader_id = INVALID_ID_64;
+    u64                default_skybox_shader_id   = INVALID_ID_64;
 };
 static shader_system_state *shader_sys_state_ptr = nullptr;
 
@@ -136,7 +137,7 @@ static void shader_parse_configuration_file(dstring conf_file_name, shader_confi
     const char *prefix = "../assets/shaders/";
     string_copy_format(full_file_path.string, "%s%s", 0, prefix, conf_file_name.c_str());
 
-    arena* arena = shader_sys_state_ptr->arena;
+    arena *arena = shader_sys_state_ptr->arena;
 
     std::fstream file;
     bool         result = file_open(full_file_path, &file, false, false);
@@ -324,7 +325,7 @@ static void shader_parse_configuration_file(dstring conf_file_name, shader_confi
             darray<dstring> list;
             list.c_init(arena);
 
-            const char     *str = go_to_colon(line.c_str());
+            const char *str = go_to_colon(line.c_str());
             DASSERT(str);
 
             dstring string = str;
@@ -342,7 +343,7 @@ static void shader_parse_configuration_file(dstring conf_file_name, shader_confi
             darray<dstring> list;
             list.c_init(arena);
 
-            const char     *str = go_to_colon(line.c_str());
+            const char *str = go_to_colon(line.c_str());
             DASSERT(str);
 
             dstring string = str;
@@ -375,25 +376,35 @@ static void shader_parse_configuration_file(dstring conf_file_name, shader_confi
     shader_system_calculate_offsets(out_config);
 }
 
-bool shader_system_create_default_shader(shader *out_shader, u64 *out_shader_id)
+bool shader_system_create_default_shaders(shader *material_shader, u64 *material_shader_id, shader *skybox_shader,
+                                          u64 *skybox_shader_id)
 {
-    DASSERT_MSG(out_shader, "out shader is nullptr.");
-    DASSERT_MSG(out_shader_id, "out_shader_id is nullptr");
-    arena* arena = shader_sys_state_ptr->arena;
+    DASSERT_MSG(material_shader, "out shader is nullptr.");
+    DASSERT_MSG(material_shader_id, "out_shader_id is nullptr");
+    arena *arena = shader_sys_state_ptr->arena;
 
-    shader_config default_shader_conf{};
-    default_shader_conf.init(arena);
+    shader_config material_shader_conf{};
+    material_shader_conf.init(arena);
 
-    dstring conf_file = "default_shader.conf";
+    dstring conf_file = "material_shader.conf";
+    shader_parse_configuration_file(conf_file, &material_shader_conf);
 
-    shader_parse_configuration_file(conf_file, &default_shader_conf);
+    *material_shader_id                              = _create_shader(&material_shader_conf, material_shader);
+    shader_sys_state_ptr->default_material_shader_id = *material_shader_id;
 
-    *out_shader_id                          = _create_shader(&default_shader_conf, out_shader);
-    shader_sys_state_ptr->default_shader_id = *out_shader_id;
+    shader_config skybox_shader_conf{};
+    skybox_shader_conf.init(arena);
+
+    conf_file.clear();
+    conf_file = "skybox_shader.conf";
+    shader_parse_configuration_file(conf_file, &skybox_shader_conf);
+
+    *skybox_shader_id                              = _create_shader(&skybox_shader_conf, skybox_shader);
+    shader_sys_state_ptr->default_skybox_shader_id = *skybox_shader_id;
+
     return true;
 }
 
-// TODO: finish this
 bool shader_system_create_shader(dstring *shader_config_file_path, shader *out_shader, u64 *out_shader_id)
 {
     if (!shader_config_file_path || !out_shader || !out_shader_id)
@@ -410,13 +421,24 @@ bool shader_system_create_shader(dstring *shader_config_file_path, shader *out_s
     return true;
 }
 
-shader *shader_system_get_default_shader()
+shader *shader_system_get_default_material_shader()
 {
     DASSERT(shader_sys_state_ptr);
-    shader *out_shader = shader_sys_state_ptr->hashtable.find(shader_sys_state_ptr->default_shader_id);
+    shader *out_shader = shader_sys_state_ptr->hashtable.find(shader_sys_state_ptr->default_material_shader_id);
     if (!out_shader)
     {
-        DFATAL("Default shader not found but have default_id %llu", shader_sys_state_ptr->default_shader_id);
+        DFATAL("Default shader not found but have default_material_id %llu", shader_sys_state_ptr->default_material_shader_id);
+        return nullptr;
+    }
+    return out_shader;
+}
+shader *shader_system_get_default_skybox_shader()
+{
+    DASSERT(shader_sys_state_ptr);
+    shader *out_shader = shader_sys_state_ptr->hashtable.find(shader_sys_state_ptr->default_skybox_shader_id);
+    if (!out_shader)
+    {
+        DFATAL("Default shader not found but have default_skybox_id %llu", shader_sys_state_ptr->default_skybox_shader_id);
         return nullptr;
     }
     return out_shader;
