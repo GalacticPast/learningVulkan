@@ -279,27 +279,27 @@ bool texture_system_load_cubemap(dstring *conf_file_base_name)
 
         if (string_compare(identifier.c_str(), "right"))
         {
-            extract_identifier(str, cubemap_faces[0]);
+            extract_identifier(str, cubemap_faces[3]);
         }
         else if (string_compare(identifier.c_str(), "left"))
         {
-            extract_identifier(str, cubemap_faces[1]);
+            extract_identifier(str, cubemap_faces[2]);
         }
         else if (string_compare(identifier.c_str(), "top"))
         {
-            extract_identifier(str, cubemap_faces[2]);
+            extract_identifier(str, cubemap_faces[5]);
         }
         else if (string_compare(identifier.c_str(), "bottom"))
         {
-            extract_identifier(str, cubemap_faces[3]);
+            extract_identifier(str, cubemap_faces[4]);
         }
         else if (string_compare(identifier.c_str(), "front"))
         {
-            extract_identifier(str, cubemap_faces[4]);
+            extract_identifier(str, cubemap_faces[1]);
         }
         else if (string_compare(identifier.c_str(), "back"))
         {
-            extract_identifier(str, cubemap_faces[5]);
+            extract_identifier(str, cubemap_faces[0]);
         }
         else
         {

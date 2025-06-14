@@ -1212,6 +1212,7 @@ void vulkan_update_global_uniform_buffer(vulkan_shader *material_shader,vulkan_s
 
     addr = static_cast<u8 *>(skybox_shader->per_frame_mapped_data) + ((skybox_shader->per_frame_stride * current_frame_index));
     scene_aligned -= sizeof(math::vec4);
+
     dcopy_memory(addr, scene_ubo, scene_aligned);
 
 }
