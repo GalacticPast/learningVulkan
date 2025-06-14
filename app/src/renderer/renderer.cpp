@@ -80,3 +80,17 @@ bool renderer_resize()
         return false;
     }
 }
+
+bool renderer_update_global_data(shader* shader, u32 offset, u32 size, void* data)
+{
+    bool result = vulkan_update_global_uniform_buffer(shader, offset,size,data);
+    DASSERT(result);
+    return result;
+}
+
+bool renderer_update_globals(shader* shader)
+{
+    bool result = vulkan_update_global_descriptor_sets(shader);
+    DASSERT(result);
+    return result;
+}

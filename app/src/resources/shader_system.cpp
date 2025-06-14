@@ -6,6 +6,7 @@
 #include "core/dstring.hpp"
 #include "defines.hpp"
 #include "math/dmath_types.hpp"
+#include "renderer/renderer.hpp"
 #include "renderer/vulkan/vulkan_backend.hpp"
 #include "resources/resource_types.hpp"
 
@@ -13,11 +14,14 @@
 
 struct shader_system_state
 {
-    arena             *arena = nullptr;
-    darray<dstring>    loaded_shaders;
-    dhashtable<shader> hashtable;
-    u64                default_material_shader_id = INVALID_ID_64;
-    u64                default_skybox_shader_id   = INVALID_ID_64;
+    arena                    *arena = nullptr;
+    darray<dstring>           loaded_shaders;
+    dhashtable<shader>        shaders;
+    dhashtable<shader_config> shader_configs;
+
+    u64 default_material_shader_id = INVALID_ID_64;
+    u64 default_skybox_shader_id   = INVALID_ID_64;
+    u64 bound_shader_id            = INVALID_ID_64;
 };
 static shader_system_state *shader_sys_state_ptr = nullptr;
 
@@ -38,7 +42,8 @@ bool shader_system_startup(arena *arena, u64 *shader_system_mem_requirements, vo
     shader_sys_state_ptr        = static_cast<shader_system_state *>(state);
     shader_sys_state_ptr->arena = arena;
 
-    shader_sys_state_ptr->hashtable.c_init(arena, MAX_SHADER_COUNT);
+    shader_sys_state_ptr->shaders.c_init(arena, MAX_SHADER_COUNT);
+    shader_sys_state_ptr->shader_configs.c_init(arena, MAX_SHADER_COUNT);
     shader_sys_state_ptr->loaded_shaders.reserve(arena, MAX_SHADER_COUNT);
 
     return true;
@@ -57,13 +62,16 @@ bool shader_system_shutdown(void *state)
                "the correct ptr");
     }
     // TODO: release the shaders
-    shader_sys_state_ptr->hashtable.clear();
-    shader_sys_state_ptr->hashtable.~dhashtable();
+    shader_sys_state_ptr->shaders.clear();
+    shader_sys_state_ptr->shaders.~dhashtable();
+    shader_sys_state_ptr->shader_configs.clear();
+    shader_sys_state_ptr->shader_configs.~dhashtable();
     shader_sys_state_ptr->loaded_shaders.~darray();
     shader_sys_state_ptr = nullptr;
     return true;
 }
-static bool _create_shader(shader_config *config, shader *out_shader)
+
+static u64 _create_shader(shader_config *config, shader *out_shader, shader_type type)
 {
     if (!config || !out_shader)
     {
@@ -74,13 +82,24 @@ static bool _create_shader(shader_config *config, shader *out_shader)
     bool result = vulkan_initialize_shader(config, out_shader);
     DASSERT(result);
 
-    u64 id = shader_sys_state_ptr->hashtable.insert(INVALID_ID_64, *out_shader);
+    out_shader->type = type;
+    u64 id = shader_sys_state_ptr->shaders.insert(INVALID_ID_64, *out_shader);
     DASSERT(id != INVALID_ID_64);
 
-    out_shader->id = id;
+    u64 config_id  = shader_sys_state_ptr->shader_configs.insert(id, *config);
 
+    return id;
+}
+
+bool shader_system_bind_shader(u64 shader_id)
+{
+    DASSERT(shader_id != INVALID_ID_64);
+    DASSERT(shader_sys_state_ptr);
+    // TODO: check if the shader_id is valid or not.
+    shader_sys_state_ptr->bound_shader_id = shader_id;
     return true;
 }
+
 static void shader_system_calculate_offsets(shader_config *out_config)
 {
     DASSERT(out_config);
@@ -390,7 +409,7 @@ bool shader_system_create_default_shaders(shader *material_shader, u64 *material
     dstring conf_file = "material_shader.conf";
     shader_parse_configuration_file(conf_file, &material_shader_conf);
 
-    *material_shader_id                              = _create_shader(&material_shader_conf, material_shader);
+    *material_shader_id = _create_shader(&material_shader_conf, material_shader, SHADER_TYPE_MATERIAL);
     shader_sys_state_ptr->default_material_shader_id = *material_shader_id;
 
     shader_config skybox_shader_conf{};
@@ -401,13 +420,13 @@ bool shader_system_create_default_shaders(shader *material_shader, u64 *material
     conf_file = "skybox_shader.conf";
     shader_parse_configuration_file(conf_file, &skybox_shader_conf);
 
-    *skybox_shader_id                              = _create_shader(&skybox_shader_conf, skybox_shader);
+    *skybox_shader_id = _create_shader(&skybox_shader_conf, skybox_shader, SHADER_TYPE_SKYBOX);
     shader_sys_state_ptr->default_skybox_shader_id = *skybox_shader_id;
 
     return true;
 }
 
-//TODO:
+// TODO:
 bool shader_system_create_shader(dstring *shader_config_file_path, shader *out_shader, u64 *out_shader_id)
 {
     if (!shader_config_file_path || !out_shader || !out_shader_id)
@@ -424,27 +443,15 @@ bool shader_system_create_shader(dstring *shader_config_file_path, shader *out_s
     return true;
 }
 
-shader *shader_system_get_default_material_shader()
+u64 shader_system_get_default_material_shader_id()
 {
     DASSERT(shader_sys_state_ptr);
-    shader *out_shader = shader_sys_state_ptr->hashtable.find(shader_sys_state_ptr->default_material_shader_id);
-    if (!out_shader)
-    {
-        DFATAL("Default shader not found but have default_material_id %llu", shader_sys_state_ptr->default_material_shader_id);
-        return nullptr;
-    }
-    return out_shader;
+    return shader_sys_state_ptr->default_material_shader_id;
 }
-shader *shader_system_get_default_skybox_shader()
+u64 shader_system_get_default_skybox_shader_id()
 {
     DASSERT(shader_sys_state_ptr);
-    shader *out_shader = shader_sys_state_ptr->hashtable.find(shader_sys_state_ptr->default_skybox_shader_id);
-    if (!out_shader)
-    {
-        DFATAL("Default shader not found but have default_skybox_id %llu", shader_sys_state_ptr->default_skybox_shader_id);
-        return nullptr;
-    }
-    return out_shader;
+    return shader_sys_state_ptr->default_skybox_shader_id;
 }
 
 bool shader_use(u64 shader_id)
@@ -525,11 +532,55 @@ static void shader_system_add_uniform(shader_config *out_config, dstring *name, 
     out_config->uniforms.push_back(conf);
 }
 
-// HACK: this should be abstracted away to support more shaders
-bool shader_system_update_per_frame(shader *shader, scene_global_uniform_buffer_object *scene_global,
+bool shader_system_update_per_frame(scene_global_uniform_buffer_object *scene_global,
                                     light_global_uniform_buffer_object *light_global)
 {
-    return false;
+    u64 bound_shader_id = shader_sys_state_ptr->bound_shader_id;
+    DASSERT_MSG(bound_shader_id != INVALID_ID_64, "Shader bound id is invalid. Call shader bind before updating.");
+
+    shader *shader = shader_sys_state_ptr->shaders.find(bound_shader_id);
+    DASSERT(shader);
+    shader_config *config = shader_sys_state_ptr->shader_configs.find(bound_shader_id);
+    DASSERT(config);
+
+    if (shader->type == SHADER_TYPE_MATERIAL)
+    {
+        if (!scene_global)
+        {
+            DFATAL("scene_global_uniform_buffer_object was nullptr.Material shader requires it.");
+            return false;
+        }
+        if (!light_global)
+        {
+            DFATAL("light_global_uniform_buffer_object was nullptr.Material shader requires it.");
+            return false;
+        }
+        u32  scene_offset = 0;
+        bool scene        = renderer_update_global_data(shader, 0, sizeof(scene_global_uniform_buffer_object),scene_global);
+        DASSERT(scene);
+
+        u32  light_offset = config->per_frame_uniform_offsets[0];
+        bool light        = renderer_update_global_data(shader,light_offset,sizeof(light_global_uniform_buffer_object) ,light_global);
+        DASSERT(light);
+
+
+    }
+    else if (shader->type == SHADER_TYPE_SKYBOX)
+    {
+        if (!scene_global)
+        {
+            DFATAL("scene_global_uniform_buffer_object was nullptr. Skybox_shader requires it");
+            return false;
+        }
+        u32  scene_offset = config->per_frame_uniform_offsets[0];
+        bool scene        = renderer_update_global_data(shader, 0,sizeof(scene_global_uniform_buffer_object), scene_global);
+        DASSERT(scene);
+    }
+
+    bool result = renderer_update_globals(shader);
+    DASSERT(result);
+
+    return result;
 }
 
 // HACK: this should be abstracted away to support more shaders
@@ -538,20 +589,6 @@ bool shader_system_update_per_group(shader *shader, u64 offset, void *data)
     return true;
 }
 bool shader_system_update_per_object(shader *shader, u64 offset, void *data)
-{
-    return true;
-}
-// might not need this
-bool shader_system_bind_per_frame(shader *shader, u64 offset)
-{
-
-    return true;
-}
-bool shader_system_bind_per_group(shader *shader, u64 offset)
-{
-    return true;
-}
-bool shader_system_bind_per_object(shader *shader, u64 offset)
 {
     return true;
 }

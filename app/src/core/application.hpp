@@ -66,6 +66,3 @@ struct application_state
 
 bool application_initialize(application_state *out_state, application_config *config);
 void application_shutdown();
-
-// TODO: this a hack
-void application_run(render_data *data);

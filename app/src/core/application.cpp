@@ -166,11 +166,6 @@ void application_shutdown()
     DINFO("Appplication sucessfully shutdown.");
 }
 
-void application_run(render_data *data)
-{
-    renderer_draw_frame(data);
-}
-
 bool event_callback_quit(event_context context, void *data)
 {
     if (app_state_ptr)

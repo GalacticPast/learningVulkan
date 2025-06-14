@@ -13,9 +13,11 @@
 #include "math/dmath_types.hpp"
 #include "platform/platform.hpp"
 
+#include "renderer/renderer.hpp"
 #include "resources/geometry_system.hpp"
 #include "resources/material_system.hpp"
 #include "resources/resource_types.hpp"
+#include "resources/shader_system.hpp"
 
 #include "../tests/containers/darray_test.hpp"
 #include "../tests/containers/dhashtable_test.hpp"
@@ -148,9 +150,9 @@ int main()
             geometry_system_generate_plane_config(10, 10, 1, 1, 1, 1, "its a plane", DEFAULT_LIGHT_MATERIAL_HANDLE);
         u64 id3 = geometry_system_create_geometry(&plane_config, false);
 
-        //geos[4]             = geometry_system_get_geometry(id3);
-        //geos[4]->ubo.model *= mat4_scale(math::vec3(100, 100, 100));
-        //geos[4]->ubo.model *= mat4_translation(math::vec3(0, -2, 0));
+        // geos[4]             = geometry_system_get_geometry(id3);
+        // geos[4]->ubo.model *= mat4_scale(math::vec3(100, 100, 100));
+        // geos[4]->ubo.model *= mat4_translation(math::vec3(0, -2, 0));
 
         geometry_count = 4;
     }
@@ -171,6 +173,9 @@ int main()
     u32 index = 0;
     f32 z     = 0.1f;
 
+    u64 def_material_shader = shader_system_get_default_material_shader_id();
+    u64 def_skybox_shader   = shader_system_get_default_skybox_shader_id();
+
     while (app_state.is_running)
     {
         ZoneScoped;
@@ -178,8 +183,13 @@ int main()
 
         update_camera(&triangle.scene_ubo, &triangle.light_ubo, frame_elapsed_time);
 
-        // HACK: fix this hack
-        application_run(&triangle);
+        shader_system_bind_shader(def_material_shader);
+        shader_system_update_per_frame(&triangle.scene_ubo, &triangle.light_ubo);
+
+        shader_system_bind_shader(def_skybox_shader);
+        shader_system_update_per_frame(&triangle.scene_ubo, nullptr);
+
+        renderer_draw_frame(&triangle);
 
         // Figure out how long the frame took and, if below
         f64 frame_end_time    = platform_get_absolute_time();

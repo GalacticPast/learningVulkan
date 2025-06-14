@@ -159,9 +159,9 @@ struct vulkan_shader
     u32                                  total_descriptors_allocated = INVALID_ID;
     darray<VkDescriptorSet>              per_group_descriptor_sets;
 
-    renderpass_types type;
+    renderpass_types              type;
     shader_pipeline_configuration pipeline_configuration;
-    vulkan_pipeline  pipeline;
+    vulkan_pipeline               pipeline;
 };
 
 struct vulkan_context

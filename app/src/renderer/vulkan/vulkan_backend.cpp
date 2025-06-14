@@ -445,26 +445,34 @@ bool vulkan_update_materials_descriptor_set(vulkan_shader *shader, material *mat
     return true;
 }
 
-bool vulkan_update_global_descriptor_sets(vulkan_shader *material_shader, vulkan_shader *skybox_shader,
-                                          scene_global_uniform_buffer_object *scene_global,
-                                          light_global_uniform_buffer_object *light_global)
+bool vulkan_update_global_descriptor_sets(shader *shader)
 {
     ZoneScoped;
+    DASSERT(shader);
 
-    VkDescriptorBufferInfo desc_buffer_infos[2]{};
-    VkWriteDescriptorSet   desc_writes[2]{};
-    VkDeviceSize ranges[2]  = {sizeof(scene_global_uniform_buffer_object), sizeof(light_global_uniform_buffer_object)};
+    vulkan_shader* vk_shader = static_cast<vulkan_shader *>(shader->internal_vulkan_shader_state);
+    DASSERT(vk_shader);
+    u32 size =  vk_shader->per_frame_uniforms_size.size();
+
+    VkDescriptorBufferInfo desc_buffer_infos[16]{};
+    VkWriteDescriptorSet   desc_writes[16]{};
+    //HACK:
+    VkDeviceSize ranges[16]  = {sizeof(scene_global_uniform_buffer_object), sizeof(light_global_uniform_buffer_object)};
+
+    DASSERT_MSG(size < 16, "Size is greater than 16 which was our previous assumtion");
+
     u32          curr_frame = vk_context->current_frame_index;
 
-    for (u32 i = 0; i < 2; i++)
+
+    for (u32 i = 0; i < size; i++)
     {
-        desc_buffer_infos[i].buffer = material_shader->per_frame_uniform_buffer.handle;
+        desc_buffer_infos[i].buffer = vk_shader->per_frame_uniform_buffer.handle;
         desc_buffer_infos[i].offset = 0;
         desc_buffer_infos[i].range  = ranges[i];
 
         desc_writes[i].sType            = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
         desc_writes[i].pNext            = 0;
-        desc_writes[i].dstSet           = material_shader->per_frame_descriptor_set;
+        desc_writes[i].dstSet           = vk_shader->per_frame_descriptor_set;
         desc_writes[i].dstBinding       = i;
         desc_writes[i].dstArrayElement  = 0;
         desc_writes[i].descriptorCount  = 1;
@@ -473,12 +481,7 @@ bool vulkan_update_global_descriptor_sets(vulkan_shader *material_shader, vulkan
         desc_writes[i].pImageInfo       = 0;
         desc_writes[i].pTexelBufferView = 0;
     }
-    vkUpdateDescriptorSets(vk_context->vk_device.logical, 2, desc_writes, 0, nullptr);
-
-    desc_buffer_infos[0].buffer = skybox_shader->per_frame_uniform_buffer.handle;
-    desc_writes[0].dstSet       = skybox_shader->per_frame_descriptor_set;
-    desc_buffer_infos[0].range  = ranges[0] - sizeof(math::vec4);
-    vkUpdateDescriptorSets(vk_context->vk_device.logical, 1, desc_writes, 0, nullptr);
+    vkUpdateDescriptorSets(vk_context->vk_device.logical, size, desc_writes, 0, nullptr);
 
     return true;
 }
@@ -1211,24 +1214,17 @@ VkBool32 vulkan_dbg_msg_rprt_callback(VkDebugUtilsMessageSeverityFlagBitsEXT    
     return VK_FALSE;
 }
 
-void vulkan_update_global_uniform_buffer(vulkan_shader *material_shader, vulkan_shader *skybox_shader,
-                                         scene_global_uniform_buffer_object *scene_ubo,
-                                         light_global_uniform_buffer_object *light_ubo, u32 current_frame_index)
+bool vulkan_update_global_uniform_buffer(shader *shader, u32 offset, u32 size, void *data)
 {
-    u64 scene_aligned = material_shader->per_frame_uniforms_size[0];
-    u8 *addr          = static_cast<u8 *>(material_shader->per_frame_mapped_data) +
-               ((material_shader->per_frame_stride * current_frame_index));
-    dcopy_memory(addr, scene_ubo, scene_aligned);
+    DASSERT(shader);
+    vulkan_shader *vk_shader = static_cast<vulkan_shader *>(shader->internal_vulkan_shader_state);
 
-    u32 size  = material_shader->per_frame_uniforms_size[1] - scene_aligned;
-    addr     += scene_aligned;
-    dcopy_memory(addr, light_ubo, size);
+    //HACK: make it better
+    offset = align_upto(offset, vk_shader->min_ubo_alignment);
 
-    addr = static_cast<u8 *>(skybox_shader->per_frame_mapped_data) +
-           ((skybox_shader->per_frame_stride * current_frame_index));
-    scene_aligned -= sizeof(math::vec4);
-
-    dcopy_memory(addr, scene_ubo, scene_aligned);
+    u8 *addr = static_cast<u8 *>(vk_shader->per_frame_mapped_data) + (vk_shader->per_frame_stride * vk_context->current_frame_index + offset);
+    dcopy_memory(addr, data, size);
+    return true;
 }
 
 u32 vulkan_calculate_vertex_offset(vulkan_context *vk_context, u32 geometry_id)
@@ -1247,6 +1243,7 @@ u32 vulkan_calculate_vertex_offset(vulkan_context *vk_context, u32 geometry_id)
     u32 ans = vert_offset;
     return ans;
 }
+
 u32 vulkan_calculate_index_offset(vulkan_context *vk_context, u32 geometry_id)
 {
     // INFO: maybe make this a u64 ?
@@ -1482,10 +1479,6 @@ bool vulkan_draw_frame(render_data *render_data)
         static_cast<vulkan_shader *>(vk_context->default_material_shader->internal_vulkan_shader_state);
     vulkan_shader *skybox_shader =
         static_cast<vulkan_shader *>(vk_context->default_skybox_shader->internal_vulkan_shader_state);
-    vulkan_update_global_uniform_buffer(material_shader, skybox_shader, &render_data->scene_ubo,
-                                        &render_data->light_ubo, current_frame);
-    vulkan_update_global_descriptor_sets(material_shader, skybox_shader, &render_data->scene_ubo,
-                                         &render_data->light_ubo);
 
     vulkan_begin_frame_renderpass(vk_context, curr_command_buffer, current_frame);
 

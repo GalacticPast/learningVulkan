@@ -105,11 +105,17 @@ struct shader_config
     };
 };
 
+enum shader_type
+{
+    SHADER_TYPE_UNKNOWN  = 0,
+    SHADER_TYPE_MATERIAL = 1,
+    SHADER_TYPE_SKYBOX   = 2,
+};
+
 struct shader
 {
-    u64 id = INVALID_ID_64;
-
-    void *internal_vulkan_shader_state;
+    shader_type type;
+    void       *internal_vulkan_shader_state;
 };
 
 #define DEFAULT_ALBEDO_TEXTURE_HANDLE "DEFAULT_ALBDEO_TEXTURE"
