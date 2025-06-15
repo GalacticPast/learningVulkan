@@ -6,9 +6,8 @@ layout(location = 0) out vec4 out_color;
 //dir_light
 layout(set = 0, binding = 1)uniform directional_light
 {
-    vec3 direction;
     vec4 color;
-    vec3 camera_pos;
+    vec3 direction;
 }dir_light;
 
 layout(set = 1, binding = 0) uniform sampler2D diffuse_map;
@@ -23,6 +22,7 @@ layout(location = 1) in struct dto {
     vec3 normal;
     vec3 frag_position;
     vec4 tangent;
+    vec3 camera_pos;
 } in_dto;
 
 //TODO: transfer form cpu
@@ -85,7 +85,7 @@ void main()
 
     normal = normalize(TBN * local_normal);
 
-    vec3 view_direction = normalize(dir_light.camera_pos - in_dto.frag_position);
+    vec3 view_direction = normalize(in_dto.camera_pos - in_dto.frag_position);
 
     out_color = calculate_directional_light(view_direction, normal);
     out_color += calculate_point_light(view_direction, normal, one);

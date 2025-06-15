@@ -110,6 +110,7 @@ enum shader_type
     SHADER_TYPE_UNKNOWN  = 0,
     SHADER_TYPE_MATERIAL = 1,
     SHADER_TYPE_SKYBOX   = 2,
+    SHADER_TYPE_GRID     = 3,
 };
 
 struct shader

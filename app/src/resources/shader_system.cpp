@@ -21,6 +21,7 @@ struct shader_system_state
 
     u64 default_material_shader_id = INVALID_ID_64;
     u64 default_skybox_shader_id   = INVALID_ID_64;
+    u64 default_grid_shader_id     = INVALID_ID_64;
     u64 bound_shader_id            = INVALID_ID_64;
 };
 static shader_system_state *shader_sys_state_ptr = nullptr;
@@ -98,6 +99,14 @@ bool shader_system_bind_shader(u64 shader_id)
     // TODO: check if the shader_id is valid or not.
     shader_sys_state_ptr->bound_shader_id = shader_id;
     return true;
+}
+
+shader* shader_system_get_shader(u64 shader_id)
+{
+    DASSERT(shader_id != INVALID_ID_64);
+    DASSERT(shader_sys_state_ptr);
+    shader* shader = shader_sys_state_ptr->shaders.find(shader_id);
+    return shader;
 }
 
 static void shader_system_calculate_offsets(shader_config *out_config)
@@ -395,11 +404,8 @@ static void shader_parse_configuration_file(dstring conf_file_name, shader_confi
     shader_system_calculate_offsets(out_config);
 }
 
-bool shader_system_create_default_shaders(shader *material_shader, u64 *material_shader_id, shader *skybox_shader,
-                                          u64 *skybox_shader_id)
+bool shader_system_create_default_shaders(u64 *material_shader_id, u64 *skybox_shader_id, u64 *grid_shader_id)
 {
-    DASSERT_MSG(material_shader, "out shader is nullptr.");
-    DASSERT_MSG(material_shader_id, "out_shader_id is nullptr");
     arena *arena = shader_sys_state_ptr->arena;
 
     shader_config material_shader_conf{};
@@ -408,8 +414,8 @@ bool shader_system_create_default_shaders(shader *material_shader, u64 *material
 
     dstring conf_file = "material_shader.conf";
     shader_parse_configuration_file(conf_file, &material_shader_conf);
-
-    *material_shader_id = _create_shader(&material_shader_conf, material_shader, SHADER_TYPE_MATERIAL);
+    shader material_shader{};
+    *material_shader_id = _create_shader(&material_shader_conf, &material_shader, SHADER_TYPE_MATERIAL);
     shader_sys_state_ptr->default_material_shader_id = *material_shader_id;
 
     shader_config skybox_shader_conf{};
@@ -420,8 +426,21 @@ bool shader_system_create_default_shaders(shader *material_shader, u64 *material
     conf_file = "skybox_shader.conf";
     shader_parse_configuration_file(conf_file, &skybox_shader_conf);
 
-    *skybox_shader_id = _create_shader(&skybox_shader_conf, skybox_shader, SHADER_TYPE_SKYBOX);
+    shader skybox_shader{};
+    *skybox_shader_id = _create_shader(&skybox_shader_conf, &skybox_shader, SHADER_TYPE_SKYBOX);
     shader_sys_state_ptr->default_skybox_shader_id = *skybox_shader_id;
+
+    shader_config grid_shader_conf{};
+    grid_shader_conf.pipeline_configuration.mode = CULL_NONE_BIT;
+    grid_shader_conf.init(arena);
+
+    conf_file.clear();
+    conf_file = "grid_shader.conf";
+    shader_parse_configuration_file(conf_file, &grid_shader_conf);
+
+    shader grid_shader{};
+    *grid_shader_id                              = _create_shader(&grid_shader_conf, &grid_shader, SHADER_TYPE_GRID);
+    shader_sys_state_ptr->default_grid_shader_id = *grid_shader_id;
 
     return true;
 }
@@ -453,7 +472,11 @@ u64 shader_system_get_default_skybox_shader_id()
     DASSERT(shader_sys_state_ptr);
     return shader_sys_state_ptr->default_skybox_shader_id;
 }
-
+u64 shader_system_get_default_grid_shader_id()
+{
+    DASSERT(shader_sys_state_ptr);
+    return shader_sys_state_ptr->default_grid_shader_id;
+}
 bool shader_use(u64 shader_id)
 {
     return true;
@@ -564,18 +587,22 @@ bool shader_system_update_per_frame(scene_global_uniform_buffer_object *scene_gl
             renderer_update_global_data(shader, light_offset, sizeof(light_global_uniform_buffer_object), light_global);
         DASSERT(light);
     }
-    else if (shader->type == SHADER_TYPE_SKYBOX)
+    else if (shader->type == SHADER_TYPE_SKYBOX || shader->type == SHADER_TYPE_GRID)
     {
         if (!scene_global)
         {
             DFATAL("scene_global_uniform_buffer_object was nullptr. Skybox_shader requires it");
             return false;
         }
-        u32  scene_offset = config->per_frame_uniform_offsets[0];
+        u32 scene_offset = config->per_frame_uniform_offsets[0];
         // this is because we are not sending the ambient color to the skybox shader;
-        u32  size         = sizeof(scene_global_uniform_buffer_object) - sizeof(math::vec4);
-        bool scene = renderer_update_global_data(shader, 0, size, scene_global);
+        u32  size        = sizeof(scene_global_uniform_buffer_object) - sizeof(math::vec4);
+        bool scene       = renderer_update_global_data(shader, 0, size, scene_global);
         DASSERT(scene);
+    }
+    else
+    {
+        DERROR("Unknown shader type %d", shader->type);
     }
 
     bool result = renderer_update_globals(shader);

@@ -103,7 +103,6 @@ int main()
 
     light_ubo.direction  = {-0.578f, -0.578f, -0.578f};
     light_ubo.color      = {0.8f, 0.8f, 0.8f, 1.0f};
-    light_ubo.camera_pos = light_ubo.direction;
 
 #if false
     {
@@ -133,8 +132,10 @@ int main()
         u64 green = geometry_system_create_geometry(&green_light, false);
         u64 blue  = geometry_system_create_geometry(&blue_light, false);
 
-        geos    = static_cast<geometry **>(dallocate(app_state.system_arena, sizeof(geometry *) * 6, MEM_TAG_UNKNOWN));
-        geos[0] = geometry_system_get_default_geometry();
+        geos     = static_cast<geometry **>(dallocate(app_state.system_arena, sizeof(geometry *) * 6, MEM_TAG_UNKNOWN));
+        geos[0]  = geometry_system_get_default_geometry();
+        mat_name = "orange_lines_512.conf";
+        geos[0]->material = material_system_acquire_from_config_file(&mat_name);
         mat_name.clear();
 
         geos[1]            = geometry_system_get_geometry(red);
@@ -175,6 +176,7 @@ int main()
 
     u64 def_material_shader = shader_system_get_default_material_shader_id();
     u64 def_skybox_shader   = shader_system_get_default_skybox_shader_id();
+    u64 def_grid_shader     = shader_system_get_default_grid_shader_id();
 
     while (app_state.is_running)
     {
@@ -187,6 +189,9 @@ int main()
         shader_system_update_per_frame(&triangle.scene_ubo, &triangle.light_ubo);
 
         shader_system_bind_shader(def_skybox_shader);
+        shader_system_update_per_frame(&triangle.scene_ubo, nullptr);
+
+        shader_system_bind_shader(def_grid_shader);
         shader_system_update_per_frame(&triangle.scene_ubo, nullptr);
 
         renderer_draw_frame(&triangle);
@@ -276,7 +281,7 @@ void update_camera(scene_global_uniform_buffer_object *ubo, light_global_uniform
         camera_pos.z += velocity.z * temp_move_speed;
     }
 
-    lbo->camera_pos = camera_pos;
+    ubo->camera_pos = camera_pos;
 
     math::mat4 rotation    = mat4_euler_xyz(camera_euler.x, camera_euler.y, camera_euler.z);
     math::mat4 translation = mat4_translation(camera_pos);

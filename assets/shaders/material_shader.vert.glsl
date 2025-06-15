@@ -8,6 +8,7 @@ layout(location = 3) in vec4 in_tangent;
 layout(set = 0, binding = 0) uniform global_uniform_object {
     mat4 view;
     mat4 projection;
+    vec3 camera_pos;
     vec4 ambient_color;
 } global_ubo;
 
@@ -27,6 +28,7 @@ layout(location = 1) out struct dto {
     vec3 normal;
     vec3 frag_position;
     vec4 tangent;
+    vec3 camera_pos;
 } out_dto;
 
 void main() {
@@ -40,6 +42,7 @@ void main() {
 	out_dto.tangent = vec4(normalize(m3_model * in_tangent.xyz), in_tangent.w);
     out_dto.ambient = global_ubo.ambient_color;
     out_dto.diffuse_color = u_push_constants.diffuse_color;
+    out_dto.camera_pos = global_ubo.camera_pos;
 
     gl_Position = global_ubo.projection * global_ubo.view * u_push_constants.model * vec4(in_position, 1.0);
 }

@@ -203,12 +203,22 @@ bool vulkan_create_pipeline(vulkan_context *vk_context, vulkan_shader *shader)
     DASSERT_MSG(sizeof(vk_push_constant) == 128, "Object uniform buffer must be 128 bytes wide.");
     object_push_constant_range.size = sizeof(vk_push_constant);
 
+    u32 layout_count = 0;
+
+    for(u32 i = 0 ; i < 2 ; i++)
+    {
+        if(set_layouts[i])
+        {
+            layout_count++;
+        }
+    }
+
     VkPipelineLayoutCreateInfo pipeline_layout_create_info{};
 
     pipeline_layout_create_info.sType                  = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
     pipeline_layout_create_info.pNext                  = 0;
     pipeline_layout_create_info.flags                  = 0;
-    pipeline_layout_create_info.setLayoutCount         = 2;
+    pipeline_layout_create_info.setLayoutCount         = layout_count;
     pipeline_layout_create_info.pSetLayouts            = set_layouts;
     pipeline_layout_create_info.pushConstantRangeCount = 1;
     pipeline_layout_create_info.pPushConstantRanges    = &object_push_constant_range;

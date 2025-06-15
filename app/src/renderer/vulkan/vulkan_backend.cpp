@@ -199,14 +199,11 @@ bool vulkan_backend_initialize(arena *arena, u64 *vulkan_backend_memory_requirem
         DERROR("Vulkan renderpass creation failed.");
         return false;
     }
-    // NOTE: I do think this is a hack but oh well
-    vk_context->default_material_shader = static_cast<shader *>(dallocate(arena, sizeof(shader), MEM_TAG_RENDERER));
-    vk_context->default_skybox_shader   = static_cast<shader *>(dallocate(arena, sizeof(shader), MEM_TAG_RENDERER));
-    if (!shader_system_create_default_shaders(vk_context->default_material_shader,
-                                              &vk_context->default_material_shader_id,
-                                              vk_context->default_skybox_shader, &vk_context->default_skybox_shader_id))
+
+    if (!shader_system_create_default_shaders( &vk_context->default_material_shader_id,
+                                              &vk_context->default_skybox_shader_id, &vk_context->default_grid_shader_id))
     {
-        DERROR("Vulkan default_material shader creation failed.");
+        DERROR("Vulkan default_material shader,skybox shader, grid shader creation failed.");
         return false;
     }
     if (!vulkan_create_framebuffers(vk_context))
@@ -497,8 +494,11 @@ bool vulkan_create_cubemap(material *cubemap_mat)
     static u32 id            = 0;
     cubemap_mat->internal_id = id;
     id++;
+
+    shader* skybox_shader = shader_system_get_shader(vk_context->default_skybox_shader_id);
+
     vulkan_shader *shader =
-        static_cast<vulkan_shader *>(vk_context->default_skybox_shader->internal_vulkan_shader_state);
+        static_cast<vulkan_shader *>(skybox_shader->internal_vulkan_shader_state);
     bool result = vulkan_update_cubemap_descriptor_set(shader, cubemap_mat);
     DASSERT(result == true);
 
@@ -512,8 +512,10 @@ bool vulkan_create_material(material *in_mat)
     static u32 id       = 0;
     in_mat->internal_id = id;
     id++;
+    shader* material_shader = shader_system_get_shader(vk_context->default_material_shader_id);
+
     vulkan_shader *shader =
-        static_cast<vulkan_shader *>(vk_context->default_material_shader->internal_vulkan_shader_state);
+        static_cast<vulkan_shader *>(material_shader->internal_vulkan_shader_state);
     bool result = vulkan_update_materials_descriptor_set(shader, in_mat);
 
     DASSERT(result == true);
@@ -1098,8 +1100,19 @@ void vulkan_backend_shutdown()
     dfree(vk_context->vk_swapchain.buffers, sizeof(VkFramebuffer) * vk_context->vk_swapchain.images_count,
           MEM_TAG_RENDERER);
 
-    vulkan_destroy_shader(vk_context->default_material_shader);
-    vulkan_destroy_shader(vk_context->default_skybox_shader);
+    shader* material_shader = shader_system_get_shader(vk_context->default_material_shader_id);
+    DASSERT(material_shader);
+
+    shader* skybox_shader = shader_system_get_shader(vk_context->default_skybox_shader_id);
+    DASSERT(skybox_shader);
+
+    shader* grid_shader = shader_system_get_shader(vk_context->default_grid_shader_id);
+    DASSERT(grid_shader);
+
+
+    vulkan_destroy_shader(material_shader);
+    vulkan_destroy_shader(skybox_shader);
+    vulkan_destroy_shader(grid_shader);
 
     vkDestroyRenderPass(device, vk_context->vk_renderpass, allocator);
 
@@ -1341,12 +1354,11 @@ bool vulkan_destroy_geometry(geometry *geometry)
     return true;
 };
 
-bool vulkan_draw_geometries(render_data *data, VkCommandBuffer *curr_command_buffer, u32 curr_frame_index)
+bool vulkan_draw_geometries(vulkan_shader* material_shader_vulkan_data, render_data *data, VkCommandBuffer *curr_command_buffer, u32 curr_frame_index)
 {
     ZoneScoped;
-    // HACK: for now we are using the default shader cause thats the only shader we have
-    vulkan_shader *vk_shader =
-        static_cast<vulkan_shader *>(vk_context->default_material_shader->internal_vulkan_shader_state);
+
+    vulkan_shader *vk_shader = material_shader_vulkan_data;
 
     // bind the globals
 
@@ -1390,12 +1402,19 @@ bool vulkan_draw_geometries(render_data *data, VkCommandBuffer *curr_command_buf
     return true;
 }
 
-bool vulkan_draw_skybox(render_data *data, VkCommandBuffer *curr_command_buffer, u32 curr_frame_index)
+bool vulkan_draw_grid(vulkan_shader* grid_shader_vulkan_data, VkCommandBuffer *curr_command_buffer)
+{
+    vulkan_shader *shader = grid_shader_vulkan_data;
+    DASSERT(shader);
+    vkCmdDraw(*curr_command_buffer, 6,1,0,0);
+    return true;
+}
+
+bool vulkan_draw_skybox(vulkan_shader* skybox_shader_vulkan_data, render_data *data, VkCommandBuffer *curr_command_buffer, u32 curr_frame_index)
 {
     // BIG HACK
     // HACK:
-    vulkan_shader *shader =
-        static_cast<vulkan_shader *>(vk_context->default_skybox_shader->internal_vulkan_shader_state);
+    vulkan_shader *shader = skybox_shader_vulkan_data;
     DASSERT(shader);
 
     u32 dynamic_offsets[1] = {curr_frame_index * shader->per_frame_stride};
@@ -1475,22 +1494,36 @@ bool vulkan_draw_frame(render_data *render_data)
     VkCommandBuffer &curr_command_buffer = vk_context->command_buffers[current_frame];
 
     // HACK:
-    // draw the skybox
     vkResetCommandBuffer(curr_command_buffer, 0);
     vulkan_begin_command_buffer_single_use(vk_context, curr_command_buffer);
 
-    vulkan_shader *material_shader =
-        static_cast<vulkan_shader *>(vk_context->default_material_shader->internal_vulkan_shader_state);
-    vulkan_shader *skybox_shader =
-        static_cast<vulkan_shader *>(vk_context->default_skybox_shader->internal_vulkan_shader_state);
+    shader* material_shader = shader_system_get_shader(vk_context->default_material_shader_id);
+    DASSERT(material_shader);
+
+    shader* skybox_shader = shader_system_get_shader(vk_context->default_skybox_shader_id);
+    DASSERT(skybox_shader);
+
+    shader* grid_shader = shader_system_get_shader(vk_context->default_grid_shader_id);
+    DASSERT(grid_shader);
+
+    vulkan_shader *vk_material_shader =
+        static_cast<vulkan_shader *>(material_shader->internal_vulkan_shader_state);
+    vulkan_shader *vk_skybox_shader =
+        static_cast<vulkan_shader *>(skybox_shader->internal_vulkan_shader_state);
+    vulkan_shader *vk_grid_shader =
+        static_cast<vulkan_shader *>(grid_shader->internal_vulkan_shader_state);
 
     vulkan_begin_frame_renderpass(vk_context, curr_command_buffer, current_frame);
 
-    vkCmdBindPipeline(curr_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, skybox_shader->pipeline.handle);
-    vulkan_draw_skybox(render_data, &curr_command_buffer, current_frame);
+    vkCmdBindPipeline(curr_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, vk_skybox_shader->pipeline.handle);
+    vulkan_draw_skybox(vk_skybox_shader, render_data, &curr_command_buffer, current_frame);
 
-    vkCmdBindPipeline(curr_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, material_shader->pipeline.handle);
-    vulkan_draw_geometries(render_data, &curr_command_buffer, current_frame);
+    vkCmdBindPipeline(curr_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, vk_grid_shader->pipeline.handle);
+    vulkan_draw_grid(vk_grid_shader, &curr_command_buffer);
+
+    vkCmdBindPipeline(curr_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, vk_material_shader->pipeline.handle);
+    vulkan_draw_geometries(vk_material_shader, render_data, &curr_command_buffer, current_frame);
+
 
     vulkan_end_frame_renderpass(&curr_command_buffer);
 
