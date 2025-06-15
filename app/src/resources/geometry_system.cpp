@@ -431,6 +431,7 @@ bool geometry_system_create_default_geometry()
     {
         geometry_system_parse_obj(geo_sys_state_ptr->arena, "../assets/meshes/cube.obj", &num_of_objects, &default_geo_configs);
         DASSERT(num_of_objects != INVALID_ID);
+        default_geo_configs[0].material = material_system_get_default_material();
         geometry_system_write_configs_to_file(&bin_file, num_of_objects, default_geo_configs);
         // there is only one thats why
         calculate_tangents(default_geo_configs);
