@@ -3,10 +3,10 @@
 #include "core/logger.hpp"
 #include "defines.hpp"
 #include "platform/platform.hpp"
+#include "renderer/vulkan/vulkan_backend.hpp"
 #include "renderer/vulkan/vulkan_types.hpp"
 #include "vulkan/vulkan_core.h"
 #include "vulkan_device.hpp"
-#include "vulkan_framebuffer.hpp"
 #include "vulkan_image.hpp"
 
 bool create_swapchain(vulkan_context *vk_context)
@@ -181,7 +181,8 @@ bool destroy_swapchain(vulkan_context *vk_context)
         }
         for (u32 i = 0; i < vk_context->vk_swapchain.images_count; i++)
         {
-            vkDestroyFramebuffer(device, vk_context->vk_swapchain.buffers[i], vk_context->vk_allocator);
+            vkDestroyFramebuffer(device, vk_context->vk_swapchain.world_framebuffers[i], vk_context->vk_allocator);
+            vkDestroyFramebuffer(device, vk_context->vk_swapchain.ui_framebuffers[i], vk_context->vk_allocator);
         }
         vkDestroyImageView(device, vk_context->vk_swapchain.depth_image.view, allocator);
         vkDestroyImage(device, vk_context->vk_swapchain.depth_image.handle, allocator);

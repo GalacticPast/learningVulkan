@@ -97,6 +97,13 @@ struct shader_pipeline_configuration
     pipeline_depth_state       depth_state;
 };
 
+enum renderpass_types
+{
+    UNKNOWN_RENDERPASS_TYPE = 0,
+    WORLD_RENDERPASS,
+    UI_RENDERPASS,
+};
+
 struct shader_config
 {
     // NOTE: for now
@@ -116,6 +123,7 @@ struct shader_config
     dstring frag_spv_full_path;
 
     shader_pipeline_configuration pipeline_configuration;
+    renderpass_types              renderpass_types;
 
     void init(arena *arena)
     {

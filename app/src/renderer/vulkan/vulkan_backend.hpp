@@ -29,6 +29,8 @@ bool vulkan_destroy_texture(texture *in_texture);
 bool vulkan_create_geometry(geometry *out_geometry, u32 vertex_count, vertex *vertices, u32 index_count, u32 *indices);
 bool vulkan_destroy_geometry(geometry *geometry);
 
+bool vulkan_create_framebuffers(vulkan_context *vk_context);
+
 // not in bytes
 u32 vulkan_calculate_index_offset(vulkan_context *vk_context, u32 geometry_id);
 // not in bytes

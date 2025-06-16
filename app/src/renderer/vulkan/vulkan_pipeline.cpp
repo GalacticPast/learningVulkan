@@ -2,6 +2,7 @@
 #include "containers/darray.hpp"
 #include "core/logger.hpp"
 #include "math/dmath_types.hpp"
+#include "renderer/vulkan/vulkan_types.hpp"
 #include "resources/resource_types.hpp"
 #include "vulkan/vulkan_core.h"
 
@@ -267,7 +268,20 @@ bool vulkan_create_pipeline(vulkan_context *vk_context, vulkan_shader *shader)
     pipeline_create_info.pColorBlendState    = &color_blend_state_create_info;
     pipeline_create_info.pDynamicState       = &dynamic_state_create_info;
     pipeline_create_info.layout              = shader->pipeline.layout;
-    pipeline_create_info.renderPass          = vk_context->vk_renderpass;
+    if(shader->renderpass_type == WORLD_RENDERPASS)
+    {
+        pipeline_create_info.renderPass          = vk_context->world_renderpass;
+    }
+    else if(shader->renderpass_type == UI_RENDERPASS)
+    {
+        pipeline_create_info.renderPass          = vk_context->ui_renderpass;
+    }
+    else
+    {
+        DERROR("Uknown Renderpass type %d", shader->renderpass_type);
+        return false;
+    }
+
     pipeline_create_info.subpass             = 0;
     pipeline_create_info.basePipelineHandle  = VK_NULL_HANDLE;
     pipeline_create_info.basePipelineIndex   = -1;

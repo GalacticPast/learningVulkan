@@ -88,7 +88,8 @@ struct vulkan_swapchain
 
     VkSwapchainKHR handle;
     VkExtent2D     surface_extent;
-    VkFramebuffer *buffers = nullptr;
+    VkFramebuffer *world_framebuffers = nullptr;
+    VkFramebuffer *ui_framebuffers    = nullptr;
 
     u32          images_count = INVALID_ID;
     VkImage     *images       = nullptr;
@@ -117,11 +118,6 @@ struct vulkan_buffer
 {
     VkBuffer       handle;
     VkDeviceMemory memory;
-};
-
-enum renderpass_types
-{
-    WORLD_RENDERPASS,
 };
 
 #define VULKAN_MAX_DESCRIPTOR_SET_COUNT 4096
@@ -159,7 +155,7 @@ struct vulkan_shader
     u32                                  total_descriptors_allocated = INVALID_ID;
     darray<VkDescriptorSet>              per_group_descriptor_sets;
 
-    renderpass_types              type;
+    renderpass_types              renderpass_type;
     shader_pipeline_configuration pipeline_configuration;
     vulkan_pipeline               pipeline;
 };
@@ -173,7 +169,8 @@ struct vulkan_context
 
     vulkan_swapchain vk_swapchain;
 
-    VkRenderPass vk_renderpass;
+    VkRenderPass world_renderpass;
+    VkRenderPass ui_renderpass;
 
     darray<VkCommandBuffer> command_buffers;
 
@@ -181,8 +178,8 @@ struct vulkan_context
     vulkan_buffer index_buffer;
 
     u64 default_material_shader_id = INVALID_ID_64;
-    u64 default_skybox_shader_id = INVALID_ID_64;
-    u64 default_grid_shader_id = INVALID_ID_64;
+    u64 default_skybox_shader_id   = INVALID_ID_64;
+    u64 default_grid_shader_id     = INVALID_ID_64;
 
     VkCommandPool graphics_command_pool;
     VkCommandPool transfer_command_pool;

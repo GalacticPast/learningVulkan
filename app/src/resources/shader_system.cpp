@@ -411,6 +411,7 @@ bool shader_system_create_default_shaders(u64 *material_shader_id, u64 *skybox_s
     shader_config material_shader_conf{};
     material_shader_conf.pipeline_configuration.mode = CULL_BACK_BIT;
     material_shader_conf.pipeline_configuration.color_blend.enable_color_blend = false;
+    material_shader_conf.renderpass_types = WORLD_RENDERPASS;
     material_shader_conf.init(arena);
 
     dstring conf_file = "material_shader.conf";
@@ -423,6 +424,7 @@ bool shader_system_create_default_shaders(u64 *material_shader_id, u64 *skybox_s
     shader_config skybox_shader_conf{};
     skybox_shader_conf.pipeline_configuration.mode = CULL_NONE_BIT;
     skybox_shader_conf.pipeline_configuration.color_blend.enable_color_blend = false;
+    skybox_shader_conf.renderpass_types = WORLD_RENDERPASS;
     skybox_shader_conf.init(arena);
 
     conf_file.clear();
@@ -438,6 +440,8 @@ bool shader_system_create_default_shaders(u64 *material_shader_id, u64 *skybox_s
     grid_shader_conf.pipeline_configuration.color_blend.enable_color_blend = true;
     grid_shader_conf.pipeline_configuration.color_blend.src_color_blend_factor = COLOR_BLEND_FACTOR_SRC_ALPHA;
     grid_shader_conf.pipeline_configuration.color_blend.dst_color_blend_factor = COLOR_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+
+    grid_shader_conf.renderpass_types = WORLD_RENDERPASS;
 
     grid_shader_conf.pipeline_configuration.depth_state.enable_depth_blend = false;
 

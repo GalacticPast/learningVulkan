@@ -15,7 +15,6 @@
 #include "vulkan_backend.hpp"
 #include "vulkan_buffers.hpp"
 #include "vulkan_device.hpp"
-#include "vulkan_framebuffer.hpp"
 #include "vulkan_image.hpp"
 #include "vulkan_pipeline.hpp"
 #include "vulkan_platform.hpp"
@@ -34,6 +33,8 @@ bool vulkan_create_debug_messenger(VkDebugUtilsMessengerCreateInfoEXT *dbg_messe
 bool vulkan_create_default_texture();
 bool vulkan_allocate_descriptor_set(VkDescriptorPool *desc_pool, VkDescriptorSetLayout *set_layout,
                                     u32 descriptor_count);
+bool vulkan_create_framebuffers(vulkan_context *vk_context);
+
 bool vulkan_backend_initialize(arena *arena, u64 *vulkan_backend_memory_requirements, application_config *app_config,
                                void *state)
 {
@@ -200,8 +201,9 @@ bool vulkan_backend_initialize(arena *arena, u64 *vulkan_backend_memory_requirem
         return false;
     }
 
-    if (!shader_system_create_default_shaders( &vk_context->default_material_shader_id,
-                                              &vk_context->default_skybox_shader_id, &vk_context->default_grid_shader_id))
+    if (!shader_system_create_default_shaders(&vk_context->default_material_shader_id,
+                                              &vk_context->default_skybox_shader_id,
+                                              &vk_context->default_grid_shader_id))
     {
         DERROR("Vulkan default_material shader,skybox shader, grid shader creation failed.");
         return false;
@@ -270,6 +272,90 @@ bool vulkan_create_command_pools(vulkan_context *vk_context)
     result = vkCreateCommandPool(vk_context->vk_device.logical, &command_pool_create_info, vk_context->vk_allocator,
                                  &vk_context->transfer_command_pool);
     VK_CHECK(result);
+
+    return true;
+}
+
+bool vulkan_create_framebuffers(vulkan_context *vk_context)
+{
+    DINFO("Creating vulkan framebuffers...");
+    arena *arena              = vk_context->arena;
+    u32    framebuffers_count = vk_context->vk_swapchain.images_count;
+
+    // WORLD renderpass framebuffers
+    {
+        if (vk_context->vk_swapchain.world_framebuffers == nullptr)
+        {
+            vk_context->vk_swapchain.world_framebuffers = static_cast<VkFramebuffer *>(
+                dallocate(arena, sizeof(VkFramebuffer) * framebuffers_count, MEM_TAG_RENDERER));
+        }
+        else
+        {
+            dzero_memory(vk_context->vk_swapchain.world_framebuffers, sizeof(VkFramebuffer) * framebuffers_count);
+        }
+
+        VkFramebuffer *buffers = vk_context->vk_swapchain.world_framebuffers;
+
+        for (u32 i = 0; i < framebuffers_count; i++)
+        {
+            VkImageView framebuffer_attachments[2] = {vk_context->vk_swapchain.img_views[i],
+                                                      vk_context->vk_swapchain.depth_image.view};
+
+            VkFramebufferCreateInfo framebuffer_create_info{};
+
+            framebuffer_create_info.sType           = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+            framebuffer_create_info.pNext           = 0;
+            framebuffer_create_info.flags           = 0;
+            framebuffer_create_info.renderPass      = vk_context->world_renderpass;
+            framebuffer_create_info.attachmentCount = 2;
+            framebuffer_create_info.pAttachments    = framebuffer_attachments;
+            framebuffer_create_info.width           = vk_context->vk_swapchain.surface_extent.width;
+            framebuffer_create_info.height          = vk_context->vk_swapchain.surface_extent.height;
+            framebuffer_create_info.layers          = 1;
+
+            VkResult result = vkCreateFramebuffer(vk_context->vk_device.logical, &framebuffer_create_info,
+                                                  vk_context->vk_allocator, &buffers[i]);
+            VK_CHECK(result);
+        }
+    }
+    //
+    // ui renderpass framebuffers
+    {
+        if (vk_context->vk_swapchain.ui_framebuffers == nullptr)
+        {
+            vk_context->vk_swapchain.ui_framebuffers = static_cast<VkFramebuffer *>(
+                dallocate(arena, sizeof(VkFramebuffer) * framebuffers_count, MEM_TAG_RENDERER));
+        }
+        else
+        {
+            dzero_memory(vk_context->vk_swapchain.ui_framebuffers, sizeof(VkFramebuffer) * framebuffers_count);
+        }
+
+        VkFramebuffer *buffers = vk_context->vk_swapchain.ui_framebuffers;
+
+        for (u32 i = 0; i < framebuffers_count; i++)
+        {
+            VkImageView framebuffer_attachments[1] = {
+                vk_context->vk_swapchain.img_views[i],
+            };
+
+            VkFramebufferCreateInfo framebuffer_create_info{};
+
+            framebuffer_create_info.sType           = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+            framebuffer_create_info.pNext           = 0;
+            framebuffer_create_info.flags           = 0;
+            framebuffer_create_info.renderPass      = vk_context->ui_renderpass;
+            framebuffer_create_info.attachmentCount = 1;
+            framebuffer_create_info.pAttachments    = framebuffer_attachments;
+            framebuffer_create_info.width           = vk_context->vk_swapchain.surface_extent.width;
+            framebuffer_create_info.height          = vk_context->vk_swapchain.surface_extent.height;
+            framebuffer_create_info.layers          = 1;
+
+            VkResult result = vkCreateFramebuffer(vk_context->vk_device.logical, &framebuffer_create_info,
+                                                  vk_context->vk_allocator, &buffers[i]);
+            VK_CHECK(result);
+        }
+    }
 
     return true;
 }
@@ -442,31 +528,27 @@ bool vulkan_update_materials_descriptor_set(vulkan_shader *shader, material *mat
     return true;
 }
 
-bool vulkan_update_global_descriptor_sets(shader *shader, darray<u32>& ranges)
+bool vulkan_update_global_descriptor_sets(shader *shader, darray<u32> &ranges)
 {
     ZoneScoped;
     DASSERT(shader);
 
-    vulkan_shader* vk_shader = static_cast<vulkan_shader *>(shader->internal_vulkan_shader_state);
+    vulkan_shader *vk_shader = static_cast<vulkan_shader *>(shader->internal_vulkan_shader_state);
     DASSERT(vk_shader);
-    u32 size =  ranges.size();
+    u32 size = ranges.size();
     DASSERT_MSG(size < 16, "Size is greater than 16 which was our previous assumtion");
 
     VkDescriptorBufferInfo desc_buffer_infos[16]{};
     VkWriteDescriptorSet   desc_writes[16]{};
-    //HACK:
-    VkDeviceSize vk_ranges[16]  = {};
+    // HACK:
+    VkDeviceSize vk_ranges[16] = {};
 
-
-    for(u32 i = 0 ; i < size ; i++)
+    for (u32 i = 0; i < size; i++)
     {
         vk_ranges[i] = ranges[i];
     }
 
-
-
-    u32          curr_frame = vk_context->current_frame_index;
-
+    u32 curr_frame = vk_context->current_frame_index;
 
     for (u32 i = 0; i < size; i++)
     {
@@ -498,11 +580,10 @@ bool vulkan_create_cubemap(material *cubemap_mat)
     cubemap_mat->internal_id = id;
     id++;
 
-    shader* skybox_shader = shader_system_get_shader(vk_context->default_skybox_shader_id);
+    shader *skybox_shader = shader_system_get_shader(vk_context->default_skybox_shader_id);
 
-    vulkan_shader *shader =
-        static_cast<vulkan_shader *>(skybox_shader->internal_vulkan_shader_state);
-    bool result = vulkan_update_cubemap_descriptor_set(shader, cubemap_mat);
+    vulkan_shader *shader = static_cast<vulkan_shader *>(skybox_shader->internal_vulkan_shader_state);
+    bool           result = vulkan_update_cubemap_descriptor_set(shader, cubemap_mat);
     DASSERT(result == true);
 
     return true;
@@ -515,11 +596,10 @@ bool vulkan_create_material(material *in_mat)
     static u32 id       = 0;
     in_mat->internal_id = id;
     id++;
-    shader* material_shader = shader_system_get_shader(vk_context->default_material_shader_id);
+    shader *material_shader = shader_system_get_shader(vk_context->default_material_shader_id);
 
-    vulkan_shader *shader =
-        static_cast<vulkan_shader *>(material_shader->internal_vulkan_shader_state);
-    bool result = vulkan_update_materials_descriptor_set(shader, in_mat);
+    vulkan_shader *shader = static_cast<vulkan_shader *>(material_shader->internal_vulkan_shader_state);
+    bool           result = vulkan_update_materials_descriptor_set(shader, in_mat);
 
     DASSERT(result == true);
 
@@ -549,6 +629,8 @@ bool vulkan_initialize_shader(shader_config *config, shader *in_shader)
 
     u32 uniforms_size                 = config->uniforms.size();
     vk_shader->pipeline_configuration = config->pipeline_configuration;
+    vk_shader->renderpass_type        = config->renderpass_types;
+    //
     // per-frame resources aka (uniform_s, aka set 0)
     {
         if (config->has_per_frame)
@@ -1098,26 +1180,29 @@ void vulkan_backend_shutdown()
 
     for (u32 i = 0; i < vk_context->vk_swapchain.images_count; i++)
     {
-        vkDestroyFramebuffer(device, vk_context->vk_swapchain.buffers[i], allocator);
+        vkDestroyFramebuffer(device, vk_context->vk_swapchain.world_framebuffers[i], allocator);
+        vkDestroyFramebuffer(device, vk_context->vk_swapchain.ui_framebuffers[i], allocator);
     }
-    dfree(vk_context->vk_swapchain.buffers, sizeof(VkFramebuffer) * vk_context->vk_swapchain.images_count,
+    dfree(vk_context->vk_swapchain.world_framebuffers, sizeof(VkFramebuffer) * vk_context->vk_swapchain.images_count,
+          MEM_TAG_RENDERER);
+    dfree(vk_context->vk_swapchain.ui_framebuffers, sizeof(VkFramebuffer) * vk_context->vk_swapchain.images_count,
           MEM_TAG_RENDERER);
 
-    shader* material_shader = shader_system_get_shader(vk_context->default_material_shader_id);
+    shader *material_shader = shader_system_get_shader(vk_context->default_material_shader_id);
     DASSERT(material_shader);
 
-    shader* skybox_shader = shader_system_get_shader(vk_context->default_skybox_shader_id);
+    shader *skybox_shader = shader_system_get_shader(vk_context->default_skybox_shader_id);
     DASSERT(skybox_shader);
 
-    shader* grid_shader = shader_system_get_shader(vk_context->default_grid_shader_id);
+    shader *grid_shader = shader_system_get_shader(vk_context->default_grid_shader_id);
     DASSERT(grid_shader);
-
 
     vulkan_destroy_shader(material_shader);
     vulkan_destroy_shader(skybox_shader);
     vulkan_destroy_shader(grid_shader);
 
-    vkDestroyRenderPass(device, vk_context->vk_renderpass, allocator);
+    vkDestroyRenderPass(device, vk_context->world_renderpass, allocator);
+    vkDestroyRenderPass(device, vk_context->ui_renderpass, allocator);
 
     for (u32 i = 0; i < vk_context->vk_swapchain.images_count; i++)
     {
@@ -1239,10 +1324,11 @@ bool vulkan_update_global_uniform_buffer(shader *shader, u32 offset, u32 size, v
     DASSERT(shader);
     vulkan_shader *vk_shader = static_cast<vulkan_shader *>(shader->internal_vulkan_shader_state);
 
-    //HACK: make it better
+    // HACK: make it better
     offset = align_upto(offset, vk_shader->min_ubo_alignment);
 
-    u8 *addr = static_cast<u8 *>(vk_shader->per_frame_mapped_data) + (vk_shader->per_frame_stride * vk_context->current_frame_index + offset);
+    u8 *addr = static_cast<u8 *>(vk_shader->per_frame_mapped_data) +
+               (vk_shader->per_frame_stride * vk_context->current_frame_index + offset);
     dcopy_memory(addr, data, size);
     return true;
 }
@@ -1357,7 +1443,8 @@ bool vulkan_destroy_geometry(geometry *geometry)
     return true;
 };
 
-bool vulkan_draw_geometries(vulkan_shader* material_shader_vulkan_data, render_data *data, VkCommandBuffer *curr_command_buffer, u32 curr_frame_index)
+bool vulkan_draw_geometries(vulkan_shader *material_shader_vulkan_data, render_data *data,
+                            VkCommandBuffer *curr_command_buffer, u32 curr_frame_index)
 {
     ZoneScoped;
 
@@ -1405,15 +1492,16 @@ bool vulkan_draw_geometries(vulkan_shader* material_shader_vulkan_data, render_d
     return true;
 }
 
-bool vulkan_draw_grid(vulkan_shader* grid_shader_vulkan_data, VkCommandBuffer *curr_command_buffer)
+bool vulkan_draw_grid(vulkan_shader *grid_shader_vulkan_data, VkCommandBuffer *curr_command_buffer)
 {
     vulkan_shader *shader = grid_shader_vulkan_data;
     DASSERT(shader);
-    vkCmdDraw(*curr_command_buffer, 6,1,0,0);
+    vkCmdDraw(*curr_command_buffer, 6, 1, 0, 0);
     return true;
 }
 
-bool vulkan_draw_skybox(vulkan_shader* skybox_shader_vulkan_data, render_data *data, VkCommandBuffer *curr_command_buffer, u32 curr_frame_index)
+bool vulkan_draw_skybox(vulkan_shader *skybox_shader_vulkan_data, render_data *data,
+                        VkCommandBuffer *curr_command_buffer, u32 curr_frame_index)
 {
     // BIG HACK
     // HACK:
@@ -1500,23 +1588,20 @@ bool vulkan_draw_frame(render_data *render_data)
     vkResetCommandBuffer(curr_command_buffer, 0);
     vulkan_begin_command_buffer_single_use(vk_context, curr_command_buffer);
 
-    shader* material_shader = shader_system_get_shader(vk_context->default_material_shader_id);
+    shader *material_shader = shader_system_get_shader(vk_context->default_material_shader_id);
     DASSERT(material_shader);
 
-    shader* skybox_shader = shader_system_get_shader(vk_context->default_skybox_shader_id);
+    shader *skybox_shader = shader_system_get_shader(vk_context->default_skybox_shader_id);
     DASSERT(skybox_shader);
 
-    shader* grid_shader = shader_system_get_shader(vk_context->default_grid_shader_id);
+    shader *grid_shader = shader_system_get_shader(vk_context->default_grid_shader_id);
     DASSERT(grid_shader);
 
-    vulkan_shader *vk_material_shader =
-        static_cast<vulkan_shader *>(material_shader->internal_vulkan_shader_state);
-    vulkan_shader *vk_skybox_shader =
-        static_cast<vulkan_shader *>(skybox_shader->internal_vulkan_shader_state);
-    vulkan_shader *vk_grid_shader =
-        static_cast<vulkan_shader *>(grid_shader->internal_vulkan_shader_state);
+    vulkan_shader *vk_material_shader = static_cast<vulkan_shader *>(material_shader->internal_vulkan_shader_state);
+    vulkan_shader *vk_skybox_shader   = static_cast<vulkan_shader *>(skybox_shader->internal_vulkan_shader_state);
+    vulkan_shader *vk_grid_shader     = static_cast<vulkan_shader *>(grid_shader->internal_vulkan_shader_state);
 
-    vulkan_begin_frame_renderpass(vk_context, curr_command_buffer, current_frame);
+    vulkan_begin_renderpass(vk_context, WORLD_RENDERPASS, curr_command_buffer, current_frame);
 
     vkCmdBindPipeline(curr_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, vk_skybox_shader->pipeline.handle);
     vulkan_draw_skybox(vk_skybox_shader, render_data, &curr_command_buffer, current_frame);
@@ -1527,8 +1612,11 @@ bool vulkan_draw_frame(render_data *render_data)
     vkCmdBindPipeline(curr_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, vk_material_shader->pipeline.handle);
     vulkan_draw_geometries(vk_material_shader, render_data, &curr_command_buffer, current_frame);
 
+    vulkan_end_renderpass(&curr_command_buffer);
 
-    vulkan_end_frame_renderpass(&curr_command_buffer);
+    vulkan_begin_renderpass(vk_context, UI_RENDERPASS, curr_command_buffer, current_frame);
+
+    vulkan_end_renderpass(&curr_command_buffer);
 
     vulkan_end_command_buffer_single_use(vk_context, curr_command_buffer, false);
     //
