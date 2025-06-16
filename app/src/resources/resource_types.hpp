@@ -184,12 +184,12 @@ struct texture_map
 
 struct material_config
 {
-    dstring    mat_name;
-    dstring    albedo_map;
-    dstring    alpha_map;
-    dstring    normal_map;
-    dstring    specular_map;
-    math::vec4 diffuse_color = {1.0f, 1.0f, 1.0f, 1.0f};
+    dstring mat_name;
+    dstring albedo_map;
+    dstring alpha_map;
+    dstring normal_map;
+    dstring specular_map;
+    vec4    diffuse_color = {1.0f, 1.0f, 1.0f, 1.0f};
     // TODO: add normal maps, heightmap etc..
 };
 
@@ -203,7 +203,7 @@ struct material
     //
     u32         reference_count = INVALID_ID;
     texture_map map;
-    math::vec4  diffuse_color = {1.0f, 1.0f, 1.0f, 1.0f};
+    vec4        diffuse_color = {1.0f, 1.0f, 1.0f, 1.0f};
 };
 
 #define DEFAULT_GEOMETRY_HANDLE "DEFAULT_GEOMETRY"
@@ -213,12 +213,12 @@ struct material
 
 struct geometry_config
 {
-    dstring   name;
-    material *material     = nullptr;
-    u32       vertex_count = INVALID_ID;
-    vertex   *vertices     = nullptr;
-    u32       index_count  = INVALID_ID;
-    u32      *indices      = nullptr;
+    dstring    name;
+    material  *material     = nullptr;
+    u32        vertex_count = INVALID_ID;
+    vertex_3D *vertices     = nullptr;
+    u32        index_count  = INVALID_ID;
+    u32       *indices      = nullptr;
 };
 
 struct geometry

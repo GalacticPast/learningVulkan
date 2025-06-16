@@ -1367,19 +1367,19 @@ u32 vulkan_calculate_index_offset(vulkan_context *vk_context, u32 geometry_id)
     return ans;
 }
 
-bool vulkan_create_geometry(geometry *out_geometry, u32 vertex_count, vertex *vertices, u32 index_count, u32 *indices)
+bool vulkan_create_geometry(geometry *out_geometry, u32 vertex_count, vertex_3D *vertices, u32 index_count, u32 *indices)
 {
     // TODO: vulkan_geometry_state
 
     void *vertex_data = nullptr;
-    u32   buffer_size = vertex_count * sizeof(vertex);
+    u32   buffer_size = vertex_count * sizeof(vertex_3D);
 
     vulkan_buffer vertex_staging_buffer{};
     vulkan_create_buffer(vk_context, &vertex_staging_buffer, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
                          VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, buffer_size);
 
     vulkan_copy_data_to_buffer(vk_context, &vertex_staging_buffer, vertex_data, vertices, buffer_size);
-    u32 vertex_offset = vulkan_calculate_vertex_offset(vk_context, out_geometry->id) * sizeof(vertex);
+    u32 vertex_offset = vulkan_calculate_vertex_offset(vk_context, out_geometry->id) * sizeof(vertex_3D);
     vulkan_copy_buffer(vk_context, &vk_context->transfer_command_pool, &vk_context->vk_device.transfer_queue,
                        &vk_context->vertex_buffer, vertex_offset, &vertex_staging_buffer, buffer_size);
 

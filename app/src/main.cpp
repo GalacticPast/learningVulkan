@@ -226,13 +226,13 @@ void update_camera(scene_global_uniform_buffer_object *ubo, light_global_uniform
     f32 fov_rad      = 45 * D_DEG2RAD_MULTIPLIER;
     f32 aspect_ratio = static_cast<f32>(s_width) / static_cast<f32>(s_height);
 
-    math::vec3 velocity = math::vec3();
+    vec3 velocity = vec3();
     f32        step     = 0.01f;
 
     ubo->projection = mat4_perspective(fov_rad, aspect_ratio, 0.01f, 1000.0f);
 
-    static math::vec3 camera_pos   = math::vec3(0, 6, 6);
-    static math::vec3 camera_euler = math::vec3(0, 0, 0);
+    static vec3 camera_pos   = vec3(0, 6, 6);
+    static vec3 camera_euler = vec3(0, 0, 0);
 
     if (input_is_key_down(KEY_A) || input_is_key_down(KEY_LEFT))
     {
@@ -256,17 +256,17 @@ void update_camera(scene_global_uniform_buffer_object *ubo, light_global_uniform
 
     if (input_is_key_down(KEY_W))
     {
-        math::vec3 forward  = mat4_forward(ubo->view);
+        vec3 forward  = mat4_forward(ubo->view);
         velocity           += forward;
     }
     if (input_is_key_down(KEY_S))
     {
 
-        math::vec3 backward  = mat4_backward(ubo->view);
+        vec3 backward  = mat4_backward(ubo->view);
         velocity            += backward;
     }
 
-    math::vec3 z_axis          = math::vec3();
+    vec3 z_axis          = vec3();
     f32        temp_move_speed = start_time;
 
     f32 scalar = 100.0f;
@@ -283,8 +283,8 @@ void update_camera(scene_global_uniform_buffer_object *ubo, light_global_uniform
 
     ubo->camera_pos = camera_pos;
 
-    math::mat4 rotation    = mat4_euler_xyz(camera_euler.x, camera_euler.y, camera_euler.z);
-    math::mat4 translation = mat4_translation(camera_pos);
+    mat4 rotation    = mat4_euler_xyz(camera_euler.x, camera_euler.y, camera_euler.z);
+    mat4 translation = mat4_translation(camera_pos);
 
     ubo->view = rotation * translation;
     ubo->view = mat4_inverse(ubo->view);

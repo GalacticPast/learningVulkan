@@ -49,5 +49,5 @@ const char *string_first_string_occurence(const char *string, const char *sub_st
 
 s32 string_num_of_substring_occurence(const char *string, const char *str);
 
-bool string_to_vec4(const char *string, math::vec4 *vector);
+bool string_to_vec4(const char *string, vec4 *vector);
 bool string_to_u32(const char *string, u32 *integer);

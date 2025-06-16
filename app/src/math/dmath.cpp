@@ -3,8 +3,6 @@
 #include "platform/platform.hpp"
 #include "resources/resource_types.hpp"
 //
-#include <cstdint>
-#include <iostream>
 #include <random>
 //
 static bool rand_seeded = false;
@@ -61,7 +59,7 @@ f32 fdrandom_in_range(f32 min, f32 max)
 // HACK:
 //  for scaling
 
-void scale_geometries(const geometry_config *config, math::vec3 scaling_factor)
+void scale_geometries(const geometry_config *config, vec3 scaling_factor)
 {
     u32 vertex_count = config->vertex_count;
 

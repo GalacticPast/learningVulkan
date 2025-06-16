@@ -26,7 +26,7 @@ bool vulkan_create_cubemap(material *cubemap_mat);
 bool vulkan_create_texture(texture *in_texture, u8 *pixels);
 bool vulkan_destroy_texture(texture *in_texture);
 
-bool vulkan_create_geometry(geometry *out_geometry, u32 vertex_count, vertex *vertices, u32 index_count, u32 *indices);
+bool vulkan_create_geometry(geometry *out_geometry, u32 vertex_count, vertex_3D *vertices, u32 index_count, u32 *indices);
 bool vulkan_destroy_geometry(geometry *geometry);
 
 bool vulkan_create_framebuffers(vulkan_context *vk_context);

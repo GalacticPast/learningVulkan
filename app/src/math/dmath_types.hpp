@@ -3,9 +3,7 @@
 #include "defines.hpp"
 #include <cmath>
 
-namespace math
-{
-struct vec_2d
+struct vec2
 {
     union {
         f32 elements[2];
@@ -22,15 +20,15 @@ struct vec_2d
         };
     };
 
-    vec_2d() : x(0), y(0) {};
-    vec_2d(f32 x, f32 y) : x(x), y(y) {};
+    vec2() : x(0), y(0) {};
+    vec2(f32 x, f32 y) : x(x), y(y) {};
 
-    inline void operator+=(const vec_2d &vec)
+    inline void operator+=(const vec2 &vec)
     {
         this->x += vec.x;
         this->y += vec.y;
     }
-    inline void operator-=(const vec_2d &vec)
+    inline void operator-=(const vec2 &vec)
     {
         this->x -= vec.x;
         this->y -= vec.y;
@@ -45,21 +43,21 @@ struct vec_2d
         this->x /= n;
         this->y /= n;
     }
-    inline vec_2d operator+(const vec_2d &vec)
+    inline vec2 operator+(const vec2 &vec)
     {
-        return vec_2d(this->x + vec.x, this->y + vec.y);
+        return vec2(this->x + vec.x, this->y + vec.y);
     }
-    inline vec_2d operator-(const vec_2d &vec)
+    inline vec2 operator-(const vec2 &vec)
     {
-        return vec_2d(this->x - vec.x, this->y - vec.y);
+        return vec2(this->x - vec.x, this->y - vec.y);
     }
-    inline vec_2d operator*(const f32 n)
+    inline vec2 operator*(const f32 n)
     {
-        return vec_2d(this->x * n, this->y * n);
+        return vec2(this->x * n, this->y * n);
     }
-    inline vec_2d operator/(const f32 n)
+    inline vec2 operator/(const f32 n)
     {
-        return vec_2d(this->x / n, this->y / n);
+        return vec2(this->x / n, this->y / n);
     }
     inline f32 magnitude()
     {
@@ -322,46 +320,45 @@ struct mat4
         dcopy_memory(this->data, out_matrix.data, sizeof(f32) * 16);
     }
 };
-} // namespace math
 
-struct vertex
+struct vertex_3D
 {
-    math::vec3   position;
-    math::vec3   normal;
-    math::vec_2d tex_coord;
-    math::vec4   tangent;
+    vec3 position;
+    vec3 normal;
+    vec2 tex_coord;
+    vec4 tangent;
 };
 
 struct camera
 {
-    math::vec3 euler;
-    math::vec3 position;
-    math::vec3 up = math::vec3(0, 1, 0);
+    vec3 euler;
+    vec3 position;
+    vec3 up = vec3(0, 1, 0);
 };
 
 struct scene_global_uniform_buffer_object
 {
-    math::mat4 view;
-    math::mat4 projection;
-    math::vec4 ambient_color;
-    alignas(16) math::vec3 camera_pos;
+    mat4 view;
+    mat4 projection;
+    vec4 ambient_color;
+    alignas(16) vec3 camera_pos;
 };
 struct light_global_uniform_buffer_object
 {
-    alignas(16) math::vec3 direction;
-    alignas(16) math::vec4 color;
+    alignas(16) vec3 direction;
+    alignas(16) vec4 color;
 };
 
 struct object_uniform_buffer_object
 {
-    math::mat4 model;
+    mat4 model;
 };
 
 struct vk_push_constant // aka push constants
 {
-    math::mat4 model; // 64 bytes
-    math::vec4 diffuse_color;
-    math::vec4 padding;
-    math::vec4 padding2;
-    math::vec4 padding3;
+    mat4 model; // 64 bytes
+    vec4 diffuse_color;
+    vec4 padding;
+    vec4 padding2;
+    vec4 padding3;
 };
