@@ -39,7 +39,7 @@ bool texture_system_initialize(arena *arena, u64 *texture_system_mem_requirement
 
     stbi_set_flip_vertically_on_load(true);
     texture_system_create_default_textures();
-    dstring conf_file_base_name = "default_skybox.conf";
+    dstring conf_file_base_name = "yokohama_3.conf";
     texture_system_load_cubemap(&conf_file_base_name);
     return true;
 }
