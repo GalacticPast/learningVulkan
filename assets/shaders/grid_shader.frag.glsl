@@ -74,5 +74,7 @@ vec4 gridColor(vec2 uv, vec2 camPos) {
 }
 
 void main() {
-  out_FragColor = gridColor(uv, camPos);
+    vec4 grid_color = gridColor(uv, camPos);
+    out_FragColor = grid_color; // render grid line color
 }
+

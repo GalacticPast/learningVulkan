@@ -118,6 +118,7 @@ bool vulkan_create_pipeline(vulkan_context *vk_context, vulkan_shader *shader)
     rasterizer_create_info.rasterizerDiscardEnable = VK_FALSE;
     rasterizer_create_info.polygonMode             = VK_POLYGON_MODE_FILL;
     rasterizer_create_info.lineWidth               = 1.0f;
+
     if(shader->pipeline_configuration.mode == CULL_FRONT_BIT)
     {
         rasterizer_create_info.cullMode                = VK_CULL_MODE_FRONT_BIT;
@@ -130,6 +131,7 @@ bool vulkan_create_pipeline(vulkan_context *vk_context, vulkan_shader *shader)
     {
         rasterizer_create_info.cullMode                = VK_CULL_MODE_NONE;
     }
+
     rasterizer_create_info.frontFace               = VK_FRONT_FACE_COUNTER_CLOCKWISE;
     rasterizer_create_info.depthBiasEnable         = VK_FALSE;
     rasterizer_create_info.depthBiasConstantFactor = 0.0f;
@@ -147,7 +149,11 @@ bool vulkan_create_pipeline(vulkan_context *vk_context, vulkan_shader *shader)
     multisampling_state_create_info.alphaToCoverageEnable = VK_FALSE;
     multisampling_state_create_info.alphaToOneEnable      = VK_FALSE;
 
+
+    pipeline_color_blend_state color_blend_options = shader->pipeline_configuration.color_blend;
+
     VkPipelineColorBlendAttachmentState color_blend_attachment_state{};
+
     color_blend_attachment_state.colorWriteMask =
         VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
     color_blend_attachment_state.blendEnable         = VK_FALSE;
@@ -157,6 +163,16 @@ bool vulkan_create_pipeline(vulkan_context *vk_context, vulkan_shader *shader)
     color_blend_attachment_state.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;  // Optional
     color_blend_attachment_state.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO; // Optional
     color_blend_attachment_state.alphaBlendOp        = VK_BLEND_OP_ADD;      // Optional
+
+    if(color_blend_options.enable_color_blend)
+    {
+        color_blend_attachment_state.blendEnable         = VK_TRUE;
+        //TODO: better checking
+        //HACK:
+        //FIXME
+        color_blend_attachment_state.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
+        color_blend_attachment_state.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+    }
 
     VkPipelineColorBlendStateCreateInfo color_blend_state_create_info{};
     color_blend_state_create_info.sType             = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
@@ -178,16 +194,24 @@ bool vulkan_create_pipeline(vulkan_context *vk_context, vulkan_shader *shader)
     depth_stencil_state_create_info.depthTestEnable       = VK_TRUE;
     depth_stencil_state_create_info.depthWriteEnable      = VK_TRUE;
     depth_stencil_state_create_info.depthCompareOp        = VK_COMPARE_OP_LESS;
+
     if(shader->pipeline_configuration.mode == CULL_NONE_BIT)
     {
         depth_stencil_state_create_info.depthCompareOp        = VK_COMPARE_OP_LESS_OR_EQUAL;
     }
+
     depth_stencil_state_create_info.depthBoundsTestEnable = VK_FALSE;
     depth_stencil_state_create_info.minDepthBounds        = 0.0f;
     depth_stencil_state_create_info.maxDepthBounds        = 1.0f;
     depth_stencil_state_create_info.stencilTestEnable     = VK_FALSE;
     depth_stencil_state_create_info.front                 = {};
     depth_stencil_state_create_info.back                  = {};
+
+    if(!shader->pipeline_configuration.depth_state.enable_depth_blend)
+    {
+        depth_stencil_state_create_info.depthTestEnable       = VK_FALSE;
+        depth_stencil_state_create_info.depthWriteEnable      = VK_FALSE;
+    }
 
     // global global_descriptor_set_ubo_layout_binding
 

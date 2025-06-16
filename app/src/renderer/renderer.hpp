@@ -12,7 +12,7 @@ bool renderer_resize();
 void renderer_draw_frame(struct render_data *data);
 
 bool renderer_update_global_data(shader* shader, u32 offset, u32 size, void* data);
-bool renderer_update_globals(shader* shader);
+bool renderer_update_globals(shader* shader, darray<u32>& sizes);
 
 bool renderer_start_frame();
 bool renderer_end_frame();

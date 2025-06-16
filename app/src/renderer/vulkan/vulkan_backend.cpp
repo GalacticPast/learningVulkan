@@ -442,25 +442,28 @@ bool vulkan_update_materials_descriptor_set(vulkan_shader *shader, material *mat
     return true;
 }
 
-bool vulkan_update_global_descriptor_sets(shader *shader)
+bool vulkan_update_global_descriptor_sets(shader *shader, darray<u32>& ranges)
 {
     ZoneScoped;
     DASSERT(shader);
 
     vulkan_shader* vk_shader = static_cast<vulkan_shader *>(shader->internal_vulkan_shader_state);
     DASSERT(vk_shader);
-    u32 size =  vk_shader->per_frame_uniforms_size.size();
+    u32 size =  ranges.size();
+    DASSERT_MSG(size < 16, "Size is greater than 16 which was our previous assumtion");
 
     VkDescriptorBufferInfo desc_buffer_infos[16]{};
     VkWriteDescriptorSet   desc_writes[16]{};
     //HACK:
-    VkDeviceSize ranges[16]  = {sizeof(scene_global_uniform_buffer_object), sizeof(light_global_uniform_buffer_object)};
-    if(size == 1)
+    VkDeviceSize vk_ranges[16]  = {};
+
+
+    for(u32 i = 0 ; i < size ; i++)
     {
-        ranges[0] -= sizeof(math::vec4);
+        vk_ranges[i] = ranges[i];
     }
 
-    DASSERT_MSG(size < 16, "Size is greater than 16 which was our previous assumtion");
+
 
     u32          curr_frame = vk_context->current_frame_index;
 

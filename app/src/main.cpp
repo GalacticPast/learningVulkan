@@ -231,7 +231,7 @@ void update_camera(scene_global_uniform_buffer_object *ubo, light_global_uniform
 
     ubo->projection = mat4_perspective(fov_rad, aspect_ratio, 0.01f, 1000.0f);
 
-    static math::vec3 camera_pos   = math::vec3(0, 0, 6);
+    static math::vec3 camera_pos   = math::vec3(0, 6, 6);
     static math::vec3 camera_euler = math::vec3(0, 0, 0);
 
     if (input_is_key_down(KEY_A) || input_is_key_down(KEY_LEFT))

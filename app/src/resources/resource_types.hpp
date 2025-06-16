@@ -65,14 +65,36 @@ struct shader_attribute_config
 
 enum pipeline_cull_mode
 {
+    CULL_NONE_BIT = 0,
     CULL_FRONT_BIT,
     CULL_BACK_BIT,
-    CULL_NONE_BIT,
+};
+enum pipeline_color_blend_options
+{
+    COLOR_BLEND_UNKNOWN                    = 0,
+    COLOR_BLEND_FACTOR_ZERO                = 1,
+    COLOR_BLEND_FACTOR_ONE                 = 2,
+    COLOR_BLEND_FACTOR_SRC_ALPHA           = 3,
+    COLOR_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA = 4,
+};
+
+struct pipeline_color_blend_state
+{
+    bool                         enable_color_blend = false;
+    pipeline_color_blend_options src_color_blend_factor;
+    pipeline_color_blend_options dst_color_blend_factor;
+};
+
+struct pipeline_depth_state
+{
+    bool enable_depth_blend = true;
 };
 
 struct shader_pipeline_configuration
 {
-    pipeline_cull_mode mode;
+    pipeline_cull_mode         mode;
+    pipeline_color_blend_state color_blend;
+    pipeline_depth_state       depth_state;
 };
 
 struct shader_config

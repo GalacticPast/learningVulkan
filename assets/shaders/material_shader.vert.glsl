@@ -8,8 +8,8 @@ layout(location = 3) in vec4 in_tangent;
 layout(set = 0, binding = 0) uniform global_uniform_object {
     mat4 view;
     mat4 projection;
-    vec3 camera_pos;
     vec4 ambient_color;
+    vec3 camera_pos;
 } global_ubo;
 
 layout(push_constant) uniform push_constants {

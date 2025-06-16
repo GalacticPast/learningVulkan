@@ -88,9 +88,9 @@ bool renderer_update_global_data(shader* shader, u32 offset, u32 size, void* dat
     return result;
 }
 
-bool renderer_update_globals(shader* shader)
+bool renderer_update_globals(shader* shader, darray<u32>& sizes)
 {
-    bool result = vulkan_update_global_descriptor_sets(shader);
+    bool result = vulkan_update_global_descriptor_sets(shader, sizes);
     DASSERT(result);
     return result;
 }

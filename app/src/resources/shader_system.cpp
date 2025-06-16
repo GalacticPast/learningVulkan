@@ -410,16 +410,19 @@ bool shader_system_create_default_shaders(u64 *material_shader_id, u64 *skybox_s
 
     shader_config material_shader_conf{};
     material_shader_conf.pipeline_configuration.mode = CULL_BACK_BIT;
+    material_shader_conf.pipeline_configuration.color_blend.enable_color_blend = false;
     material_shader_conf.init(arena);
 
     dstring conf_file = "material_shader.conf";
     shader_parse_configuration_file(conf_file, &material_shader_conf);
+
     shader material_shader{};
     *material_shader_id = _create_shader(&material_shader_conf, &material_shader, SHADER_TYPE_MATERIAL);
     shader_sys_state_ptr->default_material_shader_id = *material_shader_id;
 
     shader_config skybox_shader_conf{};
     skybox_shader_conf.pipeline_configuration.mode = CULL_NONE_BIT;
+    skybox_shader_conf.pipeline_configuration.color_blend.enable_color_blend = false;
     skybox_shader_conf.init(arena);
 
     conf_file.clear();
@@ -432,6 +435,12 @@ bool shader_system_create_default_shaders(u64 *material_shader_id, u64 *skybox_s
 
     shader_config grid_shader_conf{};
     grid_shader_conf.pipeline_configuration.mode = CULL_NONE_BIT;
+    grid_shader_conf.pipeline_configuration.color_blend.enable_color_blend = true;
+    grid_shader_conf.pipeline_configuration.color_blend.src_color_blend_factor = COLOR_BLEND_FACTOR_SRC_ALPHA;
+    grid_shader_conf.pipeline_configuration.color_blend.dst_color_blend_factor = COLOR_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+
+    grid_shader_conf.pipeline_configuration.depth_state.enable_depth_blend = false;
+
     grid_shader_conf.init(arena);
 
     conf_file.clear();
@@ -594,9 +603,8 @@ bool shader_system_update_per_frame(scene_global_uniform_buffer_object *scene_gl
             DFATAL("scene_global_uniform_buffer_object was nullptr. Skybox_shader requires it");
             return false;
         }
-        u32 scene_offset = config->per_frame_uniform_offsets[0];
+        u32 size = config->per_frame_uniform_offsets[0];
         // this is because we are not sending the ambient color to the skybox shader;
-        u32  size        = sizeof(scene_global_uniform_buffer_object) - sizeof(math::vec4);
         bool scene       = renderer_update_global_data(shader, 0, size, scene_global);
         DASSERT(scene);
     }
@@ -605,7 +613,7 @@ bool shader_system_update_per_frame(scene_global_uniform_buffer_object *scene_gl
         DERROR("Unknown shader type %d", shader->type);
     }
 
-    bool result = renderer_update_globals(shader);
+    bool result = renderer_update_globals(shader, config->per_frame_uniform_offsets);
     DASSERT(result);
 
     return result;
