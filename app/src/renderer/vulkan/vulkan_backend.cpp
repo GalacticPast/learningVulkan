@@ -1381,19 +1381,27 @@ bool vulkan_create_geometry(renderpass_types type, geometry *out_geometry, u32 v
 {
     // TODO: vulkan_geometry_state
 
-    void *vertex_data = nullptr;
-    u32   buffer_size = vertex_count * vertex_size;
+    void *vertex_data        = nullptr;
+    u32   vertex_buffer_size = vertex_count * vertex_size;
+    void *index_data        = nullptr;
+    u32   index_buffer_size = index_count * sizeof(u32);
 
     vulkan_buffer vertex_staging_buffer{};
     vulkan_create_buffer(vk_context, &vertex_staging_buffer, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-                         VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, buffer_size);
+                         VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+                         vertex_buffer_size);
 
-    vulkan_copy_data_to_buffer(vk_context, &vertex_staging_buffer, vertex_data, vertices, buffer_size);
+    vulkan_copy_data_to_buffer(vk_context, &vertex_staging_buffer, vertex_data, vertices, vertex_buffer_size);
 
-    u32 vertex_offset = INVALID_ID;
-    u32 index_offset  = INVALID_ID;
+    vulkan_buffer index_staging_buffer{};
+    vulkan_create_buffer(vk_context, &index_staging_buffer, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+                         VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, index_buffer_size);
+    vulkan_copy_data_to_buffer(vk_context, &index_staging_buffer, index_data, indices, index_buffer_size);
+
 
     vulkan_geometry_data *internal_array = nullptr;
+    u32 vertex_offset = INVALID_ID;
+    u32 index_offset  = INVALID_ID;
 
     if (type == WORLD_RENDERPASS)
     {
@@ -1404,6 +1412,12 @@ bool vulkan_create_geometry(renderpass_types type, geometry *out_geometry, u32 v
                        sizeof(u32);
         vk_context->world_geometries_count++;
         internal_array = vk_context->world_internal_geometries;
+        vulkan_copy_buffer(vk_context, &vk_context->transfer_command_pool, &vk_context->vk_device.transfer_queue,
+                           &vk_context->world_renderpass.vertex_buffer, vertex_offset, &vertex_staging_buffer,
+                           vertex_buffer_size);
+        vulkan_copy_buffer(vk_context, &vk_context->transfer_command_pool, &vk_context->vk_device.transfer_queue,
+                           &vk_context->world_renderpass.index_buffer, index_offset, &index_staging_buffer,
+                           index_buffer_size);
     }
     else if (type == UI_RENDERPASS)
     {
@@ -1413,26 +1427,14 @@ bool vulkan_create_geometry(renderpass_types type, geometry *out_geometry, u32 v
             vulkan_calculate_index_offset(vk_context, index_offset, vk_context->ui_internal_geometries) * sizeof(u32);
         vk_context->ui_geometries_count++;
         internal_array = vk_context->ui_internal_geometries;
+        vulkan_copy_buffer(vk_context, &vk_context->transfer_command_pool, &vk_context->vk_device.transfer_queue,
+                           &vk_context->ui_renderpass.vertex_buffer, vertex_offset, &vertex_staging_buffer,
+                           vertex_buffer_size);
+        vulkan_copy_buffer(vk_context, &vk_context->transfer_command_pool, &vk_context->vk_device.transfer_queue,
+                           &vk_context->ui_renderpass.index_buffer, index_offset, &index_staging_buffer, index_buffer_size);
     }
 
-    vulkan_copy_buffer(vk_context, &vk_context->transfer_command_pool, &vk_context->vk_device.transfer_queue,
-                       &vk_context->world_renderpass.vertex_buffer, vertex_offset, &vertex_staging_buffer, buffer_size);
-
     vulkan_destroy_buffer(vk_context, &vertex_staging_buffer);
-
-    // index
-    void *index_data = nullptr;
-    buffer_size      = index_count * sizeof(u32);
-
-    vulkan_buffer index_staging_buffer;
-    vulkan_create_buffer(vk_context, &index_staging_buffer, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-                         VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, buffer_size);
-
-    vulkan_copy_data_to_buffer(vk_context, &index_staging_buffer, index_data, indices, buffer_size);
-
-    vulkan_copy_buffer(vk_context, &vk_context->transfer_command_pool, &vk_context->vk_device.transfer_queue,
-                       &vk_context->world_renderpass.index_buffer, index_offset, &index_staging_buffer, buffer_size);
-
     vulkan_destroy_buffer(vk_context, &index_staging_buffer);
 
     arena *arena                        = vk_context->arena;
@@ -1573,9 +1575,9 @@ bool vulkan_draw_skybox(vulkan_shader *skybox_shader_vulkan_data, render_data *d
     dstring   mat_name = DEFAULT_CUBEMAP_TEXTURE_HANDLE;
     material *cube_mat = material_system_acquire_from_name(&mat_name);
 
-    u32 index_offset  = vulkan_calculate_index_offset(vk_context, cube_geo->id, vk_context->world_internal_geometries);
-    u32 vertex_offset = vulkan_calculate_vertex_offset(vk_context, cube_geo->id, vk_context->world_internal_geometries);
     vulkan_geometry_data *geo_data = static_cast<vulkan_geometry_data *>(cube_geo->vulkan_geometry_state);
+    u32 index_offset  = vulkan_calculate_index_offset(vk_context, geo_data->id, vk_context->world_internal_geometries);
+    u32 vertex_offset = vulkan_calculate_vertex_offset(vk_context, geo_data->id, vk_context->world_internal_geometries);
 
     u32 descriptor_set_index = cube_mat->internal_id;
 

@@ -93,8 +93,8 @@ u64 geometry_system_create_geometry(geometry_config *config, bool use_name)
     if (config->type == GEO_TYPE_3D)
     {
         calculate_tangents(config);
-        result = vulkan_create_geometry(WORLD_RENDERPASS, &geo, tris_count, sizeof(vertex_3D),
-                                        config->vertices, indices_count, config->indices);
+        result = vulkan_create_geometry(WORLD_RENDERPASS, &geo, tris_count, sizeof(vertex_3D), config->vertices,
+                                        indices_count, config->indices);
     }
     else if (config->type == GEO_TYPE_2D)
     {
@@ -128,7 +128,7 @@ u64 geometry_system_create_geometry(geometry_config *config, bool use_name)
     return geo.id;
 }
 
-geometry_config geometry_system_generate_quad_config(f32 width, f32 height,dstring *name)
+geometry_config geometry_system_generate_quad_config(f32 width, f32 height, dstring *name)
 {
     DASSERT(name);
     if (width == 0)
@@ -146,23 +146,25 @@ geometry_config geometry_system_generate_quad_config(f32 width, f32 height,dstri
     geometry_config config;
 
     config.vertex_count = 4;
-    config.type = GEO_TYPE_2D;
-    config.vertices = static_cast<vertex_3D *>(dallocate(arena, sizeof(vertex_2D) * config.vertex_count, MEM_TAG_GEOMETRY));
+    config.type         = GEO_TYPE_2D;
+    config.vertices =
+        static_cast<vertex_3D *>(dallocate(arena, sizeof(vertex_2D) * config.vertex_count, MEM_TAG_GEOMETRY));
     config.index_count = 6;
     config.indices     = static_cast<u32 *>(dallocate(arena, sizeof(u32) * config.index_count, MEM_TAG_GEOMETRY));
 
-    vertex_2D* vertices = reinterpret_cast<vertex_2D *>(config.vertices);
-    vertices[0].position = {0,0};
-    vertices[0].tex_coord= {0,0};
+    vertex_2D *vertices   = reinterpret_cast<vertex_2D *>(config.vertices);
 
-    vertices[1].position = {1,0};
-    vertices[1].tex_coord= {1,0};
+    vertices[0].position  = {0.0f, 0.0f};
+    vertices[0].tex_coord = {0.0f, 0.0f};
 
-    vertices[2].position = {0,1};
-    vertices[2].tex_coord= {0,1};
+    vertices[1].position  = {1.0f, 0.0f};
+    vertices[1].tex_coord = {1.0f, 0.0f};
 
-    vertices[3].position = {1,1};
-    vertices[3].tex_coord= {1,1};
+    vertices[2].position  = {0.0f, 1.0f};
+    vertices[2].tex_coord = {0.0f, 1.0f};
+
+    vertices[3].position  = {1.0f, 1.0f};
+    vertices[3].tex_coord = {1.0f, 1.0f};
 
     config.indices[0] = 0;
     config.indices[1] = 1;
@@ -291,7 +293,7 @@ geometry_config geometry_system_generate_plane_config(f32 width, f32 height, u32
     config.name.str_len = strlen(name);
     dstring mat_name    = material_name;
     config.material     = material_system_acquire_from_name(&mat_name);
-    config.type = GEO_TYPE_3D;
+    config.type         = GEO_TYPE_3D;
     return config;
 }
 
@@ -499,7 +501,7 @@ bool geometry_system_create_default_geometry()
 
     for (u32 i = 0; i < num_of_objects; i++)
     {
-        default_geo_configs[i].type = GEO_TYPE_3D;
+        default_geo_configs[i].type       = GEO_TYPE_3D;
         geo_sys_state_ptr->default_geo_id = geometry_system_create_geometry(&default_geo_configs[i], false);
     }
 
@@ -704,8 +706,8 @@ void geometry_system_parse_obj(arena *arena, const char *obj_file_full_path, u32
             {
                 break;
             }
-            object_name_ptr += 2;
-            (*geo_configs)[i].type = GEO_TYPE_3D;
+            object_name_ptr        += 2;
+            (*geo_configs)[i].type  = GEO_TYPE_3D;
 
             next_object_name_ptr = strstr(object_name_ptr, "o ");
             if (next_object_name_ptr == nullptr)
@@ -1302,15 +1304,15 @@ bool geometry_system_parse_bin_file(dstring *file_full_path, u32 *geometry_confi
         {
             u32 name_len;
             dcopy_memory(&name_len, ptr, sizeof(u32));
-            ptr           += sizeof(u32);
+            ptr += sizeof(u32);
             dstring name;
             string_ncopy(name.string, ptr, name_len);
 
-            if(string_compare(name.c_str(), "type_3D"))
+            if (string_compare(name.c_str(), "type_3D"))
             {
                 (*configs)[index].type = GEO_TYPE_3D;
             }
-            else if(string_compare(name.c_str(), "type_2D"))
+            else if (string_compare(name.c_str(), "type_2D"))
             {
                 (*configs)[index].type = GEO_TYPE_3D;
             }
