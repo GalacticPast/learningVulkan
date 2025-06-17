@@ -28,4 +28,6 @@ void geometry_system_get_geometries_from_file(const char *obj_file_name, const c
 geometry_config geometry_system_generate_plane_config(f32 width, f32 height, u32 x_segment_count, u32 y_segment_count,
                                                       f32 tile_x, f32 tile_y, const char *name,
                                                       const char *material_name);
+geometry_config geometry_system_generate_quad_config(f32 width, f32 height,dstring *name);
+
 void geometry_system_copy_config(geometry_config *dst_config, const geometry_config *src_config);

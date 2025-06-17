@@ -203,7 +203,7 @@ bool vulkan_backend_initialize(arena *arena, u64 *vulkan_backend_memory_requirem
 
     if (!shader_system_create_default_shaders(&vk_context->default_material_shader_id,
                                               &vk_context->default_skybox_shader_id,
-                                              &vk_context->default_grid_shader_id))
+                                              &vk_context->default_grid_shader_id, &vk_context->default_ui_shader_id))
     {
         DERROR("Vulkan default_material shader,skybox shader, grid shader creation failed.");
         return false;
@@ -245,15 +245,15 @@ bool vulkan_backend_initialize(arena *arena, u64 *vulkan_backend_memory_requirem
         vk_context->world_internal_geometries[i].id            = INVALID_ID;
         vk_context->world_internal_geometries[i].vertex_count  = INVALID_ID;
         vk_context->world_internal_geometries[i].indices_count = INVALID_ID;
-        vk_context->ui_internal_geometries[i].id            = INVALID_ID;
-        vk_context->ui_internal_geometries[i].vertex_count  = INVALID_ID;
-        vk_context->ui_internal_geometries[i].indices_count = INVALID_ID;
+        vk_context->ui_internal_geometries[i].id               = INVALID_ID;
+        vk_context->ui_internal_geometries[i].vertex_count     = INVALID_ID;
+        vk_context->ui_internal_geometries[i].indices_count    = INVALID_ID;
     }
 
-    vk_context->current_frame_index     = 0;
+    vk_context->current_frame_index    = 0;
     vk_context->world_geometries_count = 0;
-    vk_context->ui_geometries_count = 0;
-    vk_context->frame_counter           = 0;
+    vk_context->ui_geometries_count    = 0;
+    vk_context->frame_counter          = 0;
 
     return true;
 }
@@ -758,7 +758,7 @@ bool vulkan_initialize_shader(shader_config *config, shader *in_shader)
         }
         else
         {
-            DASSERT_MSG(config->has_per_frame, "The shader doesnt have a per_frame_uniform buffer. Are you sure??");
+            DDEBUG("The shader doesnt have a per_frame_uniform buffer. Are you sure??");
         }
     }
     // per_group resources aka set 1
@@ -1478,8 +1478,8 @@ bool vulkan_destroy_geometry(geometry *geometry)
     return true;
 };
 
-bool vulkan_draw_geometries(vulkan_shader *material_shader_vulkan_data, render_data *data,
-                            VkCommandBuffer *curr_command_buffer, u32 curr_frame_index)
+bool vulkan_draw_geometries(vulkan_shader *material_shader_vulkan_data, geometry_type type, u32 geometry_count,
+                            geometry **geos, VkCommandBuffer *curr_command_buffer, u32 curr_frame_index)
 {
     ZoneScoped;
 
@@ -1487,43 +1487,63 @@ bool vulkan_draw_geometries(vulkan_shader *material_shader_vulkan_data, render_d
 
     // bind the globals
 
-    u32 aligned_global     = vk_shader->per_frame_uniforms_size[0];
-    u32 dynamic_offsets[2] = {curr_frame_index * vk_shader->per_frame_stride,
-                              curr_frame_index * vk_shader->per_frame_stride + aligned_global};
 
-    vkCmdBindDescriptorSets(*curr_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, vk_shader->pipeline.layout, 0, 1,
-                            &vk_shader->per_frame_descriptor_set, 2, dynamic_offsets);
 
-    VkBuffer     vertex_buffers[] = {vk_context->world_renderpass.vertex_buffer.handle};
+
+    VkBuffer     vertex_buffers[1] = {};
     VkDeviceSize offsets[]        = {0};
 
-    vkCmdBindVertexBuffers(*curr_command_buffer, 0, 1, vertex_buffers, offsets);
-    vkCmdBindIndexBuffer(*curr_command_buffer, vk_context->world_renderpass.index_buffer.handle, 0,
-                         VK_INDEX_TYPE_UINT32);
+    vulkan_geometry_data* geo_data = nullptr;
+
+    if(type == GEO_TYPE_3D)
+    {
+        u32 aligned_global     = vk_shader->per_frame_uniforms_size[0];
+        u32 dynamic_offsets[2] = {curr_frame_index * vk_shader->per_frame_stride,
+            curr_frame_index * vk_shader->per_frame_stride + aligned_global};
+        vertex_buffers[0] = vk_context->world_renderpass.vertex_buffer.handle;
+        vkCmdBindVertexBuffers(*curr_command_buffer, 0, 1, vertex_buffers, offsets);
+        vkCmdBindIndexBuffer(*curr_command_buffer, vk_context->world_renderpass.index_buffer.handle, 0,
+                             VK_INDEX_TYPE_UINT32);
+        vkCmdBindDescriptorSets(*curr_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, vk_shader->pipeline.layout, 0, 1,
+                                &vk_shader->per_frame_descriptor_set, 2, dynamic_offsets);
+        geo_data = vk_context->world_internal_geometries;
+
+    }
+    else if(type == GEO_TYPE_2D)
+    {
+        vertex_buffers[0] = vk_context->ui_renderpass.vertex_buffer.handle;
+        vkCmdBindVertexBuffers(*curr_command_buffer, 0, 1, vertex_buffers, offsets);
+        vkCmdBindIndexBuffer(*curr_command_buffer, vk_context->ui_renderpass.index_buffer.handle, 0,
+                             VK_INDEX_TYPE_UINT32);
+        geo_data = vk_context->ui_internal_geometries;
+    }
 
     vk_push_constant pc{};
 
-    for (u32 i = 0; i < data->geometry_count; i++)
+    for (u32 i = 0; i < geometry_count; i++)
     {
 
-        material *mat = data->test_geometry[i]->material;
+        material *mat = geos[i]->material;
 
-        u32                   index_offset  = vulkan_calculate_index_offset(vk_context, data->test_geometry[i]->id,
-                                                                            vk_context->world_internal_geometries);
-        u32                   vertex_offset = vulkan_calculate_vertex_offset(vk_context, data->test_geometry[i]->id,
-                                                                             vk_context->world_internal_geometries);
+        u32                   index_offset  = vulkan_calculate_index_offset(vk_context, geos[i]->id,
+                                                                            geo_data);
+        u32                   vertex_offset = vulkan_calculate_vertex_offset(vk_context, geos[i]->id,
+                                                                             geo_data);
         vulkan_geometry_data *geo_data =
-            static_cast<vulkan_geometry_data *>(data->test_geometry[i]->vulkan_geometry_state);
+            static_cast<vulkan_geometry_data *>(geos[i]->vulkan_geometry_state);
 
-        u32 descriptor_set_index = mat->internal_id;
+        if(mat)
+        {
+            u32 descriptor_set_index = mat->internal_id;
 
-        vkCmdBindDescriptorSets(*curr_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, vk_shader->pipeline.layout, 1, 1,
-                                &vk_shader->per_group_descriptor_sets[descriptor_set_index], 0, nullptr);
+            vkCmdBindDescriptorSets(*curr_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, vk_shader->pipeline.layout, 1, 1,
+                                    &vk_shader->per_group_descriptor_sets[descriptor_set_index], 0, nullptr);
+            pc.diffuse_color = mat->diffuse_color;
+            pc.model         = geos[i]->ubo.model;
+            vkCmdPushConstants(*curr_command_buffer, vk_shader->pipeline.layout, VK_SHADER_STAGE_VERTEX_BIT, 0,
+                               sizeof(vk_push_constant), &pc);
 
-        pc.model         = data->test_geometry[i]->ubo.model;
-        pc.diffuse_color = mat->diffuse_color;
-        vkCmdPushConstants(*curr_command_buffer, vk_shader->pipeline.layout, VK_SHADER_STAGE_VERTEX_BIT, 0,
-                           sizeof(vk_push_constant), &pc);
+        }
 
         vkCmdDrawIndexed(*curr_command_buffer, geo_data->indices_count, 1, index_offset, vertex_offset, 0);
     }
@@ -1554,15 +1574,16 @@ bool vulkan_draw_skybox(vulkan_shader *skybox_shader_vulkan_data, render_data *d
     VkDeviceSize offsets[]        = {0};
 
     vkCmdBindVertexBuffers(*curr_command_buffer, 0, 1, vertex_buffers, offsets);
-    vkCmdBindIndexBuffer(*curr_command_buffer, vk_context->world_renderpass.index_buffer.handle, 0, VK_INDEX_TYPE_UINT32);
+    vkCmdBindIndexBuffer(*curr_command_buffer, vk_context->world_renderpass.index_buffer.handle, 0,
+                         VK_INDEX_TYPE_UINT32);
 
     geometry *cube_geo = geometry_system_get_default_geometry();
     dstring   mat_name = DEFAULT_CUBEMAP_TEXTURE_HANDLE;
     material *cube_mat = material_system_acquire_from_name(&mat_name);
 
-    u32                   index_offset  = vulkan_calculate_index_offset(vk_context, cube_geo->id, vk_context->world_internal_geometries);
-    u32                   vertex_offset = vulkan_calculate_vertex_offset(vk_context, cube_geo->id,vk_context->world_internal_geometries);
-    vulkan_geometry_data *geo_data      = static_cast<vulkan_geometry_data *>(cube_geo->vulkan_geometry_state);
+    u32 index_offset  = vulkan_calculate_index_offset(vk_context, cube_geo->id, vk_context->world_internal_geometries);
+    u32 vertex_offset = vulkan_calculate_vertex_offset(vk_context, cube_geo->id, vk_context->world_internal_geometries);
+    vulkan_geometry_data *geo_data = static_cast<vulkan_geometry_data *>(cube_geo->vulkan_geometry_state);
 
     u32 descriptor_set_index = cube_mat->internal_id;
 
@@ -1635,9 +1656,13 @@ bool vulkan_draw_frame(render_data *render_data)
     shader *grid_shader = shader_system_get_shader(vk_context->default_grid_shader_id);
     DASSERT(grid_shader);
 
+    shader *ui_shader = shader_system_get_shader(vk_context->default_ui_shader_id);
+    DASSERT(ui_shader);
+
     vulkan_shader *vk_material_shader = static_cast<vulkan_shader *>(material_shader->internal_vulkan_shader_state);
     vulkan_shader *vk_skybox_shader   = static_cast<vulkan_shader *>(skybox_shader->internal_vulkan_shader_state);
     vulkan_shader *vk_grid_shader     = static_cast<vulkan_shader *>(grid_shader->internal_vulkan_shader_state);
+    vulkan_shader *vk_ui_shader     = static_cast<vulkan_shader *>(ui_shader->internal_vulkan_shader_state);
 
     vulkan_begin_renderpass(vk_context, WORLD_RENDERPASS, curr_command_buffer, current_frame);
 
@@ -1648,12 +1673,13 @@ bool vulkan_draw_frame(render_data *render_data)
     vulkan_draw_grid(vk_grid_shader, &curr_command_buffer);
 
     vkCmdBindPipeline(curr_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, vk_material_shader->pipeline.handle);
-    vulkan_draw_geometries(vk_material_shader, render_data, &curr_command_buffer, current_frame);
+    vulkan_draw_geometries(vk_material_shader, GEO_TYPE_3D, render_data->geometry_count_3D,render_data->test_geometry_3D, &curr_command_buffer, current_frame);
 
     vulkan_end_renderpass(&curr_command_buffer);
 
+    vkCmdBindPipeline(curr_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, vk_ui_shader->pipeline.handle);
     vulkan_begin_renderpass(vk_context, UI_RENDERPASS, curr_command_buffer, current_frame);
-
+    vulkan_draw_geometries(vk_ui_shader, GEO_TYPE_2D, render_data->geometry_count_2D,render_data->test_geometry_2D, &curr_command_buffer, current_frame);
     vulkan_end_renderpass(&curr_command_buffer);
 
     vulkan_end_command_buffer_single_use(vk_context, curr_command_buffer, false);

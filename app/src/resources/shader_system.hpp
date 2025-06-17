@@ -8,7 +8,8 @@ bool shader_system_create_shader(dstring *shader_config_file_path, shader *out_s
 
 bool shader_system_bind_shader(u64 shader_id);
 
-bool shader_system_create_default_shaders(u64 *material_shader_id, u64 *skybox_shader_id, u64 *grid_shader_id);
+bool shader_system_create_default_shaders(u64 *material_shader_id, u64 *skybox_shader_id, u64 *grid_shader_id,
+                                          u64 *ui_shader_id);
 
 shader *shader_system_get_shader(u64 id);
 

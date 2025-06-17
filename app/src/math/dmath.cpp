@@ -63,11 +63,21 @@ void scale_geometries(const geometry_config *config, vec3 scaling_factor)
 {
     u32 vertex_count = config->vertex_count;
 
-
-    for (u32 i = 0; i < vertex_count; i++)
+    if(config->type == GEO_TYPE_3D)
     {
-        reinterpret_cast<vertex_3D *>(config->vertices)[i].position.x *= scaling_factor.x;
-        reinterpret_cast<vertex_3D *>(config->vertices)[i].position.y *= scaling_factor.y;
-        reinterpret_cast<vertex_3D *>(config->vertices)[i].position.z *= scaling_factor.z;
+        for (u32 i = 0; i < vertex_count; i++)
+        {
+            reinterpret_cast<vertex_3D *>(config->vertices)[i].position.x *= scaling_factor.x;
+            reinterpret_cast<vertex_3D *>(config->vertices)[i].position.y *= scaling_factor.y;
+            reinterpret_cast<vertex_3D *>(config->vertices)[i].position.z *= scaling_factor.z;
+        }
+    }
+    else
+    {
+        for (u32 i = 0; i < vertex_count; i++)
+        {
+            reinterpret_cast<vertex_2D *>(config->vertices)[i].position.x *= scaling_factor.x;
+            reinterpret_cast<vertex_2D *>(config->vertices)[i].position.y *= scaling_factor.y;
+        }
     }
 }

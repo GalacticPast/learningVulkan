@@ -84,14 +84,15 @@ bool geometry_system_shutdowm(void *state)
 
 u64 geometry_system_create_geometry(geometry_config *config, bool use_name)
 {
-    calculate_tangents(config);
     DASSERT(config->type != GEO_TYPE_UNKNOWN);
+
     geometry geo{};
     u32      tris_count    = config->vertex_count;
     u32      indices_count = config->index_count;
     bool     result        = false;
     if (config->type == GEO_TYPE_3D)
     {
+        calculate_tangents(config);
         result = vulkan_create_geometry(WORLD_RENDERPASS, &geo, tris_count, sizeof(vertex_3D),
                                         static_cast<void *>(config->vertices), indices_count, config->indices);
     }
@@ -125,6 +126,52 @@ u64 geometry_system_create_geometry(geometry_config *config, bool use_name)
     geo_sys_state_ptr->loaded_geometry.push_back(geo.name);
 
     return geo.id;
+}
+
+geometry_config geometry_system_generate_quad_config(f32 width, f32 height,dstring *name)
+{
+    DASSERT(name);
+    if (width == 0)
+    {
+        DWARN("Width must be nonzero. Defaulting to one.");
+        width = 1.0f;
+    }
+    if (height == 0)
+    {
+        DWARN("Height must be nonzero. Defaulting to one.");
+        height = 1.0f;
+    }
+
+    arena          *arena = geo_sys_state_ptr->arena;
+    geometry_config config;
+
+    config.vertex_count = 4;
+    config.type = GEO_TYPE_2D;
+    config.vertices = static_cast<vertex_3D *>(dallocate(arena, sizeof(vertex_2D) * config.vertex_count, MEM_TAG_GEOMETRY));
+    config.index_count = 6;
+    config.indices     = static_cast<u32 *>(dallocate(arena, sizeof(u32) * config.index_count, MEM_TAG_GEOMETRY));
+
+    vertex_2D* vertices = reinterpret_cast<vertex_2D *>(config.vertices);
+    vertices[0].position = {0,0};
+    vertices[0].tex_coord= {0,0};
+
+    vertices[1].position = {1,0};
+    vertices[1].tex_coord= {1,0};
+
+    vertices[2].position = {0,1};
+    vertices[2].tex_coord= {0,1};
+
+    vertices[3].position = {1,1};
+    vertices[3].tex_coord= {1,1};
+
+    config.indices[0] = 0;
+    config.indices[1] = 1;
+    config.indices[2] = 2;
+    config.indices[3] = 1;
+    config.indices[4] = 3;
+    config.indices[5] = 2;
+
+    return config;
 }
 
 geometry_config geometry_system_generate_plane_config(f32 width, f32 height, u32 x_segment_count, u32 y_segment_count,
@@ -291,9 +338,9 @@ geometry_config *geometry_system_generate_config(dstring obj_file_name)
 
 geometry_config geometry_system_generate_cube_config()
 {
-    u32 width  = 1;
-    u32 height = 1;
-    u32 depth  = 1;
+    u32 width  = 2;
+    u32 height = 2;
+    u32 depth  = 2;
     f32 tile_x = 1;
     f32 tile_y = 1;
 
@@ -305,6 +352,7 @@ geometry_config geometry_system_generate_cube_config()
     config.index_count = 6 * 6; // 6 indices per side, 6 sides
     config.indices =
         static_cast<u32 *>(dallocate(geo_sys_state_ptr->arena, sizeof(u32) * config.index_count, MEM_TAG_GEOMETRY));
+    config.type = GEO_TYPE_3D;
 
     f32 half_width  = width * 0.5f;
     f32 half_height = height * 0.5f;
@@ -419,7 +467,6 @@ geometry_config geometry_system_generate_cube_config()
         ((u32 *)config.indices)[i_offset + 4] = v_offset + 3;
         ((u32 *)config.indices)[i_offset + 5] = v_offset + 1;
     }
-    calculate_tangents(&config);
     return config;
 }
 
@@ -446,7 +493,6 @@ bool geometry_system_create_default_geometry()
         default_geo_configs[0].material = material_system_get_default_material();
         geometry_system_write_configs_to_file(&bin_file, num_of_objects, default_geo_configs);
         // there is only one thats why
-        calculate_tangents(default_geo_configs);
     }
 
     DASSERT(num_of_objects != INVALID_ID);

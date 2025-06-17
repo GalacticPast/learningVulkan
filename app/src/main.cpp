@@ -98,17 +98,20 @@ int main()
 
     render_data triangle{};
 
-    geometry **geos           = nullptr;
-    u32        geometry_count = INVALID_ID;
+    geometry **geos_3D           = nullptr;
+    u32        geometry_count_3D = INVALID_ID;
 
-    light_ubo.direction  = {-0.578f, -0.578f, -0.578f};
-    light_ubo.color      = {0.8f, 0.8f, 0.8f, 1.0f};
+    geometry **geos_2D           = nullptr;
+    u32        geometry_count_2D = INVALID_ID;
+
+    light_ubo.direction = {-0.578f, -0.578f, -0.578f};
+    light_ubo.color     = {0.8f, 0.8f, 0.8f, 1.0f};
 
 #if false
     {
         const char *obj_file_name  = "sponza.obj";
         const char *mtl_file_name  = "sponza.mtl";
-        geometry_system_get_geometries_from_file(obj_file_name, mtl_file_name, &geos, &geometry_count);
+        geometry_system_get_geometries_from_file(obj_file_name, mtl_file_name, &geos_3D, &geometry_count_3D);
 
     }
 #endif
@@ -132,35 +135,40 @@ int main()
         u64 green = geometry_system_create_geometry(&green_light, false);
         u64 blue  = geometry_system_create_geometry(&blue_light, false);
 
-        geos     = static_cast<geometry **>(dallocate(app_state.system_arena, sizeof(geometry *) * 6, MEM_TAG_UNKNOWN));
-        geos[0]  = geometry_system_get_default_geometry();
+        geos_3D     = static_cast<geometry **>(dallocate(app_state.system_arena, sizeof(geometry *) * 6, MEM_TAG_UNKNOWN));
+        geos_3D[0]  = geometry_system_get_default_geometry();
         mat_name = "orange_lines_512.conf";
-        geos[0]->material = material_system_acquire_from_config_file(&mat_name);
+        geos_3D[0]->material = material_system_acquire_from_config_file(&mat_name);
         mat_name.clear();
 
-        geos[1]            = geometry_system_get_geometry(red);
-        geos[1]->ubo.model = mat4_translation({2, 0, 0});
+        geos_3D[1]            = geometry_system_get_geometry(red);
+        geos_3D[1]->ubo.model = mat4_translation({2, 0, 0});
 
-        geos[2]            = geometry_system_get_geometry(green);
-        geos[2]->ubo.model = mat4_translation({0, 2, 0});
+        geos_3D[2]            = geometry_system_get_geometry(green);
+        geos_3D[2]->ubo.model = mat4_translation({0, 2, 0});
 
-        geos[3]            = geometry_system_get_geometry(blue);
-        geos[3]->ubo.model = mat4_translation({0, 0, 2});
+        geos_3D[3]            = geometry_system_get_geometry(blue);
+        geos_3D[3]->ubo.model = mat4_translation({0, 0, 2});
 
-        geometry_config plane_config =
-            geometry_system_generate_plane_config(10, 10, 1, 1, 1, 1, "its a plane", DEFAULT_LIGHT_MATERIAL_HANDLE);
-        u64 id3 = geometry_system_create_geometry(&plane_config, false);
+        geometry_count_3D = 4;
 
-        // geos[4]             = geometry_system_get_geometry(id3);
-        // geos[4]->ubo.model *= mat4_scale(math::vec3(100, 100, 100));
-        // geos[4]->ubo.model *= mat4_translation(math::vec3(0, -2, 0));
+        dstring quad_name = "test_quad";
+        geometry_config quad_config = geometry_system_generate_quad_config(10,10,&quad_name);
+        scale_geometries(&quad_config, {0.05,0.05,0.05});
+        u64 quad_id = geometry_system_create_geometry(&quad_config, false);
+        geos_2D     = static_cast<geometry **>(dallocate(app_state.system_arena, sizeof(geometry *) * 2, MEM_TAG_UNKNOWN));
+        geos_2D[0]  = geometry_system_get_geometry(quad_id);
+        geometry_count_2D = 1;
 
-        geometry_count = 4;
+
     }
 #endif
 
-    triangle.test_geometry  = geos;
-    triangle.geometry_count = geometry_count;
+    triangle.test_geometry_3D  = geos_3D;
+    triangle.geometry_count_3D = geometry_count_3D;
+
+    triangle.test_geometry_2D  = geos_2D;
+    triangle.geometry_count_2D = geometry_count_2D;
 
     triangle.scene_ubo = scene_ubo;
     triangle.light_ubo = light_ubo;
@@ -227,7 +235,7 @@ void update_camera(scene_global_uniform_buffer_object *ubo, light_global_uniform
     f32 aspect_ratio = static_cast<f32>(s_width) / static_cast<f32>(s_height);
 
     vec3 velocity = vec3();
-    f32        step     = 0.01f;
+    f32  step     = 0.01f;
 
     ubo->projection = mat4_perspective(fov_rad, aspect_ratio, 0.01f, 1000.0f);
 
@@ -257,17 +265,17 @@ void update_camera(scene_global_uniform_buffer_object *ubo, light_global_uniform
     if (input_is_key_down(KEY_W))
     {
         vec3 forward  = mat4_forward(ubo->view);
-        velocity           += forward;
+        velocity     += forward;
     }
     if (input_is_key_down(KEY_S))
     {
 
         vec3 backward  = mat4_backward(ubo->view);
-        velocity            += backward;
+        velocity      += backward;
     }
 
     vec3 z_axis          = vec3();
-    f32        temp_move_speed = start_time;
+    f32  temp_move_speed = start_time;
 
     f32 scalar = 100.0f;
 

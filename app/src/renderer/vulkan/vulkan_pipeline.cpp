@@ -212,6 +212,7 @@ bool vulkan_create_pipeline(vulkan_context *vk_context, vulkan_shader *shader)
     {
         depth_stencil_state_create_info.depthTestEnable       = VK_FALSE;
         depth_stencil_state_create_info.depthWriteEnable      = VK_FALSE;
+        depth_stencil_state_create_info.depthCompareOp        = VK_COMPARE_OP_NEVER;
     }
 
     // global global_descriptor_set_ubo_layout_binding
@@ -268,6 +269,7 @@ bool vulkan_create_pipeline(vulkan_context *vk_context, vulkan_shader *shader)
     pipeline_create_info.pColorBlendState    = &color_blend_state_create_info;
     pipeline_create_info.pDynamicState       = &dynamic_state_create_info;
     pipeline_create_info.layout              = shader->pipeline.layout;
+
     if(shader->renderpass_type == WORLD_RENDERPASS)
     {
         pipeline_create_info.renderPass          = vk_context->world_renderpass.handle;

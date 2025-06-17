@@ -22,6 +22,7 @@ struct shader_system_state
     u64 default_material_shader_id = INVALID_ID_64;
     u64 default_skybox_shader_id   = INVALID_ID_64;
     u64 default_grid_shader_id     = INVALID_ID_64;
+    u64 default_ui_shader_id       = INVALID_ID_64;
     u64 bound_shader_id            = INVALID_ID_64;
 };
 static shader_system_state *shader_sys_state_ptr = nullptr;
@@ -101,11 +102,11 @@ bool shader_system_bind_shader(u64 shader_id)
     return true;
 }
 
-shader* shader_system_get_shader(u64 shader_id)
+shader *shader_system_get_shader(u64 shader_id)
 {
     DASSERT(shader_id != INVALID_ID_64);
     DASSERT(shader_sys_state_ptr);
-    shader* shader = shader_sys_state_ptr->shaders.find(shader_id);
+    shader *shader = shader_sys_state_ptr->shaders.find(shader_id);
     return shader;
 }
 
@@ -404,14 +405,15 @@ static void shader_parse_configuration_file(dstring conf_file_name, shader_confi
     shader_system_calculate_offsets(out_config);
 }
 
-bool shader_system_create_default_shaders(u64 *material_shader_id, u64 *skybox_shader_id, u64 *grid_shader_id)
+bool shader_system_create_default_shaders(u64 *material_shader_id, u64 *skybox_shader_id, u64 *grid_shader_id,
+                                          u64 *ui_shader_id)
 {
     arena *arena = shader_sys_state_ptr->arena;
 
     shader_config material_shader_conf{};
-    material_shader_conf.pipeline_configuration.mode = CULL_BACK_BIT;
+    material_shader_conf.pipeline_configuration.mode                           = CULL_BACK_BIT;
     material_shader_conf.pipeline_configuration.color_blend.enable_color_blend = false;
-    material_shader_conf.renderpass_types = WORLD_RENDERPASS;
+    material_shader_conf.renderpass_types                                      = WORLD_RENDERPASS;
     material_shader_conf.init(arena);
 
     dstring conf_file = "material_shader.conf";
@@ -422,9 +424,9 @@ bool shader_system_create_default_shaders(u64 *material_shader_id, u64 *skybox_s
     shader_sys_state_ptr->default_material_shader_id = *material_shader_id;
 
     shader_config skybox_shader_conf{};
-    skybox_shader_conf.pipeline_configuration.mode = CULL_NONE_BIT;
+    skybox_shader_conf.pipeline_configuration.mode                           = CULL_NONE_BIT;
     skybox_shader_conf.pipeline_configuration.color_blend.enable_color_blend = false;
-    skybox_shader_conf.renderpass_types = WORLD_RENDERPASS;
+    skybox_shader_conf.renderpass_types                                      = WORLD_RENDERPASS;
     skybox_shader_conf.init(arena);
 
     conf_file.clear();
@@ -436,8 +438,8 @@ bool shader_system_create_default_shaders(u64 *material_shader_id, u64 *skybox_s
     shader_sys_state_ptr->default_skybox_shader_id = *skybox_shader_id;
 
     shader_config grid_shader_conf{};
-    grid_shader_conf.pipeline_configuration.mode = CULL_NONE_BIT;
-    grid_shader_conf.pipeline_configuration.color_blend.enable_color_blend = true;
+    grid_shader_conf.pipeline_configuration.mode                               = CULL_NONE_BIT;
+    grid_shader_conf.pipeline_configuration.color_blend.enable_color_blend     = true;
     grid_shader_conf.pipeline_configuration.color_blend.src_color_blend_factor = COLOR_BLEND_FACTOR_SRC_ALPHA;
     grid_shader_conf.pipeline_configuration.color_blend.dst_color_blend_factor = COLOR_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
 
@@ -454,6 +456,23 @@ bool shader_system_create_default_shaders(u64 *material_shader_id, u64 *skybox_s
     shader grid_shader{};
     *grid_shader_id                              = _create_shader(&grid_shader_conf, &grid_shader, SHADER_TYPE_GRID);
     shader_sys_state_ptr->default_grid_shader_id = *grid_shader_id;
+
+    shader_config ui_shader_conf{};
+    ui_shader_conf.pipeline_configuration.mode                           = CULL_NONE_BIT;
+    ui_shader_conf.pipeline_configuration.color_blend.enable_color_blend = false;
+
+    ui_shader_conf.renderpass_types                                      = UI_RENDERPASS;
+    ui_shader_conf.pipeline_configuration.depth_state.enable_depth_blend = false;
+
+    ui_shader_conf.init(arena);
+
+    conf_file.clear();
+    conf_file = "ui_shader.conf";
+    shader_parse_configuration_file(conf_file, &ui_shader_conf);
+
+    shader ui_shader{};
+    *ui_shader_id                              = _create_shader(&ui_shader_conf, &ui_shader, SHADER_TYPE_GRID);
+    shader_sys_state_ptr->default_ui_shader_id = *ui_shader_id;
 
     return true;
 }
@@ -607,9 +626,9 @@ bool shader_system_update_per_frame(scene_global_uniform_buffer_object *scene_gl
             DFATAL("scene_global_uniform_buffer_object was nullptr. Skybox_shader requires it");
             return false;
         }
-        u32 size = config->per_frame_uniform_offsets[0];
+        u32 size   = config->per_frame_uniform_offsets[0];
         // this is because we are not sending the ambient color to the skybox shader;
-        bool scene       = renderer_update_global_data(shader, 0, size, scene_global);
+        bool scene = renderer_update_global_data(shader, 0, size, scene_global);
         DASSERT(scene);
     }
     else

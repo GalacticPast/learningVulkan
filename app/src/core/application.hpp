@@ -1,8 +1,8 @@
 #pragma once
 
-#include "main.hpp"
 #include "containers/darray.hpp"
 #include "defines.hpp"
+#include "main.hpp"
 #include "memory/linear_allocator.hpp"
 #include "resources/resource_types.hpp"
 
@@ -11,9 +11,11 @@ struct render_data
     scene_global_uniform_buffer_object scene_ubo;
     light_global_uniform_buffer_object light_ubo;
 
-    u32 geometry_count       = INVALID_ID;
-    // array of geometry pointers
-    geometry **test_geometry = nullptr;
+    u32        geometry_count_3D = INVALID_ID;
+    geometry **test_geometry_3D  = nullptr;
+
+    u32        geometry_count_2D = INVALID_ID;
+    geometry **test_geometry_2D  = nullptr;
 };
 
 struct application_state
@@ -25,7 +27,7 @@ struct application_state
     u64              application_system_linear_allocator_memory_requirements; // 1 mega bytes
     linear_allocator application_system_linear_allocator;
 
-    arena *system_arena  = nullptr;
+    arena *system_arena   = nullptr;
     arena *resource_arena = nullptr;
 
     u64   platform_system_memory_requirements; // 1 mega bytes
@@ -58,4 +60,3 @@ struct application_state
 
 bool application_initialize(application_state *out_state, application_config *config);
 void application_shutdown();
-
