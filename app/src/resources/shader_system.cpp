@@ -458,8 +458,10 @@ bool shader_system_create_default_shaders(u64 *material_shader_id, u64 *skybox_s
     shader_sys_state_ptr->default_grid_shader_id = *grid_shader_id;
 
     shader_config ui_shader_conf{};
-    ui_shader_conf.pipeline_configuration.mode                           = CULL_NONE_BIT;
-    ui_shader_conf.pipeline_configuration.color_blend.enable_color_blend = false;
+    ui_shader_conf.pipeline_configuration.mode                               = CULL_NONE_BIT;
+    ui_shader_conf.pipeline_configuration.color_blend.enable_color_blend     = true;
+    ui_shader_conf.pipeline_configuration.color_blend.src_color_blend_factor = COLOR_BLEND_FACTOR_SRC_ALPHA;
+    ui_shader_conf.pipeline_configuration.color_blend.dst_color_blend_factor = COLOR_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
 
     ui_shader_conf.renderpass_types                                      = UI_RENDERPASS;
     ui_shader_conf.pipeline_configuration.depth_state.enable_depth_blend = false;

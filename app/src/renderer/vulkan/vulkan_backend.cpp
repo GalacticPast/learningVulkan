@@ -1205,9 +1205,13 @@ void vulkan_backend_shutdown()
     shader *grid_shader = shader_system_get_shader(vk_context->default_grid_shader_id);
     DASSERT(grid_shader);
 
+    shader *ui_shader = shader_system_get_shader(vk_context->default_ui_shader_id);
+    DASSERT(ui_shader);
+
     vulkan_destroy_shader(material_shader);
     vulkan_destroy_shader(skybox_shader);
     vulkan_destroy_shader(grid_shader);
+    vulkan_destroy_shader(ui_shader);
 
     vkDestroyRenderPass(device, vk_context->world_renderpass.handle, allocator);
     vkDestroyRenderPass(device, vk_context->ui_renderpass.handle, allocator);
