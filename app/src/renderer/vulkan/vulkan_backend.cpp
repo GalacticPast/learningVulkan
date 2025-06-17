@@ -4,6 +4,7 @@
 #include "core/logger.hpp"
 #include "defines.hpp"
 
+#include "math/dmath.hpp"
 #include "math/dmath_types.hpp"
 #include "resources/geometry_system.hpp"
 #include "resources/material_system.hpp"
@@ -1340,35 +1341,36 @@ bool vulkan_update_global_uniform_buffer(shader *shader, u32 offset, u32 size, v
     return true;
 }
 
-u32 vulkan_calculate_vertex_offset(vulkan_context *vk_context, u32 geometry_id, vulkan_geometry_data *data)
+u32 vulkan_calculate_vertex_offset(vulkan_context *vk_context, u32 geometry_id,
+                                   vulkan_geometry_data *vk_geo_internal_array)
 {
     // INFO: maybe make this a u64 ?
     u32 vert_offset = 0;
 
     for (u32 i = 0; i < MAX_GEOMETRIES_LOADED && i < geometry_id; i++)
     {
-        if (data[i].id == INVALID_ID)
+        if (vk_geo_internal_array[i].id == INVALID_ID)
         {
             break;
         }
-        vert_offset += data[i].vertex_count;
+        vert_offset += vk_geo_internal_array[i].vertex_count;
     }
     u32 ans = vert_offset;
     return ans;
 }
 
-u32 vulkan_calculate_index_offset(vulkan_context *vk_context, u32 geometry_id, vulkan_geometry_data *data)
+u32 vulkan_calculate_index_offset(vulkan_context *vk_context, u32 geometry_id,
+                                  vulkan_geometry_data *vk_geo_internal_array)
 {
-    // INFO: maybe make this a u64 ?
     u32 index_offset = 0;
 
     for (u32 i = 0; i < MAX_GEOMETRIES_LOADED && i < geometry_id; i++)
     {
-        if (data[i].id == INVALID_ID)
+        if (vk_geo_internal_array[i].id == INVALID_ID)
         {
             break;
         }
-        index_offset += data[i].indices_count;
+        index_offset += vk_geo_internal_array[i].indices_count;
     }
     u32 ans = index_offset;
     return ans;
@@ -1391,28 +1393,26 @@ bool vulkan_create_geometry(renderpass_types type, geometry *out_geometry, u32 v
     u32 vertex_offset = INVALID_ID;
     u32 index_offset  = INVALID_ID;
 
-    vulkan_geometry_data *data = nullptr;
+    vulkan_geometry_data *internal_array = nullptr;
 
     if (type == WORLD_RENDERPASS)
     {
         vertex_offset =
-            vulkan_calculate_vertex_offset(vk_context, out_geometry->id, vk_context->world_internal_geometries) *
+            vulkan_calculate_vertex_offset(vk_context, vertex_offset, vk_context->world_internal_geometries) *
             vertex_size;
-        index_offset =
-            vulkan_calculate_index_offset(vk_context, out_geometry->id, vk_context->world_internal_geometries) *
-            sizeof(u32);
+        index_offset = vulkan_calculate_index_offset(vk_context, index_offset, vk_context->world_internal_geometries) *
+                       sizeof(u32);
         vk_context->world_geometries_count++;
-        data = vk_context->world_internal_geometries;
+        internal_array = vk_context->world_internal_geometries;
     }
     else if (type == UI_RENDERPASS)
     {
         vertex_offset =
-            vulkan_calculate_vertex_offset(vk_context, out_geometry->id, vk_context->ui_internal_geometries) *
-            vertex_size;
-        index_offset = vulkan_calculate_index_offset(vk_context, out_geometry->id, vk_context->ui_internal_geometries) *
-                       sizeof(u32);
+            vulkan_calculate_vertex_offset(vk_context, vertex_offset, vk_context->ui_internal_geometries) * vertex_size;
+        index_offset =
+            vulkan_calculate_index_offset(vk_context, index_offset, vk_context->ui_internal_geometries) * sizeof(u32);
         vk_context->ui_geometries_count++;
-        data = vk_context->ui_internal_geometries;
+        internal_array = vk_context->ui_internal_geometries;
     }
 
     vulkan_copy_buffer(vk_context, &vk_context->transfer_command_pool, &vk_context->vk_device.transfer_queue,
@@ -1437,30 +1437,29 @@ bool vulkan_create_geometry(renderpass_types type, geometry *out_geometry, u32 v
 
     arena *arena                        = vk_context->arena;
     out_geometry->vulkan_geometry_state = dallocate(arena, sizeof(vulkan_geometry_data), MEM_TAG_RENDERER);
-    vulkan_geometry_data *geo_data      = static_cast<vulkan_geometry_data *>(out_geometry->vulkan_geometry_state);
+    vulkan_geometry_data *geo_vk_data   = static_cast<vulkan_geometry_data *>(out_geometry->vulkan_geometry_state);
 
-    geo_data->indices_count = index_count;
-    geo_data->vertex_count  = vertex_count;
+    geo_vk_data->indices_count = index_count;
+    geo_vk_data->vertex_count  = vertex_count;
+
+    u32 low = INVALID_ID;
 
     for (s32 i = 0; i < MAX_GEOMETRIES_LOADED; i++)
     {
-        if (data[i].id == INVALID_ID)
+        if (internal_array[i].id == INVALID_ID)
         {
-            geo_data->id          = i;
-            data[i].id            = i;
-            data[i].vertex_count  = vertex_count;
-            data[i].indices_count = index_count;
+            geo_vk_data->id                 = i;
+            internal_array[i].id            = i;
+            internal_array[i].vertex_count  = vertex_count;
+            internal_array[i].indices_count = index_count;
             break;
         }
     }
-
-    if (geo_data->id == INVALID_ID)
+    if (geo_vk_data->id == INVALID_ID)
     {
         DERROR("Couldnt load geometry into vulkan_internal_geometries. Maybe we run out space??");
         return false;
     }
-
-    out_geometry->id = geo_data->id;
     return true;
 };
 bool vulkan_destroy_geometry(geometry *geometry)
@@ -1487,35 +1486,31 @@ bool vulkan_draw_geometries(vulkan_shader *material_shader_vulkan_data, geometry
 
     // bind the globals
 
-
-
-
     VkBuffer     vertex_buffers[1] = {};
-    VkDeviceSize offsets[]        = {0};
+    VkDeviceSize offsets[]         = {0};
 
-    vulkan_geometry_data* geo_data = nullptr;
+    vulkan_geometry_data *internal_vulkan_geo_data_array = nullptr;
 
-    if(type == GEO_TYPE_3D)
+    if (type == GEO_TYPE_3D)
     {
         u32 aligned_global     = vk_shader->per_frame_uniforms_size[0];
         u32 dynamic_offsets[2] = {curr_frame_index * vk_shader->per_frame_stride,
-            curr_frame_index * vk_shader->per_frame_stride + aligned_global};
-        vertex_buffers[0] = vk_context->world_renderpass.vertex_buffer.handle;
+                                  curr_frame_index * vk_shader->per_frame_stride + aligned_global};
+        vertex_buffers[0]      = vk_context->world_renderpass.vertex_buffer.handle;
         vkCmdBindVertexBuffers(*curr_command_buffer, 0, 1, vertex_buffers, offsets);
         vkCmdBindIndexBuffer(*curr_command_buffer, vk_context->world_renderpass.index_buffer.handle, 0,
                              VK_INDEX_TYPE_UINT32);
         vkCmdBindDescriptorSets(*curr_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, vk_shader->pipeline.layout, 0, 1,
                                 &vk_shader->per_frame_descriptor_set, 2, dynamic_offsets);
-        geo_data = vk_context->world_internal_geometries;
-
+        internal_vulkan_geo_data_array = vk_context->world_internal_geometries;
     }
-    else if(type == GEO_TYPE_2D)
+    else if (type == GEO_TYPE_2D)
     {
         vertex_buffers[0] = vk_context->ui_renderpass.vertex_buffer.handle;
         vkCmdBindVertexBuffers(*curr_command_buffer, 0, 1, vertex_buffers, offsets);
         vkCmdBindIndexBuffer(*curr_command_buffer, vk_context->ui_renderpass.index_buffer.handle, 0,
                              VK_INDEX_TYPE_UINT32);
-        geo_data = vk_context->ui_internal_geometries;
+        internal_vulkan_geo_data_array = vk_context->ui_internal_geometries;
     }
 
     vk_push_constant pc{};
@@ -1525,27 +1520,24 @@ bool vulkan_draw_geometries(vulkan_shader *material_shader_vulkan_data, geometry
 
         material *mat = geos[i]->material;
 
-        u32                   index_offset  = vulkan_calculate_index_offset(vk_context, geos[i]->id,
-                                                                            geo_data);
-        u32                   vertex_offset = vulkan_calculate_vertex_offset(vk_context, geos[i]->id,
-                                                                             geo_data);
-        vulkan_geometry_data *geo_data =
-            static_cast<vulkan_geometry_data *>(geos[i]->vulkan_geometry_state);
+        vulkan_geometry_data *vk_data = static_cast<vulkan_geometry_data *>(geos[i]->vulkan_geometry_state);
 
-        if(mat)
+        u32 index_offset  = vulkan_calculate_index_offset(vk_context, vk_data->id, internal_vulkan_geo_data_array);
+        u32 vertex_offset = vulkan_calculate_vertex_offset(vk_context, vk_data->id, internal_vulkan_geo_data_array);
+
+        if (mat)
         {
             u32 descriptor_set_index = mat->internal_id;
 
-            vkCmdBindDescriptorSets(*curr_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, vk_shader->pipeline.layout, 1, 1,
-                                    &vk_shader->per_group_descriptor_sets[descriptor_set_index], 0, nullptr);
+            vkCmdBindDescriptorSets(*curr_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, vk_shader->pipeline.layout,
+                                    1, 1, &vk_shader->per_group_descriptor_sets[descriptor_set_index], 0, nullptr);
             pc.diffuse_color = mat->diffuse_color;
             pc.model         = geos[i]->ubo.model;
             vkCmdPushConstants(*curr_command_buffer, vk_shader->pipeline.layout, VK_SHADER_STAGE_VERTEX_BIT, 0,
                                sizeof(vk_push_constant), &pc);
-
         }
 
-        vkCmdDrawIndexed(*curr_command_buffer, geo_data->indices_count, 1, index_offset, vertex_offset, 0);
+        vkCmdDrawIndexed(*curr_command_buffer, vk_data->indices_count, 1, index_offset, vertex_offset, 0);
     }
     return true;
 }
@@ -1662,7 +1654,7 @@ bool vulkan_draw_frame(render_data *render_data)
     vulkan_shader *vk_material_shader = static_cast<vulkan_shader *>(material_shader->internal_vulkan_shader_state);
     vulkan_shader *vk_skybox_shader   = static_cast<vulkan_shader *>(skybox_shader->internal_vulkan_shader_state);
     vulkan_shader *vk_grid_shader     = static_cast<vulkan_shader *>(grid_shader->internal_vulkan_shader_state);
-    vulkan_shader *vk_ui_shader     = static_cast<vulkan_shader *>(ui_shader->internal_vulkan_shader_state);
+    vulkan_shader *vk_ui_shader       = static_cast<vulkan_shader *>(ui_shader->internal_vulkan_shader_state);
 
     vulkan_begin_renderpass(vk_context, WORLD_RENDERPASS, curr_command_buffer, current_frame);
 
@@ -1673,13 +1665,15 @@ bool vulkan_draw_frame(render_data *render_data)
     vulkan_draw_grid(vk_grid_shader, &curr_command_buffer);
 
     vkCmdBindPipeline(curr_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, vk_material_shader->pipeline.handle);
-    vulkan_draw_geometries(vk_material_shader, GEO_TYPE_3D, render_data->geometry_count_3D,render_data->test_geometry_3D, &curr_command_buffer, current_frame);
+    vulkan_draw_geometries(vk_material_shader, GEO_TYPE_3D, render_data->geometry_count_3D,
+                           render_data->test_geometry_3D, &curr_command_buffer, current_frame);
 
     vulkan_end_renderpass(&curr_command_buffer);
 
     vkCmdBindPipeline(curr_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, vk_ui_shader->pipeline.handle);
     vulkan_begin_renderpass(vk_context, UI_RENDERPASS, curr_command_buffer, current_frame);
-    vulkan_draw_geometries(vk_ui_shader, GEO_TYPE_2D, render_data->geometry_count_2D,render_data->test_geometry_2D, &curr_command_buffer, current_frame);
+    vulkan_draw_geometries(vk_ui_shader, GEO_TYPE_2D, render_data->geometry_count_2D, render_data->test_geometry_2D,
+                           &curr_command_buffer, current_frame);
     vulkan_end_renderpass(&curr_command_buffer);
 
     vulkan_end_command_buffer_single_use(vk_context, curr_command_buffer, false);

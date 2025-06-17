@@ -94,7 +94,7 @@ u64 geometry_system_create_geometry(geometry_config *config, bool use_name)
     {
         calculate_tangents(config);
         result = vulkan_create_geometry(WORLD_RENDERPASS, &geo, tris_count, sizeof(vertex_3D),
-                                        static_cast<void *>(config->vertices), indices_count, config->indices);
+                                        config->vertices, indices_count, config->indices);
     }
     else if (config->type == GEO_TYPE_2D)
     {
