@@ -1,17 +1,20 @@
+#include "defines.hpp"
+
 #include "material_system.hpp"
+#include "shader_system.hpp"
 #include "containers/darray.hpp"
 #include "containers/dhashtable.hpp"
 #include "core/dfile_system.hpp"
 #include "core/dmemory.hpp"
 #include "core/logger.hpp"
-#include "defines.hpp"
+#include "core/dstring.hpp"
 
 #include "renderer/vulkan/vulkan_backend.hpp"
 #include "texture_system.hpp"
 
-#include "core/dstring.hpp"
 
 #include "resource_types.hpp"
+
 
 struct material_system_state
 {
@@ -99,7 +102,7 @@ bool material_system_create_material(material_config *config)
     mat.map.specular    = texture_system_get_texture(config->specular_map.c_str());
     mat.diffuse_color   = config->diffuse_color;
 
-    bool result = vulkan_create_material(&mat);
+    bool result = vulkan_create_material(&mat, shader_system_get_default_material_shader_id());
 
     mat_sys_state_ptr->hashtable.insert(config->mat_name.c_str(), mat);
     mat_sys_state_ptr->loaded_materials.push_back(config->mat_name);
@@ -121,7 +124,7 @@ bool material_system_create_default_material()
         default_mat.map.specular    = texture_system_get_texture(DEFAULT_ALBEDO_TEXTURE_HANDLE);
         default_mat.diffuse_color   = {1.0f, 1.0f, 1.0f, 1.0f};
 
-        bool result = vulkan_create_material(&default_mat);
+        bool result = vulkan_create_material(&default_mat, shader_system_get_default_material_shader_id());
         DASSERT(result);
 
         mat_sys_state_ptr->hashtable.insert(DEFAULT_MATERIAL_HANDLE, default_mat);
@@ -138,7 +141,7 @@ bool material_system_create_default_material()
 
         default_light_mat.diffuse_color = {1.0f, 1.0f, 1.0f, 1.0f};
 
-        bool result = vulkan_create_material(&default_light_mat);
+        bool result = vulkan_create_material(&default_light_mat, shader_system_get_default_material_shader_id());
         DASSERT(result);
 
         mat_sys_state_ptr->hashtable.insert(DEFAULT_LIGHT_MATERIAL_HANDLE, default_light_mat);
@@ -160,6 +163,24 @@ bool material_system_create_default_material()
 
         mat_sys_state_ptr->hashtable.insert(DEFAULT_CUBEMAP_TEXTURE_HANDLE, skybox);
         mat_sys_state_ptr->loaded_materials.push_back(DEFAULT_CUBEMAP_TEXTURE_HANDLE);
+
+    }
+    //HACK:
+    //create font_atlas
+    {
+        material font_atlas{};
+        font_atlas.name = DEFAULT_FONT_ATLAS_TEXTURE_HANDLE;
+        font_atlas.id              = 0;
+        font_atlas.reference_count = 0;
+        font_atlas.map.diffuse     = texture_system_get_texture(DEFAULT_FONT_ATLAS_TEXTURE_HANDLE);
+        font_atlas.map.normal      = nullptr;
+        font_atlas.map.specular    = nullptr;
+
+        bool result = vulkan_create_material(&font_atlas, shader_system_get_default_ui_shader_id());
+        DASSERT(result);
+
+        mat_sys_state_ptr->hashtable.insert(DEFAULT_FONT_ATLAS_TEXTURE_HANDLE, font_atlas);
+        mat_sys_state_ptr->loaded_materials.push_back(DEFAULT_FONT_ATLAS_TEXTURE_HANDLE);
 
     }
     return true;

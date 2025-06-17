@@ -37,7 +37,7 @@ inline vec2 vec2_normalized(vec2 a)
     const f32 length = a.magnitude();
     f32       x      = a.x / length;
     f32       y      = a.y / length;
-    return vec2 (x, y);
+    return vec2(x, y);
 }
 /**
  * @brief Compares all elements of vector_0 and vector_1 and ensures the difference
@@ -80,9 +80,8 @@ inline f32 vec3_dot(vec3 vector_0, vec3 vector_1)
 }
 inline vec3 vec3_cross(vec3 vector_0, vec3 vector_1)
 {
-    return (vec3){vector_0.y * vector_1.z - vector_0.z * vector_1.y,
-                        vector_0.z * vector_1.x - vector_0.x * vector_1.z,
-                        vector_0.x * vector_1.y - vector_0.y * vector_1.x};
+    return (vec3){vector_0.y * vector_1.z - vector_0.z * vector_1.y, vector_0.z * vector_1.x - vector_0.x * vector_1.z,
+                  vector_0.x * vector_1.y - vector_0.y * vector_1.x};
 }
 
 inline const bool vec3_compare(vec3 vector_0, vec3 vector_1, f32 tolerance)
@@ -150,17 +149,19 @@ inline mat4 mat4_orthographic(f32 left, f32 right, f32 bottom, f32 top, f32 near
 {
     mat4 out_matrix = mat4();
 
-    f32 lr = 1.0f / (left - right);
-    f32 bt = 1.0f / (bottom - top);
-    f32 nf = 1.0f / (near_clip - far_clip);
+    f32 rl = right - left;
+    f32 tb = bottom - top;
+    f32 fn = far_clip - near_clip;
 
-    out_matrix.data[0]  = -2.0f * lr;
-    out_matrix.data[5]  = -2.0f * bt;
-    out_matrix.data[10] = 2.0f * nf;
+    out_matrix.data[0]  =  2.0f / rl;   // m00
+    out_matrix.data[5]  =  2.0f / tb;   // m11
+    out_matrix.data[10] =  1.0f / (near_clip - far_clip); // m22, notice sign flip
+    out_matrix.data[15] =  1.0f;        // m33
 
-    out_matrix.data[12] = (left + right) * lr;
-    out_matrix.data[13] = (top + bottom) * bt;
-    out_matrix.data[14] = (far_clip + near_clip) * nf;
+    out_matrix.data[12] = -(right + left) / rl;  // m30
+    out_matrix.data[13] = -(bottom + top) / tb;  // m31
+    out_matrix.data[14] =  near_clip / (near_clip - far_clip); // m32
+
     return out_matrix;
 }
 
@@ -175,7 +176,7 @@ inline mat4 mat4_orthographic(f32 left, f32 right, f32 bottom, f32 top, f32 near
  */
 inline mat4 mat4_perspective(f32 fov_radians, f32 aspect_ratio, f32 near_clip, f32 far_clip)
 {
-    f32        half_tan_fov = tanf(fov_radians * 0.5f);
+    f32  half_tan_fov = tanf(fov_radians * 0.5f);
     mat4 out_matrix;
     dzero_memory(out_matrix.data, sizeof(f32) * 16);
     out_matrix.data[0]  = 1.0f / (aspect_ratio * half_tan_fov);
@@ -235,23 +236,23 @@ inline mat4 mat4_look_at(vec3 position, vec3 target, vec3 up)
  */
 inline mat4 mat4_transposed(mat4 matrix)
 {
-    mat4 out_matrix = mat4();
-    out_matrix.data[0]    = matrix.data[0];
-    out_matrix.data[1]    = matrix.data[4];
-    out_matrix.data[2]    = matrix.data[8];
-    out_matrix.data[3]    = matrix.data[12];
-    out_matrix.data[4]    = matrix.data[1];
-    out_matrix.data[5]    = matrix.data[5];
-    out_matrix.data[6]    = matrix.data[9];
-    out_matrix.data[7]    = matrix.data[13];
-    out_matrix.data[8]    = matrix.data[2];
-    out_matrix.data[9]    = matrix.data[6];
-    out_matrix.data[10]   = matrix.data[10];
-    out_matrix.data[11]   = matrix.data[14];
-    out_matrix.data[12]   = matrix.data[3];
-    out_matrix.data[13]   = matrix.data[7];
-    out_matrix.data[14]   = matrix.data[11];
-    out_matrix.data[15]   = matrix.data[15];
+    mat4 out_matrix     = mat4();
+    out_matrix.data[0]  = matrix.data[0];
+    out_matrix.data[1]  = matrix.data[4];
+    out_matrix.data[2]  = matrix.data[8];
+    out_matrix.data[3]  = matrix.data[12];
+    out_matrix.data[4]  = matrix.data[1];
+    out_matrix.data[5]  = matrix.data[5];
+    out_matrix.data[6]  = matrix.data[9];
+    out_matrix.data[7]  = matrix.data[13];
+    out_matrix.data[8]  = matrix.data[2];
+    out_matrix.data[9]  = matrix.data[6];
+    out_matrix.data[10] = matrix.data[10];
+    out_matrix.data[11] = matrix.data[14];
+    out_matrix.data[12] = matrix.data[3];
+    out_matrix.data[13] = matrix.data[7];
+    out_matrix.data[14] = matrix.data[11];
+    out_matrix.data[15] = matrix.data[15];
     return out_matrix;
 }
 
@@ -291,7 +292,7 @@ inline mat4 mat4_inverse(mat4 matrix)
     f32 t23 = m[4] * m[1];
 
     mat4 out_matrix;
-    f32       *o = out_matrix.data;
+    f32 *o = out_matrix.data;
 
     o[0] = (t0 * m[5] + t3 * m[9] + t4 * m[13]) - (t1 * m[5] + t2 * m[9] + t5 * m[13]);
     o[1] = (t1 * m[1] + t6 * m[9] + t9 * m[13]) - (t0 * m[1] + t7 * m[9] + t8 * m[13]);
@@ -322,10 +323,10 @@ inline mat4 mat4_inverse(mat4 matrix)
 
 inline mat4 mat4_translation(vec3 position)
 {
-    mat4 out_matrix = mat4();
-    out_matrix.data[12]   = position.x;
-    out_matrix.data[13]   = position.y;
-    out_matrix.data[14]   = position.z;
+    mat4 out_matrix     = mat4();
+    out_matrix.data[12] = position.x;
+    out_matrix.data[13] = position.y;
+    out_matrix.data[14] = position.z;
     return out_matrix;
 }
 
@@ -337,18 +338,18 @@ inline mat4 mat4_translation(vec3 position)
  */
 inline mat4 mat4_scale(vec3 scale)
 {
-    mat4 out_matrix = mat4();
-    out_matrix.data[0]    = scale.x;
-    out_matrix.data[5]    = scale.y;
-    out_matrix.data[10]   = scale.z;
+    mat4 out_matrix     = mat4();
+    out_matrix.data[0]  = scale.x;
+    out_matrix.data[5]  = scale.y;
+    out_matrix.data[10] = scale.z;
     return out_matrix;
 }
 
 inline mat4 mat4_euler_x(f32 angle_radians)
 {
     mat4 out_matrix = mat4();
-    f32        c          = cosf(angle_radians);
-    f32        s          = sinf(angle_radians);
+    f32  c          = cosf(angle_radians);
+    f32  s          = sinf(angle_radians);
 
     out_matrix.data[5]  = c;
     out_matrix.data[6]  = s;
@@ -359,8 +360,8 @@ inline mat4 mat4_euler_x(f32 angle_radians)
 inline mat4 mat4_euler_y(f32 angle_radians)
 {
     mat4 out_matrix = mat4();
-    f32        c          = cosf(angle_radians);
-    f32        s          = sinf(angle_radians);
+    f32  c          = cosf(angle_radians);
+    f32  s          = sinf(angle_radians);
 
     out_matrix.data[0]  = c;
     out_matrix.data[2]  = -s;
@@ -387,7 +388,7 @@ inline mat4 mat4_euler_xyz(f32 x_radians, f32 y_radians, f32 z_radians)
     mat4 ry         = mat4_euler_y(y_radians);
     mat4 rz         = mat4_euler_z(z_radians);
     mat4 out_matrix = mat4_mul(rx, ry);
-    out_matrix            = mat4_mul(out_matrix, rz);
+    out_matrix      = mat4_mul(out_matrix, rz);
     return out_matrix;
 }
 

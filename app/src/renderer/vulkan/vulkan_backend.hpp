@@ -18,7 +18,7 @@ bool vulkan_initialize_shader(shader_config *config, shader *in_shader);
 //                            u32 location, void *data);
 
 
-bool vulkan_create_material(material *in_material);
+bool vulkan_create_material(material *in_mat, u64 shader_id);
 bool vulkan_destroy_material(material *in_material);
 
 bool vulkan_create_cubemap(material *cubemap_mat);

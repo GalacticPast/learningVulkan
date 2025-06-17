@@ -10,6 +10,12 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include "vendor/stb_image.h"
 
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#include "vendor/stb_image_write.h"
+
+#define STB_TRUETYPE_IMPLEMENTATION
+#include "vendor/stb_truetype.h"
+
 struct texture_system_state
 {
     darray<dstring>     loaded_textures;
@@ -21,6 +27,7 @@ static texture_system_state *tex_sys_state_ptr;
 bool                         texture_system_create_default_textures();
 
 static bool texture_system_release_textures(dstring *texture_name);
+static bool texture_system_create_font_atlas();
 
 bool texture_system_initialize(arena *arena, u64 *texture_system_mem_requirements, void *state)
 {
@@ -41,6 +48,7 @@ bool texture_system_initialize(arena *arena, u64 *texture_system_mem_requirement
     texture_system_create_default_textures();
     dstring conf_file_base_name = "yokohama_3.conf";
     texture_system_load_cubemap(&conf_file_base_name);
+    texture_system_create_font_atlas();
     return true;
 }
 
@@ -353,13 +361,13 @@ bool texture_system_load_cubemap(dstring *conf_file_base_name)
     cubemap_texture.num_channels = 4;
     cubemap_texture.texure_size  = prev_width * prev_height * 4 * 6;
 
-    arena* temp_arena = arena_get_arena();
-    u8* pixels = static_cast<u8 *>(dallocate(temp_arena, cubemap_texture.texure_size, MEM_TAG_RENDERER));
+    arena *temp_arena = arena_get_arena();
+    u8    *pixels     = static_cast<u8 *>(dallocate(temp_arena, cubemap_texture.texure_size, MEM_TAG_RENDERER));
 
     u32 tex_real_size = prev_width * prev_height * 4;
-    u32 layer_size = cubemap_texture.texure_size / 6;
-    u8* dest = pixels;
-    for(u32 i = 0 ; i < 6 ; i++)
+    u32 layer_size    = cubemap_texture.texure_size / 6;
+    u8 *dest          = pixels;
+    for (u32 i = 0; i < 6; i++)
     {
         dest = pixels + (i * tex_real_size);
         dcopy_memory(dest, cubemap_pixels[i], tex_real_size);
@@ -367,11 +375,108 @@ bool texture_system_load_cubemap(dstring *conf_file_base_name)
 
     create_texture(&cubemap_texture, pixels);
 
-    for(s32 i = 0 ; i < 6 ; i++)
+    for (s32 i = 0; i < 6; i++)
     {
         stbi_image_free(cubemap_pixels[i]);
     }
 
+    return true;
+}
+
+bool texture_system_create_font_atlas()
+{
+    arena *arena = tex_sys_state_ptr->arena;
+
+    dstring prefix    = "../assets/fonts/";
+    dstring font_name = "SourceSansPro-Regular.ttf";
+
+    dstring font_atlas_base_name = "source_sans_pro_regular.png";
+
+    dstring file_full_path;
+    string_copy_format(file_full_path.string, "%s%s", 0, prefix.c_str(), font_atlas_base_name.c_str());
+
+
+    if (!file_exists(&file_full_path))
+    {
+        file_full_path.clear();
+        string_copy_format(file_full_path.string, "%s%s", 0, prefix.c_str(), font_name.c_str());
+
+        std::fstream f;
+        u64          font_buffer_size = INVALID_ID_64;
+
+        bool result = file_open_and_read(file_full_path.c_str(), &font_buffer_size, nullptr, false);
+        DASSERT(result);
+
+        char *font_buffer = static_cast<char *>(dallocate(arena, font_buffer_size, MEM_TAG_UNKNOWN));
+        result            = file_open_and_read(file_full_path.c_str(), &font_buffer_size, font_buffer, false);
+        DASSERT(result);
+
+        u32 atlas_width  = 512;
+        u32 atlas_height = 512;
+
+        u32 font_atlas_size   = atlas_width * atlas_height;
+        u8 *font_atlas_buffer = static_cast<u8 *>(dallocate(arena, font_atlas_size, MEM_TAG_UNKNOWN));
+
+        stbtt_pack_context packContext;
+        if (!stbtt_PackBegin(&packContext, font_atlas_buffer, atlas_width, atlas_height, 0, 1, NULL))
+        {
+            DERROR("Failed to begin font packing.");
+        }
+
+        stbtt_PackSetOversampling(&packContext, 1, 1); // No oversampling
+
+        stbtt_packedchar charData[96]; // ASCII 32..126
+
+        stbtt_pack_range range;
+        range.font_size                        = 32;
+        range.first_unicode_codepoint_in_range = 32; // space
+        range.num_chars                        = 96; // printable ASCII
+        range.chardata_for_range               = charData;
+
+        if (!stbtt_PackFontRanges(&packContext, reinterpret_cast<const u8 *>(font_buffer), 0, &range, 1))
+        {
+            DERROR("Font range packing failed.");
+        }
+
+        stbtt_PackEnd(&packContext);
+
+        file_full_path.clear();
+        string_copy_format(file_full_path.string, "%s%s", 0, prefix.c_str(), font_atlas_base_name.c_str());
+
+        if (!stbi_write_png(file_full_path.c_str(), atlas_width, atlas_height, 1, font_atlas_buffer, atlas_width))
+        {
+            DERROR("Failed to write PNG: %s.", font_atlas_base_name.c_str());
+        }
+        else
+        {
+            DDEBUG("Saved %s successfully.", font_atlas_base_name.c_str());
+        }
+    }
+
+
+    s32 width        = INVALID_ID_S32;
+    s32 height       = INVALID_ID_S32;
+    s32 num_channels = INVALID_ID_S32;
+
+    stbi_uc *pixels = stbi_load(file_full_path.c_str(), &width, &height, &num_channels, STBI_rgb_alpha);
+    if (!pixels)
+    {
+        DERROR("Texture creation failed. Error opening file %s: %s", font_atlas_base_name.c_str(), stbi_failure_reason());
+        stbi__err(0, 0);
+        return false;
+    }
+
+    texture font_atlas_texture;
+
+    font_atlas_texture.name         = DEFAULT_FONT_ATLAS_TEXTURE_HANDLE;
+    font_atlas_texture.width        = width;
+    font_atlas_texture.height       = height;
+    font_atlas_texture.num_channels = 4;
+
+    bool result = create_texture(&font_atlas_texture, pixels);
+    DASSERT(result);
+
+    stbi_image_free(pixels);
 
     return true;
 }

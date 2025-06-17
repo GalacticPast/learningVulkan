@@ -430,8 +430,14 @@ bool vulkan_update_materials_descriptor_set(vulkan_shader *shader, material *mat
 
     DTRACE("Updataing descriptor_set_index: %d", descriptor_set_index);
 
+    // HACK:
     u32                   image_count    = 3;
     VkDescriptorImageInfo image_infos[3] = {};
+
+    if (shader->renderpass_type == UI_RENDERPASS)
+    {
+        image_count = 1;
+    }
 
     // INFO: in case
     // I dont get the default material in the start because the default material might not be initialized yet.
@@ -595,16 +601,16 @@ bool vulkan_create_cubemap(material *cubemap_mat)
 }
 
 // TODO: destroy material
-bool vulkan_create_material(material *in_mat)
+bool vulkan_create_material(material *in_mat, u64 shader_id)
 {
-    // HACK: FIX THIS
     static u32 id       = 0;
     in_mat->internal_id = id;
     id++;
-    shader *material_shader = shader_system_get_shader(vk_context->default_material_shader_id);
+    shader *shader = shader_system_get_shader(shader_id);
+    DASSERT(shader);
 
-    vulkan_shader *shader = static_cast<vulkan_shader *>(material_shader->internal_vulkan_shader_state);
-    bool           result = vulkan_update_materials_descriptor_set(shader, in_mat);
+    vulkan_shader *vk_shader = static_cast<vulkan_shader *>(shader->internal_vulkan_shader_state);
+    bool           result    = vulkan_update_materials_descriptor_set(vk_shader, in_mat);
 
     DASSERT(result == true);
 
@@ -1497,18 +1503,19 @@ bool vulkan_draw_geometries(vulkan_shader *material_shader_vulkan_data, geometry
 
     vulkan_geometry_data *internal_vulkan_geo_data_array = nullptr;
 
+    u32 aligned_global     = vk_shader->per_frame_uniforms_size[0];
+    u32 dynamic_offsets[2] = {curr_frame_index * vk_shader->per_frame_stride,
+                              curr_frame_index * vk_shader->per_frame_stride + aligned_global};
+
     if (type == GEO_TYPE_3D)
     {
-        u32 aligned_global     = vk_shader->per_frame_uniforms_size[0];
-        u32 dynamic_offsets[2] = {curr_frame_index * vk_shader->per_frame_stride,
-                                  curr_frame_index * vk_shader->per_frame_stride + aligned_global};
-        vertex_buffers[0]      = vk_context->world_renderpass.vertex_buffer.handle;
+        vertex_buffers[0] = vk_context->world_renderpass.vertex_buffer.handle;
         vkCmdBindVertexBuffers(*curr_command_buffer, 0, 1, vertex_buffers, offsets);
         vkCmdBindIndexBuffer(*curr_command_buffer, vk_context->world_renderpass.index_buffer.handle, 0,
                              VK_INDEX_TYPE_UINT32);
+        internal_vulkan_geo_data_array = vk_context->world_internal_geometries;
         vkCmdBindDescriptorSets(*curr_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, vk_shader->pipeline.layout, 0, 1,
                                 &vk_shader->per_frame_descriptor_set, 2, dynamic_offsets);
-        internal_vulkan_geo_data_array = vk_context->world_internal_geometries;
     }
     else if (type == GEO_TYPE_2D)
     {
@@ -1517,10 +1524,11 @@ bool vulkan_draw_geometries(vulkan_shader *material_shader_vulkan_data, geometry
         vkCmdBindIndexBuffer(*curr_command_buffer, vk_context->ui_renderpass.index_buffer.handle, 0,
                              VK_INDEX_TYPE_UINT32);
         internal_vulkan_geo_data_array = vk_context->ui_internal_geometries;
+        vkCmdBindDescriptorSets(*curr_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, vk_shader->pipeline.layout, 0, 1,
+                                &vk_shader->per_frame_descriptor_set, 1, dynamic_offsets);
     }
 
     vk_push_constant pc{};
-    pc.model = mat4_orthographic(0, vk_context->vk_swapchain.width, vk_context->vk_swapchain.height, 0, 0.01f, 1000.0f);
 
     for (u32 i = 0; i < geometry_count; i++)
     {
@@ -1532,22 +1540,14 @@ bool vulkan_draw_geometries(vulkan_shader *material_shader_vulkan_data, geometry
         u32 index_offset  = vulkan_calculate_index_offset(vk_context, vk_data->id, internal_vulkan_geo_data_array);
         u32 vertex_offset = vulkan_calculate_vertex_offset(vk_context, vk_data->id, internal_vulkan_geo_data_array);
 
-        if (mat)
-        {
-            u32 descriptor_set_index = mat->internal_id;
+        u32 descriptor_set_index = mat->internal_id;
 
-            vkCmdBindDescriptorSets(*curr_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, vk_shader->pipeline.layout,
-                                    1, 1, &vk_shader->per_group_descriptor_sets[descriptor_set_index], 0, nullptr);
-            pc.diffuse_color = mat->diffuse_color;
-            pc.model         = geos[i]->ubo.model;
-            vkCmdPushConstants(*curr_command_buffer, vk_shader->pipeline.layout, VK_SHADER_STAGE_VERTEX_BIT, 0,
-                               sizeof(vk_push_constant), &pc);
-        }
-        else
-        {
-            vkCmdPushConstants(*curr_command_buffer, vk_shader->pipeline.layout, VK_SHADER_STAGE_VERTEX_BIT, 0,
-                               sizeof(vk_push_constant), &pc);
-        }
+        vkCmdBindDescriptorSets(*curr_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, vk_shader->pipeline.layout, 1, 1,
+                                &vk_shader->per_group_descriptor_sets[descriptor_set_index], 0, nullptr);
+        pc.diffuse_color = mat->diffuse_color;
+        pc.model         = geos[i]->ubo.model;
+        vkCmdPushConstants(*curr_command_buffer, vk_shader->pipeline.layout, VK_SHADER_STAGE_VERTEX_BIT, 0,
+                           sizeof(vk_push_constant), &pc);
 
         vkCmdDrawIndexed(*curr_command_buffer, vk_data->indices_count, 1, index_offset, vertex_offset, 0);
     }

@@ -16,9 +16,13 @@ shader *shader_system_get_shader(u64 id);
 u64 shader_system_get_default_material_shader_id();
 u64 shader_system_get_default_skybox_shader_id();
 u64 shader_system_get_default_grid_shader_id();
+u64 shader_system_get_default_ui_shader_id();
 
 // so in the end we need a dynamic buffer for each stage or just have one big buffer for all 3
-bool shader_system_update_per_frame(scene_global_uniform_buffer_object *scene_global,
-                                    light_global_uniform_buffer_object *light_global);
+// HACK:
+// FIXME:
+bool shader_system_update_per_frame(void *scene_global,
+                                    void *light_global);
+
 bool shader_system_update_per_group(u64 offset, void *data);
 bool shader_system_update_per_object(u64 offset, void *data);

@@ -2,21 +2,9 @@
 
 #include "containers/darray.hpp"
 #include "defines.hpp"
-#include "main.hpp"
 #include "memory/linear_allocator.hpp"
 #include "resources/resource_types.hpp"
 
-struct render_data
-{
-    scene_global_uniform_buffer_object scene_ubo;
-    light_global_uniform_buffer_object light_ubo;
-
-    u32        geometry_count_3D = INVALID_ID;
-    geometry **test_geometry_3D  = nullptr;
-
-    u32        geometry_count_2D = INVALID_ID;
-    geometry **test_geometry_2D  = nullptr;
-};
 
 struct application_state
 {

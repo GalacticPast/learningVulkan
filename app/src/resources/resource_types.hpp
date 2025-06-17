@@ -1,9 +1,8 @@
 #pragma once
 
 #include "containers/darray.hpp"
-#include "defines.hpp"
-
 #include "core/dstring.hpp"
+#include "defines.hpp"
 #include "main.hpp"
 
 #define MAX_SHADER_COUNT 1024
@@ -141,6 +140,7 @@ enum shader_type
     SHADER_TYPE_MATERIAL = 1,
     SHADER_TYPE_SKYBOX   = 2,
     SHADER_TYPE_GRID     = 3,
+    SHADER_TYPE_UI       = 4,
 };
 
 struct shader
@@ -152,6 +152,8 @@ struct shader
 #define DEFAULT_ALBEDO_TEXTURE_HANDLE "DEFAULT_ALBDEO_TEXTURE"
 #define DEFAULT_NORMAL_TEXTURE_HANDLE "DEFAULT_NORMAL_TEXTURE"
 #define DEFAULT_CUBEMAP_TEXTURE_HANDLE "DEFAULT_CUBEMAP_TEXTURE"
+#define DEFAULT_FONT_ATLAS_TEXTURE_HANDLE "DEFAULT_FONT_ATLAS_TEXTURE"
+
 #define MAX_TEXTURES_LOADED 1024
 #define TEXTURE_NAME_MAX_LENGTH 512
 

@@ -27,6 +27,13 @@ struct vulkan_geometry_data
     u32 vertex_count  = INVALID_ID;
 };
 
+struct push_constant // aka push constants
+{
+    mat4 data;  // 64 bytes
+    mat4 data2; // 64 bytes
+};
+;
+
 struct vk_push_constant // aka push constants
 {
     mat4 model; // 64 bytes
@@ -193,7 +200,7 @@ struct vulkan_context
     u64 default_material_shader_id = INVALID_ID_64;
     u64 default_skybox_shader_id   = INVALID_ID_64;
     u64 default_grid_shader_id     = INVALID_ID_64;
-    u64 default_ui_shader_id     = INVALID_ID_64;
+    u64 default_ui_shader_id       = INVALID_ID_64;
 
     VkCommandPool graphics_command_pool;
     VkCommandPool transfer_command_pool;

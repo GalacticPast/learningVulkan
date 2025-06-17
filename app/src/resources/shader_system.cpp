@@ -458,10 +458,10 @@ bool shader_system_create_default_shaders(u64 *material_shader_id, u64 *skybox_s
     shader_sys_state_ptr->default_grid_shader_id = *grid_shader_id;
 
     shader_config ui_shader_conf{};
-    ui_shader_conf.pipeline_configuration.mode                               = CULL_BACK_BIT;
-    ui_shader_conf.pipeline_configuration.color_blend.enable_color_blend     = false;
-    //ui_shader_conf.pipeline_configuration.color_blend.src_color_blend_factor = COLOR_BLEND_FACTOR_SRC_ALPHA;
-    //ui_shader_conf.pipeline_configuration.color_blend.dst_color_blend_factor = COLOR_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+    ui_shader_conf.pipeline_configuration.mode                               = CULL_NONE_BIT;
+    ui_shader_conf.pipeline_configuration.color_blend.enable_color_blend     = true;
+    ui_shader_conf.pipeline_configuration.color_blend.src_color_blend_factor = COLOR_BLEND_FACTOR_SRC_ALPHA;
+    ui_shader_conf.pipeline_configuration.color_blend.dst_color_blend_factor = COLOR_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
 
     ui_shader_conf.renderpass_types                                      = UI_RENDERPASS;
     ui_shader_conf.pipeline_configuration.depth_state.enable_depth_blend = false;
@@ -473,7 +473,7 @@ bool shader_system_create_default_shaders(u64 *material_shader_id, u64 *skybox_s
     shader_parse_configuration_file(conf_file, &ui_shader_conf);
 
     shader ui_shader{};
-    *ui_shader_id                              = _create_shader(&ui_shader_conf, &ui_shader, SHADER_TYPE_GRID);
+    *ui_shader_id                              = _create_shader(&ui_shader_conf, &ui_shader, SHADER_TYPE_UI);
     shader_sys_state_ptr->default_ui_shader_id = *ui_shader_id;
 
     return true;
@@ -511,6 +511,12 @@ u64 shader_system_get_default_grid_shader_id()
     DASSERT(shader_sys_state_ptr);
     return shader_sys_state_ptr->default_grid_shader_id;
 }
+u64 shader_system_get_default_ui_shader_id()
+{
+    DASSERT(shader_sys_state_ptr);
+    return shader_sys_state_ptr->default_ui_shader_id;
+}
+
 bool shader_use(u64 shader_id)
 {
     return true;
@@ -589,8 +595,8 @@ static void shader_system_add_uniform(shader_config *out_config, dstring *name, 
     out_config->uniforms.push_back(conf);
 }
 
-bool shader_system_update_per_frame(scene_global_uniform_buffer_object *scene_global,
-                                    light_global_uniform_buffer_object *light_global)
+bool shader_system_update_per_frame(void *scene_global,
+                                    void *light_global)
 {
     u64 bound_shader_id = shader_sys_state_ptr->bound_shader_id;
     DASSERT_MSG(bound_shader_id != INVALID_ID_64, "Shader bound id is invalid. Call shader bind before updating.");
@@ -621,11 +627,11 @@ bool shader_system_update_per_frame(scene_global_uniform_buffer_object *scene_gl
             renderer_update_global_data(shader, light_offset, sizeof(light_global_uniform_buffer_object), light_global);
         DASSERT(light);
     }
-    else if (shader->type == SHADER_TYPE_SKYBOX || shader->type == SHADER_TYPE_GRID)
+    else if (shader->type == SHADER_TYPE_SKYBOX || shader->type == SHADER_TYPE_GRID || shader->type == SHADER_TYPE_UI)
     {
         if (!scene_global)
         {
-            DFATAL("scene_global_uniform_buffer_object was nullptr. Skybox_shader requires it");
+            DFATAL("scene_global_uniform_buffer_object was nullptr.Shader requires it.");
             return false;
         }
         u32 size   = config->per_frame_uniform_offsets[0];

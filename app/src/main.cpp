@@ -3,6 +3,7 @@
 #include "core/dmemory.hpp"
 #include "core/input.hpp"
 #include "core/logger.hpp"
+#include "main.hpp"
 
 #include "containers/darray.hpp"
 
@@ -25,7 +26,8 @@
 #include "../tests/linear_allocator/linear_allocator_test.hpp"
 #include "../tests/test_manager.hpp"
 
-void update_camera(scene_global_uniform_buffer_object *ubo, light_global_uniform_buffer_object *lbo, f64 start_time);
+void update_camera(scene_global_uniform_buffer_object *ubo, ui_global_uniform_buffer_object *ui_ubo,
+                   light_global_uniform_buffer_object *lbo, f64 start_time);
 
 void run_tests()
 {
@@ -88,6 +90,9 @@ int main()
     f32 fov_rad      = 45 * D_DEG2RAD_MULTIPLIER;
     f32 aspect_ratio = static_cast<f32>(s_width) / static_cast<f32>(s_height);
 
+    ui_global_uniform_buffer_object ui_ubo{};
+    ui_ubo.view = mat4_inverse(mat4());
+
     scene_global_uniform_buffer_object scene_ubo{};
     scene_ubo.view          = mat4_look_at({2, 2, 2}, {0, 0, 0}, {0, 0, 1.0f});
     scene_ubo.projection    = mat4_perspective(fov_rad, aspect_ratio, 0.01f, 1000.0f);
@@ -135,9 +140,9 @@ int main()
         u64 green = geometry_system_create_geometry(&green_light, false);
         u64 blue  = geometry_system_create_geometry(&blue_light, false);
 
-        geos_3D     = static_cast<geometry **>(dallocate(app_state.system_arena, sizeof(geometry *) * 6, MEM_TAG_UNKNOWN));
-        geos_3D[0]  = geometry_system_get_default_geometry();
-        mat_name = "orange_lines_512.conf";
+        geos_3D = static_cast<geometry **>(dallocate(app_state.system_arena, sizeof(geometry *) * 6, MEM_TAG_UNKNOWN));
+        geos_3D[0]           = geometry_system_get_default_geometry();
+        mat_name             = "orange_lines_512.conf";
         geos_3D[0]->material = material_system_acquire_from_config_file(&mat_name);
         mat_name.clear();
 
@@ -152,14 +157,14 @@ int main()
 
         geometry_count_3D = 4;
 
-        dstring quad_name = "test_quad";
-        geometry_config quad_config = geometry_system_generate_quad_config(100,100,0,0,&quad_name);
-        u64 quad_id = geometry_system_create_geometry(&quad_config, false);
-        geos_2D     = static_cast<geometry **>(dallocate(app_state.system_arena, sizeof(geometry *) * 2, MEM_TAG_UNKNOWN));
-        geos_2D[0]  = geometry_system_get_geometry(quad_id);
-        geometry_count_2D = 1;
-
-
+        dstring         quad_name   = "test_quad";
+        geometry_config quad_config = geometry_system_generate_quad_config(100, 100, 0, 0, &quad_name);
+        u64             quad_id     = geometry_system_create_geometry(&quad_config, false);
+        geos_2D = static_cast<geometry **>(dallocate(app_state.system_arena, sizeof(geometry *) * 2, MEM_TAG_UNKNOWN));
+        geos_2D[0]           = geometry_system_get_geometry(quad_id);
+        dstring font_atlas   = DEFAULT_FONT_ATLAS_TEXTURE_HANDLE;
+        geos_2D[0]->material = material_system_acquire_from_name(&font_atlas);
+        geometry_count_2D    = 1;
     }
 #endif
 
@@ -170,6 +175,7 @@ int main()
     triangle.geometry_count_2D = geometry_count_2D;
 
     triangle.scene_ubo = scene_ubo;
+    triangle.ui_ubo    = ui_ubo;
     triangle.light_ubo = light_ubo;
 
     f64 frame_start_time   = 0;
@@ -184,13 +190,14 @@ int main()
     u64 def_material_shader = shader_system_get_default_material_shader_id();
     u64 def_skybox_shader   = shader_system_get_default_skybox_shader_id();
     u64 def_grid_shader     = shader_system_get_default_grid_shader_id();
+    u64 def_ui_shader       = shader_system_get_default_ui_shader_id();
 
     while (app_state.is_running)
     {
         ZoneScoped;
         frame_start_time = platform_get_absolute_time();
 
-        update_camera(&triangle.scene_ubo, &triangle.light_ubo, frame_elapsed_time);
+        update_camera(&triangle.scene_ubo, &triangle.ui_ubo, &triangle.light_ubo, frame_elapsed_time);
 
         shader_system_bind_shader(def_material_shader);
         shader_system_update_per_frame(&triangle.scene_ubo, &triangle.light_ubo);
@@ -200,6 +207,9 @@ int main()
 
         shader_system_bind_shader(def_grid_shader);
         shader_system_update_per_frame(&triangle.scene_ubo, nullptr);
+
+        shader_system_bind_shader(def_ui_shader);
+        shader_system_update_per_frame(&triangle.ui_ubo, nullptr);
 
         renderer_draw_frame(&triangle);
 
@@ -223,7 +233,8 @@ int main()
     application_shutdown();
 }
 
-void update_camera(scene_global_uniform_buffer_object *ubo, light_global_uniform_buffer_object *lbo, f64 start_time)
+void update_camera(scene_global_uniform_buffer_object *ubo, ui_global_uniform_buffer_object *ui_ubo,
+                   light_global_uniform_buffer_object *lbo, f64 start_time)
 {
     // ubo->model = mat4_euler_z((start_time * (90.0f * D_DEG2RAD_MULTIPLIER)));
     u32 s_width;
@@ -236,7 +247,8 @@ void update_camera(scene_global_uniform_buffer_object *ubo, light_global_uniform
     vec3 velocity = vec3();
     f32  step     = 0.01f;
 
-    ubo->projection = mat4_perspective(fov_rad, aspect_ratio, 0.01f, 1000.0f);
+    ubo->projection    = mat4_perspective(fov_rad, aspect_ratio, 0.01f, 1000.0f);
+    ui_ubo->projection = mat4_orthographic(0, s_width, s_height, 0, -1, 1);
 
     static vec3 camera_pos   = vec3(0, 6, 6);
     static vec3 camera_euler = vec3(0, 0, 0);
