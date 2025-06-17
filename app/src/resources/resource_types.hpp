@@ -4,7 +4,7 @@
 #include "defines.hpp"
 
 #include "core/dstring.hpp"
-#include "math/dmath_types.hpp"
+#include "main.hpp"
 
 #define MAX_SHADER_COUNT 1024
 
@@ -211,14 +211,22 @@ struct material
 #define MAX_GEOMETRIES_LOADED 1024
 #define GEOMETRY_NAME_MAX_LENGTH 256
 
+enum geometry_type
+{
+    GEO_TYPE_UNKNOWN = 0,
+    GEO_TYPE_3D,
+    GEO_TYPE_2D,
+};
+
 struct geometry_config
 {
-    dstring    name;
-    material  *material     = nullptr;
-    u32        vertex_count = INVALID_ID;
-    vertex_3D *vertices     = nullptr;
-    u32        index_count  = INVALID_ID;
-    u32       *indices      = nullptr;
+    dstring       name;
+    geometry_type type;
+    material     *material     = nullptr;
+    u32           vertex_count = INVALID_ID;
+    void         *vertices     = nullptr;
+    u32           index_count  = INVALID_ID;
+    u32          *indices      = nullptr;
 };
 
 struct geometry

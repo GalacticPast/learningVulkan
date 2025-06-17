@@ -1,18 +1,10 @@
 #pragma once
 
+#include "main.hpp"
 #include "containers/darray.hpp"
 #include "defines.hpp"
 #include "memory/linear_allocator.hpp"
 #include "resources/resource_types.hpp"
-
-struct application_config
-{
-    u32         x;
-    u32         y;
-    u32         height;
-    u32         width;
-    const char *application_name;
-};
 
 struct render_data
 {
@@ -66,3 +58,4 @@ struct application_state
 
 bool application_initialize(application_state *out_state, application_config *config);
 void application_shutdown();
+

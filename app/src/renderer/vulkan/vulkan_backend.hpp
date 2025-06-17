@@ -26,17 +26,14 @@ bool vulkan_create_cubemap(material *cubemap_mat);
 bool vulkan_create_texture(texture *in_texture, u8 *pixels);
 bool vulkan_destroy_texture(texture *in_texture);
 
-bool vulkan_create_geometry(geometry *out_geometry, u32 vertex_count, vertex_3D *vertices, u32 index_count, u32 *indices);
+// To which renderpass to upload the vertex and index data to.
+bool vulkan_create_geometry(renderpass_types type, geometry *out_geometry, u32 vertex_count, u32 vertex_size, void *vertices, u32 index_count,u32 *indices);
 bool vulkan_destroy_geometry(geometry *geometry);
 
 bool vulkan_create_framebuffers(vulkan_context *vk_context);
 
-// not in bytes
-u32 vulkan_calculate_index_offset(vulkan_context *vk_context, u32 geometry_id);
-// not in bytes
-u32 vulkan_calculate_vertex_offset(vulkan_context *vk_context, u32 geometry_id);
-
 bool vulkan_update_global_uniform_buffer(shader* shader, u32 offset, u32 size, void* data);
+
 bool vulkan_update_global_descriptor_sets(shader *shader, darray<u32>& ranges);
 
 bool vulkan_create_command_pools(vulkan_context *vk_context);

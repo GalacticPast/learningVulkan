@@ -89,9 +89,12 @@ bool vulkan_copy_buffer(vulkan_context *vk_context, VkCommandPool* cmd_pool,VkQu
 
 bool vulkan_create_index_buffer(vulkan_context *vk_context)
 {
-    // 512 MBS
-    u64 index_buffer_size = 1024 * 1024 * 1024;
-    vulkan_create_buffer(vk_context, &vk_context->index_buffer,
+    u64 index_buffer_size = MB(256);
+    vulkan_create_buffer(vk_context, &vk_context->world_renderpass.index_buffer,
+                         VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
+                         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, index_buffer_size);
+
+    vulkan_create_buffer(vk_context, &vk_context->ui_renderpass.index_buffer,
                          VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
                          VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, index_buffer_size);
 
@@ -100,9 +103,12 @@ bool vulkan_create_index_buffer(vulkan_context *vk_context)
 
 bool vulkan_create_vertex_buffer(vulkan_context *vk_context)
 {
-    // 512  mbs
-    u64 vertex_buffer_size = 1024 * 1024 * 1024;
-    vulkan_create_buffer(vk_context, &vk_context->vertex_buffer,
+    u64 vertex_buffer_size = MB(256);
+    vulkan_create_buffer(vk_context, &vk_context->world_renderpass.vertex_buffer,
+                         VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+                         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, vertex_buffer_size);
+
+    vulkan_create_buffer(vk_context, &vk_context->ui_renderpass.vertex_buffer,
                          VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
                          VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, vertex_buffer_size);
 

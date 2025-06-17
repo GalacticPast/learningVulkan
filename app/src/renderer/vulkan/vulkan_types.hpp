@@ -27,6 +27,15 @@ struct vulkan_geometry_data
     u32 vertex_count  = INVALID_ID;
 };
 
+struct vk_push_constant // aka push constants
+{
+    mat4 model; // 64 bytes
+    vec4 diffuse_color;
+    vec4 padding;
+    vec4 padding2;
+    vec4 padding3;
+};
+
 #define MAX_FRAMES_IN_FLIGHT 3
 struct vulkan_device
 {
@@ -160,6 +169,13 @@ struct vulkan_shader
     vulkan_pipeline               pipeline;
 };
 
+struct vulkan_renderpass
+{
+    VkRenderPass  handle;
+    vulkan_buffer vertex_buffer;
+    vulkan_buffer index_buffer;
+};
+
 struct vulkan_context
 {
     u64 frame_counter;
@@ -169,13 +185,10 @@ struct vulkan_context
 
     vulkan_swapchain vk_swapchain;
 
-    VkRenderPass world_renderpass;
-    VkRenderPass ui_renderpass;
+    vulkan_renderpass world_renderpass;
+    vulkan_renderpass ui_renderpass;
 
     darray<VkCommandBuffer> command_buffers;
-
-    vulkan_buffer vertex_buffer;
-    vulkan_buffer index_buffer;
 
     u64 default_material_shader_id = INVALID_ID_64;
     u64 default_skybox_shader_id   = INVALID_ID_64;
@@ -195,8 +208,11 @@ struct vulkan_context
 
     VkInstance vk_instance;
 
-    u32                  loaded_geometries_count = 0;
-    vulkan_geometry_data internal_geometries[MAX_GEOMETRIES_LOADED];
+    u32                  world_geometries_count = 0;
+    vulkan_geometry_data world_internal_geometries[MAX_GEOMETRIES_LOADED];
+
+    u32                  ui_geometries_count = 0;
+    vulkan_geometry_data ui_internal_geometries[MAX_GEOMETRIES_LOADED];
 
     u32         enabled_layer_count = INVALID_ID;
     const char *enabled_layer_names[4];

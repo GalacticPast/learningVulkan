@@ -73,7 +73,7 @@ bool vulkan_create_renderpass(vulkan_context *vk_context)
         render_pass_create_info.pDependencies   = &dependency;
 
         VkResult result = vkCreateRenderPass(vk_context->vk_device.logical, &render_pass_create_info,
-                                             vk_context->vk_allocator, &vk_context->world_renderpass);
+                                             vk_context->vk_allocator, &vk_context->world_renderpass.handle);
         VK_CHECK(result);
     }
     // ui renderpass
@@ -130,7 +130,7 @@ bool vulkan_create_renderpass(vulkan_context *vk_context)
         render_pass_create_info.pDependencies   = &dependency;
 
         VkResult result = vkCreateRenderPass(vk_context->vk_device.logical, &render_pass_create_info,
-                                             vk_context->vk_allocator, &vk_context->ui_renderpass);
+                                             vk_context->vk_allocator, &vk_context->ui_renderpass.handle);
         VK_CHECK(result);
 
     }
@@ -158,13 +158,13 @@ bool vulkan_begin_renderpass(vulkan_context *vk_context,renderpass_types renderp
 
     if(renderpass_type == WORLD_RENDERPASS)
     {
-        renderpass_begin_info.renderPass        = vk_context->world_renderpass;
+        renderpass_begin_info.renderPass        = vk_context->world_renderpass.handle;
         renderpass_begin_info.framebuffer       = vk_context->vk_swapchain.world_framebuffers[image_index];
         renderpass_begin_info.pClearValues      = clear_values;
     }
     else if(renderpass_type == UI_RENDERPASS)
     {
-        renderpass_begin_info.renderPass        = vk_context->ui_renderpass;
+        renderpass_begin_info.renderPass        = vk_context->ui_renderpass.handle;
         renderpass_begin_info.framebuffer       = vk_context->vk_swapchain.ui_framebuffers[image_index];
         renderpass_begin_info.pClearValues      = nullptr;
     }

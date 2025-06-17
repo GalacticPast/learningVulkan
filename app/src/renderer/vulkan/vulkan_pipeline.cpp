@@ -270,11 +270,11 @@ bool vulkan_create_pipeline(vulkan_context *vk_context, vulkan_shader *shader)
     pipeline_create_info.layout              = shader->pipeline.layout;
     if(shader->renderpass_type == WORLD_RENDERPASS)
     {
-        pipeline_create_info.renderPass          = vk_context->world_renderpass;
+        pipeline_create_info.renderPass          = vk_context->world_renderpass.handle;
     }
     else if(shader->renderpass_type == UI_RENDERPASS)
     {
-        pipeline_create_info.renderPass          = vk_context->ui_renderpass;
+        pipeline_create_info.renderPass          = vk_context->ui_renderpass.handle;
     }
     else
     {

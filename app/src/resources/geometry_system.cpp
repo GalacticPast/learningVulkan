@@ -85,15 +85,26 @@ bool geometry_system_shutdowm(void *state)
 u64 geometry_system_create_geometry(geometry_config *config, bool use_name)
 {
     calculate_tangents(config);
+    DASSERT(config->type != GEO_TYPE_UNKNOWN);
     geometry geo{};
     u32      tris_count    = config->vertex_count;
     u32      indices_count = config->index_count;
-    bool     result        = vulkan_create_geometry(&geo, tris_count, config->vertices, indices_count, config->indices);
-    geo.name               = config->name;
-    geo.reference_count    = 0;
-    geo.material           = config->material;
+    bool     result        = false;
+    if (config->type == GEO_TYPE_3D)
+    {
+        result = vulkan_create_geometry(WORLD_RENDERPASS, &geo, tris_count, sizeof(vertex_3D),
+                                        static_cast<void *>(config->vertices), indices_count, config->indices);
+    }
+    else if (config->type == GEO_TYPE_2D)
+    {
+        result = vulkan_create_geometry(UI_RENDERPASS, &geo, tris_count, sizeof(vertex_2D),
+                                        static_cast<void *>(config->vertices), indices_count, config->indices);
+    }
+    geo.name            = config->name;
+    geo.reference_count = 0;
+    geo.material        = config->material;
     // default model
-    geo.ubo.model          = mat4();
+    geo.ubo.model       = mat4();
     // we are setting this id to INVALID_ID_64 because the hashtable will genereate an ID for us.
 
     if (!result)
@@ -233,7 +244,7 @@ geometry_config geometry_system_generate_plane_config(f32 width, f32 height, u32
     config.name.str_len = strlen(name);
     dstring mat_name    = material_name;
     config.material     = material_system_acquire_from_name(&mat_name);
-
+    config.type = GEO_TYPE_3D;
     return config;
 }
 
@@ -442,6 +453,7 @@ bool geometry_system_create_default_geometry()
 
     for (u32 i = 0; i < num_of_objects; i++)
     {
+        default_geo_configs[i].type = GEO_TYPE_3D;
         geo_sys_state_ptr->default_geo_id = geometry_system_create_geometry(&default_geo_configs[i], false);
     }
 
@@ -647,6 +659,7 @@ void geometry_system_parse_obj(arena *arena, const char *obj_file_full_path, u32
                 break;
             }
             object_name_ptr += 2;
+            (*geo_configs)[i].type = GEO_TYPE_3D;
 
             next_object_name_ptr = strstr(object_name_ptr, "o ");
             if (next_object_name_ptr == nullptr)
@@ -982,6 +995,8 @@ void geometry_system_parse_obj(arena *arena, const char *obj_file_full_path, u32
             static_cast<u32 *>(dallocate(arena, sizeof(u32) * (count / 3), MEM_TAG_GEOMETRY));
         (*geo_configs)[object].index_count = count / 3;
 
+        vertex_3D *vertices = static_cast<vertex_3D *>((*geo_configs)[object].vertices);
+
         u32 index_ind = 0;
         for (u32 j = 0; j <= count - 3; j += 3)
         {
@@ -989,10 +1004,10 @@ void geometry_system_parse_obj(arena *arena, const char *obj_file_full_path, u32
             u32 tex_ind  = offset_ptr_walk[j + 1] - 1;
             u32 norm_ind = offset_ptr_walk[j + 2] - 1;
 
-            (*geo_configs)[object].vertices[index_ind].position  = vert_coords[vert_ind];
-            (*geo_configs)[object].vertices[index_ind].tex_coord = textures[tex_ind];
-            (*geo_configs)[object].vertices[index_ind].normal    = normals[norm_ind];
-            (*geo_configs)[object].indices[index_ind]            = index_ind;
+            vertices[index_ind].position              = vert_coords[vert_ind];
+            vertices[index_ind].tex_coord             = textures[tex_ind];
+            vertices[index_ind].normal                = normals[norm_ind];
+            (*geo_configs)[object].indices[index_ind] = index_ind;
             index_ind++;
         }
         DASSERT(index_ind == (*geo_configs)[object].index_count);
@@ -1109,7 +1124,27 @@ bool geometry_system_write_configs_to_file(dstring *file_full_path, u32 geometry
     u32 size = 0;
     for (u32 i = 0; i < geometry_config_count; i++)
     {
-
+        file_write(&f, "geo_type:", string_length("geo_type:"));
+        if (configs[i].type == GEO_TYPE_3D)
+        {
+            size = string_length("type_3D");
+            file_write(&f, reinterpret_cast<const char *>(&size), sizeof(u32));
+            file_write(&f, "type_3D", string_length("type_3D"));
+            file_write(&f, reinterpret_cast<const char *>(&new_line), 1);
+            size = 0;
+        }
+        else if (configs[i].type == GEO_TYPE_2D)
+        {
+            size = string_length("type_2D");
+            file_write(&f, reinterpret_cast<const char *>(&size), sizeof(u32));
+            file_write(&f, "type_2D", string_length("type_2D"));
+            file_write(&f, reinterpret_cast<const char *>(&new_line), 1);
+            size = 0;
+        }
+        else
+        {
+            DERROR("Unknown geometry type: %d", configs[i].type);
+        }
         size = configs[i].name.str_len;
         if (size)
         {
@@ -1217,6 +1252,29 @@ bool geometry_system_parse_bin_file(dstring *file_full_path, u32 *geometry_confi
                 dallocate(arena, sizeof(geometry_config) * config_count, MEM_TAG_GEOMETRY));
             ptr += sizeof(u32) + 1;
         }
+        else if (string_compare(identifier.c_str(), "geo_type"))
+        {
+            u32 name_len;
+            dcopy_memory(&name_len, ptr, sizeof(u32));
+            ptr           += sizeof(u32);
+            dstring name;
+            string_ncopy(name.string, ptr, name_len);
+
+            if(string_compare(name.c_str(), "type_3D"))
+            {
+                (*configs)[index].type = GEO_TYPE_3D;
+            }
+            else if(string_compare(name.c_str(), "type_2D"))
+            {
+                (*configs)[index].type = GEO_TYPE_3D;
+            }
+            else
+            {
+                DERROR("Unknown geo_type_identifier %s", name.c_str());
+                return false;
+            }
+            ptr += name_len + 1;
+        }
         else if (string_compare(identifier.c_str(), "name"))
         {
             u32 name_len;
@@ -1292,21 +1350,21 @@ static void calculate_tangents(geometry_config *config)
 
     u32 index_count = config->index_count;
     DASSERT(index_count);
-
+    vertex_3D *vertices = static_cast<vertex_3D *>(config->vertices);
     for (u32 i = 0; i < index_count; i += 3)
     {
         u32 i0 = config->indices[i + 0];
         u32 i1 = config->indices[i + 1];
         u32 i2 = config->indices[i + 2];
 
-        vec3 edge1 = config->vertices[i1].position - config->vertices[i0].position;
-        vec3 edge2 = config->vertices[i2].position - config->vertices[i0].position;
+        vec3 edge1 = vertices[i1].position - vertices[i0].position;
+        vec3 edge2 = vertices[i2].position - vertices[i0].position;
 
-        f32 deltaU1 = config->vertices[i1].tex_coord.x - config->vertices[i0].tex_coord.x;
-        f32 deltaV1 = config->vertices[i1].tex_coord.y - config->vertices[i0].tex_coord.y;
+        f32 deltaU1 = vertices[i1].tex_coord.x - vertices[i0].tex_coord.x;
+        f32 deltaV1 = vertices[i1].tex_coord.y - vertices[i0].tex_coord.y;
 
-        f32 deltaU2 = config->vertices[i2].tex_coord.x - config->vertices[i0].tex_coord.x;
-        f32 deltaV2 = config->vertices[i2].tex_coord.y - config->vertices[i0].tex_coord.y;
+        f32 deltaU2 = vertices[i2].tex_coord.x - vertices[i0].tex_coord.x;
+        f32 deltaV2 = vertices[i2].tex_coord.y - vertices[i0].tex_coord.y;
 
         f32 dividend = (deltaU1 * deltaV2 - deltaU2 * deltaV1);
         f32 fc       = 1.0f / dividend;
@@ -1323,8 +1381,8 @@ static void calculate_tangents(geometry_config *config)
 
         vec4 t4 = {tangent.x, tangent.y, tangent.z, handedness};
 
-        config->vertices[i0].tangent = t4;
-        config->vertices[i1].tangent = t4;
-        config->vertices[i2].tangent = t4;
+        vertices[i0].tangent = t4;
+        vertices[i1].tangent = t4;
+        vertices[i2].tangent = t4;
     }
 }
