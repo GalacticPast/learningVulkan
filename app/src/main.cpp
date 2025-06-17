@@ -153,8 +153,7 @@ int main()
         geometry_count_3D = 4;
 
         dstring quad_name = "test_quad";
-        geometry_config quad_config = geometry_system_generate_quad_config(10,10,&quad_name);
-        scale_geometries(&quad_config, {0.05,0.05,0.05});
+        geometry_config quad_config = geometry_system_generate_quad_config(100,100,0,0,&quad_name);
         u64 quad_id = geometry_system_create_geometry(&quad_config, false);
         geos_2D     = static_cast<geometry **>(dallocate(app_state.system_arena, sizeof(geometry *) * 2, MEM_TAG_UNKNOWN));
         geos_2D[0]  = geometry_system_get_geometry(quad_id);

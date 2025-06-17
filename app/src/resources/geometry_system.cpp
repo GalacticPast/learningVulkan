@@ -128,7 +128,7 @@ u64 geometry_system_create_geometry(geometry_config *config, bool use_name)
     return geo.id;
 }
 
-geometry_config geometry_system_generate_quad_config(f32 width, f32 height, dstring *name)
+geometry_config geometry_system_generate_quad_config(f32 width, f32 height,f32 posx, f32 posy, dstring *name)
 {
     DASSERT(name);
     if (width == 0)
@@ -154,24 +154,24 @@ geometry_config geometry_system_generate_quad_config(f32 width, f32 height, dstr
 
     vertex_2D *vertices   = reinterpret_cast<vertex_2D *>(config.vertices);
 
-    vertices[0].position  = {0.0f, 0.0f};
+    vertices[0].position  = {posx, posy};
     vertices[0].tex_coord = {0.0f, 0.0f};
 
-    vertices[1].position  = {1.0f, 0.0f};
+    vertices[1].position  = {posx + width, posy};
     vertices[1].tex_coord = {1.0f, 0.0f};
 
-    vertices[2].position  = {0.0f, 1.0f};
+    vertices[2].position  = {posx, posy + height};
     vertices[2].tex_coord = {0.0f, 1.0f};
 
-    vertices[3].position  = {1.0f, 1.0f};
+    vertices[3].position  = {width + posx, posy + height};
     vertices[3].tex_coord = {1.0f, 1.0f};
 
     config.indices[0] = 0;
-    config.indices[1] = 1;
-    config.indices[2] = 2;
+    config.indices[1] = 2;
+    config.indices[2] = 1;
     config.indices[3] = 1;
-    config.indices[4] = 3;
-    config.indices[5] = 2;
+    config.indices[4] = 2;
+    config.indices[5] = 3;
 
     return config;
 }

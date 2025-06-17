@@ -1387,8 +1387,8 @@ bool vulkan_create_geometry(renderpass_types type, geometry *out_geometry, u32 v
 
     void *vertex_data        = nullptr;
     u32   vertex_buffer_size = vertex_count * vertex_size;
-    void *index_data        = nullptr;
-    u32   index_buffer_size = index_count * sizeof(u32);
+    void *index_data         = nullptr;
+    u32   index_buffer_size  = index_count * sizeof(u32);
 
     vulkan_buffer vertex_staging_buffer{};
     vulkan_create_buffer(vk_context, &vertex_staging_buffer, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
@@ -1402,10 +1402,9 @@ bool vulkan_create_geometry(renderpass_types type, geometry *out_geometry, u32 v
                          VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, index_buffer_size);
     vulkan_copy_data_to_buffer(vk_context, &index_staging_buffer, index_data, indices, index_buffer_size);
 
-
     vulkan_geometry_data *internal_array = nullptr;
-    u32 vertex_offset = INVALID_ID;
-    u32 index_offset  = INVALID_ID;
+    u32                   vertex_offset  = INVALID_ID;
+    u32                   index_offset   = INVALID_ID;
 
     if (type == WORLD_RENDERPASS)
     {
@@ -1435,7 +1434,8 @@ bool vulkan_create_geometry(renderpass_types type, geometry *out_geometry, u32 v
                            &vk_context->ui_renderpass.vertex_buffer, vertex_offset, &vertex_staging_buffer,
                            vertex_buffer_size);
         vulkan_copy_buffer(vk_context, &vk_context->transfer_command_pool, &vk_context->vk_device.transfer_queue,
-                           &vk_context->ui_renderpass.index_buffer, index_offset, &index_staging_buffer, index_buffer_size);
+                           &vk_context->ui_renderpass.index_buffer, index_offset, &index_staging_buffer,
+                           index_buffer_size);
     }
 
     vulkan_destroy_buffer(vk_context, &vertex_staging_buffer);
@@ -1520,6 +1520,7 @@ bool vulkan_draw_geometries(vulkan_shader *material_shader_vulkan_data, geometry
     }
 
     vk_push_constant pc{};
+    pc.model = mat4_orthographic(0, vk_context->vk_swapchain.width, vk_context->vk_swapchain.height, 0, 0.01f, 1000.0f);
 
     for (u32 i = 0; i < geometry_count; i++)
     {
@@ -1539,6 +1540,11 @@ bool vulkan_draw_geometries(vulkan_shader *material_shader_vulkan_data, geometry
                                     1, 1, &vk_shader->per_group_descriptor_sets[descriptor_set_index], 0, nullptr);
             pc.diffuse_color = mat->diffuse_color;
             pc.model         = geos[i]->ubo.model;
+            vkCmdPushConstants(*curr_command_buffer, vk_shader->pipeline.layout, VK_SHADER_STAGE_VERTEX_BIT, 0,
+                               sizeof(vk_push_constant), &pc);
+        }
+        else
+        {
             vkCmdPushConstants(*curr_command_buffer, vk_shader->pipeline.layout, VK_SHADER_STAGE_VERTEX_BIT, 0,
                                sizeof(vk_push_constant), &pc);
         }

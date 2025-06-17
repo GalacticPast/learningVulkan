@@ -17,7 +17,7 @@ bool vulkan_create_pipeline(vulkan_context *vk_context, vulkan_shader *shader)
                              shader->fragment_shader_code.size());
 
     // create the pipeline shader stage
-    arena* arena = vk_context->arena;
+    arena                        *arena              = vk_context->arena;
     u32                           shader_stage_count = 0;
     darray<VkShaderStageFlagBits> stage_flag_bits    = {};
     stage_flag_bits.c_init(arena);
@@ -114,23 +114,23 @@ bool vulkan_create_pipeline(vulkan_context *vk_context, vulkan_shader *shader)
     viewport_state_create_info.pScissors     = &scissor;
 
     VkPipelineRasterizationStateCreateInfo rasterizer_create_info = {};
-    rasterizer_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
+    rasterizer_create_info.sType                   = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
     rasterizer_create_info.depthClampEnable        = VK_FALSE;
     rasterizer_create_info.rasterizerDiscardEnable = VK_FALSE;
     rasterizer_create_info.polygonMode             = VK_POLYGON_MODE_FILL;
     rasterizer_create_info.lineWidth               = 1.0f;
 
-    if(shader->pipeline_configuration.mode == CULL_FRONT_BIT)
+    if (shader->pipeline_configuration.mode == CULL_FRONT_BIT)
     {
-        rasterizer_create_info.cullMode                = VK_CULL_MODE_FRONT_BIT;
+        rasterizer_create_info.cullMode = VK_CULL_MODE_FRONT_BIT;
     }
-    else if(shader->pipeline_configuration.mode == CULL_BACK_BIT)
+    else if (shader->pipeline_configuration.mode == CULL_BACK_BIT)
     {
-        rasterizer_create_info.cullMode                = VK_CULL_MODE_BACK_BIT;
+        rasterizer_create_info.cullMode = VK_CULL_MODE_BACK_BIT;
     }
     else
     {
-        rasterizer_create_info.cullMode                = VK_CULL_MODE_NONE;
+        rasterizer_create_info.cullMode = VK_CULL_MODE_NONE;
     }
 
     rasterizer_create_info.frontFace               = VK_FRONT_FACE_COUNTER_CLOCKWISE;
@@ -150,7 +150,6 @@ bool vulkan_create_pipeline(vulkan_context *vk_context, vulkan_shader *shader)
     multisampling_state_create_info.alphaToCoverageEnable = VK_FALSE;
     multisampling_state_create_info.alphaToOneEnable      = VK_FALSE;
 
-
     pipeline_color_blend_state color_blend_options = shader->pipeline_configuration.color_blend;
 
     VkPipelineColorBlendAttachmentState color_blend_attachment_state{};
@@ -165,12 +164,12 @@ bool vulkan_create_pipeline(vulkan_context *vk_context, vulkan_shader *shader)
     color_blend_attachment_state.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO; // Optional
     color_blend_attachment_state.alphaBlendOp        = VK_BLEND_OP_ADD;      // Optional
 
-    if(color_blend_options.enable_color_blend)
+    if (color_blend_options.enable_color_blend)
     {
         color_blend_attachment_state.blendEnable         = VK_TRUE;
-        //TODO: better checking
-        //HACK:
-        //FIXME
+        // TODO: better checking
+        // HACK:
+        // FIXME
         color_blend_attachment_state.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
         color_blend_attachment_state.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
     }
@@ -189,16 +188,16 @@ bool vulkan_create_pipeline(vulkan_context *vk_context, vulkan_shader *shader)
     color_blend_state_create_info.blendConstants[3] = 0.0f;
 
     VkPipelineDepthStencilStateCreateInfo depth_stencil_state_create_info{};
-    depth_stencil_state_create_info.sType                 = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
-    depth_stencil_state_create_info.pNext                 = 0;
-    depth_stencil_state_create_info.flags                 = 0;
-    depth_stencil_state_create_info.depthTestEnable       = VK_TRUE;
-    depth_stencil_state_create_info.depthWriteEnable      = VK_TRUE;
-    depth_stencil_state_create_info.depthCompareOp        = VK_COMPARE_OP_LESS;
+    depth_stencil_state_create_info.sType            = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
+    depth_stencil_state_create_info.pNext            = 0;
+    depth_stencil_state_create_info.flags            = 0;
+    depth_stencil_state_create_info.depthTestEnable  = VK_TRUE;
+    depth_stencil_state_create_info.depthWriteEnable = VK_TRUE;
+    depth_stencil_state_create_info.depthCompareOp   = VK_COMPARE_OP_LESS;
 
-    if(shader->pipeline_configuration.mode == CULL_NONE_BIT)
+    if (shader->pipeline_configuration.mode == CULL_NONE_BIT)
     {
-        depth_stencil_state_create_info.depthCompareOp        = VK_COMPARE_OP_LESS_OR_EQUAL;
+        depth_stencil_state_create_info.depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL;
     }
 
     depth_stencil_state_create_info.depthBoundsTestEnable = VK_FALSE;
@@ -208,11 +207,11 @@ bool vulkan_create_pipeline(vulkan_context *vk_context, vulkan_shader *shader)
     depth_stencil_state_create_info.front                 = {};
     depth_stencil_state_create_info.back                  = {};
 
-    if(!shader->pipeline_configuration.depth_state.enable_depth_blend)
+    if (!shader->pipeline_configuration.depth_state.enable_depth_blend)
     {
-        depth_stencil_state_create_info.depthTestEnable       = VK_FALSE;
-        depth_stencil_state_create_info.depthWriteEnable      = VK_FALSE;
-        depth_stencil_state_create_info.depthCompareOp        = VK_COMPARE_OP_NEVER;
+        depth_stencil_state_create_info.depthTestEnable  = VK_FALSE;
+        depth_stencil_state_create_info.depthWriteEnable = VK_FALSE;
+        depth_stencil_state_create_info.depthCompareOp   = VK_COMPARE_OP_NEVER;
     }
 
     // global global_descriptor_set_ubo_layout_binding
@@ -231,9 +230,9 @@ bool vulkan_create_pipeline(vulkan_context *vk_context, vulkan_shader *shader)
 
     u32 layout_count = 0;
 
-    for(u32 i = 0 ; i < 2 ; i++)
+    for (u32 i = 0; i < 2; i++)
     {
-        if(set_layouts[i])
+        if (set_layouts[i])
         {
             layout_count++;
         }
@@ -270,13 +269,13 @@ bool vulkan_create_pipeline(vulkan_context *vk_context, vulkan_shader *shader)
     pipeline_create_info.pDynamicState       = &dynamic_state_create_info;
     pipeline_create_info.layout              = shader->pipeline.layout;
 
-    if(shader->renderpass_type == WORLD_RENDERPASS)
+    if (shader->renderpass_type == WORLD_RENDERPASS)
     {
-        pipeline_create_info.renderPass          = vk_context->world_renderpass.handle;
+        pipeline_create_info.renderPass = vk_context->world_renderpass.handle;
     }
-    else if(shader->renderpass_type == UI_RENDERPASS)
+    else if (shader->renderpass_type == UI_RENDERPASS)
     {
-        pipeline_create_info.renderPass          = vk_context->ui_renderpass.handle;
+        pipeline_create_info.renderPass = vk_context->ui_renderpass.handle;
     }
     else
     {
@@ -284,9 +283,9 @@ bool vulkan_create_pipeline(vulkan_context *vk_context, vulkan_shader *shader)
         return false;
     }
 
-    pipeline_create_info.subpass             = 0;
-    pipeline_create_info.basePipelineHandle  = VK_NULL_HANDLE;
-    pipeline_create_info.basePipelineIndex   = -1;
+    pipeline_create_info.subpass            = 0;
+    pipeline_create_info.basePipelineHandle = VK_NULL_HANDLE;
+    pipeline_create_info.basePipelineIndex  = -1;
 
     result = vkCreateGraphicsPipelines(vk_context->vk_device.logical, VK_NULL_HANDLE, 1, &pipeline_create_info,
                                        vk_context->vk_allocator, &shader->pipeline.handle);
