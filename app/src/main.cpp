@@ -1,9 +1,9 @@
-#include "main.hpp"
 #include "core/application.hpp"
 #include "core/dclock.hpp"
 #include "core/dmemory.hpp"
 #include "core/input.hpp"
 #include "core/logger.hpp"
+#include "main.hpp"
 
 #include "containers/darray.hpp"
 
@@ -158,9 +158,6 @@ int main()
         geometry_count_3D = 4;
 
         geos_2D = static_cast<geometry **>(dallocate(app_state.system_arena, sizeof(geometry *) * 2, MEM_TAG_UNKNOWN));
-
-        dstring test = "learning_vulkan";
-        geometry_system_generate_text_geometry(&test, {0, 0}, {10, 10});
     }
 #endif
 
@@ -191,13 +188,17 @@ int main()
 
     dstring font_atlas = DEFAULT_FONT_ATLAS_TEXTURE_HANDLE;
 
-    dstring test = "abcd";
+    dstring test;
+    test    = "FPS: ";
+    u32 fps = 0;
+
     while (app_state.is_running)
     {
         ZoneScoped;
         frame_start_time = platform_get_absolute_time();
-        geometry_system_generate_text_geometry(&test, {0, 0}, {10, 10});
 
+        test.str_len += u32_to_string(&test.string[4], fps);
+        geometry_system_generate_text_geometry(&test, {10, 10}, 15.0f);
         u64 quad_id          = geometry_system_flush_text_geometries();
         geos_2D[0]           = geometry_system_get_geometry(quad_id);
         geos_2D[0]->material = material_system_acquire_from_name(&font_atlas);
@@ -232,7 +233,9 @@ int main()
                 platform_sleep(remaining_ms - 1);
             }
         }
-
+        frame_end_time     = platform_get_absolute_time();
+        frame_elapsed_time = frame_end_time - frame_start_time;
+        fps = 1 / (frame_elapsed_time);
         input_update(0);
     }
     application_shutdown();

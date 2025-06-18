@@ -4,14 +4,12 @@
 #include "core/logger.hpp"
 #include "defines.hpp"
 
-#include "math/dmath.hpp"
 #include "math/dmath_types.hpp"
 #include "resources/geometry_system.hpp"
 #include "resources/material_system.hpp"
 #include "resources/resource_types.hpp"
 #include "resources/shader_system.hpp"
 
-#include "resources/texture_system.hpp"
 #include "vulkan/vulkan_core.h"
 #include "vulkan_backend.hpp"
 #include "vulkan_buffers.hpp"
@@ -1021,13 +1019,18 @@ bool vulkan_create_texture(texture *in_texture, u8 *pixels)
     // INFO: use the correct colorspace for the image, if the texture is a default texture then it should not be mapping
     // to sRGB colorspace. There was a bug before when the final color of a default normal map was (0.25, 0.25,1,1) even
     // though the actual value was (0.5,0.5,1,1) because I used the sRGB format
-    if (tex_height == DEFAULT_TEXTURE_WIDTH && tex_height == DEFAULT_TEXTURE_HEIGHT)
+    if (in_texture->format == IMG_FORMAT_UNORM)
     {
         image->format = VK_FORMAT_R8G8B8A8_UNORM;
     }
-    else
+    else if(in_texture->format == IMG_FORMAT_SRGB)
     {
         image->format = VK_FORMAT_R8G8B8A8_SRGB;
+    }
+    else
+    {
+        DERROR("Uknown image format. %d", in_texture->format);
+        return false;
     }
 
     bool result =
@@ -1458,9 +1461,6 @@ bool vulkan_create_geometry(renderpass_types type, geometry *out_geometry, u32 v
         out_geometry->vulkan_geometry_state = dallocate(arena, sizeof(vulkan_geometry_data), MEM_TAG_RENDERER);
         geo_vk_data = static_cast<vulkan_geometry_data *>(out_geometry->vulkan_geometry_state);
 
-        geo_vk_data->indices_count = index_count;
-        geo_vk_data->vertex_count  = vertex_count;
-
         u32 low = INVALID_ID;
 
         for (s32 i = 0; i < MAX_GEOMETRIES_LOADED; i++)
@@ -1480,6 +1480,15 @@ bool vulkan_create_geometry(renderpass_types type, geometry *out_geometry, u32 v
             return false;
         }
     }
+    else
+    {
+        u32 id = geo_vk_data->id;
+        internal_array[id].vertex_count  = vertex_count;
+        internal_array[id].indices_count = index_count;
+    }
+    geo_vk_data->indices_count = index_count;
+    geo_vk_data->vertex_count  = vertex_count;
+
     return true;
 };
 bool vulkan_destroy_geometry(geometry *geometry)

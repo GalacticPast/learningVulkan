@@ -1462,7 +1462,7 @@ static void calculate_tangents(geometry_config *config)
     }
 }
 
-bool geometry_system_generate_text_geometry(dstring *text, vec2 position, vec2 dimensions)
+bool geometry_system_generate_text_geometry(dstring *text, vec2 position, f32 font_size)
 {
     DASSERT(text);
     u32              length = INVALID_ID;
@@ -1489,7 +1489,9 @@ bool geometry_system_generate_text_geometry(dstring *text, vec2 position, vec2 d
     for (u32 i = 0; i < strlen; i++)
     {
         char ch = (*text)[i];
-        hash    = ch - 32;
+        if (ch == '\0')
+            break;
+        hash = ch - 32;
 
         float u0 = glyphs[hash].x0 / (float)512;
         float v0 = glyphs[hash].y0 / (float)512;
@@ -1502,16 +1504,16 @@ bool geometry_system_generate_text_geometry(dstring *text, vec2 position, vec2 d
         q3.tex_coord = {u1, v1}; // Bottom-right
 
         q0.position = {pos.x, pos.y};
-        q1.position = {pos.x + dimensions.x, pos.y};
-        q2.position = {pos.x, pos.y + dimensions.y};
-        q3.position = {pos.x + dimensions.x, pos.y + dimensions.y};
+        q1.position = {pos.x + font_size, pos.y};
+        q2.position = {pos.x, pos.y + font_size};
+        q3.position = {pos.x + font_size, pos.y + font_size};
 
         vertices[vert_ind++] = q0;
         vertices[vert_ind++] = q1;
         vertices[vert_ind++] = q2;
         vertices[vert_ind++] = q3;
 
-        pos.x += dimensions.x;
+        pos.x += font_size;
 
         indices[index_ind + 0] = index_offset + 0;
         indices[index_ind + 1] = index_offset + 2;

@@ -251,3 +251,10 @@ bool string_to_u32(const char *string, u32 *integer)
     DASSERT(res != INVALID_ID);
     return true;
 }
+
+
+u32 u32_to_string(char * string, u32 integer)
+{
+    u32 bytes_written = sprintf(string, "%d", integer);
+    return bytes_written;
+}

@@ -1,4 +1,3 @@
-#include "texture_system.hpp"
 #include "containers/dhashtable.hpp"
 #include "core/dfile_system.hpp"
 #include "core/dmemory.hpp"
@@ -6,6 +5,7 @@
 #include "memory/arenas.hpp"
 #include "renderer/vulkan/vulkan_backend.hpp"
 #include "resources/resource_types.hpp"
+#include "texture_system.hpp"
 
 #define STB_IMAGE_IMPLEMENTATION
 #include "vendor/stb_image.h"
@@ -15,10 +15,6 @@
 
 #define STB_TRUETYPE_IMPLEMENTATION
 #include "vendor/stb_truetype.h"
-
-STATIC_ASSERT(sizeof(stbtt_packedchar) == sizeof(font_glyph_data),
-              "Font glyph data and stbtt_packedchar size mismatch. This will cause alignment issues when reading and "
-              "writing to the .font_data file.");
 
 struct texture_system_state
 {
@@ -35,7 +31,7 @@ bool                         texture_system_create_default_textures();
 
 static bool texture_system_release_textures(dstring *texture_name);
 static bool texture_system_create_font_atlas();
-static bool _write_glyph_atlas_to_file(dstring *file_base_name, stbtt_packedchar *stb_packed_char, u32 size);
+static bool _write_glyph_atlas_to_file(dstring *file_base_name, font_glyph_data *glyph_data, u32 length);
 static bool _parse_glyph_atlas_file(dstring *file_full_path, font_glyph_data **data, u32 *length);
 
 bool texture_system_initialize(arena *arena, u64 *texture_system_mem_requirements, void *state)
@@ -124,8 +120,8 @@ bool texture_system_create_texture(dstring *conf_file_base_name)
     texture.width        = tex_width;
     texture.height       = tex_height;
     texture.num_channels = tex_channels;
-
-    bool result = create_texture(&texture, pixels);
+    texture.format       = IMG_FORMAT_SRGB;
+    bool result          = create_texture(&texture, pixels);
     stbi_image_free(pixels);
 
     return result;
@@ -141,6 +137,7 @@ bool texture_system_create_default_textures()
         default_albedo_texture.width        = DEFAULT_TEXTURE_WIDTH;
         default_albedo_texture.height       = DEFAULT_TEXTURE_HEIGHT;
         default_albedo_texture.num_channels = 4;
+        default_albedo_texture.format       = IMG_FORMAT_SRGB;
 
         u32 tex_width    = default_albedo_texture.width;
         u32 tex_height   = default_albedo_texture.height;
@@ -174,6 +171,7 @@ bool texture_system_create_default_textures()
         default_normal_texture.width        = DEFAULT_TEXTURE_WIDTH;
         default_normal_texture.height       = DEFAULT_TEXTURE_HEIGHT;
         default_normal_texture.num_channels = 4;
+        default_normal_texture.format       = IMG_FORMAT_UNORM;
 
         u32 tex_width    = default_normal_texture.width;
         u32 tex_height   = default_normal_texture.height;
@@ -369,6 +367,7 @@ bool texture_system_load_cubemap(dstring *conf_file_base_name)
     cubemap_texture.height       = prev_height;
     cubemap_texture.num_channels = 4;
     cubemap_texture.texure_size  = prev_width * prev_height * 4 * 6;
+    cubemap_texture.format       = IMG_FORMAT_SRGB;
 
     arena *temp_arena = arena_get_arena();
     u8    *pixels     = static_cast<u8 *>(dallocate(temp_arena, cubemap_texture.texure_size, MEM_TAG_RENDERER));
@@ -406,8 +405,8 @@ bool texture_system_create_font_atlas()
     string_copy_format(file_full_path.string, "%s%s%s", 0, prefix.c_str(), font_atlas_base_name.c_str(),
                        suffix.c_str());
 
-    bool             verify_data = false;
-    stbtt_packedchar char_data[96]; // ASCII 32..126
+    bool            verify_data = false;
+    font_glyph_data glyphs[96]; // ASCII 32..126
 
     if (!file_exists(&file_full_path))
     {
@@ -421,8 +420,9 @@ bool texture_system_create_font_atlas()
         bool result = file_open_and_read(file_full_path.c_str(), &font_buffer_size, nullptr, false);
         DASSERT(result);
 
-        char *font_buffer = static_cast<char *>(dallocate(arena, font_buffer_size, MEM_TAG_UNKNOWN));
-        result            = file_open_and_read(file_full_path.c_str(), &font_buffer_size, font_buffer, false);
+        u8 *font_buffer = static_cast<u8 *>(dallocate(arena, font_buffer_size, MEM_TAG_UNKNOWN));
+        result =
+            file_open_and_read(file_full_path.c_str(), &font_buffer_size, reinterpret_cast<char *>(font_buffer), false);
         DASSERT(result);
 
         u32 atlas_width  = 512;
@@ -431,28 +431,72 @@ bool texture_system_create_font_atlas()
         u32 font_atlas_size   = atlas_width * atlas_height;
         u8 *font_atlas_buffer = static_cast<u8 *>(dallocate(arena, font_atlas_size, MEM_TAG_UNKNOWN));
 
-        stbtt_pack_context packContext;
-        if (!stbtt_PackBegin(&packContext, font_atlas_buffer, atlas_width, atlas_height, 0, 1, NULL))
+        stbtt_fontinfo font;
+        if (!stbtt_InitFont(&font, font_buffer, stbtt_GetFontOffsetForIndex(font_buffer, 0)))
         {
-            DERROR("Failed to begin font packing.");
+            DERROR("Failed to init font.");
+            return false;
         }
 
-        stbtt_PackSetOversampling(&packContext, 1, 1); // No oversampling
+        u32   char_count       = 96;
+        u32   glyph_padding    = 4;
+        float pixel_height     = 48.0f;
+        float scale            = stbtt_ScaleForPixelHeight(&font, pixel_height);
+        float onedge_value     = 180;
+        float pixel_dist_scale = 64.0f;
 
-        stbtt_pack_range range;
-        range.font_size                        = 32;
-        range.first_unicode_codepoint_in_range = 32; // space
-        range.num_chars                        = 96; // printable ASCII
-        range.chardata_for_range               = char_data;
+        int pen_x = 0, pen_y = 0, row_height = 0;
 
-        if (!stbtt_PackFontRanges(&packContext, reinterpret_cast<const u8 *>(font_buffer), 0, &range, 1))
+        for (u32 i = 0; i < char_count; ++i)
         {
-            DERROR("Font range packing failed.");
+            u32 c = 32 + i;
+
+            s32            w, h, xoff, yoff;
+            unsigned char *sdf = stbtt_GetCodepointSDF(&font, scale, c, glyph_padding, onedge_value, pixel_dist_scale,
+                                                       &w, &h, &xoff, &yoff);
+
+            if (pen_x + w >= (s32)atlas_width)
+            {
+                pen_x       = 0;
+                pen_y      += row_height + 1;
+                row_height  = 0;
+            }
+
+            if (pen_y + h >= (s32)atlas_height)
+            {
+                DERROR("Atlas too small. Increase size.");
+                free(sdf);
+                break;
+            }
+
+            // Copy glyph SDF into atlas
+            for (int y = 0; y < h; ++y)
+            {
+                dcopy_memory(font_atlas_buffer + (pen_y + y) * atlas_width + pen_x, sdf + y * w, w);
+            }
+
+            // Get advance
+            int adv, lsb;
+            stbtt_GetCodepointHMetrics(&font, c, &adv, &lsb);
+
+            glyphs[i].x0       = pen_x;
+            glyphs[i].y0       = pen_y;
+            glyphs[i].x1       = pen_x + w;
+            glyphs[i].y1       = pen_y + h;
+            glyphs[i].w        = w;
+            glyphs[i].h        = h;
+            glyphs[i].xoff     = (float)xoff;
+            glyphs[i].yoff     = (float)yoff;
+            glyphs[i].xadvance = scale * adv;
+
+            pen_x += w + 1;
+            if (h > row_height)
+                row_height = h;
+
+            free(sdf);
         }
 
-        stbtt_PackEnd(&packContext);
-
-        _write_glyph_atlas_to_file(&font_name, char_data, 96);
+        _write_glyph_atlas_to_file(&font_name, glyphs, char_count);
 
         file_full_path.clear();
         string_copy_format(file_full_path.string, "%s%s%s", 0, prefix.c_str(), font_atlas_base_name.c_str(), ".png");
@@ -488,6 +532,7 @@ bool texture_system_create_font_atlas()
     font_atlas_texture.width        = width;
     font_atlas_texture.height       = height;
     font_atlas_texture.num_channels = 4;
+    font_atlas_texture.format       = IMG_FORMAT_UNORM;
 
     bool result = create_texture(&font_atlas_texture, pixels);
     DASSERT(result);
@@ -511,22 +556,22 @@ bool texture_system_create_font_atlas()
     {
         for (u32 i = 0; i < size; i++)
         {
-            DASSERT(data[i].x0 == char_data[i].x0);
-            DASSERT(data[i].x1 == char_data[i].x1);
-            DASSERT(data[i].y0 == char_data[i].y0);
-            DASSERT(data[i].y1 == char_data[i].y1);
-            DASSERT(data[i].xoff == char_data[i].xoff);
-            DASSERT(data[i].yoff == char_data[i].yoff);
-            DASSERT(data[i].xadvance == char_data[i].xadvance);
-            DASSERT(data[i].xoff2 == char_data[i].xoff2);
-            DASSERT(data[i].yoff2 == char_data[i].yoff2);
+            DASSERT(data[i].x0 == glyphs[i].x0);
+            DASSERT(data[i].x1 == glyphs[i].x1);
+            DASSERT(data[i].y0 == glyphs[i].y0);
+            DASSERT(data[i].y1 == glyphs[i].y1);
+            DASSERT(data[i].xoff == glyphs[i].xoff);
+            DASSERT(data[i].yoff == glyphs[i].yoff);
+            DASSERT(data[i].xadvance == glyphs[i].xadvance);
+            DASSERT(data[i].xoff2 == glyphs[i].xoff2);
+            DASSERT(data[i].yoff2 == glyphs[i].yoff2);
         }
     }
 #endif
     return true;
 }
 
-bool _write_glyph_atlas_to_file(dstring *file_base_name, stbtt_packedchar *stb_packed_char, u32 length)
+bool _write_glyph_atlas_to_file(dstring *file_base_name, font_glyph_data *glyph_data, u32 length)
 {
     dstring full_file_name;
     dstring prefix = "../assets/fonts/";
@@ -547,12 +592,12 @@ bool _write_glyph_atlas_to_file(dstring *file_base_name, stbtt_packedchar *stb_p
     file_write(&f, reinterpret_cast<const char *>(&length), sizeof(u32));
     file_write(&f, reinterpret_cast<const char *>(&new_line), 1);
 
-    u32 size = sizeof(stbtt_packedchar);
+    u32 size = sizeof(font_glyph_data);
 
     for (u32 i = 0; i < length; i++)
     {
         file_write(&f, "data:", string_length("data:"));
-        file_write(&f, reinterpret_cast<const char *>(&stb_packed_char[i]), size);
+        file_write(&f, reinterpret_cast<const char *>(&glyph_data[i]), size);
         file_write(&f, reinterpret_cast<const char *>(&new_line), 1);
     }
     file_close(&f);
@@ -644,7 +689,7 @@ bool _parse_glyph_atlas_file(dstring *file_full_path, font_glyph_data **data, u3
     return true;
 }
 
-font_glyph_data* texture_system_get_glyph_table(u32* length)
+font_glyph_data *texture_system_get_glyph_table(u32 *length)
 {
     *length = tex_sys_state_ptr->glyphs_size;
     return tex_sys_state_ptr->glyphs;

@@ -157,16 +157,24 @@ struct shader
 #define MAX_TEXTURES_LOADED 1024
 #define TEXTURE_NAME_MAX_LENGTH 512
 
+enum image_format
+{
+    IMG_FORMAT_UNKNOWN = 0,
+    IMG_FORMAT_SRGB,
+    IMG_FORMAT_UNORM,
+};
+
 struct texture
 {
 
-    dstring name;
-    u32     id                   = INVALID_ID;
-    u32     width                = INVALID_ID;
-    u32     height               = INVALID_ID;
-    u32     num_channels         = INVALID_ID;
-    u64     texure_size          = INVALID_ID_64;
-    void   *vulkan_texture_state = nullptr;
+    dstring      name;
+    u32          id           = INVALID_ID;
+    u32          width        = INVALID_ID;
+    u32          height       = INVALID_ID;
+    u32          num_channels = INVALID_ID;
+    u64          texure_size  = INVALID_ID_64;
+    image_format format;
+    void        *vulkan_texture_state = nullptr;
 };
 
 #define DEFAULT_TEXTURE_WIDTH 16
@@ -183,6 +191,9 @@ struct font_glyph_data
     u16 y0; // uv coordinates for the quad
     u16 x1;
     u16 y1;
+
+    u32 w;
+    u32 h;
 
     f32 xoff; // adjust quad position on screen
     f32 yoff;

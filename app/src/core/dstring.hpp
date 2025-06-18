@@ -51,3 +51,5 @@ s32 string_num_of_substring_occurence(const char *string, const char *str);
 
 bool string_to_vec4(const char *string, vec4 *vector);
 bool string_to_u32(const char *string, u32 *integer);
+
+u32 u32_to_string(char * string, u32 integer);
