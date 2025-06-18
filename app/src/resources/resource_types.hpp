@@ -177,6 +177,21 @@ struct texture
 #define MAX_MATERIALS_LOADED 1024
 #define MATERIAL_NAME_MAX_LENGTH 256
 
+struct font_glyph_data
+{
+    u16 x0; // bounding box coords
+    u16 y0; // uv coordinates for the quad
+    u16 x1;
+    u16 y1;
+
+    f32 xoff; // adjust quad position on screen
+    f32 yoff;
+    f32 xadvance; // cursor movement or how much to move for the next atlas
+
+    f32 xoff2;
+    f32 yoff2;
+};
+
 struct texture_map
 {
     texture *diffuse  = nullptr;

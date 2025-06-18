@@ -1,3 +1,4 @@
+#include "texture_system.hpp"
 #include "containers/dhashtable.hpp"
 #include "core/dfile_system.hpp"
 #include "core/dmemory.hpp"
@@ -5,7 +6,6 @@
 #include "memory/arenas.hpp"
 #include "renderer/vulkan/vulkan_backend.hpp"
 #include "resources/resource_types.hpp"
-#include "texture_system.hpp"
 
 #define STB_IMAGE_IMPLEMENTATION
 #include "vendor/stb_image.h"
@@ -15,6 +15,10 @@
 
 #define STB_TRUETYPE_IMPLEMENTATION
 #include "vendor/stb_truetype.h"
+
+STATIC_ASSERT(sizeof(stbtt_packedchar) == sizeof(font_glyph_data),
+              "Font glyph data and stbtt_packedchar size mismatch. This will cause alignment issues when reading and "
+              "writing to the .font_data file.");
 
 struct texture_system_state
 {
@@ -28,6 +32,8 @@ bool                         texture_system_create_default_textures();
 
 static bool texture_system_release_textures(dstring *texture_name);
 static bool texture_system_create_font_atlas();
+static bool _write_glyph_atlas_to_file(dstring *file_base_name, stbtt_packedchar *stb_packed_char, u32 size);
+static bool _parse_glyph_atlas_file(dstring *file_full_path, font_glyph_data **data, u32 *length);
 
 bool texture_system_initialize(arena *arena, u64 *texture_system_mem_requirements, void *state)
 {
@@ -388,18 +394,23 @@ bool texture_system_create_font_atlas()
     arena *arena = tex_sys_state_ptr->arena;
 
     dstring prefix    = "../assets/fonts/";
-    dstring font_name = "SourceSansPro-Regular.ttf";
+    dstring font_name = "SourceSansPro-Regular";
+    dstring suffix    = ".png";
 
-    dstring font_atlas_base_name = "source_sans_pro_regular.png";
+    dstring font_atlas_base_name = "SourceSansPro-Regular";
 
     dstring file_full_path;
-    string_copy_format(file_full_path.string, "%s%s", 0, prefix.c_str(), font_atlas_base_name.c_str());
+    string_copy_format(file_full_path.string, "%s%s%s", 0, prefix.c_str(), font_atlas_base_name.c_str(),
+                       suffix.c_str());
 
+    bool verify_data = false;
+    stbtt_packedchar char_data[96]; // ASCII 32..126
 
     if (!file_exists(&file_full_path))
     {
+        verify_data = true;
         file_full_path.clear();
-        string_copy_format(file_full_path.string, "%s%s", 0, prefix.c_str(), font_name.c_str());
+        string_copy_format(file_full_path.string, "%s%s%s", 0, prefix.c_str(), font_name.c_str(), ".ttf");
 
         std::fstream f;
         u64          font_buffer_size = INVALID_ID_64;
@@ -425,13 +436,11 @@ bool texture_system_create_font_atlas()
 
         stbtt_PackSetOversampling(&packContext, 1, 1); // No oversampling
 
-        stbtt_packedchar charData[96]; // ASCII 32..126
-
         stbtt_pack_range range;
         range.font_size                        = 32;
         range.first_unicode_codepoint_in_range = 32; // space
         range.num_chars                        = 96; // printable ASCII
-        range.chardata_for_range               = charData;
+        range.chardata_for_range               = char_data;
 
         if (!stbtt_PackFontRanges(&packContext, reinterpret_cast<const u8 *>(font_buffer), 0, &range, 1))
         {
@@ -440,8 +449,10 @@ bool texture_system_create_font_atlas()
 
         stbtt_PackEnd(&packContext);
 
+        _write_glyph_atlas_to_file(&font_name, char_data, 96);
+
         file_full_path.clear();
-        string_copy_format(file_full_path.string, "%s%s", 0, prefix.c_str(), font_atlas_base_name.c_str());
+        string_copy_format(file_full_path.string, "%s%s%s", 0, prefix.c_str(), font_atlas_base_name.c_str(), ".png");
 
         if (!stbi_write_png(file_full_path.c_str(), atlas_width, atlas_height, 1, font_atlas_buffer, atlas_width))
         {
@@ -453,18 +464,20 @@ bool texture_system_create_font_atlas()
         }
     }
 
-
     s32 width        = INVALID_ID_S32;
     s32 height       = INVALID_ID_S32;
     s32 num_channels = INVALID_ID_S32;
 
+    stbi_set_flip_vertically_on_load(false);
     stbi_uc *pixels = stbi_load(file_full_path.c_str(), &width, &height, &num_channels, STBI_rgb_alpha);
     if (!pixels)
     {
-        DERROR("Texture creation failed. Error opening file %s: %s", font_atlas_base_name.c_str(), stbi_failure_reason());
+        DERROR("Texture creation failed. Error opening file %s: %s", font_atlas_base_name.c_str(),
+               stbi_failure_reason());
         stbi__err(0, 0);
         return false;
     }
+    stbi_set_flip_vertically_on_load(true);
 
     texture font_atlas_texture;
 
@@ -478,5 +491,149 @@ bool texture_system_create_font_atlas()
 
     stbi_image_free(pixels);
 
+    font_glyph_data *data = nullptr;
+    u32              size = 0;
+    file_full_path.clear();
+    file_full_path = "../assets/fonts/SourceSansPro-Regular.font_data";
+
+    _parse_glyph_atlas_file(&file_full_path, &data, &size);
+
+    DASSERT(size == 96);
+
+#ifdef DEBUG
+    if(verify_data)
+    {
+        for (u32 i = 0; i < size; i++)
+        {
+            DASSERT(data[i].x0 == char_data[i].x0);
+            DASSERT(data[i].x1 == char_data[i].x1);
+            DASSERT(data[i].y0 == char_data[i].y0);
+            DASSERT(data[i].y1 == char_data[i].y1);
+            DASSERT(data[i].xoff == char_data[i].xoff);
+            DASSERT(data[i].yoff == char_data[i].yoff);
+            DASSERT(data[i].xadvance == char_data[i].xadvance);
+            DASSERT(data[i].xoff2 == char_data[i].xoff2);
+            DASSERT(data[i].yoff2 == char_data[i].yoff2);
+        }
+    }
+#endif
+    return true;
+}
+
+bool _write_glyph_atlas_to_file(dstring *file_base_name, stbtt_packedchar *stb_packed_char, u32 length)
+{
+    dstring full_file_name;
+    dstring prefix = "../assets/fonts/";
+    dstring suffix = ".font_data";
+
+    string_copy_format(full_file_name.string, "%s%s%s", 0, prefix.c_str(), file_base_name->c_str(), suffix.c_str());
+
+    std::fstream f;
+    bool         result = file_open(full_file_name.c_str(), &f, true, true);
+    DASSERT_MSG(result, "Failed to open file");
+
+    char new_line = '\n';
+
+    font_glyph_data test{};
+
+    // INFO: file header
+    file_write(&f, "font_glyph_data_count:", string_length("font_glyph_data_count:"));
+    file_write(&f, reinterpret_cast<const char *>(&length), sizeof(u32));
+    file_write(&f, reinterpret_cast<const char *>(&new_line), 1);
+
+    u32 size = sizeof(stbtt_packedchar);
+
+    for (u32 i = 0; i < length; i++)
+    {
+        file_write(&f, "data:", string_length("data:"));
+        file_write(&f, reinterpret_cast<const char *>(&stb_packed_char[i]), size);
+        file_write(&f, reinterpret_cast<const char *>(&new_line), 1);
+    }
+    file_close(&f);
+    return true;
+}
+
+bool _parse_glyph_atlas_file(dstring *file_full_path, font_glyph_data **data, u32 *length)
+{
+
+    DASSERT(file_full_path);
+
+    u64 buff_size = INVALID_ID_64;
+    file_open_and_read(file_full_path->c_str(), &buff_size, 0, 1);
+    arena *arena = tex_sys_state_ptr->arena;
+
+    char *buffer = static_cast<char *>(dallocate(arena, buff_size + 1, MEM_TAG_GEOMETRY));
+    bool  result = file_open_and_read(file_full_path->c_str(), &buff_size, buffer, 1);
+    DASSERT(result);
+
+    buffer[buff_size] = EOF;
+    const char *eof   = buffer + buff_size;
+
+    auto go_to_colon = [](const char *line) -> const char * {
+        u32 index = 0;
+        while (line[index] != ':')
+        {
+            if (line[index] == '\n' && line[index] == '\r' && line[index] == '\0')
+            {
+                return nullptr;
+            }
+            index++;
+        }
+        return line + index + 1;
+    };
+
+    auto extract_identifier = [](const char *line, char *dst) {
+        u32 index = 0;
+        u32 j     = 0;
+
+        while (line[index] != ':' && line[index] != '\0' && line[index] != '\n' && line[index] != '\r')
+        {
+            if (line[index] == ' ')
+            {
+                index++;
+                continue;
+            }
+            dst[j++] = line[index++];
+        }
+        dst[j++] = '\0';
+    };
+
+    const char *ptr = buffer;
+    dstring     identifier;
+    u32         index = 0;
+
+    u32 size = 0;
+    while (ptr < eof && ptr != nullptr)
+    {
+        extract_identifier(ptr, identifier.string);
+        ptr = go_to_colon(ptr);
+        if (!ptr)
+        {
+            break;
+        }
+
+        if (string_compare(identifier.c_str(), "data"))
+        {
+            font_glyph_data *glyph = &(*data)[index];
+            dcopy_memory(glyph, ptr, size);
+            ptr += size + 1;
+            index++;
+        }
+        else if (string_compare(identifier.c_str(), "font_glyph_data_count"))
+        {
+            dcopy_memory(&size, ptr, sizeof(u32));
+            (*data)  = static_cast<font_glyph_data *>(dallocate(arena, size * sizeof(font_glyph_data), MEM_TAG_DARRAY));
+            *length  = size;
+            ptr     += sizeof(u32) + 1;
+            size     = 0;
+            // small optimization I think. because this will only execute once
+            size     = sizeof(font_glyph_data);
+        }
+        else
+        {
+            DERROR("Unknwon identifier %s", identifier.c_str());
+            return false;
+        }
+    }
     return true;
 }
