@@ -1478,17 +1478,16 @@ bool geometry_system_generate_text_geometry(dstring *text, vec2 position, vec2 d
         char ch = (*text)[i];
         hash    = ch - 32;
 
-        float u0 = glyphs[hash].x0;
-        float v0 = glyphs[hash].y0;
-        float u1 = glyphs[hash].x1;
-        float v1 = glyphs[hash].y1;
+        float u0 = glyphs[hash].x0 / (float)512;
+        float v0 = glyphs[hash].y0 / (float)512;
+        float u1 = glyphs[hash].x1 / (float)512;
+        float v1 = glyphs[hash].y1 / (float)512;
 
         q0.tex_coord = {u0, v0}; // Top-left
-        q1.tex_coord = {u0, v1}; // Bottom-left
-        q2.tex_coord = {u1, v1}; // Bottom-right
-        q3.tex_coord = {u1, v0}; // Top-right
+        q1.tex_coord = {u1, v0}; // Top-right
+        q2.tex_coord = {u0, v1}; // Bottom-left
+        q3.tex_coord = {u1, v1}; // Bottom-right
 
-        // Top-left
         q0.position = {pos.x, pos.y};
         q1.position = {pos.x + dimensions.x, pos.y};
         q2.position = {pos.x, pos.y + dimensions.y};
@@ -1509,8 +1508,8 @@ bool geometry_system_generate_text_geometry(dstring *text, vec2 position, vec2 d
         indices[index_ind + 4] = index_offset + 2;
         indices[index_ind + 5] = index_offset + 3;
 
-        index_ind += 6;
-        index_offset += 3;
+        index_ind    += 6;
+        index_offset += 4;
     }
     geo_sys_state_ptr->vertex_offset_ind                 = vert_ind;
     geo_sys_state_ptr->index_offset_ind                  = index_ind;

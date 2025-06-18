@@ -471,6 +471,7 @@ bool texture_system_create_font_atlas()
     s32 height       = INVALID_ID_S32;
     s32 num_channels = INVALID_ID_S32;
 
+    stbi_set_flip_vertically_on_load(false);
     stbi_uc *pixels = stbi_load(file_full_path.c_str(), &width, &height, &num_channels, STBI_rgb_alpha);
     if (!pixels)
     {
@@ -479,6 +480,7 @@ bool texture_system_create_font_atlas()
         stbi__err(0, 0);
         return false;
     }
+    stbi_set_flip_vertically_on_load(true);
 
     texture font_atlas_texture;
 
