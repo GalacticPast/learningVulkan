@@ -65,9 +65,9 @@ bool geometry_system_initialize(arena *arena, u64 *geometry_system_mem_requireme
     geo_sys_state_ptr->vertex_offset_ind             = 0;
     geo_sys_state_ptr->index_offset_ind              = 0;
     geo_sys_state_ptr->font_id                       = INVALID_ID_64;
-    geo_sys_state_ptr->font_geometry_config.vertices = dallocate(arena, sizeof(vertex_2D) * 1024, MEM_TAG_GEOMETRY);
+    geo_sys_state_ptr->font_geometry_config.vertices = dallocate(arena, sizeof(vertex_2D) * MB(1), MEM_TAG_GEOMETRY);
     geo_sys_state_ptr->font_geometry_config.indices =
-        static_cast<u32 *>(dallocate(arena, sizeof(u32) * 1024 * 1024, MEM_TAG_GEOMETRY));
+        static_cast<u32 *>(dallocate(arena, sizeof(u32) * MB(1), MEM_TAG_GEOMETRY));
 
     geometry_system_create_default_geometry();
 
@@ -1481,10 +1481,12 @@ bool geometry_system_generate_text_geometry(dstring *text, vec2 position, f32 fo
     vertex_2D *vertices = static_cast<vertex_2D *>(geo_sys_state_ptr->font_geometry_config.vertices);
     u32       *indices  = geo_sys_state_ptr->font_geometry_config.indices;
 
+    // this is the ptr to the next starting block
     u32 vert_ind  = geo_sys_state_ptr->vertex_offset_ind;
-    u32 index_ind = geo_sys_state_ptr->vertex_offset_ind;
+    // this is the ptr to the next starting block
+    u32 index_ind = geo_sys_state_ptr->font_geometry_config.index_count;
 
-    u32 index_offset = index_ind;
+    u32 index_offset = geo_sys_state_ptr->index_offset_ind;
 
     for (u32 i = 0; i < strlen; i++)
     {
@@ -1523,13 +1525,16 @@ bool geometry_system_generate_text_geometry(dstring *text, vec2 position, f32 fo
         indices[index_ind + 4] = index_offset + 2;
         indices[index_ind + 5] = index_offset + 3;
 
+        // num of indices per quad i.e 2 triangles
         index_ind    += 6;
+        // advacnce the index offset by 4 so that the next quad has the proper offset;
         index_offset += 4;
     }
-    geo_sys_state_ptr->vertex_offset_ind                 = vert_ind;
-    geo_sys_state_ptr->index_offset_ind                  = index_ind;
-    geo_sys_state_ptr->font_geometry_config.vertex_count = vert_ind;
-    geo_sys_state_ptr->font_geometry_config.index_count  = index_ind;
+
+    geo_sys_state_ptr->vertex_offset_ind                 += strlen * 4;
+    geo_sys_state_ptr->index_offset_ind                  += index_offset;
+    geo_sys_state_ptr->font_geometry_config.vertex_count += strlen * 4;
+    geo_sys_state_ptr->font_geometry_config.index_count  += strlen * 6;
 
     return true;
 }
@@ -1549,8 +1554,10 @@ u64 geometry_system_flush_text_geometries()
     {
         geometry_system_update_geometry(&geo_sys_state_ptr->font_geometry_config, id);
     }
-    geo_sys_state_ptr->index_offset_ind  = 0;
-    geo_sys_state_ptr->vertex_offset_ind = 0;
+    geo_sys_state_ptr->index_offset_ind                  = 0;
+    geo_sys_state_ptr->vertex_offset_ind                 = 0;
+    geo_sys_state_ptr->font_geometry_config.vertex_count = 0;
+    geo_sys_state_ptr->font_geometry_config.index_count  = 0;
 
     return id;
 }

@@ -1,9 +1,9 @@
+#include "main.hpp"
 #include "core/application.hpp"
 #include "core/dclock.hpp"
 #include "core/dmemory.hpp"
 #include "core/input.hpp"
 #include "core/logger.hpp"
-#include "main.hpp"
 
 #include "containers/darray.hpp"
 
@@ -189,8 +189,11 @@ int main()
     dstring font_atlas = DEFAULT_FONT_ATLAS_TEXTURE_HANDLE;
 
     dstring test;
-    test    = "FPS: ";
-    u32 fps = 0;
+    test             = "FPS: ";
+    dstring abc_cap  = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    dstring abc_sall = "abcdefghijklmnopqrstuvwxyz";
+    dstring num      = "0123456789";
+    u32     fps      = 0;
 
     while (app_state.is_running)
     {
@@ -198,7 +201,11 @@ int main()
         frame_start_time = platform_get_absolute_time();
 
         test.str_len += u32_to_string(&test.string[4], fps);
-        geometry_system_generate_text_geometry(&test, {10, 10}, 15.0f);
+        geometry_system_generate_text_geometry(&test, {0, 10}, 15.0f);
+        geometry_system_generate_text_geometry(&abc_cap, {0, 60}, 15.0f);
+        geometry_system_generate_text_geometry(&abc_sall, {0, 120}, 15.0f);
+        geometry_system_generate_text_geometry(&num, {0, 180}, 15.0f);
+
         u64 quad_id          = geometry_system_flush_text_geometries();
         geos_2D[0]           = geometry_system_get_geometry(quad_id);
         geos_2D[0]->material = material_system_acquire_from_name(&font_atlas);
@@ -235,7 +242,7 @@ int main()
         }
         frame_end_time     = platform_get_absolute_time();
         frame_elapsed_time = frame_end_time - frame_start_time;
-        fps = 1 / (frame_elapsed_time);
+        fps                = 1 / (frame_elapsed_time);
         input_update(0);
     }
     application_shutdown();
