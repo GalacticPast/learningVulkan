@@ -159,20 +159,14 @@ int main()
 
         geos_2D = static_cast<geometry **>(dallocate(app_state.system_arena, sizeof(geometry *) * 2, MEM_TAG_UNKNOWN));
 
-        dstring test         = "learning_vulkan";
+        dstring test = "learning_vulkan";
         geometry_system_generate_text_geometry(&test, {0, 0}, {10, 10});
-
-        u64 quad_id = geometry_system_flush_text_geometries();
-        geos_2D[0]           = geometry_system_get_geometry(quad_id);
-
-        dstring font_atlas   = DEFAULT_FONT_ATLAS_TEXTURE_HANDLE;
-        geos_2D[0]->material = material_system_acquire_from_name(&font_atlas);
-        geometry_count_2D    = 1;
     }
 #endif
 
     triangle.test_geometry_3D  = geos_3D;
     triangle.geometry_count_3D = geometry_count_3D;
+    geometry_count_2D          = 1;
 
     triangle.test_geometry_2D  = geos_2D;
     triangle.geometry_count_2D = geometry_count_2D;
@@ -195,10 +189,19 @@ int main()
     u64 def_grid_shader     = shader_system_get_default_grid_shader_id();
     u64 def_ui_shader       = shader_system_get_default_ui_shader_id();
 
+    dstring font_atlas = DEFAULT_FONT_ATLAS_TEXTURE_HANDLE;
+
     while (app_state.is_running)
     {
         ZoneScoped;
         frame_start_time = platform_get_absolute_time();
+
+        dstring test = "learning_vulkan";
+        geometry_system_generate_text_geometry(&test, {0, 0}, {10, 10});
+
+        u64 quad_id          = geometry_system_flush_text_geometries();
+        geos_2D[0]           = geometry_system_get_geometry(quad_id);
+        geos_2D[0]->material = material_system_acquire_from_name(&font_atlas);
 
         update_camera(&triangle.scene_ubo, &triangle.ui_ubo, &triangle.light_ubo, frame_elapsed_time);
 

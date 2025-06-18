@@ -1525,5 +1525,9 @@ u64 geometry_system_flush_text_geometries()
 
     u64 id                     = geometry_system_create_geometry(&geo_sys_state_ptr->font_geometry_config, false);
     geo_sys_state_ptr->font_id = id;
+    geo_sys_state_ptr->index_offset_ind = 0;
+    geo_sys_state_ptr->vertex_offset_ind = 0;
+
+
     return id;
 }
