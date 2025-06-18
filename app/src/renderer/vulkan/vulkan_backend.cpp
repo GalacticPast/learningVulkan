@@ -1404,10 +1404,11 @@ bool vulkan_create_geometry(renderpass_types type, geometry *out_geometry, u32 v
     vulkan_copy_data_to_buffer(vk_context, &vertex_staging_buffer, vertex_data, vertices, vertex_buffer_size);
 
     vulkan_buffer index_staging_buffer{};
-    if(index_buffer_size)
+    if (index_buffer_size)
     {
         vulkan_create_buffer(vk_context, &index_staging_buffer, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-                             VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, index_buffer_size);
+                             VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+                             index_buffer_size);
         vulkan_copy_data_to_buffer(vk_context, &index_staging_buffer, index_data, indices, index_buffer_size);
     }
 
@@ -1433,11 +1434,8 @@ bool vulkan_create_geometry(renderpass_types type, geometry *out_geometry, u32 v
     }
     else if (type == UI_RENDERPASS)
     {
-        vertex_offset =
-            vulkan_calculate_vertex_offset(vk_context, vertex_offset, vk_context->ui_internal_geometries) * vertex_size;
-        index_offset =
-            vulkan_calculate_index_offset(vk_context, index_offset, vk_context->ui_internal_geometries) * sizeof(u32);
         vertex_offset = 0;
+        index_offset  = 0;
 
         vk_context->ui_geometries_count++;
         internal_array = vk_context->ui_internal_geometries;
@@ -1452,30 +1450,35 @@ bool vulkan_create_geometry(renderpass_types type, geometry *out_geometry, u32 v
     vulkan_destroy_buffer(vk_context, &vertex_staging_buffer);
     vulkan_destroy_buffer(vk_context, &index_staging_buffer);
 
-    arena *arena                        = vk_context->arena;
-    out_geometry->vulkan_geometry_state = dallocate(arena, sizeof(vulkan_geometry_data), MEM_TAG_RENDERER);
-    vulkan_geometry_data *geo_vk_data   = static_cast<vulkan_geometry_data *>(out_geometry->vulkan_geometry_state);
+    arena                *arena       = vk_context->arena;
+    vulkan_geometry_data *geo_vk_data = static_cast<vulkan_geometry_data *>(out_geometry->vulkan_geometry_state);
 
-    geo_vk_data->indices_count = index_count;
-    geo_vk_data->vertex_count  = vertex_count;
-
-    u32 low = INVALID_ID;
-
-    for (s32 i = 0; i < MAX_GEOMETRIES_LOADED; i++)
+    if (!geo_vk_data)
     {
-        if (internal_array[i].id == INVALID_ID)
+        out_geometry->vulkan_geometry_state = dallocate(arena, sizeof(vulkan_geometry_data), MEM_TAG_RENDERER);
+        geo_vk_data = static_cast<vulkan_geometry_data *>(out_geometry->vulkan_geometry_state);
+
+        geo_vk_data->indices_count = index_count;
+        geo_vk_data->vertex_count  = vertex_count;
+
+        u32 low = INVALID_ID;
+
+        for (s32 i = 0; i < MAX_GEOMETRIES_LOADED; i++)
         {
-            geo_vk_data->id                 = i;
-            internal_array[i].id            = i;
-            internal_array[i].vertex_count  = vertex_count;
-            internal_array[i].indices_count = index_count;
-            break;
+            if (internal_array[i].id == INVALID_ID)
+            {
+                geo_vk_data->id                 = i;
+                internal_array[i].id            = i;
+                internal_array[i].vertex_count  = vertex_count;
+                internal_array[i].indices_count = index_count;
+                break;
+            }
         }
-    }
-    if (geo_vk_data->id == INVALID_ID)
-    {
-        DERROR("Couldnt load geometry into vulkan_internal_geometries. Maybe we run out space??");
-        return false;
+        if (geo_vk_data->id == INVALID_ID)
+        {
+            DERROR("Couldnt load geometry into vulkan_internal_geometries. Maybe we run out space??");
+            return false;
+        }
     }
     return true;
 };

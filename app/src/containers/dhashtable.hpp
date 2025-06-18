@@ -55,11 +55,11 @@ template <typename T> class dhashtable
   public:
     bool is_non_resizable = false;
 
-    dhashtable(struct arena* arena);
-    dhashtable(struct arena* arena,u64 table_size);
+    dhashtable(struct arena *arena);
+    dhashtable(struct arena *arena, u64 table_size);
 
-    void c_init(struct arena* arena);
-    void c_init(struct arena* arena, u64 size);
+    void c_init(struct arena *arena);
+    void c_init(struct arena *arena, u64 size);
 
     u64 get_size_requirements(u64 size);
     // WARN: before you call this function you have to call the get size requirements function so that you can get the
@@ -86,6 +86,9 @@ template <typename T> class dhashtable
      * only for fixed size hashtables */
     u64  insert(const u64 key, T type);
     void insert(const char *key, T type);
+
+    bool update(const u64 key, T type);
+    void update(const char *key, T type);
 
     void set_default_value(T default_val);
 };
@@ -117,8 +120,9 @@ template <typename T> void dhashtable<T>::_resize_and_rehash()
     u64    old_capacity   = capacity;
     u64    old_max_length = max_length;
 
-    entry *new_table = static_cast<entry *>(dallocate(arena, capacity * DEFAULT_HASH_TABLE_RESIZE_FACTOR, MEM_TAG_DHASHTABLE));
-    table            = new_table;
+    entry *new_table =
+        static_cast<entry *>(dallocate(arena, capacity * DEFAULT_HASH_TABLE_RESIZE_FACTOR, MEM_TAG_DHASHTABLE));
+    table       = new_table;
     capacity   *= DEFAULT_HASH_TABLE_RESIZE_FACTOR;
     max_length  = capacity / element_size;
     DTRACE("Num_elements_in_table before resize and rehash %d", num_elements_in_table);
@@ -184,7 +188,7 @@ template <typename T> u64 dhashtable<T>::hash_func(const char *key)
     return hash;
 }
 
-template <typename T> dhashtable<T>::dhashtable(struct arena* arena)
+template <typename T> dhashtable<T>::dhashtable(struct arena *arena)
 {
     element_size          = sizeof(entry);
     capacity              = DEFAULT_HASH_TABLE_SIZE * element_size;
@@ -194,7 +198,7 @@ template <typename T> dhashtable<T>::dhashtable(struct arena* arena)
     table                 = static_cast<entry *>(dallocate(arena, capacity, MEM_TAG_DHASHTABLE));
 }
 
-template <typename T> dhashtable<T>::dhashtable(struct arena* arena, u64 table_size)
+template <typename T> dhashtable<T>::dhashtable(struct arena *arena, u64 table_size)
 {
     element_size          = sizeof(entry);
     capacity              = table_size * element_size;
@@ -204,7 +208,7 @@ template <typename T> dhashtable<T>::dhashtable(struct arena* arena, u64 table_s
     default_entry         = nullptr;
 }
 
-template <typename T> void dhashtable<T>::c_init(struct arena* arena)
+template <typename T> void dhashtable<T>::c_init(struct arena *arena)
 {
     element_size          = sizeof(entry);
     capacity              = DEFAULT_HASH_TABLE_SIZE * element_size;
@@ -223,7 +227,7 @@ template <typename T> void dhashtable<T>::c_init(void *block, u64 table_size)
     default_entry         = nullptr;
 }
 
-template <typename T> void dhashtable<T>::c_init(struct arena* arena,u64 table_size)
+template <typename T> void dhashtable<T>::c_init(struct arena *arena, u64 table_size)
 {
     element_size          = sizeof(entry);
     capacity              = table_size * element_size;
@@ -250,6 +254,30 @@ template <typename T> void dhashtable<T>::set_default_value(T default_val)
     }
     default_entry->type = default_val;
 }
+
+template <typename T> bool dhashtable<T>::update(const u64 key, T type)
+{
+    s64 dummy = key;
+    if (key == INVALID_ID_64)
+    {
+        DERROR("Invalid key for updating the entry.");
+    }
+    u32 high = static_cast<u32>(dummy >> 32);
+    u32 low  = static_cast<u32>(dummy);
+
+    entry *entry_ptr = &table[low];
+    if (table[low].is_initialized)
+    {
+        entry_ptr->type              = type;
+    }
+    else
+    {
+        DERROR("Coulndt associate a entry with key %llu, high %d low %d.",key, high, low);
+        return false;
+    }
+    return true;
+}
+//
 // should make the bottom 32 bits as the index for the hastable entry and the top 32 bits for the unique-id;
 template <typename T> u64 dhashtable<T>::insert(const u64 key, T type)
 {

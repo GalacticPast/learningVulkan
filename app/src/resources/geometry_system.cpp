@@ -64,6 +64,7 @@ bool geometry_system_initialize(arena *arena, u64 *geometry_system_mem_requireme
 
     geo_sys_state_ptr->vertex_offset_ind             = 0;
     geo_sys_state_ptr->index_offset_ind              = 0;
+    geo_sys_state_ptr->font_id                       = INVALID_ID_64;
     geo_sys_state_ptr->font_geometry_config.vertices = dallocate(arena, sizeof(vertex_2D) * 1024, MEM_TAG_GEOMETRY);
     geo_sys_state_ptr->font_geometry_config.indices =
         static_cast<u32 *>(dallocate(arena, sizeof(u32) * 1024 * 1024, MEM_TAG_GEOMETRY));
@@ -93,6 +94,18 @@ bool geometry_system_shutdowm(void *state)
     geo_sys_state_ptr->loaded_geometry.~darray();
     geo_sys_state_ptr = 0;
     return true;
+}
+
+bool geometry_system_update_geometry(geometry_config *config, u64 id)
+{
+    geometry *geo           = geometry_system_get_geometry(id);
+    u32       tris_count    = config->vertex_count;
+    u32       indices_count = config->index_count;
+    bool      result        = vulkan_create_geometry(UI_RENDERPASS, geo, tris_count, sizeof(vertex_2D),
+                                                     static_cast<void *>(config->vertices), indices_count, config->indices);
+    geo_sys_state_ptr->hashtable.update(id, *geo);
+
+    return result;
 }
 
 u64 geometry_system_create_geometry(geometry_config *config, bool use_name)
@@ -1523,11 +1536,19 @@ u64 geometry_system_flush_text_geometries()
 {
     geo_sys_state_ptr->font_geometry_config.type = GEO_TYPE_2D;
 
-    u64 id                     = geometry_system_create_geometry(&geo_sys_state_ptr->font_geometry_config, false);
-    geo_sys_state_ptr->font_id = id;
-    geo_sys_state_ptr->index_offset_ind = 0;
-    geo_sys_state_ptr->vertex_offset_ind = 0;
+    u64 id = geo_sys_state_ptr->font_id;
 
+    if (id == INVALID_ID_64)
+    {
+        id                         = geometry_system_create_geometry(&geo_sys_state_ptr->font_geometry_config, false);
+        geo_sys_state_ptr->font_id = id;
+    }
+    else
+    {
+        geometry_system_update_geometry(&geo_sys_state_ptr->font_geometry_config, id);
+    }
+    geo_sys_state_ptr->index_offset_ind  = 0;
+    geo_sys_state_ptr->vertex_offset_ind = 0;
 
     return id;
 }

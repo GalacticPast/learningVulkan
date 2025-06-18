@@ -191,12 +191,11 @@ int main()
 
     dstring font_atlas = DEFAULT_FONT_ATLAS_TEXTURE_HANDLE;
 
+    dstring test = "abcd";
     while (app_state.is_running)
     {
         ZoneScoped;
         frame_start_time = platform_get_absolute_time();
-
-        dstring test = "learning_vulkan";
         geometry_system_generate_text_geometry(&test, {0, 0}, {10, 10});
 
         u64 quad_id          = geometry_system_flush_text_geometries();
