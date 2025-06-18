@@ -31,3 +31,7 @@ geometry_config geometry_system_generate_plane_config(f32 width, f32 height, u32
 geometry_config geometry_system_generate_quad_config(f32 width, f32 height,f32 posx, f32 posy, dstring *name);
 
 void geometry_system_copy_config(geometry_config *dst_config, const geometry_config *src_config);
+
+bool geometry_system_generate_text_geometry(dstring* text, vec2 position, vec2 dimensions);
+u64 geometry_system_flush_text_geometries();
+

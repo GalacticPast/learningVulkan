@@ -16,6 +16,7 @@
 #include "renderer/vulkan/vulkan_backend.hpp"
 #include "resources/material_system.hpp"
 #include "resources/resource_types.hpp"
+#include "resources/texture_system.hpp"
 
 #include <cstring>
 #include <stdio.h>
@@ -26,6 +27,12 @@ struct geometry_system_state
     dhashtable<geometry> hashtable;
     u64                  default_geo_id;
     arena               *arena;
+
+    // HACK:
+    u64             font_id;
+    u32             vertex_offset_ind = INVALID_ID;
+    u32             index_offset_ind  = INVALID_ID;
+    geometry_config font_geometry_config;
 };
 
 static geometry_system_state *geo_sys_state_ptr;
@@ -54,6 +61,12 @@ bool geometry_system_initialize(arena *arena, u64 *geometry_system_mem_requireme
     geo_sys_state_ptr->hashtable.is_non_resizable = true;
     geo_sys_state_ptr->loaded_geometry.reserve(arena);
     geo_sys_state_ptr->arena = arena;
+
+    geo_sys_state_ptr->vertex_offset_ind             = 0;
+    geo_sys_state_ptr->index_offset_ind              = 0;
+    geo_sys_state_ptr->font_geometry_config.vertices = dallocate(arena, sizeof(vertex_2D) * 1024, MEM_TAG_GEOMETRY);
+    geo_sys_state_ptr->font_geometry_config.indices =
+        static_cast<u32 *>(dallocate(arena, sizeof(u32) * 1024 * 1024, MEM_TAG_GEOMETRY));
 
     geometry_system_create_default_geometry();
 
@@ -128,7 +141,7 @@ u64 geometry_system_create_geometry(geometry_config *config, bool use_name)
     return geo.id;
 }
 
-geometry_config geometry_system_generate_quad_config(f32 width, f32 height,f32 posx, f32 posy, dstring *name)
+geometry_config geometry_system_generate_quad_config(f32 width, f32 height, f32 posx, f32 posy, dstring *name)
 {
     DASSERT(name);
     if (width == 0)
@@ -152,7 +165,7 @@ geometry_config geometry_system_generate_quad_config(f32 width, f32 height,f32 p
     config.index_count = 6;
     config.indices     = static_cast<u32 *>(dallocate(arena, sizeof(u32) * config.index_count, MEM_TAG_GEOMETRY));
 
-    vertex_2D *vertices   = reinterpret_cast<vertex_2D *>(config.vertices);
+    vertex_2D *vertices = reinterpret_cast<vertex_2D *>(config.vertices);
 
     vertices[0].position  = {posx, posy};
     vertices[0].tex_coord = {0.0f, 0.0f};
@@ -169,6 +182,7 @@ geometry_config geometry_system_generate_quad_config(f32 width, f32 height,f32 p
     config.indices[0] = 0;
     config.indices[1] = 2;
     config.indices[2] = 1;
+
     config.indices[3] = 1;
     config.indices[4] = 2;
     config.indices[5] = 3;
@@ -1433,4 +1447,84 @@ static void calculate_tangents(geometry_config *config)
         vertices[i1].tangent = t4;
         vertices[i2].tangent = t4;
     }
+}
+
+bool geometry_system_generate_text_geometry(dstring *text, vec2 position, vec2 dimensions)
+{
+    DASSERT(text);
+    u32              length = INVALID_ID;
+    font_glyph_data *glyphs = texture_system_get_glyph_table(&length);
+    DASSERT(glyphs);
+
+    u32  strlen = text->str_len;
+    u32  hash   = 0;
+    vec2 pos    = position;
+
+    vertex_2D q0;
+    vertex_2D q1;
+    vertex_2D q2;
+    vertex_2D q3;
+
+    vertex_2D *vertices = static_cast<vertex_2D *>(geo_sys_state_ptr->font_geometry_config.vertices);
+    u32       *indices  = geo_sys_state_ptr->font_geometry_config.indices;
+
+    u32 vert_ind  = geo_sys_state_ptr->vertex_offset_ind;
+    u32 index_ind = geo_sys_state_ptr->vertex_offset_ind;
+
+    u32 index_offset = index_ind;
+
+    for (u32 i = 0; i < strlen; i++)
+    {
+        char ch = (*text)[i];
+        hash    = ch - 32;
+
+        float u0 = glyphs[hash].x0;
+        float v0 = glyphs[hash].y0;
+        float u1 = glyphs[hash].x1;
+        float v1 = glyphs[hash].y1;
+
+        q0.tex_coord = {u0, v0}; // Top-left
+        q1.tex_coord = {u0, v1}; // Bottom-left
+        q2.tex_coord = {u1, v1}; // Bottom-right
+        q3.tex_coord = {u1, v0}; // Top-right
+
+        // Top-left
+        q0.position = {pos.x, pos.y};
+        q1.position = {pos.x + dimensions.x, pos.y};
+        q2.position = {pos.x, pos.y + dimensions.y};
+        q3.position = {pos.x + dimensions.x, pos.y + dimensions.y};
+
+        vertices[vert_ind++] = q0;
+        vertices[vert_ind++] = q1;
+        vertices[vert_ind++] = q2;
+        vertices[vert_ind++] = q3;
+
+        pos.x += dimensions.x;
+
+        indices[index_ind + 0] = index_offset + 0;
+        indices[index_ind + 1] = index_offset + 2;
+        indices[index_ind + 2] = index_offset + 1;
+
+        indices[index_ind + 3] = index_offset + 1;
+        indices[index_ind + 4] = index_offset + 2;
+        indices[index_ind + 5] = index_offset + 3;
+
+        index_ind += 6;
+        index_offset += 3;
+    }
+    geo_sys_state_ptr->vertex_offset_ind                 = vert_ind;
+    geo_sys_state_ptr->index_offset_ind                  = index_ind;
+    geo_sys_state_ptr->font_geometry_config.vertex_count = vert_ind;
+    geo_sys_state_ptr->font_geometry_config.index_count  = index_ind;
+
+    return true;
+}
+
+u64 geometry_system_flush_text_geometries()
+{
+    geo_sys_state_ptr->font_geometry_config.type = GEO_TYPE_2D;
+
+    u64 id                     = geometry_system_create_geometry(&geo_sys_state_ptr->font_geometry_config, false);
+    geo_sys_state_ptr->font_id = id;
+    return id;
 }

@@ -25,6 +25,9 @@ struct texture_system_state
     darray<dstring>     loaded_textures;
     dhashtable<texture> hashtable;
     arena              *arena;
+
+    u32              glyphs_size;
+    font_glyph_data *glyphs;
 };
 
 static texture_system_state *tex_sys_state_ptr;
@@ -403,7 +406,7 @@ bool texture_system_create_font_atlas()
     string_copy_format(file_full_path.string, "%s%s%s", 0, prefix.c_str(), font_atlas_base_name.c_str(),
                        suffix.c_str());
 
-    bool verify_data = false;
+    bool             verify_data = false;
     stbtt_packedchar char_data[96]; // ASCII 32..126
 
     if (!file_exists(&file_full_path))
@@ -468,7 +471,6 @@ bool texture_system_create_font_atlas()
     s32 height       = INVALID_ID_S32;
     s32 num_channels = INVALID_ID_S32;
 
-    stbi_set_flip_vertically_on_load(false);
     stbi_uc *pixels = stbi_load(file_full_path.c_str(), &width, &height, &num_channels, STBI_rgb_alpha);
     if (!pixels)
     {
@@ -477,7 +479,6 @@ bool texture_system_create_font_atlas()
         stbi__err(0, 0);
         return false;
     }
-    stbi_set_flip_vertically_on_load(true);
 
     texture font_atlas_texture;
 
@@ -498,10 +499,13 @@ bool texture_system_create_font_atlas()
 
     _parse_glyph_atlas_file(&file_full_path, &data, &size);
 
+    tex_sys_state_ptr->glyphs      = data;
+    tex_sys_state_ptr->glyphs_size = size;
+
     DASSERT(size == 96);
 
 #ifdef DEBUG
-    if(verify_data)
+    if (verify_data)
     {
         for (u32 i = 0; i < size; i++)
         {
@@ -636,4 +640,10 @@ bool _parse_glyph_atlas_file(dstring *file_full_path, font_glyph_data **data, u3
         }
     }
     return true;
+}
+
+font_glyph_data* texture_system_get_glyph_table(u32* length)
+{
+    *length = tex_sys_state_ptr->glyphs_size;
+    return tex_sys_state_ptr->glyphs;
 }

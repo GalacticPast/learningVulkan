@@ -1404,9 +1404,12 @@ bool vulkan_create_geometry(renderpass_types type, geometry *out_geometry, u32 v
     vulkan_copy_data_to_buffer(vk_context, &vertex_staging_buffer, vertex_data, vertices, vertex_buffer_size);
 
     vulkan_buffer index_staging_buffer{};
-    vulkan_create_buffer(vk_context, &index_staging_buffer, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-                         VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, index_buffer_size);
-    vulkan_copy_data_to_buffer(vk_context, &index_staging_buffer, index_data, indices, index_buffer_size);
+    if(index_buffer_size)
+    {
+        vulkan_create_buffer(vk_context, &index_staging_buffer, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+                             VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, index_buffer_size);
+        vulkan_copy_data_to_buffer(vk_context, &index_staging_buffer, index_data, indices, index_buffer_size);
+    }
 
     vulkan_geometry_data *internal_array = nullptr;
     u32                   vertex_offset  = INVALID_ID;
@@ -1434,6 +1437,8 @@ bool vulkan_create_geometry(renderpass_types type, geometry *out_geometry, u32 v
             vulkan_calculate_vertex_offset(vk_context, vertex_offset, vk_context->ui_internal_geometries) * vertex_size;
         index_offset =
             vulkan_calculate_index_offset(vk_context, index_offset, vk_context->ui_internal_geometries) * sizeof(u32);
+        vertex_offset = 0;
+
         vk_context->ui_geometries_count++;
         internal_array = vk_context->ui_internal_geometries;
         vulkan_copy_buffer(vk_context, &vk_context->transfer_command_pool, &vk_context->vk_device.transfer_queue,

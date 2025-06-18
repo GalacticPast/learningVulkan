@@ -1,9 +1,9 @@
+#include "main.hpp"
 #include "core/application.hpp"
 #include "core/dclock.hpp"
 #include "core/dmemory.hpp"
 #include "core/input.hpp"
 #include "core/logger.hpp"
-#include "main.hpp"
 
 #include "containers/darray.hpp"
 
@@ -157,11 +157,14 @@ int main()
 
         geometry_count_3D = 4;
 
-        dstring         quad_name   = "test_quad";
-        geometry_config quad_config = geometry_system_generate_quad_config(100, 100, 0, 0, &quad_name);
-        u64             quad_id     = geometry_system_create_geometry(&quad_config, false);
         geos_2D = static_cast<geometry **>(dallocate(app_state.system_arena, sizeof(geometry *) * 2, MEM_TAG_UNKNOWN));
+
+        dstring test         = "learning_vulkan";
+        geometry_system_generate_text_geometry(&test, {0, 0}, {10, 10});
+
+        u64 quad_id = geometry_system_flush_text_geometries();
         geos_2D[0]           = geometry_system_get_geometry(quad_id);
+
         dstring font_atlas   = DEFAULT_FONT_ATLAS_TEXTURE_HANDLE;
         geos_2D[0]->material = material_system_acquire_from_name(&font_atlas);
         geometry_count_2D    = 1;
