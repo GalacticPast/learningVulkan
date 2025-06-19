@@ -1511,6 +1511,9 @@ bool geometry_system_generate_text_geometry(dstring *text, vec2 position, f32 fo
         q3.position = {pos.x + font_size, pos.y + font_size};
 
         vertices[vert_ind++] = q0;
+        vertices[vert_ind++] = q2;
+        vertices[vert_ind++] = q1;
+
         vertices[vert_ind++] = q1;
         vertices[vert_ind++] = q2;
         vertices[vert_ind++] = q3;
@@ -1518,23 +1521,22 @@ bool geometry_system_generate_text_geometry(dstring *text, vec2 position, f32 fo
         pos.x += font_size;
 
         indices[index_ind + 0] = index_offset + 0;
-        indices[index_ind + 1] = index_offset + 2;
-        indices[index_ind + 2] = index_offset + 1;
-
-        indices[index_ind + 3] = index_offset + 1;
-        indices[index_ind + 4] = index_offset + 2;
-        indices[index_ind + 5] = index_offset + 3;
+        indices[index_ind + 1] = index_offset + 1;
+        indices[index_ind + 2] = index_offset + 2;
+        indices[index_ind + 3] = index_offset + 3;
+        indices[index_ind + 4] = index_offset + 4;
+        indices[index_ind + 5] = index_offset + 5;
 
         // num of indices per quad i.e 2 triangles
         index_ind    += 6;
         // advacnce the index offset by 4 so that the next quad has the proper offset;
-        index_offset += 4;
+        index_offset += 6;
     }
 
-    geo_sys_state_ptr->vertex_offset_ind                 += strlen * 4;
+    geo_sys_state_ptr->vertex_offset_ind                 += index_offset;
     geo_sys_state_ptr->index_offset_ind                  += index_offset;
-    geo_sys_state_ptr->font_geometry_config.vertex_count += strlen * 4;
-    geo_sys_state_ptr->font_geometry_config.index_count  += strlen * 6;
+    geo_sys_state_ptr->font_geometry_config.vertex_count += index_offset;
+    geo_sys_state_ptr->font_geometry_config.index_count  += index_offset;
 
     return true;
 }
