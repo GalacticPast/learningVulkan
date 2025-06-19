@@ -152,7 +152,6 @@ struct shader
 #define DEFAULT_ALBEDO_TEXTURE_HANDLE "DEFAULT_ALBDEO_TEXTURE"
 #define DEFAULT_NORMAL_TEXTURE_HANDLE "DEFAULT_NORMAL_TEXTURE"
 #define DEFAULT_CUBEMAP_TEXTURE_HANDLE "DEFAULT_CUBEMAP_TEXTURE"
-#define DEFAULT_FONT_ATLAS_TEXTURE_HANDLE "DEFAULT_FONT_ATLAS_TEXTURE"
 
 #define MAX_TEXTURES_LOADED 1024
 #define TEXTURE_NAME_MAX_LENGTH 512
@@ -180,10 +179,17 @@ struct texture
 #define DEFAULT_TEXTURE_WIDTH 16
 #define DEFAULT_TEXTURE_HEIGHT 16
 #define DEFAULT_MATERIAL_HANDLE "default_material"
+#define DEFAULT_FONT_ATLAS_TEXTURE_HANDLE "DEFAULT_FONT_ATLAS_TEXTURE"
 // INFO: maybe name it differenlty
 #define DEFAULT_LIGHT_MATERIAL_HANDLE "default_light_material"
 #define MAX_MATERIALS_LOADED 1024
 #define MATERIAL_NAME_MAX_LENGTH 256
+
+struct font_aligned_quad
+{
+    float x0, y0, s0, t0; // top-left
+    float x1, y1, s1, t1; // bottom-right
+};
 
 struct font_glyph_data
 {

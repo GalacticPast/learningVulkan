@@ -12,6 +12,8 @@ material *material_system_get_from_id(u32 id);
 bool      material_system_parse_mtl_file(dstring *mtl_file_name);
 material *material_system_get_from_name(dstring *material_name);
 
+bool material_system_load_font(dstring *font_base_name, font_glyph_data **data);
+
 bool material_system_parse_mtl_file(dstring *mtl_file_name);
 
 bool material_system_update_material_shader_globals(scene_global_uniform_buffer_object *sgubo,

@@ -8,6 +8,6 @@ layout (set = 1 , binding = 0) uniform sampler2D font_atlas;
 
 void main()
 {
-    vec4 color = texture(font_atlas, tex_coord);
-    out_color = color;
+    float alpha = texture(font_atlas, tex_coord).r;
+    out_color = vec4(1,1,1,alpha);
 }

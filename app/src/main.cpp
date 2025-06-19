@@ -1,9 +1,9 @@
-#include "main.hpp"
 #include "core/application.hpp"
 #include "core/dclock.hpp"
 #include "core/dmemory.hpp"
 #include "core/input.hpp"
 #include "core/logger.hpp"
+#include "main.hpp"
 
 #include "containers/darray.hpp"
 
@@ -193,6 +193,8 @@ int main()
     dstring abc_cap  = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
     dstring abc_sall = "abcdefghijklmnopqrstuvwxyz";
     dstring num      = "0123456789";
+    dstring symbols  = "!@#$%^&*()_+{}[]:><|''";
+    u32 frames = 0;
     u32     fps      = 0;
 
     while (app_state.is_running)
@@ -200,11 +202,17 @@ int main()
         ZoneScoped;
         frame_start_time = platform_get_absolute_time();
 
-        test.str_len += u32_to_string(&test.string[4], fps);
-        geometry_system_generate_text_geometry(&test, {0, 10}, 10.0f);
-        geometry_system_generate_text_geometry(&abc_cap, {0, 60}, 10.0f);
-        geometry_system_generate_text_geometry(&abc_sall, {0, 120}, 10.0f);
-        geometry_system_generate_text_geometry(&num, {0, 180}, 10.0f);
+        if(frames % 64  == 0)
+        {
+            test.str_len += u32_to_string(&test.string[4], fps);
+        }
+
+        geometry_system_generate_text_geometry(&test, {0, 10});
+
+        geometry_system_generate_text_geometry(&abc_cap, {0, 60});
+        geometry_system_generate_text_geometry(&abc_sall, {0, 120});
+        geometry_system_generate_text_geometry(&num, {0, 180});
+        geometry_system_generate_text_geometry(&symbols, {0, 220});
 
         u64 quad_id          = geometry_system_flush_text_geometries();
         geos_2D[0]           = geometry_system_get_geometry(quad_id);
@@ -243,6 +251,7 @@ int main()
         frame_end_time     = platform_get_absolute_time();
         frame_elapsed_time = frame_end_time - frame_start_time;
         fps                = 1 / (frame_elapsed_time);
+        frames++;
         input_update(0);
     }
     application_shutdown();

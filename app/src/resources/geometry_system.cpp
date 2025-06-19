@@ -13,10 +13,10 @@
 #include "math/dmath.hpp"
 
 #include "memory/arenas.hpp"
+#include "platform/platform.hpp"
 #include "renderer/vulkan/vulkan_backend.hpp"
 #include "resources/material_system.hpp"
 #include "resources/resource_types.hpp"
-#include "resources/texture_system.hpp"
 
 #include <cstring>
 #include <stdio.h>
@@ -29,10 +29,13 @@ struct geometry_system_state
     arena               *arena;
 
     // HACK:
+
     u64             font_id;
     u32             vertex_offset_ind = INVALID_ID;
     u32             index_offset_ind  = INVALID_ID;
     geometry_config font_geometry_config;
+
+    font_glyph_data *font_glyph_table = nullptr;
 };
 
 static geometry_system_state *geo_sys_state_ptr;
@@ -62,12 +65,20 @@ bool geometry_system_initialize(arena *arena, u64 *geometry_system_mem_requireme
     geo_sys_state_ptr->loaded_geometry.reserve(arena);
     geo_sys_state_ptr->arena = arena;
 
-    geo_sys_state_ptr->vertex_offset_ind             = 0;
-    geo_sys_state_ptr->index_offset_ind              = 0;
-    geo_sys_state_ptr->font_id                       = INVALID_ID_64;
-    geo_sys_state_ptr->font_geometry_config.vertices = dallocate(arena, sizeof(vertex_2D) * MB(1), MEM_TAG_GEOMETRY);
-    geo_sys_state_ptr->font_geometry_config.indices =
-        static_cast<u32 *>(dallocate(arena, sizeof(u32) * MB(1), MEM_TAG_GEOMETRY));
+    {
+        geo_sys_state_ptr->vertex_offset_ind = 0;
+        geo_sys_state_ptr->index_offset_ind  = 0;
+        geo_sys_state_ptr->font_id           = INVALID_ID_64;
+        geo_sys_state_ptr->font_geometry_config.vertices =
+            dallocate(arena, sizeof(vertex_2D) * MB(1), MEM_TAG_GEOMETRY);
+        geo_sys_state_ptr->font_geometry_config.indices =
+            static_cast<u32 *>(dallocate(arena, sizeof(u32) * MB(1), MEM_TAG_GEOMETRY));
+
+        dstring font_name = "SourceSansPro-Regular";
+        material_system_load_font(&font_name, &geo_sys_state_ptr->font_glyph_table);
+
+        DASSERT(geo_sys_state_ptr->font_glyph_table);
+    }
 
     geometry_system_create_default_geometry();
 
@@ -1462,12 +1473,21 @@ static void calculate_tangents(geometry_config *config)
     }
 }
 
-bool geometry_system_generate_text_geometry(dstring *text, vec2 position, f32 font_size)
+bool geometry_system_generate_text_geometry(dstring *text, vec2 position)
 {
     DASSERT(text);
     u32              length = INVALID_ID;
-    font_glyph_data *glyphs = texture_system_get_glyph_table(&length);
+    font_glyph_data *glyphs = geo_sys_state_ptr->font_glyph_table;
+
+    font_aligned_quad quad;
     DASSERT(glyphs);
+
+    u32 scr_width;
+    u32 scr_height;
+
+    platform_get_window_dimensions(&scr_width, &scr_height);
+
+    float pixel_scale = 2.0f / scr_width;
 
     u32  strlen = text->str_len;
     u32  hash   = 0;
@@ -1495,23 +1515,28 @@ bool geometry_system_generate_text_geometry(dstring *text, vec2 position, f32 fo
             break;
         hash = ch - 32;
 
-        float u0 = glyphs[hash].x0 / (float)512;
-        float v0 = glyphs[hash].y0 / (float)512;
-        float u1 = glyphs[hash].x1 / (float)512;
-        float v1 = glyphs[hash].y1 / (float)512;
+        float u0 = (glyphs[hash].x0 / (float)512);
+        float v0 = -(glyphs[hash].y0 / (float)512);
+        float u1 = (glyphs[hash].x1 / (float)512);
+        float v1 = -(glyphs[hash].y1 / (float)512);
 
-        float x_off = glyphs[hash].xoff;
-        float y_off = glyphs[hash].yoff;
+        float width  = (glyphs[hash].x1 - glyphs[hash].x0);
+        float height = (glyphs[hash].y1 - glyphs[hash].y0);
+
+        float x_off = position.x + glyphs[hash].xoff;
+        float y_off = position.y + glyphs[hash].yoff;
+
 
         q0.tex_coord = {u0, v0}; // Top-left
         q1.tex_coord = {u1, v0}; // Top-right
         q2.tex_coord = {u0, v1}; // Bottom-left
         q3.tex_coord = {u1, v1}; // Bottom-right
 
-        q0.position = {pos.x - x_off, pos.y - y_off};
-        q1.position = {pos.x - x_off + font_size, pos.y - y_off};
-        q2.position = {pos.x - x_off, pos.y + font_size - y_off};
-        q3.position = {pos.x - x_off + font_size, pos.y + font_size - y_off};
+        q0.position = {pos.x, pos.y};
+        q1.position = {pos.x + width, pos.y};
+        q2.position = {pos.x, pos.y + height};
+        q3.position = {pos.x + width, pos.y + height};
+
 
         vertices[vert_ind++] = q0;
         vertices[vert_ind++] = q2;
@@ -1521,7 +1546,7 @@ bool geometry_system_generate_text_geometry(dstring *text, vec2 position, f32 fo
         vertices[vert_ind++] = q2;
         vertices[vert_ind++] = q3;
 
-        pos.x += font_size;
+        pos.x += width;
 
         indices[index_ind + 0] = index_offset + 0;
         indices[index_ind + 1] = index_offset + 1;
