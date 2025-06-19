@@ -1600,7 +1600,7 @@ bool vulkan_draw_skybox(vulkan_shader *skybox_shader_vulkan_data, render_data *d
 
     geometry *cube_geo = geometry_system_get_default_geometry();
     dstring   mat_name = DEFAULT_CUBEMAP_TEXTURE_HANDLE;
-    material *cube_mat = material_system_acquire_from_name(&mat_name);
+    material *cube_mat = material_system_get_from_name(&mat_name);
 
     vulkan_geometry_data *geo_data = static_cast<vulkan_geometry_data *>(cube_geo->vulkan_geometry_state);
     u32 index_offset  = vulkan_calculate_index_offset(vk_context, geo_data->id, vk_context->world_internal_geometries);

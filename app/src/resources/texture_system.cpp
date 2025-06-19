@@ -1,3 +1,4 @@
+#include "texture_system.hpp"
 #include "containers/dhashtable.hpp"
 #include "core/dfile_system.hpp"
 #include "core/dmemory.hpp"
@@ -5,7 +6,6 @@
 #include "memory/arenas.hpp"
 #include "renderer/vulkan/vulkan_backend.hpp"
 #include "resources/resource_types.hpp"
-#include "texture_system.hpp"
 
 #define STB_IMAGE_IMPLEMENTATION
 #include "vendor/stb_image.h"
@@ -391,7 +391,7 @@ bool texture_system_load_cubemap(dstring *conf_file_base_name)
     return true;
 }
 
-bool texture_system_create_font_atlas()
+bool _texture_system_create_font_atlas() // sdf
 {
     arena *arena = tex_sys_state_ptr->arena;
 
@@ -442,7 +442,7 @@ bool texture_system_create_font_atlas()
         u32   glyph_padding    = 4;
         float pixel_height     = 48.0f;
         float scale            = stbtt_ScaleForPixelHeight(&font, pixel_height);
-        float onedge_value     = 180;
+        float onedge_value     = 128;
         float pixel_dist_scale = 64.0f;
 
         int pen_x = 0, pen_y = 0, row_height = 0;
@@ -483,8 +483,8 @@ bool texture_system_create_font_atlas()
             glyphs[i].y0       = pen_y;
             glyphs[i].x1       = pen_x + w;
             glyphs[i].y1       = pen_y + h;
-            glyphs[i].w        = w;
-            glyphs[i].h        = h;
+            // glyphs[i].w        = w;
+            // glyphs[i].h        = h;
             glyphs[i].xoff     = (float)xoff;
             glyphs[i].yoff     = (float)yoff;
             glyphs[i].xadvance = scale * adv;
@@ -560,11 +560,148 @@ bool texture_system_create_font_atlas()
             DASSERT(data[i].x1 == glyphs[i].x1);
             DASSERT(data[i].y0 == glyphs[i].y0);
             DASSERT(data[i].y1 == glyphs[i].y1);
+            // DASSERT(data[i].w == glyphs[i].w);
+            // DASSERT(data[i].h == glyphs[i].h);
             DASSERT(data[i].xoff == glyphs[i].xoff);
             DASSERT(data[i].yoff == glyphs[i].yoff);
             DASSERT(data[i].xadvance == glyphs[i].xadvance);
             DASSERT(data[i].xoff2 == glyphs[i].xoff2);
             DASSERT(data[i].yoff2 == glyphs[i].yoff2);
+        }
+    }
+#endif
+    return true;
+}
+
+bool texture_system_create_font_atlas()
+{
+    arena *arena = tex_sys_state_ptr->arena;
+
+    dstring prefix    = "../assets/fonts/";
+    dstring font_name = "SourceSansPro-Regular";
+    dstring suffix    = ".png";
+
+    dstring font_atlas_base_name = "SourceSansPro-Regular";
+
+    dstring file_full_path;
+    string_copy_format(file_full_path.string, "%s%s%s", 0, prefix.c_str(), font_atlas_base_name.c_str(),
+                       suffix.c_str());
+
+    bool             verify_data = false;
+    stbtt_packedchar char_data[96]; // ASCII 32..126
+
+    if (!file_exists(&file_full_path))
+    {
+        verify_data = true;
+        file_full_path.clear();
+        string_copy_format(file_full_path.string, "%s%s%s", 0, prefix.c_str(), font_name.c_str(), ".ttf");
+
+        std::fstream f;
+        u64          font_buffer_size = INVALID_ID_64;
+
+        bool result = file_open_and_read(file_full_path.c_str(), &font_buffer_size, nullptr, false);
+        DASSERT(result);
+
+        char *font_buffer = static_cast<char *>(dallocate(arena, font_buffer_size, MEM_TAG_UNKNOWN));
+        result            = file_open_and_read(file_full_path.c_str(), &font_buffer_size, font_buffer, false);
+        DASSERT(result);
+
+        u32 atlas_width  = 512;
+        u32 atlas_height = 512;
+
+        u32 font_atlas_size   = atlas_width * atlas_height;
+        u8 *font_atlas_buffer = static_cast<u8 *>(dallocate(arena, font_atlas_size, MEM_TAG_UNKNOWN));
+
+        stbtt_pack_context packContext;
+        if (!stbtt_PackBegin(&packContext, font_atlas_buffer, atlas_width, atlas_height, 0, 1, NULL))
+        {
+            DERROR("Failed to begin font packing.");
+        }
+
+        stbtt_PackSetOversampling(&packContext, 1, 1); // No oversampling
+
+        stbtt_pack_range range;
+        range.font_size                        = 32;
+        range.first_unicode_codepoint_in_range = 32; // space
+        range.num_chars                        = 96; // printable ASCII
+        range.chardata_for_range               = char_data;
+
+        if (!stbtt_PackFontRanges(&packContext, reinterpret_cast<const u8 *>(font_buffer), 0, &range, 1))
+        {
+            DERROR("Font range packing failed.");
+        }
+
+        stbtt_PackEnd(&packContext);
+
+        _write_glyph_atlas_to_file(&font_name, reinterpret_cast<font_glyph_data *>(char_data), 96);
+
+        file_full_path.clear();
+        string_copy_format(file_full_path.string, "%s%s%s", 0, prefix.c_str(), font_atlas_base_name.c_str(), ".png");
+
+        if (!stbi_write_png(file_full_path.c_str(), atlas_width, atlas_height, 1, font_atlas_buffer, atlas_width))
+        {
+            DERROR("Failed to write PNG: %s.", font_atlas_base_name.c_str());
+        }
+        else
+        {
+            DDEBUG("Saved %s successfully.", font_atlas_base_name.c_str());
+        }
+    }
+
+    s32 width        = INVALID_ID_S32;
+    s32 height       = INVALID_ID_S32;
+    s32 num_channels = INVALID_ID_S32;
+
+    stbi_set_flip_vertically_on_load(false);
+    stbi_uc *pixels = stbi_load(file_full_path.c_str(), &width, &height, &num_channels, STBI_rgb_alpha);
+    if (!pixels)
+    {
+        DERROR("Texture creation failed. Error opening file %s: %s", font_atlas_base_name.c_str(),
+               stbi_failure_reason());
+        stbi__err(0, 0);
+        return false;
+    }
+    stbi_set_flip_vertically_on_load(true);
+
+    texture font_atlas_texture;
+
+    font_atlas_texture.name         = DEFAULT_FONT_ATLAS_TEXTURE_HANDLE;
+    font_atlas_texture.width        = width;
+    font_atlas_texture.height       = height;
+    font_atlas_texture.format       = IMG_FORMAT_UNORM;
+    font_atlas_texture.num_channels = 4;
+
+    bool result = create_texture(&font_atlas_texture, pixels);
+    DASSERT(result);
+
+    stbi_image_free(pixels);
+
+    font_glyph_data *data = nullptr;
+    u32              size = 0;
+    file_full_path.clear();
+    file_full_path = "../assets/fonts/SourceSansPro-Regular.font_data";
+
+    _parse_glyph_atlas_file(&file_full_path, &data, &size);
+
+    tex_sys_state_ptr->glyphs      = data;
+    tex_sys_state_ptr->glyphs_size = size;
+
+    DASSERT(size == 96);
+
+#ifdef DEBUG
+    if (verify_data)
+    {
+        for (u32 i = 0; i < size; i++)
+        {
+            DASSERT(data[i].x0 == char_data[i].x0);
+            DASSERT(data[i].x1 == char_data[i].x1);
+            DASSERT(data[i].y0 == char_data[i].y0);
+            DASSERT(data[i].y1 == char_data[i].y1);
+            DASSERT(data[i].xoff == char_data[i].xoff);
+            DASSERT(data[i].yoff == char_data[i].yoff);
+            DASSERT(data[i].xadvance == char_data[i].xadvance);
+            DASSERT(data[i].xoff2 == char_data[i].xoff2);
+            DASSERT(data[i].yoff2 == char_data[i].yoff2);
         }
     }
 #endif

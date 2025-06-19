@@ -10,4 +10,5 @@ texture *texture_system_get_texture(const char *texture_name);
 //cube map configuration file name
 bool     texture_system_load_cubemap(dstring *cube_map_conf);
 
+bool texture_system_load_font(dstring* font_full_file_path);
 font_glyph_data* texture_system_get_glyph_table(u32* length);

@@ -58,7 +58,7 @@ bool material_system_shutdown(void *state)
     return true;
 }
 
-material *material_system_acquire_from_config_file(dstring *file_base_name)
+material *material_system_get_from_config_file(dstring *file_base_name)
 {
     material_config base{};
 
@@ -207,7 +207,7 @@ bool material_system_release_materials(dstring *mat_name)
     }
     return true;
 }
-material *material_system_acquire_from_name(dstring *material_name)
+material *material_system_get_from_name(dstring *material_name)
 {
 
     material *out_mat = mat_sys_state_ptr->hashtable.find(material_name->c_str());

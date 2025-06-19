@@ -192,9 +192,6 @@ struct font_glyph_data
     u16 x1;
     u16 y1;
 
-    u32 w;
-    u32 h;
-
     f32 xoff; // adjust quad position on screen
     f32 yoff;
     f32 xadvance; // cursor movement or how much to move for the next atlas

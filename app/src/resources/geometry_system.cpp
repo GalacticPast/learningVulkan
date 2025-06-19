@@ -319,7 +319,7 @@ geometry_config geometry_system_generate_plane_config(f32 width, f32 height, u32
     string_ncopy(config.name.string, name, GEOMETRY_NAME_MAX_LENGTH);
     config.name.str_len = strlen(name);
     dstring mat_name    = material_name;
-    config.material     = material_system_acquire_from_name(&mat_name);
+    config.material     = material_system_get_from_name(&mat_name);
     config.type         = GEO_TYPE_3D;
     return config;
 }
@@ -639,7 +639,7 @@ void geometry_system_copy_config(geometry_config *dst_config, const geometry_con
 
     if (src_config->material)
     {
-        dst_config->material = material_system_acquire_from_name(&src_config->material->name);
+        dst_config->material = material_system_get_from_name(&src_config->material->name);
     }
 
     return;
@@ -753,7 +753,7 @@ void geometry_system_parse_obj(arena *arena, const char *obj_file_full_path, u32
                     u32 size               = extract_name(material_name.string, object_usemtl_name);
                     get_random_string((*geo_configs)[j].name.string);
                     (*geo_configs)[j].name.str_len  = MAX_KEY_LENGTH - 1;
-                    (*geo_configs)[j++].material    = material_system_acquire_from_name(&material_name);
+                    (*geo_configs)[j++].material    = material_system_get_from_name(&material_name);
                     object_usemtl_name             += size;
                 }
             }
@@ -1370,7 +1370,7 @@ bool geometry_system_parse_bin_file(dstring *file_full_path, u32 *geometry_confi
             mat_name.str_len  = name_len;
             ptr              += name_len + 1;
 
-            (*configs)[index].material = material_system_acquire_from_name(&mat_name);
+            (*configs)[index].material = material_system_get_from_name(&mat_name);
         }
         else if (string_compare(identifier.c_str(), "vertex_count"))
         {
@@ -1500,15 +1500,18 @@ bool geometry_system_generate_text_geometry(dstring *text, vec2 position, f32 fo
         float u1 = glyphs[hash].x1 / (float)512;
         float v1 = glyphs[hash].y1 / (float)512;
 
+        float x_off = glyphs[hash].xoff;
+        float y_off = glyphs[hash].yoff;
+
         q0.tex_coord = {u0, v0}; // Top-left
         q1.tex_coord = {u1, v0}; // Top-right
         q2.tex_coord = {u0, v1}; // Bottom-left
         q3.tex_coord = {u1, v1}; // Bottom-right
 
-        q0.position = {pos.x, pos.y};
-        q1.position = {pos.x + font_size, pos.y};
-        q2.position = {pos.x, pos.y + font_size};
-        q3.position = {pos.x + font_size, pos.y + font_size};
+        q0.position = {pos.x - x_off, pos.y - y_off};
+        q1.position = {pos.x - x_off + font_size, pos.y - y_off};
+        q2.position = {pos.x - x_off, pos.y + font_size - y_off};
+        q3.position = {pos.x - x_off + font_size, pos.y + font_size - y_off};
 
         vertices[vert_ind++] = q0;
         vertices[vert_ind++] = q2;

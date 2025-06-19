@@ -129,11 +129,11 @@ int main()
         geometry_config blue_light  = *geometry_system_generate_config(sphere_obj);
 
         dstring mat_name   = DEFAULT_LIGHT_MATERIAL_HANDLE;
-        red_light.material = material_system_acquire_from_name(&mat_name);
+        red_light.material = material_system_get_from_name(&mat_name);
         scale_geometries(&red_light, {0.2f, 0.2f, 0.2f});
-        green_light.material = material_system_acquire_from_name(&mat_name);
+        green_light.material = material_system_get_from_name(&mat_name);
         scale_geometries(&green_light, {0.2f, 0.2f, 0.2f});
-        blue_light.material = material_system_acquire_from_name(&mat_name);
+        blue_light.material = material_system_get_from_name(&mat_name);
         scale_geometries(&blue_light, {0.2f, 0.2f, 0.2f});
 
         u64 red   = geometry_system_create_geometry(&red_light, false);
@@ -143,7 +143,7 @@ int main()
         geos_3D = static_cast<geometry **>(dallocate(app_state.system_arena, sizeof(geometry *) * 6, MEM_TAG_UNKNOWN));
         geos_3D[0]           = geometry_system_get_default_geometry();
         mat_name             = "orange_lines_512.conf";
-        geos_3D[0]->material = material_system_acquire_from_config_file(&mat_name);
+        geos_3D[0]->material = material_system_get_from_config_file(&mat_name);
         mat_name.clear();
 
         geos_3D[1]            = geometry_system_get_geometry(red);
@@ -201,14 +201,14 @@ int main()
         frame_start_time = platform_get_absolute_time();
 
         test.str_len += u32_to_string(&test.string[4], fps);
-        geometry_system_generate_text_geometry(&test, {0, 10}, 15.0f);
-        geometry_system_generate_text_geometry(&abc_cap, {0, 60}, 15.0f);
-        geometry_system_generate_text_geometry(&abc_sall, {0, 120}, 15.0f);
-        geometry_system_generate_text_geometry(&num, {0, 180}, 15.0f);
+        geometry_system_generate_text_geometry(&test, {0, 10}, 10.0f);
+        geometry_system_generate_text_geometry(&abc_cap, {0, 60}, 10.0f);
+        geometry_system_generate_text_geometry(&abc_sall, {0, 120}, 10.0f);
+        geometry_system_generate_text_geometry(&num, {0, 180}, 10.0f);
 
         u64 quad_id          = geometry_system_flush_text_geometries();
         geos_2D[0]           = geometry_system_get_geometry(quad_id);
-        geos_2D[0]->material = material_system_acquire_from_name(&font_atlas);
+        geos_2D[0]->material = material_system_get_from_name(&font_atlas);
 
         update_camera(&triangle.scene_ubo, &triangle.ui_ubo, &triangle.light_ubo, frame_elapsed_time);
 
