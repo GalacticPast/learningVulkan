@@ -15,6 +15,7 @@
 #include "memory/arenas.hpp"
 #include "platform/platform.hpp"
 #include "renderer/vulkan/vulkan_backend.hpp"
+#include "resources/font_system.hpp"
 #include "resources/material_system.hpp"
 #include "resources/resource_types.hpp"
 
@@ -35,7 +36,7 @@ struct geometry_system_state
     u32             index_offset_ind  = INVALID_ID;
     geometry_config font_geometry_config;
 
-    font_glyph_data *font_glyph_table = nullptr;
+    font_data       *system_font;
 };
 
 static geometry_system_state *geo_sys_state_ptr;
@@ -50,42 +51,34 @@ static bool geometry_system_write_configs_to_file(dstring *file_full_path, u32 g
 static bool geometry_system_parse_bin_file(dstring *file_name, u32 *geometry_config_count, geometry_config **configs);
 static void calculate_tangents(geometry_config *config);
 
-bool geometry_system_initialize(arena *arena, u64 *geometry_system_mem_requirements, void *state)
+bool geometry_system_initialize(arena *system_arena, arena *resource_arena)
 {
-    *geometry_system_mem_requirements = sizeof(geometry_system_state);
-    if (!state)
-    {
-        return true;
-    }
-    DASSERT(arena);
-    geo_sys_state_ptr = static_cast<geometry_system_state *>(state);
+    DASSERT(system_arena);
+    DASSERT(resource_arena);
+    geo_sys_state_ptr = static_cast<geometry_system_state *>(
+        dallocate(system_arena, sizeof(geometry_system_state), MEM_TAG_APPLICATION));
 
-    geo_sys_state_ptr->hashtable.c_init(arena, MAX_GEOMETRIES_LOADED);
+    geo_sys_state_ptr->hashtable.c_init(system_arena, MAX_GEOMETRIES_LOADED);
     geo_sys_state_ptr->hashtable.is_non_resizable = true;
-    geo_sys_state_ptr->loaded_geometry.reserve(arena);
-    geo_sys_state_ptr->arena = arena;
+    geo_sys_state_ptr->loaded_geometry.reserve(system_arena);
+    geo_sys_state_ptr->arena = resource_arena;
 
     {
         geo_sys_state_ptr->vertex_offset_ind = 0;
         geo_sys_state_ptr->index_offset_ind  = 0;
         geo_sys_state_ptr->font_id           = INVALID_ID_64;
         geo_sys_state_ptr->font_geometry_config.vertices =
-            dallocate(arena, sizeof(vertex_2D) * MB(1), MEM_TAG_GEOMETRY);
+            dallocate(resource_arena, sizeof(vertex_2D) * MB(1), MEM_TAG_GEOMETRY);
         geo_sys_state_ptr->font_geometry_config.indices =
-            static_cast<u32 *>(dallocate(arena, sizeof(u32) * MB(1), MEM_TAG_GEOMETRY));
-
-        dstring font_name = "SourceSansPro-Regular";
-        material_system_load_font(&font_name, &geo_sys_state_ptr->font_glyph_table);
-
-        DASSERT(geo_sys_state_ptr->font_glyph_table);
+            static_cast<u32 *>(dallocate(resource_arena, sizeof(u32) * MB(1), MEM_TAG_GEOMETRY));
+        geo_sys_state_ptr->system_font = font_system_get_system_font();
     }
 
     geometry_system_create_default_geometry();
-
     return true;
 }
 
-bool geometry_system_shutdowm(void *state)
+bool geometry_system_shutdowm()
 {
     u32       loaded_geometry_count = geo_sys_state_ptr->loaded_geometry.size();
     geometry *geo                   = nullptr;
@@ -1477,9 +1470,9 @@ bool geometry_system_generate_text_geometry(dstring *text, vec2 position)
 {
     DASSERT(text);
     u32              length = INVALID_ID;
-    font_glyph_data *glyphs = geo_sys_state_ptr->font_glyph_table;
+    font_glyph_data *glyphs = geo_sys_state_ptr->system_font->glyphs;
+    u32 atlas_height = geo_sys_state_ptr->system_font->atlas_height;
 
-    font_aligned_quad quad;
     DASSERT(glyphs);
 
     u32 scr_width;
@@ -1507,6 +1500,25 @@ bool geometry_system_generate_text_geometry(dstring *text, vec2 position)
     u32 index_ind = geo_sys_state_ptr->font_geometry_config.index_count;
 
     u32 index_offset = geo_sys_state_ptr->index_offset_ind;
+    u32 padding = 3;
+
+    float x = F32_MIN;
+    float y = F32_MAX;
+
+    for(u32 i = 0 ; i < strlen; i++)
+    {
+        char ch = (*text)[i];
+        if (ch == '\0')
+            break;
+        hash = ch - 32;
+        float x_off = glyphs[hash].xoff;
+        float y_off = glyphs[hash].yoff;
+
+        x = DMAX(x, x_off);
+        y = DMIN(y, y_off);
+    }
+
+    float baseline = position.y - y;
 
     for (u32 i = 0; i < strlen; i++)
     {
@@ -1515,17 +1527,20 @@ bool geometry_system_generate_text_geometry(dstring *text, vec2 position)
             break;
         hash = ch - 32;
 
-        float u0 = (glyphs[hash].x0 / (float)512);
-        float v0 = -(glyphs[hash].y0 / (float)512);
-        float u1 = (glyphs[hash].x1 / (float)512);
-        float v1 = -(glyphs[hash].y1 / (float)512);
+        float u0 = (glyphs[hash].x0 / (float)atlas_height);
+        float v0 = -(glyphs[hash].y0 / (float)atlas_height);
+        float u1 = (glyphs[hash].x1 / (float)atlas_height);
+        float v1 = -(glyphs[hash].y1 / (float)atlas_height);
 
         float width  = (glyphs[hash].x1 - glyphs[hash].x0);
         float height = (glyphs[hash].y1 - glyphs[hash].y0);
 
+        float xoff = glyphs[hash].xoff;
+        float yoff = glyphs[hash].yoff;
 
-        float x_off = position.x + glyphs[hash].xoff;
-        float y_off = position.y + glyphs[hash].yoff;
+        // Use baseline for vertical positioning
+        float x_pos = pos.x + xoff;
+        float y_pos = baseline + yoff;
 
 
         q0.tex_coord = {u0, v0}; // Top-left
@@ -1533,11 +1548,10 @@ bool geometry_system_generate_text_geometry(dstring *text, vec2 position)
         q2.tex_coord = {u0, v1}; // Bottom-left
         q3.tex_coord = {u1, v1}; // Bottom-right
 
-        q0.position = {pos.x, pos.y};
-        q1.position = {pos.x + width, pos.y};
-        q2.position = {pos.x, pos.y + height};
-        q3.position = {pos.x + width, pos.y + height};
-
+        q0.position = {x_pos, y_pos};
+        q1.position = {x_pos + width, y_pos};
+        q2.position = {x_pos, y_pos + height};
+        q3.position = {x_pos + width, y_pos + height};
 
         vertices[vert_ind++] = q0;
         vertices[vert_ind++] = q2;
@@ -1547,7 +1561,7 @@ bool geometry_system_generate_text_geometry(dstring *text, vec2 position)
         vertices[vert_ind++] = q2;
         vertices[vert_ind++] = q3;
 
-        pos.x += width;
+        pos.x += glyphs[hash].xadvance;
 
         indices[index_ind + 0] = index_offset + 0;
         indices[index_ind + 1] = index_offset + 1;

@@ -34,27 +34,18 @@ static const char *memory_tag_strings[MEM_TAG_MAX_TAGS] = {
 };
 // clang-format on
 
-bool memory_system_startup(u64 *memory_system_memory_requirements, void *state)
+bool memory_system_startup(arena* arena)
 {
-    u64 freelist_mem_requirements = INVALID_ID_64;
-    *memory_system_memory_requirements = sizeof(memory_system);
-
-    if (!state)
-    {
-        return true;
-    }
     DINFO("Starting up memory system...");
-    memory_system_ptr = reinterpret_cast<memory_system *>(state);
-
-    dzero_memory(memory_system_ptr, *memory_system_memory_requirements);
+    DASSERT(arena);
+    memory_system_ptr = static_cast<memory_system *>(dallocate(arena, sizeof(memory_system), MEM_TAG_APPLICATION));
 
     return true;
 }
 
-void memory_system_shutdown(void *state)
+void memory_system_shutdown()
 {
     DINFO("Shutting down memory system...");
-    //dfreelist_destroy(memory_system_ptr->dfreelist);
     memory_system_ptr = 0;
 }
 

@@ -32,37 +32,24 @@ static void shader_system_add_uniform(shader_config *out_config, dstring *name, 
 static void shader_system_add_attributes(shader_config *out_config, const char *name, u32 location,
                                          attribute_types type);
 
-bool shader_system_startup(arena *arena, u64 *shader_system_mem_requirements, void *state)
+bool shader_system_startup(arena *system_arena, arena *resource_arena)
 {
-    *shader_system_mem_requirements = sizeof(shader_system_state);
-    if (!state)
-    {
-        return true;
-    }
-    DASSERT(arena);
+    DASSERT(system_arena);
+    DASSERT(resource_arena);
 
-    shader_sys_state_ptr        = static_cast<shader_system_state *>(state);
-    shader_sys_state_ptr->arena = arena;
+    shader_sys_state_ptr =
+        static_cast<shader_system_state *>(dallocate(system_arena, sizeof(shader_system_state), MEM_TAG_APPLICATION));
+    shader_sys_state_ptr->arena = resource_arena;
 
-    shader_sys_state_ptr->shaders.c_init(arena, MAX_SHADER_COUNT);
-    shader_sys_state_ptr->shader_configs.c_init(arena, MAX_SHADER_COUNT);
-    shader_sys_state_ptr->loaded_shaders.reserve(arena, MAX_SHADER_COUNT);
+    shader_sys_state_ptr->shaders.c_init(system_arena, MAX_SHADER_COUNT);
+    shader_sys_state_ptr->shader_configs.c_init(system_arena, MAX_SHADER_COUNT);
+    shader_sys_state_ptr->loaded_shaders.reserve(system_arena, MAX_SHADER_COUNT);
 
     return true;
 }
 
-bool shader_system_shutdown(void *state)
+bool shader_system_shutdown()
 {
-    if (!state)
-    {
-        DERROR("Provided shader system state ptr is nullptr");
-        return false;
-    }
-    if (state != shader_sys_state_ptr)
-    {
-        DFATAL("Provided state ptr is not equal to the ptr which was provided when creating the shader system. Provide "
-               "the correct ptr");
-    }
     // TODO: release the shaders
     shader_sys_state_ptr->shaders.clear();
     shader_sys_state_ptr->shaders.~dhashtable();
@@ -458,7 +445,7 @@ bool shader_system_create_default_shaders(u64 *material_shader_id, u64 *skybox_s
     shader_sys_state_ptr->default_grid_shader_id = *grid_shader_id;
 
     shader_config ui_shader_conf{};
-    ui_shader_conf.pipeline_configuration.mode                               = CULL_NONE_BIT;
+    ui_shader_conf.pipeline_configuration.mode = CULL_NONE_BIT;
 
     ui_shader_conf.pipeline_configuration.color_blend.enable_color_blend     = true;
     ui_shader_conf.pipeline_configuration.color_blend.src_color_blend_factor = COLOR_BLEND_FACTOR_SRC_ALPHA;
@@ -596,8 +583,7 @@ static void shader_system_add_uniform(shader_config *out_config, dstring *name, 
     out_config->uniforms.push_back(conf);
 }
 
-bool shader_system_update_per_frame(void *scene_global,
-                                    void *light_global)
+bool shader_system_update_per_frame(void *scene_global, void *light_global)
 {
     u64 bound_shader_id = shader_sys_state_ptr->bound_shader_id;
     DASSERT_MSG(bound_shader_id != INVALID_ID_64, "Shader bound id is invalid. Call shader bind before updating.");

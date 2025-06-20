@@ -1121,6 +1121,7 @@ bool vulkan_destroy_texture(texture *in_texture)
     vulkan_destroy_image(vk_context, image);
     vkDestroySampler(vk_context->vk_device.logical, vk_texture->sampler, vk_context->vk_allocator);
     dfree(vk_texture, sizeof(vulkan_texture), MEM_TAG_RENDERER);
+    in_texture->vulkan_texture_state = nullptr;
     return true;
 }
 

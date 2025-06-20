@@ -1,3 +1,4 @@
+#include "core/dmemory.hpp"
 #include "core/input.hpp"
 #include "defines.hpp"
 
@@ -40,15 +41,13 @@ static platform_state *platform_state_ptr;
 
 LRESULT CALLBACK win32_process_message(HWND hwnd, u32 msg, WPARAM w_param, LPARAM l_param);
 
-bool platform_system_startup(u64 *platform_mem_requirements, void *plat_state, application_config *app_config)
+bool platform_system_startup(arena* arena, application_config *app_config)
 {
-    *platform_mem_requirements = sizeof(platform_state);
-    if (plat_state == 0)
-    {
-        return true;
-    }
-    platform_state_ptr = reinterpret_cast<platform_state *>(plat_state);
+    DASSERT(arena);
+    platform_state_ptr = static_cast<platform_state *>(dallocate(arena, sizeof(platform_state), MEM_TAG_APPLICATION));
+    DASSERT(platform_state_ptr);
 
+    DINFO("Initializing platform for windows.");
     platform_state_ptr->h_instance = GetModuleHandleA(0);
 
     // Setup and register window class.
@@ -177,7 +176,7 @@ bool platform_system_startup(u64 *platform_mem_requirements, void *plat_state, a
     return true;
 }
 
-void platform_system_shutdown(void *state)
+void platform_system_shutdown()
 {
     // Simply cold-cast to the known type.
 

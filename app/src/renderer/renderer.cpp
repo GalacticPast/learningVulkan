@@ -1,6 +1,7 @@
-#include "renderer.hpp"
+#include "core/dmemory.hpp"
 #include "core/logger.hpp"
 #include "platform/platform.hpp"
+#include "renderer.hpp"
 #include "vulkan/vulkan_backend.hpp"
 
 struct renderer_system_state
@@ -15,22 +16,18 @@ struct renderer_system_state
 
 static renderer_system_state *renderer_system_state_ptr;
 
-bool renderer_system_startup(arena* arena, u64 *renderer_system_memory_requirements, struct application_config *app_config,
-                             linear_allocator *linear_systems_allocator, void *state)
+bool renderer_system_startup(arena *system_arena, arena *resource_arena, struct application_config *app_config)
 {
-    *renderer_system_memory_requirements = sizeof(renderer_system_state);
-    if (!state)
-    {
-        return true;
-    }
     DINFO("Initializing renderer system...");
-    renderer_system_state_ptr = reinterpret_cast<renderer_system_state *>(state);
+    renderer_system_state_ptr = reinterpret_cast<renderer_system_state *>(
+        dallocate(system_arena, sizeof(renderer_system_state), MEM_TAG_APPLICATION));
 
-    vulkan_backend_initialize(arena, &renderer_system_state_ptr->vulkan_backend_memory_requirements, 0, 0);
-    renderer_system_state_ptr->vulkan_backend_state = linear_allocator_allocate(
-        linear_systems_allocator, renderer_system_state_ptr->vulkan_backend_memory_requirements);
-    bool result = vulkan_backend_initialize(arena, &renderer_system_state_ptr->vulkan_backend_memory_requirements, app_config,
-                                            renderer_system_state_ptr->vulkan_backend_state);
+    vulkan_backend_initialize(system_arena, &renderer_system_state_ptr->vulkan_backend_memory_requirements, 0, 0);
+    renderer_system_state_ptr->vulkan_backend_state =
+        dallocate(system_arena, renderer_system_state_ptr->vulkan_backend_memory_requirements, MEM_TAG_APPLICATION);
+    bool result =
+        vulkan_backend_initialize(resource_arena, &renderer_system_state_ptr->vulkan_backend_memory_requirements,
+                                  app_config, renderer_system_state_ptr->vulkan_backend_state);
 
     if (!result)
     {
@@ -81,14 +78,14 @@ bool renderer_resize()
     }
 }
 
-bool renderer_update_global_data(shader* shader, u32 offset, u32 size, void* data)
+bool renderer_update_global_data(shader *shader, u32 offset, u32 size, void *data)
 {
-    bool result = vulkan_update_global_uniform_buffer(shader, offset,size,data);
+    bool result = vulkan_update_global_uniform_buffer(shader, offset, size, data);
     DASSERT(result);
     return result;
 }
 
-bool renderer_update_globals(shader* shader, darray<u32>& sizes)
+bool renderer_update_globals(shader *shader, darray<u32> &sizes)
 {
     bool result = vulkan_update_global_descriptor_sets(shader, sizes);
     DASSERT(result);

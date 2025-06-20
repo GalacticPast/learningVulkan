@@ -185,11 +185,6 @@ struct texture
 #define MAX_MATERIALS_LOADED 1024
 #define MATERIAL_NAME_MAX_LENGTH 256
 
-struct font_aligned_quad
-{
-    float x0, y0, s0, t0; // top-left
-    float x1, y1, s1, t1; // bottom-right
-};
 
 struct font_glyph_data
 {
@@ -198,15 +193,21 @@ struct font_glyph_data
     s16 x1;
     s16 y1;
 
-    s16 w;
-    s16 h;
-
     f32 xoff; // adjust quad position on screen
     f32 yoff;
     f32 xadvance; // cursor movement or how much to move for the next atlas
 
     f32 xoff2;
     f32 yoff2;
+};
+
+struct font_data
+{
+    u32 atlas_width  = INVALID_ID;
+    u32 atlas_height = INVALID_ID;
+
+    u32              glyph_table_length;
+    font_glyph_data *glyphs;
 };
 
 struct texture_map

@@ -14,8 +14,6 @@
 
 #include "resource_types.hpp"
 
-#define STB_TRUETYPE_IMPLEMENTATION
-#include "vendor/stb_truetype.h"
 
 struct material_system_state
 {
@@ -26,34 +24,26 @@ struct material_system_state
 
 static material_system_state *mat_sys_state_ptr;
 
-bool        material_system_create_material(material_config *config);
 bool        material_system_create_default_material();
 static bool material_system_parse_configuration_file(dstring *conf_file_name, material_config *out_config);
-static bool _write_glyph_atlas_to_file(dstring *file_base_name, font_glyph_data *glyph_data, u32 length);
-static bool _parse_glyph_atlas_file(dstring *file_full_path, font_glyph_data **data, u32 *length);
 
-bool material_system_initialize(arena *arena, u64 *material_system_mem_requirements, void *state)
+bool material_system_initialize(arena *system_arena, arena* resource_arena)
 {
-    *material_system_mem_requirements = sizeof(material_system_state);
-
-    if (!state)
-    {
-        return true;
-    }
     DINFO("Initializing material system...");
-    DASSERT(arena);
+    DASSERT(system_arena);
+    DASSERT(resource_arena);
 
-    mat_sys_state_ptr = static_cast<material_system_state *>(state);
+    mat_sys_state_ptr = static_cast<material_system_state *>(dallocate(system_arena, sizeof(material_system_state), MEM_TAG_APPLICATION));
 
-    mat_sys_state_ptr->loaded_materials.reserve(arena);
-    mat_sys_state_ptr->hashtable.c_init(arena, MAX_MATERIALS_LOADED);
-    mat_sys_state_ptr->arena = arena;
+    mat_sys_state_ptr->loaded_materials.reserve(system_arena);
+    mat_sys_state_ptr->hashtable.c_init(system_arena, MAX_MATERIALS_LOADED);
+    mat_sys_state_ptr->arena = resource_arena;
 
     material_system_create_default_material();
 
     return true;
 }
-bool material_system_shutdown(void *state)
+bool material_system_shutdown()
 {
     u64 loaded_materials_count = MAX_MATERIALS_LOADED;
 
@@ -73,7 +63,7 @@ material *material_system_get_from_config_file(dstring *file_base_name)
     if (out_mat == nullptr)
     {
         DTRACE("Material:%s not loaded yet. Loading it...", file_base_name->c_str());
-        material_system_create_material(&base);
+        material_system_create_material(&base, shader_system_get_default_material_shader_id());
     }
 
     out_mat = mat_sys_state_ptr->hashtable.find(base.mat_name.c_str());
@@ -93,7 +83,7 @@ material *material_system_acquire_from_config(material_config *config)
     return out_mat;
 };
 
-bool material_system_create_material(material_config *config)
+bool material_system_create_material(material_config *config, u64 shader_id)
 {
 
     material mat{};
@@ -105,7 +95,7 @@ bool material_system_create_material(material_config *config)
     mat.map.specular    = texture_system_get_texture(config->specular_map.c_str());
     mat.diffuse_color   = config->diffuse_color;
 
-    bool result = vulkan_create_material(&mat, shader_system_get_default_material_shader_id());
+    bool result = vulkan_create_material(&mat, shader_id);
 
     mat_sys_state_ptr->hashtable.insert(config->mat_name.c_str(), mat);
     mat_sys_state_ptr->loaded_materials.push_back(config->mat_name);
@@ -202,285 +192,6 @@ material *material_system_get_from_name(dstring *material_name)
         out_mat = material_system_get_default_material();
     }
     return out_mat;
-}
-
-// INFO: base name without any suffix like .ttf or .otf just the base name of the font that you want to use
-bool material_system_load_font(dstring *font_base_name, font_glyph_data **data)
-{
-    arena *arena = mat_sys_state_ptr->arena;
-
-    dstring prefix = "../assets/textures/";
-
-    dstring file_full_path;
-    string_copy_format(file_full_path.string, "%s%s%s", 0, prefix.c_str(), font_base_name->c_str(), ".png");
-
-    // INFO: Only ascii characters for now
-    font_glyph_data glyphs[96]; // ASCII 32..126
-
-    u32 atlas_width  = 514;
-    u32 atlas_height = 514;
-
-    bool verify_data = false;
-    if (!file_exists(&file_full_path))
-    {
-        verify_data = true;
-        file_full_path.clear();
-        string_copy_format(file_full_path.string, "%s%s%s", 0, "../assets/fonts/", font_base_name->c_str(), ".ttf");
-
-        std::fstream f;
-        u64          font_buffer_size = INVALID_ID_64;
-
-        bool result = file_open_and_read(file_full_path.c_str(), &font_buffer_size, nullptr, false);
-        DASSERT(result == true);
-
-        u8 *font_buffer = static_cast<u8 *>(dallocate(arena, font_buffer_size, MEM_TAG_UNKNOWN));
-        result =
-            file_open_and_read(file_full_path.c_str(), &font_buffer_size, reinterpret_cast<char *>(font_buffer), false);
-        DASSERT(result == true);
-
-        u32 font_atlas_size   = atlas_width * atlas_height;
-        u8 *font_atlas_buffer = static_cast<u8 *>(dallocate(arena, font_atlas_size, MEM_TAG_UNKNOWN));
-
-        stbtt_fontinfo font;
-        if (!stbtt_InitFont(&font, font_buffer, stbtt_GetFontOffsetForIndex(font_buffer, 0)))
-        {
-            DERROR("Failed to init font.");
-            return false;
-        }
-
-        u32   char_count       = 94;
-        u32   glyph_padding    = 6;
-        float pixel_height     = 64;
-        float scale            = stbtt_ScaleForPixelHeight(&font, pixel_height);
-        float onedge_value     = 128;
-        float pixel_dist_scale = 64.0f;
-
-        int pen_x = 0, pen_y = 0, row_height = 0;
-
-        for (u32 i = 0; i < char_count; ++i)
-        {
-            u32 c = 32 + i;
-
-            s32 w    = 0;
-            s32 h    = 0;
-            s32 xoff = 0;
-            s32 yoff = 0;
-
-            unsigned char *sdf = stbtt_GetCodepointSDF(&font, scale, c, glyph_padding, onedge_value, pixel_dist_scale,
-                                                       &w, &h, &xoff, &yoff);
-
-            if (pen_x + w >= (s32)atlas_width)
-            {
-                pen_x       = 0;
-                pen_y      += row_height + 1;
-                row_height  = 0;
-            }
-
-            if (pen_y + h >= (s32)atlas_height)
-            {
-                DERROR("Atlas too small. Increase size.");
-                free(sdf);
-                break;
-            }
-
-            // Copy glyph SDF into atlas
-            if (sdf)
-            {
-                for (int y = 0; y < h; ++y)
-                {
-                    dcopy_memory(font_atlas_buffer + (pen_y + y) * atlas_width + pen_x, sdf + y * w, w);
-                }
-
-                // Get advance
-                int adv, lsb;
-                stbtt_GetCodepointHMetrics(&font, c, &adv, &lsb);
-
-                glyphs[i].x0       = pen_x;
-                glyphs[i].y0       = pen_y;
-                glyphs[i].x1       = pen_x + w;
-                glyphs[i].y1       = pen_y + h;
-                glyphs[i].w        = w;
-                glyphs[i].h        = h;
-                glyphs[i].xoff     = (float)xoff;
-                glyphs[i].yoff     = (float)yoff;
-                glyphs[i].xadvance = scale * adv;
-
-                pen_x += w + 1;
-                if (h > row_height)
-                    row_height = h;
-
-                free(sdf);
-            }
-        }
-
-        _write_glyph_atlas_to_file(font_base_name, glyphs, 96);
-
-        file_full_path.clear();
-        string_copy_format(file_full_path.string, "%s%s%s", 0, "../assets/textures/", font_base_name->c_str(), ".png");
-        texture_system_write_texture(&file_full_path, atlas_width, atlas_height, 4, IMG_FORMAT_UNORM,
-                                     font_atlas_buffer);
-    }
-    else
-    {
-        file_full_path.clear();
-        string_copy_format(file_full_path.string, "%s%s%s", 0, "../assets/fonts/", font_base_name->c_str(),
-                           ".font_data");
-        u32 length = 0;
-        _parse_glyph_atlas_file(&file_full_path, data, &length);
-        DASSERT(length == 96);
-    }
-
-    material font_atlas{};
-    font_atlas.name            = DEFAULT_FONT_ATLAS_TEXTURE_HANDLE;
-    font_atlas.id              = 0;
-    font_atlas.reference_count = 0;
-
-    dstring base_name_plus_suffix;
-    string_copy_format(base_name_plus_suffix.string, "%s%s", 0, font_base_name->c_str(), ".png");
-    texture_system_create_texture(&base_name_plus_suffix, IMG_FORMAT_UNORM);
-
-    texture_system_create_texture(&base_name_plus_suffix, IMG_FORMAT_UNORM);
-
-    font_atlas.map.diffuse  = texture_system_get_texture(base_name_plus_suffix.c_str());
-    font_atlas.map.normal   = nullptr;
-    font_atlas.map.specular = nullptr;
-
-    bool result = vulkan_create_material(&font_atlas, shader_system_get_default_ui_shader_id());
-    DASSERT(result);
-
-    mat_sys_state_ptr->hashtable.insert(DEFAULT_FONT_ATLAS_TEXTURE_HANDLE, font_atlas);
-    mat_sys_state_ptr->loaded_materials.push_back(DEFAULT_FONT_ATLAS_TEXTURE_HANDLE);
-
-    if (!*data)
-    {
-        *data = static_cast<font_glyph_data *>(dallocate(arena, sizeof(font_glyph_data) * 96, MEM_TAG_DARRAY));
-        for (u32 i = 0; i < 96; i++)
-        {
-            void *ptr = &(*data)[i];
-            dcopy_memory(ptr, &glyphs[i], sizeof(font_glyph_data));
-        }
-    }
-
-    return true;
-}
-
-bool _write_glyph_atlas_to_file(dstring *file_base_name, font_glyph_data *glyph_data, u32 length)
-{
-    dstring full_file_name;
-    dstring prefix = "../assets/fonts/";
-    dstring suffix = ".font_data";
-
-    string_copy_format(full_file_name.string, "%s%s%s", 0, prefix.c_str(), file_base_name->c_str(), suffix.c_str());
-
-    std::fstream f;
-    bool         result = file_open(full_file_name.c_str(), &f, true, true);
-    DASSERT_MSG(result, "Failed to open file");
-
-    char new_line = '\n';
-
-    font_glyph_data test{};
-
-    // INFO: file header
-    file_write(&f, "font_glyph_data_count:", string_length("font_glyph_data_count:"));
-    file_write(&f, reinterpret_cast<const char *>(&length), sizeof(u32));
-    file_write(&f, reinterpret_cast<const char *>(&new_line), 1);
-
-    u32 size = sizeof(font_glyph_data);
-
-    for (u32 i = 0; i < length; i++)
-    {
-        file_write(&f, "data:", string_length("data:"));
-        file_write(&f, reinterpret_cast<const char *>(&glyph_data[i]), size);
-        file_write(&f, reinterpret_cast<const char *>(&new_line), 1);
-    }
-    file_close(&f);
-    return true;
-}
-
-// we might not need this now.
-bool _parse_glyph_atlas_file(dstring *file_full_path, font_glyph_data **data, u32 *length)
-{
-
-    DASSERT(file_full_path);
-
-    u64 buff_size = INVALID_ID_64;
-    file_open_and_read(file_full_path->c_str(), &buff_size, 0, 1);
-    arena *arena = mat_sys_state_ptr->arena;
-
-    char *buffer = static_cast<char *>(dallocate(arena, buff_size + 1, MEM_TAG_GEOMETRY));
-    bool  result = file_open_and_read(file_full_path->c_str(), &buff_size, buffer, 1);
-    DASSERT(result);
-
-    buffer[buff_size] = EOF;
-    const char *eof   = buffer + buff_size;
-
-    auto go_to_colon = [](const char *line) -> const char * {
-        u32 index = 0;
-        while (line[index] != ':')
-        {
-            if (line[index] == '\n' && line[index] == '\r' && line[index] == '\0')
-            {
-                return nullptr;
-            }
-            index++;
-        }
-        return line + index + 1;
-    };
-
-    auto extract_identifier = [](const char *line, char *dst) {
-        u32 index = 0;
-        u32 j     = 0;
-
-        while (line[index] != ':' && line[index] != '\0' && line[index] != '\n' && line[index] != '\r')
-        {
-            if (line[index] == ' ')
-            {
-                index++;
-                continue;
-            }
-            dst[j++] = line[index++];
-        }
-        dst[j++] = '\0';
-    };
-
-    const char *ptr = buffer;
-    dstring     identifier;
-    u32         index = 0;
-
-    u32 size = 0;
-    while (ptr < eof && ptr != nullptr)
-    {
-        extract_identifier(ptr, identifier.string);
-        ptr = go_to_colon(ptr);
-        if (!ptr)
-        {
-            break;
-        }
-
-        if (string_compare(identifier.c_str(), "data"))
-        {
-            font_glyph_data *glyph = &(*data)[index];
-            dcopy_memory(glyph, ptr, size);
-            ptr += size + 1;
-            index++;
-        }
-        else if (string_compare(identifier.c_str(), "font_glyph_data_count"))
-        {
-            dcopy_memory(&size, ptr, sizeof(u32));
-            (*data)  = static_cast<font_glyph_data *>(dallocate(arena, size * sizeof(font_glyph_data), MEM_TAG_DARRAY));
-            *length  = size;
-            ptr     += sizeof(u32) + 1;
-            size     = 0;
-            // small optimization I think. because this will only execute once
-            size     = sizeof(font_glyph_data);
-        }
-        else
-        {
-            DERROR("Unknwon identifier %s", identifier.c_str());
-            return false;
-        }
-    }
-    return true;
 }
 
 bool material_system_parse_mtl_file(dstring *mtl_file_name)
@@ -613,7 +324,7 @@ bool material_system_parse_mtl_file(dstring *mtl_file_name)
 
     for (s32 i = 0; i < num_materials; i++)
     {
-        material_system_create_material(&configs[i]);
+        material_system_create_material(&configs[i], shader_system_get_default_material_shader_id());
     }
 
     return true;

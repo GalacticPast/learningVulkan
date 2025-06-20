@@ -1,6 +1,6 @@
 #pragma once
-#include <cstdint>
 #include "vendor/tracy/Tracy.hpp"
+#include <cstdint>
 
 // Unsigned int types.
 typedef uint8_t  u8;
@@ -30,8 +30,18 @@ typedef double f64;
  * and not actually pointing to a real object.
  */
 #define INVALID_ID 4294967295U
-#define INVALID_ID_64 18446744073709551615LLU
 #define INVALID_ID_S32 2147483647
+#define S32_MAX 2147483647
+#define S32_MIN -2147483648
+
+#define INVALID_ID_64 18446744073709551615LLU
+#define INVALID_ID_S64 9223372036854775807
+#define S64_MAX 9223372036854775807
+#define S64_MIN -9223372036854775808
+
+#define INVALID_ID_F32 340282346638528859811704183484516925440.0000000000000000
+#define F32_MAX 340282346638528859811704183484516925440.0000000000000000
+#define F32_MIN -340282346638528859811704183484516925440.0000000000000000
 
 // Platform detection
 #if defined(WIN32) || defined(_WIN32) || defined(__WIN32__)
@@ -108,5 +118,3 @@ typedef double f64;
 #define KI(num) (static_cast<u64>(num) * 1024ULL)
 
 #define DALIGN_UP(p, align) ((reinterpret_cast<uintptr_t>(p) + ((align) - 1)) & ~((align) - 1))
-
-

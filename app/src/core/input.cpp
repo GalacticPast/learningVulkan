@@ -26,20 +26,16 @@ typedef struct input_state
 // Internal input state pointer
 static input_state *input_state_ptr;
 
-bool input_system_startup(u64 *memory_requirement, void *state)
+bool input_system_startup(arena* arena)
 {
-    *memory_requirement = sizeof(input_state);
-    if (state == 0)
-    {
-        return true;
-    }
     DINFO("Initializing input system.");
-    dzero_memory(state, sizeof(input_state));
-    input_state_ptr = reinterpret_cast<input_state *>(state);
+    input_state_ptr = nullptr;
+    input_state_ptr = static_cast<input_state *>(dallocate(arena, sizeof(input_state), MEM_TAG_APPLICATION));
+    DASSERT(input_state_ptr);
     return true;
 }
 
-void input_system_shutdown(void *state)
+void input_system_shutdown()
 {
     // TODO: Add shutdown routines when needed.
     input_state_ptr = 0;

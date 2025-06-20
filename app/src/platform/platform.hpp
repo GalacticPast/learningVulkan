@@ -1,5 +1,6 @@
 #pragma once
 #include "defines.hpp"
+#include "memory/arenas.hpp"
 
 struct platform_info
 {
@@ -9,9 +10,8 @@ struct platform_info
     void *max_app_address;
 };
 
-bool platform_system_startup(u64 *platform_mem_requirements, void *plat_state, struct application_config *config);
-
-void platform_system_shutdown(void *state);
+bool platform_system_startup(arena* arena, struct application_config *config);
+void platform_system_shutdown();
 
 bool platform_pump_messages();
 

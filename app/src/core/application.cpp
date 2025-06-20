@@ -6,11 +6,13 @@
 #include "core/logger.hpp"
 
 #include "defines.hpp"
+#include "main.hpp"
 #include "memory/arenas.hpp"
 #include "platform/platform.hpp"
 
 #include "renderer/renderer.hpp"
 
+#include "resources/font_system.hpp"
 #include "resources/geometry_system.hpp"
 #include "resources/material_system.hpp"
 #include "resources/shader_system.hpp"
@@ -49,89 +51,41 @@ bool application_initialize(application_state *state, application_config *config
     app_state_ptr->system_arena   = arena_get_arena();
     app_state_ptr->resource_arena = arena_get_arena();
     DASSERT(app_state_ptr->system_arena);
-    arena *system_arena = app_state_ptr->system_arena;
+    arena *system_arena          = app_state_ptr->system_arena;
     arena *resource_system_arena = app_state_ptr->resource_arena;
 
-    u64 memory_system_memory_requirements = INVALID_ID_64;
-    memory_system_startup(&memory_system_memory_requirements, 0);
-    app_state_ptr->memory_system_state =
-        dallocate(app_state_ptr->system_arena, memory_system_memory_requirements, MEM_TAG_APPLICATION);
-    DDEBUG("Allocated %dbytes", memory_system_memory_requirements);
-    bool result = memory_system_startup(&memory_system_memory_requirements, app_state_ptr->memory_system_state);
+    u64  memory_system_memory_requirements = INVALID_ID_64;
+    bool result                            = memory_system_startup(system_arena);
     DASSERT(result == true);
 
-    app_state_ptr->memory_system_memory_requirements = memory_system_memory_requirements;
-
-    result                                                                 = false;
-    app_state_ptr->application_system_linear_allocator_memory_requirements = 10 * 1024 * 1024; // 1 mega bytes
-    result = linear_allocator_create(system_arena, &app_state_ptr->application_system_linear_allocator,
-                                     app_state_ptr->application_system_linear_allocator_memory_requirements);
-    DASSERT(result == true);
-
-    event_system_startup(&app_state_ptr->event_system_memory_requirements, 0);
-    app_state_ptr->event_system_state = linear_allocator_allocate(&app_state_ptr->application_system_linear_allocator,
-                                                                  app_state_ptr->event_system_memory_requirements);
-    result = event_system_startup(&app_state_ptr->event_system_memory_requirements, app_state_ptr->event_system_state);
+    result = event_system_startup(system_arena);
     DASSERT(result == true);
 
     event_system_register(EVENT_CODE_APPLICATION_QUIT, 0, event_callback_quit);
     event_system_register(EVENT_CODE_APPLICATION_RESIZED, 0, event_callback_resize);
 
-    input_system_startup(&app_state_ptr->input_system_memory_requirements, 0);
-    app_state_ptr->input_system_state = linear_allocator_allocate(&app_state_ptr->application_system_linear_allocator,
-                                                                  app_state_ptr->input_system_memory_requirements);
-    result = input_system_startup(&app_state_ptr->input_system_memory_requirements, app_state_ptr->input_system_state);
+    result = input_system_startup(system_arena);
+    DASSERT(result);
+
+    result = platform_system_startup(system_arena, app_state_ptr->application_config);
     DASSERT(result == true);
 
-    platform_system_startup(&app_state_ptr->platform_system_memory_requirements, 0, 0);
-    app_state_ptr->platform_system_state = linear_allocator_allocate(
-        &app_state_ptr->application_system_linear_allocator, app_state_ptr->platform_system_memory_requirements);
-    result = platform_system_startup(&app_state_ptr->platform_system_memory_requirements,
-                                     app_state_ptr->platform_system_state, app_state_ptr->application_config);
+    result = shader_system_startup(system_arena, resource_system_arena);
     DASSERT(result == true);
 
-    shader_system_startup(resource_system_arena, &app_state_ptr->shader_system_memory_requirements, 0);
-    app_state_ptr->shader_system_state = linear_allocator_allocate(&app_state_ptr->application_system_linear_allocator,
-                                                                   app_state_ptr->shader_system_memory_requirements);
-    result = shader_system_startup(resource_system_arena, &app_state_ptr->shader_system_memory_requirements,
-                                   app_state_ptr->shader_system_state);
+    result = renderer_system_startup(system_arena, resource_system_arena, app_state_ptr->application_config);
     DASSERT(result == true);
 
-    // why are we passing the linear allocator to the renderer system ?? are we allocating something? THis should not be
-    // the case because the systems linear allocator should only be used for system level abstractions
-    renderer_system_startup(system_arena, &app_state_ptr->renderer_system_memory_requirements, 0, 0, 0);
-    app_state_ptr->renderer_system_state = linear_allocator_allocate(
-        &app_state_ptr->application_system_linear_allocator, app_state_ptr->renderer_system_memory_requirements);
-    result = renderer_system_startup(
-        system_arena, &app_state_ptr->renderer_system_memory_requirements, app_state_ptr->application_config,
-        &app_state_ptr->application_system_linear_allocator, app_state_ptr->renderer_system_state);
+    result = texture_system_initialize(system_arena, resource_system_arena);
     DASSERT(result == true);
 
-    texture_system_initialize(resource_system_arena, &app_state_ptr->texture_system_memory_requirements, 0);
-
-    app_state_ptr->texture_system_state = linear_allocator_allocate(&app_state_ptr->application_system_linear_allocator,
-                                                                    app_state_ptr->texture_system_memory_requirements);
-
-    result = texture_system_initialize(resource_system_arena, &app_state_ptr->texture_system_memory_requirements,
-                                       app_state_ptr->texture_system_state);
+    result = material_system_initialize(system_arena, resource_system_arena);
     DASSERT(result == true);
 
-    material_system_initialize(resource_system_arena, &app_state_ptr->material_system_memory_requirements, 0);
-
-    app_state_ptr->material_system_state = linear_allocator_allocate(
-        &app_state_ptr->application_system_linear_allocator, app_state_ptr->material_system_memory_requirements);
-
-    result = material_system_initialize(resource_system_arena, &app_state_ptr->material_system_memory_requirements,
-                                        app_state_ptr->material_system_state);
+    result = font_system_initialize(system_arena,resource_system_arena);
     DASSERT(result == true);
 
-    geometry_system_initialize(resource_system_arena, &app_state_ptr->geometry_system_memory_requirements, 0);
-
-    app_state_ptr->geometry_system_state = linear_allocator_allocate(
-        &app_state_ptr->application_system_linear_allocator, app_state_ptr->geometry_system_memory_requirements);
-
-    result = geometry_system_initialize(resource_system_arena, &app_state_ptr->geometry_system_memory_requirements,
-                                        app_state_ptr->geometry_system_state);
+    result = geometry_system_initialize(system_arena, resource_system_arena);
     DASSERT(result == true);
 
     u64 buffer_usg_mem_requirements = 0;
@@ -151,13 +105,13 @@ void application_shutdown()
     event_system_unregister(EVENT_CODE_APPLICATION_QUIT, 0, event_callback_quit);
     event_system_unregister(EVENT_CODE_APPLICATION_RESIZED, 0, event_callback_resize);
 
-    texture_system_shutdown(app_state_ptr->texture_system_state);
+    texture_system_shutdown();
     renderer_system_shutdown();
-    platform_system_shutdown(app_state_ptr->platform_system_state);
-    input_system_shutdown(app_state_ptr->input_system_state);
-    event_system_shutdown(app_state_ptr->event_system_state);
-    linear_allocator_destroy(&app_state_ptr->application_system_linear_allocator);
-    memory_system_shutdown(app_state_ptr->memory_system_state);
+    platform_system_shutdown();
+    input_system_shutdown();
+    event_system_shutdown();
+
+    memory_system_shutdown();
 
     arena_free_arena(app_state_ptr->resource_arena);
     arena_free_arena(app_state_ptr->system_arena);

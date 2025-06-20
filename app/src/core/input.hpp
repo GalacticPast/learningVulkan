@@ -1,6 +1,7 @@
 #pragma once
 
 #include "defines.hpp"
+#include "memory/arenas.hpp"
 
 typedef enum buttons
 {
@@ -144,15 +145,9 @@ typedef enum keys
     KEYS_MAX_KEYS
 } keys;
 
-/**
- * @brief Initializes the input system. Call twice; once to obtain memory requirement (passing
- * state = 0), then a second time passing allocated memory to state.
- *
- * @param memory_requirement The required size of the state memory.
- * @param state Either 0 or the allocated block of state memory.
- */
-bool input_system_startup(u64 *memory_requirement, void *state);
-void input_system_shutdown(void *state);
+bool input_system_startup(arena* arena);
+void input_system_shutdown();
+
 void input_update(f64 delta_time);
 
 // keyboard input

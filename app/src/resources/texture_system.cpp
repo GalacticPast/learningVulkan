@@ -29,20 +29,17 @@ bool                         texture_system_create_default_textures();
 static bool texture_system_release_textures(dstring *texture_name);
 // static bool texture_system_create_font_atlas();
 
-bool texture_system_initialize(arena *arena, u64 *texture_system_mem_requirements, void *state)
+bool texture_system_initialize(arena *system_arena, arena* resource_arena)
 {
-    *texture_system_mem_requirements = sizeof(texture_system_state);
-    if (!state)
-    {
-        return true;
-    }
     DINFO("Initializing texture system...");
-    DASSERT(arena);
-    tex_sys_state_ptr = static_cast<texture_system_state *>(state);
+    DASSERT(system_arena);
+    DASSERT(resource_arena);
+    tex_sys_state_ptr = static_cast<texture_system_state *>(dallocate(system_arena, sizeof(texture_system_state), MEM_TAG_APPLICATION));
+    DASSERT(tex_sys_state_ptr);
 
-    tex_sys_state_ptr->hashtable.c_init(arena, MAX_TEXTURES_LOADED);
-    tex_sys_state_ptr->loaded_textures.c_init(arena);
-    tex_sys_state_ptr->arena = arena;
+    tex_sys_state_ptr->hashtable.c_init(system_arena, MAX_TEXTURES_LOADED);
+    tex_sys_state_ptr->loaded_textures.c_init(system_arena);
+    tex_sys_state_ptr->arena = resource_arena;
 
     stbi_set_flip_vertically_on_load(true);
     texture_system_create_default_textures();
@@ -51,7 +48,7 @@ bool texture_system_initialize(arena *arena, u64 *texture_system_mem_requirement
     return true;
 }
 
-bool texture_system_shutdown(void *state)
+bool texture_system_shutdown()
 {
     u64 loaded_textures_count = tex_sys_state_ptr->loaded_textures.size();
     for (u64 i = 0; i < loaded_textures_count; i++)

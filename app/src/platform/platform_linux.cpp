@@ -61,14 +61,10 @@ static platform_state *platform_state_ptr;
 // Key translation
 keys translate_keycode(u32 wl_keycode);
 
-bool platform_system_startup(u64 *platform_mem_requirements, void *plat_state, application_config *config)
+bool platform_system_startup(arena* arena, application_config *config)
 {
-    *platform_mem_requirements = sizeof(platform_state);
-    if (plat_state == 0)
-    {
-        return true;
-    }
-    platform_state_ptr = (platform_state *)plat_state;
+    DASSERT(arena);
+    platform_state_ptr = static_cast<platform_state *>(dallocate(arena, sizeof(platform_state), MEM_TAG_APPLICATION);
 
     // Connect to X
     platform_state_ptr->display = XOpenDisplay(NULL);
@@ -915,13 +911,12 @@ static const struct wl_registry_listener wl_registry_listener = {
     .global_remove = registry_global_remove,
 };
 
-bool platform_system_startup(u64 *platform_mem_requirements, void *plat_state, application_config *app_config)
+bool platform_system_startup(arena* arena, application_config *app_config)
 {
-    *platform_mem_requirements = sizeof(platform_state);
-    if (plat_state == 0)
-    {
-        return true;
-    }
+
+    DASSERT(arena);
+    platform_state_ptr = static_cast<platform_state *>(dallocate(arena, sizeof(platform_state), MEM_TAG_APPLICATION);
+
     DINFO("Initializing linux-Wayland platform...");
 
     platform_state_ptr = (platform_state *)plat_state;

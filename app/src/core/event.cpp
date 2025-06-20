@@ -1,20 +1,37 @@
 #include "event.hpp"
+#include "core/dmemory.hpp"
 #include "core/logger.hpp"
+
+struct listener_info
+{
+    event_listener_callback func_ptr;
+    void *listener_data;
+};
+
+#define MAX_REGISTERED_LISTENERS_FOR_SINGLE_EVENT 16
+struct event
+{
+    listener_info listener_infos[MAX_REGISTERED_LISTENERS_FOR_SINGLE_EVENT];
+};
+
+struct event_system_state
+{
+    event events[MAX_EVENT_CODES];
+};
 
 static event_system_state *event_system_state_ptr;
 
-bool event_system_startup(u64 *event_system_memory_requirements, void *state)
+bool event_system_startup(arena* arena)
 {
-    *event_system_memory_requirements = sizeof(event_system_state);
-    if (!state)
-    {
-        return true;
-    }
+    DASSERT(arena);
     DINFO("Starting up event system...");
-    event_system_state_ptr = reinterpret_cast<event_system_state *>(state);
+    event_system_state_ptr = nullptr;
+    event_system_state_ptr = static_cast<event_system_state *>(dallocate(arena, sizeof(event_system_state), MEM_TAG_APPLICATION));
+    DASSERT(event_system_state_ptr);
+
     return true;
 }
-void event_system_shutdown(void *state)
+void event_system_shutdown()
 {
     if (event_system_state_ptr)
     {

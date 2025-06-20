@@ -17,8 +17,8 @@ enum memory_tags
 };
 
 
-bool memory_system_startup(u64 *memory_system_memory_requirements, void *state);
-void memory_system_shutdown(void *state);
+bool memory_system_startup(arena* arena);
+void memory_system_shutdown();
 
 void *dallocate(arena* arena, u64 mem_size, memory_tags tag);
 void  dfree(void *block, u64 size, memory_tags tag);

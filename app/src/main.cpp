@@ -20,46 +20,8 @@
 #include "resources/resource_types.hpp"
 #include "resources/shader_system.hpp"
 
-#include "../tests/containers/darray_test.hpp"
-#include "../tests/containers/dhashtable_test.hpp"
-#include "../tests/events/event_system_test.hpp"
-#include "../tests/linear_allocator/linear_allocator_test.hpp"
-#include "../tests/test_manager.hpp"
-
 void update_camera(scene_global_uniform_buffer_object *ubo, ui_global_uniform_buffer_object *ui_ubo,
                    light_global_uniform_buffer_object *lbo, f64 start_time);
-
-void run_tests()
-{
-    u64 test_manager_mem_requirements = 0;
-    u64 memory_mem_requirements       = 0;
-
-    memory_system_startup(&memory_mem_requirements, 0);
-    void *block = platform_allocate(memory_mem_requirements, false);
-    memory_system_startup(&memory_mem_requirements, block);
-
-    u64 arena_pool_size = 32;
-    u32 num_arenas      = 1;
-    arena_allocate_arena_pool(arena_pool_size, num_arenas);
-
-    arena *arena = arena_get_arena();
-    DASSERT(arena);
-
-    test_manager_initialize(arena, &test_manager_mem_requirements, nullptr);
-    test_manager *test_instance = static_cast<test_manager *>(malloc(test_manager_mem_requirements));
-    darray<test>  test_array;
-    test_instance->tests = &test_array;
-    test_manager_initialize(arena, &test_manager_mem_requirements, test_instance);
-
-    linear_allocator_register_tests();
-    event_system_register_tests();
-    darray_register_tests();
-    dhashtable_register_tests();
-
-    test_manager_run_tests();
-    test_instance->tests = 0;
-    test_instance        = 0;
-}
 
 int main()
 {

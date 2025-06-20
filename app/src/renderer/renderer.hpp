@@ -4,8 +4,7 @@
 #include "memory/arenas.hpp"
 #include "resources/resource_types.hpp"
 
-bool renderer_system_startup(arena* arena, u64 *renderer_system_memory_requirements, struct application_config *app_config,
-                             struct linear_allocator *linear_systems_allocator, void *state);
+bool renderer_system_startup(arena* system_arena, arena* resource_arena, struct application_config *app_config);
 void renderer_system_shutdown();
 bool renderer_resize();
 

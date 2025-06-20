@@ -1,6 +1,7 @@
 #pragma once
 
 #include "defines.hpp"
+#include "memory/arenas.hpp"
 
 enum event_code
 {
@@ -45,25 +46,9 @@ struct event_context
 
 typedef bool (*event_listener_callback)(event_context context, void *data);
 
-struct listener_info
-{
-    event_listener_callback func_ptr;
-    void *listener_data;
-};
 
-#define MAX_REGISTERED_LISTENERS_FOR_SINGLE_EVENT 16
-struct event
-{
-    listener_info listener_infos[MAX_REGISTERED_LISTENERS_FOR_SINGLE_EVENT];
-};
-
-struct event_system_state
-{
-    event events[MAX_EVENT_CODES];
-};
-
-bool event_system_startup(u64 *event_system_memory_requirements, void *state);
-void event_system_shutdown(void *state);
+bool event_system_startup(arena* arena);
+void event_system_shutdown();
 
 void event_fire(event_code code, event_context context);
 
