@@ -8,7 +8,7 @@ bool texture_system_create_texture(dstring *texture_name, u32 tex_width, u32 tex
                                    image_format format, u8 *pixels);
 // INFO: write a texure as jpg
 bool texture_system_write_texture(dstring *texture_name, u32 tex_width, u32 tex_height, u32 tex_num_channels,
-                                   image_format format, u8 *pixels);
+                                  image_format format, u8 *pixels);
 
 bool     texture_system_create_texture(dstring *file_base_name, image_format format);
 texture *texture_system_get_texture(const char *texture_name);

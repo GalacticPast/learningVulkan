@@ -119,10 +119,10 @@ bool texture_system_write_texture(dstring *file_full_path, u32 tex_width, u32 te
     return true;
 }
 
-bool texture_system_create_texture(dstring *file_base_name, image_format image_format)
+bool texture_system_create_texture(dstring *file_base_name, image_format format)
 {
     DASSERT(file_base_name);
-    DASSERT(image_format != IMG_FORMAT_UNKNOWN);
+    DASSERT(format != IMG_FORMAT_UNKNOWN);
 
     texture texture{};
     texture.name = *file_base_name;
@@ -153,7 +153,7 @@ bool texture_system_create_texture(dstring *file_base_name, image_format image_f
     texture.width        = tex_width;
     texture.height       = tex_height;
     texture.num_channels = tex_channels;
-    texture.format       = image_format;
+    texture.format       = format;
     bool result          = create_texture(&texture, pixels);
     stbi_image_free(pixels);
 
@@ -563,12 +563,7 @@ bool texture_system_load_cubemap(dstring *conf_file_base_name)
 //     texture font_atlas_texture;
 //
 //     font_atlas_texture.name         = DEFAULT_FONT_ATLAS_TEXTURE_HANDLE;
-//     font_atlas_texture.width        = width;
-//     font_atlas_texture.height       = height;
-//     font_atlas_texture.num_channels = 4;
-//     font_atlas_texture.format       = IMG_FORMAT_UNORM;
-//
-//     bool result = create_texture(&font_atlas_texture, pixels);
+//     font_atlas_create_texture(&font_atlas_texture, pixels);
 //     DASSERT(result);
 //
 //     stbi_image_free(pixels);
