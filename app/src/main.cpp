@@ -202,7 +202,7 @@ int main()
         ZoneScoped;
         frame_start_time = platform_get_absolute_time();
 
-        if(frames % 64  == 0)
+        if(frames % 120  == 0)
         {
             test.str_len += u32_to_string(&test.string[4], fps);
         }

@@ -193,10 +193,13 @@ struct font_aligned_quad
 
 struct font_glyph_data
 {
-    u16 x0; // bounding box coords
-    u16 y0; // uv coordinates for the quad
-    u16 x1;
-    u16 y1;
+    s16 x0; // bounding box coords
+    s16 y0; // uv coordinates for the quad
+    s16 x1;
+    s16 y1;
+
+    s16 w;
+    s16 h;
 
     f32 xoff; // adjust quad position on screen
     f32 yoff;

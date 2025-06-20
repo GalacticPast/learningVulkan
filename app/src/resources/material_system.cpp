@@ -215,7 +215,7 @@ bool material_system_load_font(dstring *font_base_name, font_glyph_data **data)
     string_copy_format(file_full_path.string, "%s%s%s", 0, prefix.c_str(), font_base_name->c_str(), ".png");
 
     // INFO: Only ascii characters for now
-    stbtt_packedchar char_data[96]; // ASCII 32..126
+    font_glyph_data glyphs[96]; // ASCII 32..126
 
     u32 atlas_width  = 512;
     u32 atlas_height = 512;
@@ -231,41 +231,89 @@ bool material_system_load_font(dstring *font_base_name, font_glyph_data **data)
         u64          font_buffer_size = INVALID_ID_64;
 
         bool result = file_open_and_read(file_full_path.c_str(), &font_buffer_size, nullptr, false);
-        DASSERT(result);
+        DASSERT(result == true);
 
-        char *font_buffer = static_cast<char *>(dallocate(arena, font_buffer_size, MEM_TAG_UNKNOWN));
-        result            = file_open_and_read(file_full_path.c_str(), &font_buffer_size, font_buffer, false);
-        DASSERT(result);
+        u8 *font_buffer = static_cast<u8 *>(dallocate(arena, font_buffer_size, MEM_TAG_UNKNOWN));
+        result =
+            file_open_and_read(file_full_path.c_str(), &font_buffer_size, reinterpret_cast<char *>(font_buffer), false);
+        DASSERT(result == true);
 
         u32 font_atlas_size   = atlas_width * atlas_height;
         u8 *font_atlas_buffer = static_cast<u8 *>(dallocate(arena, font_atlas_size, MEM_TAG_UNKNOWN));
 
         stbtt_fontinfo font;
-        result = stbtt_InitFont(&font, reinterpret_cast<u8 *>(font_buffer), 0);
-        DASSERT(result);
-
-        stbtt_pack_context packContext;
-        if (!stbtt_PackBegin(&packContext, font_atlas_buffer, atlas_width, atlas_height, 0, 1, NULL))
+        if (!stbtt_InitFont(&font, font_buffer, stbtt_GetFontOffsetForIndex(font_buffer, 0)))
         {
-            DERROR("Failed to begin font packing.");
+            DERROR("Failed to init font.");
+            return false;
         }
 
-        stbtt_PackSetOversampling(&packContext, 1, 1); // No oversampling
+        u32   char_count       = 94;
+        u32   glyph_padding    = 4;
+        float pixel_height     = 48.0f;
+        float scale            = stbtt_ScaleForPixelHeight(&font, pixel_height);
+        float onedge_value     = 128;
+        float pixel_dist_scale = 64.0f;
 
-        stbtt_pack_range range;
-        range.font_size                        = 32;
-        range.first_unicode_codepoint_in_range = 32; // space
-        range.num_chars                        = 96; // printable ASCII
-        range.chardata_for_range               = char_data;
+        int pen_x = 0, pen_y = 0, row_height = 0;
 
-        if (!stbtt_PackFontRanges(&packContext, reinterpret_cast<const u8 *>(font_buffer), 0, &range, 1))
+        for (u32 i = 0; i < char_count; ++i)
         {
-            DERROR("Font range packing failed.");
+            u32 c = 32 + i;
+
+            s32 w    = 0;
+            s32 h    = 0;
+            s32 xoff = 0;
+            s32 yoff = 0;
+
+            unsigned char *sdf = stbtt_GetCodepointSDF(&font, scale, c, glyph_padding, onedge_value, pixel_dist_scale,
+                                                       &w, &h, &xoff, &yoff);
+
+            if (pen_x + w >= (s32)atlas_width)
+            {
+                pen_x       = 0;
+                pen_y      += row_height + 1;
+                row_height  = 0;
+            }
+
+            if (pen_y + h >= (s32)atlas_height)
+            {
+                DERROR("Atlas too small. Increase size.");
+                free(sdf);
+                break;
+            }
+
+            // Copy glyph SDF into atlas
+            if (sdf)
+            {
+                for (int y = 0; y < h; ++y)
+                {
+                    dcopy_memory(font_atlas_buffer + (pen_y + y) * atlas_width + pen_x, sdf + y * w, w);
+                }
+
+                // Get advance
+                int adv, lsb;
+                stbtt_GetCodepointHMetrics(&font, c, &adv, &lsb);
+
+                glyphs[i].x0       = pen_x;
+                glyphs[i].y0       = pen_y;
+                glyphs[i].x1       = pen_x + w;
+                glyphs[i].y1       = pen_y + h;
+                glyphs[i].w        = w;
+                glyphs[i].h        = h;
+                glyphs[i].xoff     = (float)xoff;
+                glyphs[i].yoff     = (float)yoff;
+                glyphs[i].xadvance = scale * adv;
+
+                pen_x += w + 1;
+                if (h > row_height)
+                    row_height = h;
+
+                free(sdf);
+            }
         }
 
-        stbtt_PackEnd(&packContext);
-
-        _write_glyph_atlas_to_file(font_base_name, reinterpret_cast<font_glyph_data *>(char_data), 96);
+        _write_glyph_atlas_to_file(font_base_name, glyphs, 96);
 
         file_full_path.clear();
         string_copy_format(file_full_path.string, "%s%s%s", 0, "../assets/textures/", font_base_name->c_str(), ".png");
@@ -275,7 +323,8 @@ bool material_system_load_font(dstring *font_base_name, font_glyph_data **data)
     else
     {
         file_full_path.clear();
-        string_copy_format(file_full_path.string, "%s%s%s", 0,"../assets/fonts/", font_base_name->c_str(), ".font_data");
+        string_copy_format(file_full_path.string, "%s%s%s", 0, "../assets/fonts/", font_base_name->c_str(),
+                           ".font_data");
         u32 length = 0;
         _parse_glyph_atlas_file(&file_full_path, data, &length);
         DASSERT(length == 96);
@@ -299,34 +348,15 @@ bool material_system_load_font(dstring *font_base_name, font_glyph_data **data)
     mat_sys_state_ptr->hashtable.insert(DEFAULT_FONT_ATLAS_TEXTURE_HANDLE, font_atlas);
     mat_sys_state_ptr->loaded_materials.push_back(DEFAULT_FONT_ATLAS_TEXTURE_HANDLE);
 
-
-    if(!*data)
+    if (!*data)
     {
         *data = static_cast<font_glyph_data *>(dallocate(arena, sizeof(font_glyph_data) * 96, MEM_TAG_DARRAY));
         for (u32 i = 0; i < 96; i++)
         {
             void *ptr = &(*data)[i];
-            dcopy_memory(ptr, &char_data[i], sizeof(stbtt_packedchar));
+            dcopy_memory(ptr, &glyphs[i], sizeof(font_glyph_data));
         }
     }
-
-#ifdef DEBUG
-    if (verify_data)
-    {
-        for (u32 i = 0; i < 96; i++)
-        {
-            DASSERT((*data)[i].x0 == char_data[i].x0);
-            DASSERT((*data)[i].x1 == char_data[i].x1);
-            DASSERT((*data)[i].y0 == char_data[i].y0);
-            DASSERT((*data)[i].y1 == char_data[i].y1);
-            DASSERT((*data)[i].xoff == char_data[i].xoff);
-            DASSERT((*data)[i].yoff == char_data[i].yoff);
-            DASSERT((*data)[i].xadvance == char_data[i].xadvance);
-            DASSERT((*data)[i].xoff2 == char_data[i].xoff2);
-            DASSERT((*data)[i].yoff2 == char_data[i].yoff2);
-        }
-    }
-#endif
 
     return true;
 }
