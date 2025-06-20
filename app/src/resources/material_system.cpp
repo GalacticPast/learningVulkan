@@ -217,8 +217,8 @@ bool material_system_load_font(dstring *font_base_name, font_glyph_data **data)
     // INFO: Only ascii characters for now
     font_glyph_data glyphs[96]; // ASCII 32..126
 
-    u32 atlas_width  = 512;
-    u32 atlas_height = 512;
+    u32 atlas_width  = 514;
+    u32 atlas_height = 514;
 
     bool verify_data = false;
     if (!file_exists(&file_full_path))
@@ -249,8 +249,8 @@ bool material_system_load_font(dstring *font_base_name, font_glyph_data **data)
         }
 
         u32   char_count       = 94;
-        u32   glyph_padding    = 4;
-        float pixel_height     = 48.0f;
+        u32   glyph_padding    = 6;
+        float pixel_height     = 64;
         float scale            = stbtt_ScaleForPixelHeight(&font, pixel_height);
         float onedge_value     = 128;
         float pixel_dist_scale = 64.0f;
@@ -337,6 +337,7 @@ bool material_system_load_font(dstring *font_base_name, font_glyph_data **data)
 
     dstring base_name_plus_suffix;
     string_copy_format(base_name_plus_suffix.string, "%s%s", 0, font_base_name->c_str(), ".png");
+    texture_system_create_texture(&base_name_plus_suffix, IMG_FORMAT_UNORM);
 
     font_atlas.map.diffuse  = texture_system_get_texture(base_name_plus_suffix.c_str());
     font_atlas.map.normal   = nullptr;

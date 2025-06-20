@@ -10,7 +10,7 @@ bool texture_system_create_texture(dstring *texture_name, u32 tex_width, u32 tex
 bool texture_system_write_texture(dstring *texture_name, u32 tex_width, u32 tex_height, u32 tex_num_channels,
                                    image_format format, u8 *pixels);
 
-bool     texture_system_create_texture(dstring *file_base_name);
+bool texture_system_create_texture(dstring *file_base_name, image_format format);
 texture *texture_system_get_texture(const char *texture_name);
 
 // cube map configuration file name
