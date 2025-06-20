@@ -258,3 +258,9 @@ u32 u32_to_string(char * string, u32 integer)
     u32 bytes_written = sprintf(string, "%d", integer);
     return bytes_written;
 }
+
+u32 f32_to_string(char * string, f32 integer)
+{
+    u32 bytes_written = sprintf(string, "%f", integer);
+    return bytes_written;
+}

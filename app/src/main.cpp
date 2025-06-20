@@ -1,6 +1,7 @@
 #include "core/application.hpp"
 #include "core/dclock.hpp"
 #include "core/dmemory.hpp"
+#include "core/dstring.hpp"
 #include "core/input.hpp"
 #include "core/logger.hpp"
 #include "main.hpp"
@@ -151,23 +152,26 @@ int main()
     dstring font_atlas = DEFAULT_FONT_ATLAS_TEXTURE_HANDLE;
 
     dstring test;
-    test             = "FPS: ";
-    dstring abc_cap  = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-    dstring abc_sall = "abcdefghijklmnopqrstuvwxyz";
-    dstring num      = "0123456789";
-    dstring symbols  = "!@#$%^&*()_+{}[]:><|''";
-    u32 frames = 0;
-    u32     fps      = 0;
+    test               = "FPS: ";
+    dstring abc_cap    = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    dstring abc_sall   = "abcdefghijklmnopqrstuvwxyz";
+    dstring num        = "0123456789";
+    dstring symbols    = "!@#$%^&*()_+{}[]:><|''";
+    dstring camera_pos;
+    u32     frames     = 0;
+    u32     fps        = 0;
 
     while (app_state.is_running)
     {
         ZoneScoped;
         frame_start_time = platform_get_absolute_time();
 
-        if(frames % 120  == 0)
+        if (frames % 120 == 0)
         {
             test.str_len += u32_to_string(&test.string[4], fps);
         }
+
+        camera_pos.str_len = string_copy_format(camera_pos.string, "%.2f %.2f %.2f", 0,triangle.scene_ubo.camera_pos.x,triangle.scene_ubo.camera_pos.y,triangle.scene_ubo.camera_pos.z);
 
         geometry_system_generate_text_geometry(&test, {0, 10});
 
@@ -175,6 +179,7 @@ int main()
         geometry_system_generate_text_geometry(&abc_sall, {0, 120});
         geometry_system_generate_text_geometry(&num, {0, 180});
         geometry_system_generate_text_geometry(&symbols, {0, 220});
+        geometry_system_generate_text_geometry(&camera_pos, {10, 500});
 
         u64 quad_id          = geometry_system_flush_text_geometries();
         geos_2D[0]           = geometry_system_get_geometry(quad_id);
@@ -214,7 +219,7 @@ int main()
         frame_elapsed_time = frame_end_time - frame_start_time;
         fps                = 1 / (frame_elapsed_time);
         frames++;
-        input_update(0);
+        camera_pos.clear();
     }
     application_shutdown();
 }

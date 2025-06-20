@@ -1393,8 +1393,6 @@ u32 vulkan_calculate_index_offset(vulkan_context *vk_context, u32 geometry_id,
 bool vulkan_create_geometry(renderpass_types type, geometry *out_geometry, u32 vertex_count, u32 vertex_size,
                             void *vertices, u32 index_count, u32 *indices)
 {
-    // TODO: vulkan_geometry_state
-
     void *vertex_data        = nullptr;
     u32   vertex_buffer_size = vertex_count * vertex_size;
     void *index_data         = nullptr;

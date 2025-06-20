@@ -105,7 +105,10 @@ bool geometry_system_update_geometry(geometry_config *config, u64 id)
     geometry *geo           = geometry_system_get_geometry(id);
     u32       tris_count    = config->vertex_count;
     u32       indices_count = config->index_count;
-    bool      result        = vulkan_create_geometry(UI_RENDERPASS, geo, tris_count, sizeof(vertex_2D),
+
+    arena* arena = geo_sys_state_ptr->arena;
+
+    bool result        = vulkan_create_geometry(UI_RENDERPASS, geo, tris_count, sizeof(vertex_2D),
                                                      static_cast<void *>(config->vertices), indices_count, config->indices);
     geo_sys_state_ptr->hashtable.update(id, *geo);
 
