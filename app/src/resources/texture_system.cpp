@@ -119,8 +119,11 @@ bool texture_system_write_texture(dstring *file_full_path, u32 tex_width, u32 te
     return true;
 }
 
-bool texture_system_create_texture(dstring *file_base_name)
+bool texture_system_create_texture(dstring *file_base_name, image_format image_format)
 {
+    DASSERT(file_base_name);
+    DASSERT(image_format != IMG_FORMAT_UNKNOWN);
+
     texture texture{};
     texture.name = *file_base_name;
 
@@ -150,7 +153,7 @@ bool texture_system_create_texture(dstring *file_base_name)
     texture.width        = tex_width;
     texture.height       = tex_height;
     texture.num_channels = tex_channels;
-    texture.format       = IMG_FORMAT_SRGB;
+    texture.format       = image_format;
     bool result          = create_texture(&texture, pixels);
     stbi_image_free(pixels);
 
@@ -242,12 +245,11 @@ texture *texture_system_get_texture(const char *texture_name)
     }
     texture *texture = tex_sys_state_ptr->hashtable.find(texture_name);
     // TODO: increment the value for texture references
-
     if (texture == nullptr)
     {
         DTRACE("Texture: %s not loaded in yet, loading it...", texture_name);
         dstring name = texture_name;
-        texture_system_create_texture(&name);
+        texture_system_create_texture(&name, IMG_FORMAT_SRGB);
         texture = tex_sys_state_ptr->hashtable.find(texture_name);
     }
 

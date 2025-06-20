@@ -338,6 +338,8 @@ bool material_system_load_font(dstring *font_base_name, font_glyph_data **data)
     dstring base_name_plus_suffix;
     string_copy_format(base_name_plus_suffix.string, "%s%s", 0, font_base_name->c_str(), ".png");
 
+    texture_system_create_texture(&base_name_plus_suffix, IMG_FORMAT_UNORM);
+
     font_atlas.map.diffuse  = texture_system_get_texture(base_name_plus_suffix.c_str());
     font_atlas.map.normal   = nullptr;
     font_atlas.map.specular = nullptr;

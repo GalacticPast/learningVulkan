@@ -1523,6 +1523,7 @@ bool geometry_system_generate_text_geometry(dstring *text, vec2 position)
         float width  = (glyphs[hash].x1 - glyphs[hash].x0);
         float height = (glyphs[hash].y1 - glyphs[hash].y0);
 
+
         float x_off = position.x + glyphs[hash].xoff;
         float y_off = position.y + glyphs[hash].yoff;
 
