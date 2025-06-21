@@ -239,6 +239,9 @@ static void shader_parse_configuration_file(dstring conf_file_name, shader_confi
         else if (string_compare(str, "sampler_cube"))
         {
             return SAMPLER_CUBE;
+        }else if (string_compare(str, "s32"))
+        {
+            return S32;
         }
         return MAX_SHADER_ATTRIBUTE_TYPE;
     };

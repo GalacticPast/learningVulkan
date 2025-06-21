@@ -1559,8 +1559,9 @@ bool vulkan_draw_geometries(vulkan_shader *material_shader_vulkan_data, geometry
 
         vkCmdBindDescriptorSets(*curr_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, vk_shader->pipeline.layout, 1, 1,
                                 &vk_shader->per_group_descriptor_sets[descriptor_set_index], 0, nullptr);
-        pc.diffuse_color = mat->diffuse_color;
-        pc.model         = geos[i]->ubo.model;
+
+        pc.material_pc.model = geos[i]->ubo.model;
+        pc.material_pc.color = mat->diffuse_color;
         vkCmdPushConstants(*curr_command_buffer, vk_shader->pipeline.layout, VK_SHADER_STAGE_VERTEX_BIT, 0,
                            sizeof(vk_push_constant), &pc);
 

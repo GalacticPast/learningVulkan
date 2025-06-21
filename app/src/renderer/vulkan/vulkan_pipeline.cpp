@@ -225,7 +225,7 @@ bool vulkan_create_pipeline(vulkan_context *vk_context, vulkan_shader *shader)
     object_push_constant_range.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
     object_push_constant_range.offset     = 0;
 
-    DASSERT_MSG(sizeof(vk_push_constant) == 128, "Object uniform buffer must be 128 bytes wide.");
+    STATIC_ASSERT(sizeof(vk_push_constant) == 128, "Object uniform buffer must be 128 bytes wide.");
     object_push_constant_range.size = sizeof(vk_push_constant);
 
     u32 layout_count = 0;

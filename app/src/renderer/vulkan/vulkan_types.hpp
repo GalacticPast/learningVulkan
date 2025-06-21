@@ -34,13 +34,20 @@ struct push_constant // aka push constants
 };
 ;
 
-struct vk_push_constant // aka push constants
+union vk_push_constant
 {
-    mat4 model; // 64 bytes
-    vec4 diffuse_color;
-    vec4 padding;
-    vec4 padding2;
-    vec4 padding3;
+    f32 hundred_and_twenty_eight[32];
+
+    struct material_pc
+    {
+        mat4 model;
+        vec4 color;
+    }material_pc;
+
+    struct ui_pc
+    {
+
+    }ui_pc;
 };
 
 #define MAX_FRAMES_IN_FLIGHT 3

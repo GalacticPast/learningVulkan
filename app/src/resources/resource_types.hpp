@@ -38,6 +38,7 @@ enum attribute_types
     //  alligned to 16 bytes but for vertexInputAttribute the vec3 can be 12bytes large.
     VEC_3                     = 12,
     VEC_2                     = 8,
+    S32                       = 4,
     MAX_SHADER_ATTRIBUTE_TYPE = 0,
 };
 // INFO: I just decided this arbitarily so....

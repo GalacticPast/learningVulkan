@@ -6,7 +6,6 @@
 #include "core/input.hpp"
 #include "core/logger.hpp"
 
-#include "containers/darray.hpp"
 
 #include "defines.hpp"
 
@@ -179,8 +178,8 @@ int main()
         input_get_mouse_position(&mouse_x, &mouse_y);
         mouse.str_len = string_copy_format(mouse.string, "Cursor_pos: x: %d y: %d", 0, mouse_x, mouse_y);
 
-        geometry_system_generate_text_geometry(&mouse, {0, 440});
-        geometry_system_generate_text_geometry(&camera_pos, {0, 500});
+        geometry_system_generate_text_geometry(&mouse, {0, 440}, RED);
+        geometry_system_generate_text_geometry(&camera_pos, {0, 500}, GREEN);
 
         u64 quad_id          = geometry_system_flush_text_geometries();
         geos_2D[0]           = geometry_system_get_geometry(quad_id);
@@ -243,6 +242,12 @@ void update_camera(scene_global_uniform_buffer_object *ubo, ui_global_uniform_bu
 
     static vec3 camera_pos   = vec3(0, 6, 6);
     static vec3 camera_euler = vec3(0, 0, 0);
+
+    if (input_is_key_down(KEY_T))
+    {
+        ui_ubo->mode++;
+        ui_ubo->mode %= 2;
+    }
 
     if (input_is_key_down(KEY_A) || input_is_key_down(KEY_LEFT))
     {

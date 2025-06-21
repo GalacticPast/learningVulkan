@@ -32,6 +32,6 @@ geometry_config geometry_system_generate_quad_config(f32 width, f32 height,f32 p
 
 void geometry_system_copy_config(geometry_config *dst_config, const geometry_config *src_config);
 
-bool geometry_system_generate_text_geometry(dstring* text, vec2 position);
+bool geometry_system_generate_text_geometry(dstring* text, vec2 position, vec4 color);
 u64 geometry_system_flush_text_geometries();
 

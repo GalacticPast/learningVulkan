@@ -1469,7 +1469,7 @@ static void calculate_tangents(geometry_config *config)
     }
 }
 
-bool geometry_system_generate_text_geometry(dstring *text, vec2 position)
+bool geometry_system_generate_text_geometry(dstring* text, vec2 position, vec4 color)
 {
     DASSERT(text);
     u32              length       = INVALID_ID;
@@ -1493,6 +1493,11 @@ bool geometry_system_generate_text_geometry(dstring *text, vec2 position)
     vertex_2D q1;
     vertex_2D q2;
     vertex_2D q3;
+
+    q0.color = color;
+    q1.color = color;
+    q2.color = color;
+    q3.color = color;
 
     vertex_2D *vertices = static_cast<vertex_2D *>(geo_sys_state_ptr->font_geometry_config.vertices);
     u32       *indices  = geo_sys_state_ptr->font_geometry_config.indices;
