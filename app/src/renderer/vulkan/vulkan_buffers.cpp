@@ -53,6 +53,7 @@ bool vulkan_create_buffer(vulkan_context *vk_context, vulkan_buffer *out_buffer,
 bool vulkan_copy_buffer(vulkan_context *vk_context, VkCommandPool* cmd_pool,VkQueue* queue, vulkan_buffer *dst_buffer, u64 dst_offset,
                         vulkan_buffer *src_buffer, u64 buffer_size)
 {
+    u32      current_frame = vk_context->current_frame_index;
 
     VkCommandBuffer staging_command_buffer{};
     bool            result = vulkan_allocate_command_buffers(vk_context, cmd_pool,
@@ -66,6 +67,7 @@ bool vulkan_copy_buffer(vulkan_context *vk_context, VkCommandPool* cmd_pool,VkQu
 
     vkCmdCopyBuffer(staging_command_buffer, src_buffer->handle, dst_buffer->handle, 1, &cpy_region);
     vulkan_end_command_buffer_single_use(vk_context, staging_command_buffer, false);
+
 
     VkSubmitInfo queue_submit_info{};
     queue_submit_info.sType                = VK_STRUCTURE_TYPE_SUBMIT_INFO;

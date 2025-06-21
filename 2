@@ -1499,7 +1499,6 @@ bool geometry_system_generate_text_geometry(dstring *text, vec2 position)
 
     // this is the ptr to the next starting block
     u32 vert_ind  = geo_sys_state_ptr->vertex_offset_ind;
-
     // this is the ptr to the next starting block
     u32 index_ind = geo_sys_state_ptr->font_geometry_config.index_count;
 
@@ -1561,27 +1560,26 @@ bool geometry_system_generate_text_geometry(dstring *text, vec2 position)
         vertices[vert_ind++] = q1;
         vertices[vert_ind++] = q3;
 
+        pos.x += glyphs[hash].xadvance;
 
-        indices[index_ind++] = local_offset + 0;
-        indices[index_ind++] = local_offset + 1;
-        indices[index_ind++] = local_offset + 2;
+        indices[index_ind + 0] = local_offset + 0;
+        indices[index_ind + 1] = local_offset + 1;
+        indices[index_ind + 2] = local_offset + 2;
 
-        indices[index_ind++] = local_offset + 0;
-        indices[index_ind++] = local_offset + 2;
-        indices[index_ind++] = local_offset + 3;
+        indices[index_ind + 3] = local_offset + 0;
+        indices[index_ind + 4] = local_offset + 2;
+        indices[index_ind + 5] = local_offset + 1;
 
+        // num of indices per quad i.e 2 triangles
+        index_ind    += 6;
         // advacnce the index offset by 4 so that the next quad has the proper offset;
         local_offset += 4;
-
-        pos.x += glyphs[hash].xadvance;
     }
 
-    geo_sys_state_ptr->vertex_offset_ind                 = vert_ind;
-    geo_sys_state_ptr->index_offset_ind                  = local_offset;
-    geo_sys_state_ptr->font_geometry_config.vertex_count = vert_ind;
-    geo_sys_state_ptr->font_geometry_config.index_count  = index_ind;
-
-
+    geo_sys_state_ptr->vertex_offset_ind                 += vert_ind;
+    geo_sys_state_ptr->index_offset_ind                  += local_offset;
+    geo_sys_state_ptr->font_geometry_config.vertex_count += vert_ind;
+    geo_sys_state_ptr->font_geometry_config.index_count  += index_ind;
 
     return true;
 }

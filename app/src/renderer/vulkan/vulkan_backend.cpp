@@ -1023,7 +1023,7 @@ bool vulkan_create_texture(texture *in_texture, u8 *pixels)
     {
         image->format = VK_FORMAT_R8G8B8A8_UNORM;
     }
-    else if(in_texture->format == IMG_FORMAT_SRGB)
+    else if (in_texture->format == IMG_FORMAT_SRGB)
     {
         image->format = VK_FORMAT_R8G8B8A8_SRGB;
     }
@@ -1393,6 +1393,7 @@ u32 vulkan_calculate_index_offset(vulkan_context *vk_context, u32 geometry_id,
 bool vulkan_create_geometry(renderpass_types type, geometry *out_geometry, u32 vertex_count, u32 vertex_size,
                             void *vertices, u32 index_count, u32 *indices)
 {
+
     void *vertex_data        = nullptr;
     u32   vertex_buffer_size = vertex_count * vertex_size;
     void *index_data         = nullptr;
@@ -1458,7 +1459,7 @@ bool vulkan_create_geometry(renderpass_types type, geometry *out_geometry, u32 v
     if (!geo_vk_data)
     {
         out_geometry->vulkan_geometry_state = dallocate(arena, sizeof(vulkan_geometry_data), MEM_TAG_RENDERER);
-        geo_vk_data = static_cast<vulkan_geometry_data *>(out_geometry->vulkan_geometry_state);
+        geo_vk_data                         = static_cast<vulkan_geometry_data *>(out_geometry->vulkan_geometry_state);
 
         u32 low = INVALID_ID;
 
@@ -1479,14 +1480,12 @@ bool vulkan_create_geometry(renderpass_types type, geometry *out_geometry, u32 v
             return false;
         }
     }
-    else
-    {
-        u32 id = geo_vk_data->id;
-        internal_array[id].vertex_count  = vertex_count;
-        internal_array[id].indices_count = index_count;
-    }
-    geo_vk_data->indices_count = index_count;
-    geo_vk_data->vertex_count  = vertex_count;
+
+    u32 id                           = geo_vk_data->id;
+    internal_array[id].vertex_count  = vertex_count;
+    internal_array[id].indices_count = index_count;
+    geo_vk_data->indices_count       = index_count;
+    geo_vk_data->vertex_count        = vertex_count;
 
     return true;
 };
