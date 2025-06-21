@@ -56,61 +56,66 @@ void input_update(f64 delta_time)
     }
 
     // Copy current states to previous states.
-    dcopy_memory(&input_state_ptr->keyboard_previous.keys, &input_state_ptr->keyboard_current.keys, 256 * sizeof(bool));
+    dcopy_memory(&input_state_ptr->keyboard_previous, &input_state_ptr->keyboard_current, sizeof(keyboard_state));
     dcopy_memory(&input_state_ptr->mouse_previous, &input_state_ptr->mouse_current, sizeof(mouse_state));
+
 }
 
 
 void input_process_key(keys key, bool pressed)
 {
-    // Update internal input_state_ptr->
-    input_state_ptr->keyboard_current.keys[key] = pressed;
+    // Only handle this if the state actually changed.
+    if (input_state_ptr && input_state_ptr->keyboard_current.keys[key] != pressed)
+    {
+        // Update internal input_state_ptr->
+        input_state_ptr->keyboard_current.keys[key] = pressed;
 
-    event_context context;
-    context.data.u16[0] = key;
+        event_context context;
+        context.data.u16[0] = key;
 
-    if (key == KEY_ESCAPE)
-    {
-        event_fire(EVENT_CODE_APPLICATION_QUIT, context);
-    }
-    if (key == KEY_A)
-    {
-        DINFO("key A %s.", pressed ? "pressed" : "released");
-    }
-    if (key == KEY_T)
-    {
-        DINFO("key T %s.", pressed ? "pressed" : "released");
-    }
+        if (key == KEY_ESCAPE)
+        {
+            event_fire(EVENT_CODE_APPLICATION_QUIT, context);
+        }
+        if (key == KEY_A)
+        {
+            DINFO("key A %s.", pressed ? "pressed" : "released");
+        }
+        if (key == KEY_T)
+        {
+            DINFO("key T %s.", pressed ? "pressed" : "released");
+        }
 
-    if (key == KEY_LALT)
-    {
-        DINFO("Left alt %s.", pressed ? "pressed" : "released");
-    }
-    else if (key == KEY_RALT)
-    {
-        DINFO("Right alt %s.", pressed ? "pressed" : "released");
-    }
+        if (key == KEY_LALT)
+        {
+            DINFO("Left alt %s.", pressed ? "pressed" : "released");
+        }
+        else if (key == KEY_RALT)
+        {
+            DINFO("Right alt %s.", pressed ? "pressed" : "released");
+        }
 
-    if (key == KEY_LCONTROL)
-    {
-        DINFO("Left ctrl %s.", pressed ? "pressed" : "released");
-    }
-    else if (key == KEY_RCONTROL)
-    {
-        DINFO("Right ctrl %s.", pressed ? "pressed" : "released");
-    }
+        if (key == KEY_LCONTROL)
+        {
+            DINFO("Left ctrl %s.", pressed ? "pressed" : "released");
+        }
+        else if (key == KEY_RCONTROL)
+        {
+            DINFO("Right ctrl %s.", pressed ? "pressed" : "released");
+        }
 
-    if (key == KEY_LSHIFT)
-    {
-        DINFO("Left shift %s.", pressed ? "pressed" : "released");
-    }
-    else if (key == KEY_RSHIFT)
-    {
-        DINFO("Right shift %s.", pressed ? "pressed" : "released");
-    }
+        if (key == KEY_LSHIFT)
+        {
+            DINFO("Left shift %s.", pressed ? "pressed" : "released");
+        }
+        else if (key == KEY_RSHIFT)
+        {
+            DINFO("Right shift %s.", pressed ? "pressed" : "released");
+        }
 
-    // Fire off an event for immediate processing.
-    event_fire(pressed ? EVENT_CODE_KEY_PRESSED : EVENT_CODE_KEY_RELEASED, context);
+        // Fire off an event for immediate processing.
+        event_fire(pressed ? EVENT_CODE_KEY_PRESSED : EVENT_CODE_KEY_RELEASED, context);
+    }
 }
 
 void input_process_button(buttons button, bool pressed)
