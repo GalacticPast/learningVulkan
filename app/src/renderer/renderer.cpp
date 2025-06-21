@@ -57,12 +57,6 @@ void renderer_draw_frame(render_data *data)
         DERROR("Smth wrong with drawing frame");
         return;
     }
-    result = platform_pump_messages();
-    if (!result)
-    {
-        DERROR("Smth wrong with platform pumping messages");
-        return;
-    }
 }
 bool renderer_resize()
 {

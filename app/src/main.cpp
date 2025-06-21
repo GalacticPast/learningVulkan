@@ -166,6 +166,11 @@ int main()
         ZoneScoped;
         frame_start_time = platform_get_absolute_time();
 
+        result = platform_pump_messages();
+        DASSERT(result);
+
+        update_camera(&triangle.scene_ubo, &triangle.ui_ubo, &triangle.light_ubo, frame_elapsed_time);
+
         if (fps % 64 == 0)
         {
             test.str_len += u32_to_string(&test.string[4], fps);
@@ -185,7 +190,6 @@ int main()
         geos_2D[0]           = geometry_system_get_geometry(quad_id);
         geos_2D[0]->material = material_system_get_from_name(&font_atlas);
 
-        update_camera(&triangle.scene_ubo, &triangle.ui_ubo, &triangle.light_ubo, frame_elapsed_time);
 
         shader_system_bind_shader(def_material_shader);
         shader_system_update_per_frame(&triangle.scene_ubo, &triangle.light_ubo);
@@ -200,6 +204,7 @@ int main()
         shader_system_update_per_frame(&triangle.ui_ubo, nullptr);
 
         renderer_draw_frame(&triangle);
+
 
         // Figure out how long the frame took and, if below
         f64 frame_end_time    = platform_get_absolute_time();
@@ -219,6 +224,9 @@ int main()
         frame_elapsed_time = frame_end_time - frame_start_time;
         fps                = 1 / (frame_elapsed_time);
         frames++;
+
+        input_update(frame_elapsed_time);
+
     }
     application_shutdown();
 }
@@ -243,7 +251,7 @@ void update_camera(scene_global_uniform_buffer_object *ubo, ui_global_uniform_bu
     static vec3 camera_pos   = vec3(0, 6, 6);
     static vec3 camera_euler = vec3(0, 0, 0);
 
-    if (input_is_key_down(KEY_T))
+    if (input_was_key_down(KEY_T) && input_is_key_up(KEY_T))
     {
         ui_ubo->mode++;
         ui_ubo->mode %= 2;
