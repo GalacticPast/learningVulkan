@@ -1469,7 +1469,7 @@ static void calculate_tangents(geometry_config *config)
     }
 }
 
-bool geometry_system_generate_text_geometry(dstring* text, vec2 position, vec4 color)
+bool geometry_system_generate_text_geometry(dstring *text, vec2 position, vec4 color)
 {
     DASSERT(text);
     u32              length       = INVALID_ID;
@@ -1503,7 +1503,7 @@ bool geometry_system_generate_text_geometry(dstring* text, vec2 position, vec4 c
     u32       *indices  = geo_sys_state_ptr->font_geometry_config.indices;
 
     // this is the ptr to the next starting block
-    u32 vert_ind  = geo_sys_state_ptr->vertex_offset_ind;
+    u32 vert_ind = geo_sys_state_ptr->vertex_offset_ind;
 
     // this is the ptr to the next starting block
     u32 index_ind = geo_sys_state_ptr->font_geometry_config.index_count;
@@ -1565,7 +1565,6 @@ bool geometry_system_generate_text_geometry(dstring* text, vec2 position, vec4 c
         vertices[vert_ind++] = q1;
         vertices[vert_ind++] = q3;
 
-
         indices[index_ind++] = local_offset + 0;
         indices[index_ind++] = local_offset + 1;
         indices[index_ind++] = local_offset + 2;
@@ -1580,12 +1579,53 @@ bool geometry_system_generate_text_geometry(dstring* text, vec2 position, vec4 c
         pos.x += glyphs[hash].xadvance;
     }
 
+    // INFO: creating a semi-transparent bounding box for the entire text
+    {
+
+        float x_pos = position.x;
+        float y_pos = position.y;
+
+        q0.color = color; // Top-left
+        q1.color = color; // Top-right
+        q2.color = color; // Bottom-left
+        q3.color = color; // Bottom-right
+
+        q0.color.a = 0.5; // Top-left
+        q1.color.a = 0.5; // Top-right
+        q2.color.a = 0.5; // Bottom-left
+        q3.color.a = 0.5; // Bottom-right
+
+        q0.tex_coord = {0, 0}; // Top-left
+        q1.tex_coord = {0, 0}; // Top-right
+        q2.tex_coord = {0, 0}; // Bottom-left
+        q3.tex_coord = {0, 0}; // Bottom-right
+
+        q0.position = {x_pos, y_pos};
+        q1.position = {x_pos + pos.x, y_pos};
+        q2.position = {x_pos, y_pos + 20};
+        q3.position = {x_pos + pos.x, y_pos + 20};
+
+        vertices[vert_ind++] = q2;
+        vertices[vert_ind++] = q0;
+        vertices[vert_ind++] = q1;
+        vertices[vert_ind++] = q3;
+
+        indices[index_ind++] = local_offset + 0;
+        indices[index_ind++] = local_offset + 1;
+        indices[index_ind++] = local_offset + 2;
+
+        indices[index_ind++] = local_offset + 0;
+        indices[index_ind++] = local_offset + 2;
+        indices[index_ind++] = local_offset + 3;
+
+        // advacnce the index offset by 4 so that the next quad has the proper offset;
+        local_offset += 4;
+    }
+
     geo_sys_state_ptr->vertex_offset_ind                 = vert_ind;
     geo_sys_state_ptr->index_offset_ind                  = local_offset;
     geo_sys_state_ptr->font_geometry_config.vertex_count = vert_ind;
     geo_sys_state_ptr->font_geometry_config.index_count  = index_ind;
-
-
 
     return true;
 }
