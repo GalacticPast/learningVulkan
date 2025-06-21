@@ -1,10 +1,10 @@
+#include "main.hpp"
 #include "core/application.hpp"
 #include "core/dclock.hpp"
 #include "core/dmemory.hpp"
 #include "core/dstring.hpp"
 #include "core/input.hpp"
 #include "core/logger.hpp"
-#include "main.hpp"
 
 #include "containers/darray.hpp"
 
@@ -152,33 +152,35 @@ int main()
     dstring font_atlas = DEFAULT_FONT_ATLAS_TEXTURE_HANDLE;
 
     dstring test;
-    test               = "FPS: ";
-    dstring abc_cap    = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-    dstring abc_sall   = "abcdefghijklmnopqrstuvwxyz";
-    dstring num        = "0123456789";
-    dstring symbols    = "!@#$%^&*()_+{}[]:><|''";
-    u32     frames     = 0;
-    u32     fps        = 0;
+    test       = "FPS: ";
+    u32 frames = 0;
+    u32 fps    = 0;
 
+    s32 mouse_x = 0;
+    s32 mouse_y = 0;
+
+    dstring mouse;
+
+    dstring camera_pos;
     while (app_state.is_running)
     {
         ZoneScoped;
         frame_start_time = platform_get_absolute_time();
 
-        if(fps % 64 == 0)
+        if (fps % 64 == 0)
         {
             test.str_len += u32_to_string(&test.string[4], fps);
         }
 
-        dstring camera_pos = "Camera_pos: ";
-        camera_pos.str_len += string_copy_format(&camera_pos.string[camera_pos.str_len - 1], " x: %.2f y: %.2f z: %.2f", 0,triangle.scene_ubo.camera_pos.x,triangle.scene_ubo.camera_pos.y,triangle.scene_ubo.camera_pos.z);
+        camera_pos.str_len = string_copy_format(camera_pos.string, "Camera_pos: x: %.2f y: %.2f z: %.2f", 0,
+                                                triangle.scene_ubo.camera_pos.x, triangle.scene_ubo.camera_pos.y,
+                                                triangle.scene_ubo.camera_pos.z);
 
-        geometry_system_generate_text_geometry(&abc_cap, {0, 60});
-        geometry_system_generate_text_geometry(&test, {0, 10});
-        geometry_system_generate_text_geometry(&abc_sall, {0, 120});
-        geometry_system_generate_text_geometry(&num, {0, 180});
-        geometry_system_generate_text_geometry(&symbols, {0, 220});
-        geometry_system_generate_text_geometry(&camera_pos, {10, 500});
+        input_get_mouse_position(&mouse_x, &mouse_y);
+        mouse.str_len = string_copy_format(mouse.string, "Cursor_pos: x: %d y: %d", 0, mouse_x, mouse_y);
+
+        geometry_system_generate_text_geometry(&mouse, {0, 440});
+        geometry_system_generate_text_geometry(&camera_pos, {0, 500});
 
         u64 quad_id          = geometry_system_flush_text_geometries();
         geos_2D[0]           = geometry_system_get_geometry(quad_id);

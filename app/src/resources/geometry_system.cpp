@@ -1542,7 +1542,6 @@ bool geometry_system_generate_text_geometry(dstring *text, vec2 position)
         float xoff = glyphs[hash].xoff;
         float yoff = glyphs[hash].yoff;
 
-        // Use baseline for vertical positioning
         float x_pos = pos.x + xoff;
         float y_pos = baseline + yoff;
 

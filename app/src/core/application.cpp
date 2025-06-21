@@ -51,6 +51,8 @@ bool application_initialize(application_state *state, application_config *config
     app_state_ptr->system_arena   = arena_get_arena();
     app_state_ptr->resource_arena = arena_get_arena();
     DASSERT(app_state_ptr->system_arena);
+    DASSERT(app_state_ptr->resource_arena);
+
     arena *system_arena          = app_state_ptr->system_arena;
     arena *resource_system_arena = app_state_ptr->resource_arena;
 
@@ -82,7 +84,7 @@ bool application_initialize(application_state *state, application_config *config
     result = material_system_initialize(system_arena, resource_system_arena);
     DASSERT(result == true);
 
-    result = font_system_initialize(system_arena,resource_system_arena);
+    result = font_system_initialize(system_arena, resource_system_arena);
     DASSERT(result == true);
 
     result = geometry_system_initialize(system_arena, resource_system_arena);
