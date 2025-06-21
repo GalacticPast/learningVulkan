@@ -46,10 +46,10 @@ bool font_system_load_font(dstring *font_base_name, font_data* data)
 {
     arena *arena = font_sys_state_ptr->arena;
 
-    dstring prefix = "../assets/textures/";
+    dstring prefix = "../assets/fonts/";
 
     dstring file_full_path;
-    string_copy_format(file_full_path.string, "%s%s%s", 0, prefix.c_str(), font_base_name->c_str(), ".png");
+    string_copy_format(file_full_path.string, "%s%s%s", 0, prefix.c_str(), font_base_name->c_str(), ".font_data");
 
     // INFO: Only ascii characters for now
     font_glyph_data glyphs[96]; // ASCII 32..126

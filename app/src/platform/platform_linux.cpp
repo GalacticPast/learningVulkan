@@ -64,7 +64,7 @@ keys translate_keycode(u32 wl_keycode);
 bool platform_system_startup(arena* arena, application_config *config)
 {
     DASSERT(arena);
-    platform_state_ptr = static_cast<platform_state *>(dallocate(arena, sizeof(platform_state), MEM_TAG_APPLICATION);
+    platform_state_ptr = static_cast<platform_state *>(dallocate(arena, sizeof(platform_state), MEM_TAG_APPLICATION));
 
     // Connect to X
     platform_state_ptr->display = XOpenDisplay(NULL);
@@ -170,7 +170,7 @@ bool platform_system_startup(arena* arena, application_config *config)
     return true;
 }
 
-void platform_system_shutdown(void *state)
+void platform_system_shutdown()
 {
     // Simply cold-cast to the known type.
     // Turn key repeats back on since this is global for the OS... just... wow.
@@ -915,11 +915,10 @@ bool platform_system_startup(arena* arena, application_config *app_config)
 {
 
     DASSERT(arena);
-    platform_state_ptr = static_cast<platform_state *>(dallocate(arena, sizeof(platform_state), MEM_TAG_APPLICATION);
+    platform_state_ptr = static_cast<platform_state *>(dallocate(arena, sizeof(platform_state), MEM_TAG_APPLICATION));
 
     DINFO("Initializing linux-Wayland platform...");
 
-    platform_state_ptr = (platform_state *)plat_state;
 
     platform_state_ptr->wl_display = wl_display_connect(NULL);
     if (!platform_state_ptr->wl_display)
@@ -983,7 +982,7 @@ bool platform_pump_messages()
     return result == -1 ? false : true;
 }
 
-void platform_system_shutdown(void *state)
+void platform_system_shutdown()
 {
     DINFO("Shutting down linux-wayland platform...");
     xdg_toplevel_destroy(platform_state_ptr->xdg_toplevel);
