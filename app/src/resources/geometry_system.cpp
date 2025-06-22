@@ -31,7 +31,7 @@ struct geometry_system_state
 
     // HACK:
 
-    u64             font_id;
+    u64             font_geometry_id;
     u32             vertex_offset_ind = INVALID_ID;
     u32             index_offset_ind  = INVALID_ID;
     geometry_config font_geometry_config;
@@ -66,7 +66,7 @@ bool geometry_system_initialize(arena *system_arena, arena *resource_arena)
     {
         geo_sys_state_ptr->vertex_offset_ind = 0;
         geo_sys_state_ptr->index_offset_ind  = 0;
-        geo_sys_state_ptr->font_id           = INVALID_ID_64;
+        geo_sys_state_ptr->font_geometry_id           = INVALID_ID_64;
         geo_sys_state_ptr->font_geometry_config.vertices =
             dallocate(resource_arena, sizeof(vertex_2D) * MB(1), MEM_TAG_GEOMETRY);
         geo_sys_state_ptr->font_geometry_config.indices =
@@ -1634,12 +1634,12 @@ u64 geometry_system_flush_text_geometries()
 {
     geo_sys_state_ptr->font_geometry_config.type = GEO_TYPE_2D;
 
-    u64 id = geo_sys_state_ptr->font_id;
+    u64 id = geo_sys_state_ptr->font_geometry_id;
 
     if (id == INVALID_ID_64)
     {
         id                         = geometry_system_create_geometry(&geo_sys_state_ptr->font_geometry_config, false);
-        geo_sys_state_ptr->font_id = id;
+        geo_sys_state_ptr->font_geometry_id = id;
     }
     else
     {

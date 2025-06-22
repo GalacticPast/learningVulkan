@@ -1,3 +1,5 @@
+#pragma once
+
 #include "core/dstring.hpp"
 #include "resources/resource_types.hpp"
 

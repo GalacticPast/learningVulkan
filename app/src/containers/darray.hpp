@@ -29,12 +29,12 @@ template <typename T> class darray
 
     T &operator[](u64 index);
 
-    // c_init will make the array length to 0 so this is for pushing back
+    // INFO: c_init will make the array length to 0 so this is for pushing back
     // call this wehn you are pushing stuff into the array
     void c_init(struct arena *arena);
     void c_init(struct arena *arena, u64 size);
 
-    // resrve will reserve the speciefied size
+    // INFO: resrve will reserve the speciefied size
     // call this for when you want to index into the array like [] this
     void reserve(struct arena *arena, u64 size);
     void reserve(struct arena *arena);
