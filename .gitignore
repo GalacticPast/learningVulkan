@@ -20,6 +20,8 @@
 *.bin
 *.txt
 
+app/src/platform/wayland/*
+
 assets/fonts/*.png
 assets/fonts/*.font_data
 
