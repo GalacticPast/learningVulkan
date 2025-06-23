@@ -63,15 +63,16 @@ endif
 
 src_files_c := $(shell find $(src_dir) -type f -name '*.c')
 src_files_cpp := $(shell find $(src_dir) -type f -name '*.cpp')
+
 # Tracy integration
 src_files_cpp := $(filter-out $(src_dir)/src/vendor/tracy/%, $(src_files_cpp))
 src_files_c := $(filter-out $(src_dir)/src/vendor/tracy/%, $(src_files_c))
 #turn this on if you want tracy
 #src_files_cpp += $(src_dir)/src/vendor/tracy/TracyClient.cpp
+
 dependencies := $(shell find $(src_dir) -type d)
 obj_files_cpp := $(patsubst %.cpp, $(obj_dir)/%.cpp.o, $(src_files_cpp))
 obj_files_c := $(patsubst %.c, $(obj_dir)/%.c.o, $(src_files_c))
-
 endif
 endif
 

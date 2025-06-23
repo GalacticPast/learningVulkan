@@ -13,8 +13,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/time.h>
 #include <sys/mman.h>
+#include <sys/time.h>
 #include <unistd.h>
 
 #if _POSIX_C_SOURCE >= 199309L
@@ -61,7 +61,7 @@ static platform_state *platform_state_ptr;
 // Key translation
 keys translate_keycode(u32 wl_keycode);
 
-bool platform_system_startup(arena* arena, application_config *config)
+bool platform_system_startup(arena *arena, application_config *config)
 {
     DASSERT(arena);
     platform_state_ptr = static_cast<platform_state *>(dallocate(arena, sizeof(platform_state), MEM_TAG_APPLICATION));
@@ -599,10 +599,12 @@ keys translate_keycode(u32 xk_keycode)
         DASSERT(expr != 0);                                                                                            \
     }
 //
-
-#include "wayland/xdg-decoration-unstable-v1.h"
-#include "wayland/xdg-shell-client-protocol.h"
 #include <wayland-client.h>
+
+
+#include "platform/wayland/xdg-shell-client-protocol.h"
+#include "platform/wayland/xdg-decoration-unstable-v1.h"
+
 #include <xkbcommon/xkbcommon-keysyms.h>
 #include <xkbcommon/xkbcommon.h> // sudo apt-get install libxkbcommon-dev
 
@@ -883,21 +885,27 @@ static const struct xdg_wm_base_listener xdg_wm_base_listener = {
 static void registry_global(void *data, struct wl_registry *wl_registry, u32 name, const char *interface, u32 version)
 {
     // DDEBUG("Print to see the version code for specific interfaces: Interface:%s Version:%d", interface, version);
-    if (strcmp(interface, wl_compositor_interface.name) == 0)
+    if (string_compare(interface, wl_compositor_interface.name))
     {
         platform_state_ptr->wl_compositor =
-            (wl_compositor *)wl_registry_bind(wl_registry, name, &wl_compositor_interface, version);
+            reinterpret_cast<wl_compositor *>(wl_registry_bind(wl_registry, name, &wl_compositor_interface, version));
     }
-    else if (strcmp(interface, xdg_wm_base_interface.name) == 0)
+    else if (string_compare(interface, xdg_wm_base_interface.name))
     {
         platform_state_ptr->xdg_wm_base =
-            (xdg_wm_base *)wl_registry_bind(wl_registry, name, &xdg_wm_base_interface, version);
+            reinterpret_cast<xdg_wm_base *>(wl_registry_bind(wl_registry, name, &xdg_wm_base_interface, version));
         xdg_wm_base_add_listener(platform_state_ptr->xdg_wm_base, &xdg_wm_base_listener, platform_state_ptr);
     }
-    else if (strcmp(interface, wl_seat_interface.name) == 0)
+    else if (string_compare(interface, wl_seat_interface.name))
     {
-        platform_state_ptr->wl_seat = (wl_seat *)wl_registry_bind(wl_registry, name, &wl_seat_interface, version);
+        platform_state_ptr->wl_seat =
+            reinterpret_cast<wl_seat *>(wl_registry_bind(wl_registry, name, &wl_seat_interface, version));
         wl_seat_add_listener(platform_state_ptr->wl_seat, &wl_seat_listener, platform_state_ptr);
+    }
+    else if (string_compare(interface, zxdg_decoration_manager_v1_interface.name))
+    {
+        platform_state_ptr->zxdg_decoration_manager_v1 = reinterpret_cast<zxdg_decoration_manager_v1 *>(
+            wl_registry_bind(wl_registry, name, &zxdg_decoration_manager_v1_interface, version));
     }
 }
 
@@ -911,14 +919,13 @@ static const struct wl_registry_listener wl_registry_listener = {
     .global_remove = registry_global_remove,
 };
 
-bool platform_system_startup(arena* arena, application_config *app_config)
+bool platform_system_startup(arena *arena, application_config *app_config)
 {
 
     DASSERT(arena);
     platform_state_ptr = static_cast<platform_state *>(dallocate(arena, sizeof(platform_state), MEM_TAG_APPLICATION));
 
     DINFO("Initializing linux-Wayland platform...");
-
 
     platform_state_ptr->wl_display = wl_display_connect(NULL);
     if (!platform_state_ptr->wl_display)
@@ -970,6 +977,10 @@ bool platform_system_startup(arena* arena, application_config *app_config)
 
     wl_surface_commit(platform_state_ptr->wl_surface);
     platform_state_ptr->info = platform_get_info();
+
+    platform_state_ptr->zxdg_toplevel_decoration = zxdg_decoration_manager_v1_get_toplevel_decoration(platform_state_ptr->zxdg_decoration_manager_v1, platform_state_ptr->xdg_toplevel); // toplevel is from xdg_surface_get_toplevel
+    zxdg_toplevel_decoration_v1_set_mode(platform_state_ptr->zxdg_toplevel_decoration, ZXDG_TOPLEVEL_DECORATION_V1_MODE_SERVER_SIDE);
+
 
     return true;
 }
@@ -1189,12 +1200,11 @@ void *platform_virtual_reserve(u64 size, bool aligned)
     DASSERT(size != INVALID_ID_64);
     platform_info info = platform_get_info();
 
-
-    void         *ptr  = mmap(NULL, size, PROT_NONE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+    void *ptr = mmap(NULL, size, PROT_NONE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
     if (ptr == MAP_FAILED)
     {
-        s32 error_code = errno;
-        const char *error = strerror(error_code);
+        s32         error_code = errno;
+        const char *error      = strerror(error_code);
         DFATAL("Linux Virtual reserve failed. %s", error);
     }
     DASSERT(reinterpret_cast<uintptr_t>(ptr) % info.page_size == 0);
@@ -1203,26 +1213,26 @@ void *platform_virtual_reserve(u64 size, bool aligned)
 void platform_virtual_unreserve(void *ptr, u64 size)
 {
     DASSERT(size != INVALID_ID_64);
-    platform_info info   = platform_get_info();
+    platform_info info = platform_get_info();
     DASSERT(reinterpret_cast<uintptr_t>(ptr) % info.page_size == 0);
 
-    s32           result = munmap(ptr, size);
+    s32 result = munmap(ptr, size);
     if (result == -1)
     {
-        s32 error_code = errno;
-        const char *error = strerror(error_code);
+        s32         error_code = errno;
+        const char *error      = strerror(error_code);
         DFATAL("Linux Virtual unreserve failed. %s", error);
     }
 }
 void platform_virtual_free(void *block, u64 size, bool aligned)
 {
-    platform_info info   = platform_get_info();
+    platform_info info = platform_get_info();
     DASSERT(reinterpret_cast<uintptr_t>(block) % info.page_size == 0);
     s32 result = munmap(block, size);
     if (result == -1)
     {
-        s32 error_code = errno;
-        const char *error = strerror(error_code);
+        s32         error_code = errno;
+        const char *error      = strerror(error_code);
         DFATAL("Linux Virtual free failed. %s", error);
     }
 }
@@ -1243,16 +1253,16 @@ void *platform_virtual_commit(void *ptr, u32 num_pages)
     {
         DASSERT(num_pages);
         u64 size   = info.page_size * num_pages;
-        return_ptr = mmap(ptr, size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED , -1, 0);
+        return_ptr = mmap(ptr, size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED, -1, 0);
         // better error handling
 
         if (return_ptr == MAP_FAILED)
         {
-            s32 error_code = errno;
-            const char *error = strerror(error_code);
+            s32         error_code = errno;
+            const char *error      = strerror(error_code);
             DFATAL("Linux Virtual alloc failed. %s", error);
         }
-        if(ptr != return_ptr)
+        if (ptr != return_ptr)
         {
             DFATAL("Returned ptr is different from passed page ptr. ");
         }
