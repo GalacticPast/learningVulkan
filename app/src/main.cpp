@@ -11,6 +11,7 @@
 #include "math/dmath.hpp"
 
 #include "math/dmath_types.hpp"
+#include "memory/arenas.hpp"
 #include "platform/platform.hpp"
 
 #include "renderer/renderer.hpp"
@@ -152,6 +153,9 @@ int main()
 
     dstring test;
     test       = "FPS: ";
+
+    dstring dropdown;
+
     u32 frames = 0;
     u32 fps    = 0;
 
@@ -161,6 +165,9 @@ int main()
     dstring mouse;
     dstring camera_pos;
     dstring fps_text;
+
+    arena* frame_arena = arena_get_arena();
+    ui_system_set_arena(frame_arena);
 
     while (app_state.is_running)
     {
@@ -189,7 +196,9 @@ int main()
         ui_text(reinterpret_cast<uintptr_t>(&camera_pos),&camera_pos, {0, 380}, WHITE);
         ui_text(reinterpret_cast<uintptr_t>(&fps_text),&fps_text, {0, 0}, YELLOW);
 
-        bool result = ui_button(INVALID_ID_64, reinterpret_cast<uintptr_t>(&test), {100, 100});
+        ui_dropdown(INVALID_ID_64,reinterpret_cast<uintptr_t>(&dropdown),{100,100});
+
+        bool result = ui_button(reinterpret_cast<uintptr_t>(&dropdown), reinterpret_cast<uintptr_t>(&test), {100, 120});
         if (result)
         {
             DDEBUG("Button pressed");
@@ -234,6 +243,7 @@ int main()
         frames++;
 
         input_update(frame_elapsed_time);
+        arena_reset_arena(frame_arena);
     }
     application_shutdown();
 }

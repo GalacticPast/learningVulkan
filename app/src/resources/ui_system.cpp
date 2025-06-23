@@ -7,6 +7,7 @@
 #include "defines.hpp"
 #include "main.hpp"
 #include "math/dmath.hpp"
+#include "memory/arenas.hpp"
 #include "resources/font_system.hpp"
 #include "resources/geometry_system.hpp"
 #include "resources/resource_types.hpp"
@@ -46,7 +47,8 @@ struct ui_system_state
 
 static ui_system_state *ui_sys_state_ptr;
 static bool             _insert_element(u64 parent_id, u64 id, ui_element *root, ui_element *element);
-static bool             ui_system_generate_quad_config(f32 width, f32 height, f32 posx, f32 posy, vec4 color);
+static void             _generate_element_geometry(ui_element *element);
+static bool             _generate_quad_config(vec2 position, vec2 dimensions, vec4 color);
 
 bool ui_system_initialize(arena *system_arena, arena *resource_arena)
 {
@@ -55,15 +57,14 @@ bool ui_system_initialize(arena *system_arena, arena *resource_arena)
 
     ui_sys_state_ptr =
         static_cast<ui_system_state *>(dallocate(system_arena, sizeof(ui_system_state), MEM_TAG_APPLICATION));
-    ui_sys_state_ptr->arena = resource_arena;
-    ui_sys_state_ptr->root.nodes.c_init(resource_arena);
-    ui_sys_state_ptr->root.id     = 0;
+    ui_sys_state_ptr->arena       = resource_arena;
     ui_sys_state_ptr->geometry_id = INVALID_ID_64;
     ui_sys_state_ptr->ui_geometry_config.vertices =
         dallocate(resource_arena, sizeof(vertex_2D) * MB(1), MEM_TAG_GEOMETRY);
     ui_sys_state_ptr->ui_geometry_config.indices =
         static_cast<u32 *>(dallocate(resource_arena, sizeof(u32) * MB(1), MEM_TAG_GEOMETRY));
-    ui_sys_state_ptr->system_font = font_system_get_system_font();
+    ui_sys_state_ptr->system_font             = font_system_get_system_font();
+    ui_sys_state_ptr->ui_geometry_config.type = GEO_TYPE_2D;
 
     return true;
 }
@@ -137,13 +138,13 @@ bool _check_if_hot(u64 id, box a, box b)
 bool _insert_element(u64 parent_id, u64 id, ui_element *root, ui_element *element)
 {
     DASSERT(id != INVALID_ID);
-    //INFO: this should never happen anyways.
-    if(root == nullptr)
+    // INFO: this should never happen anyways.
+    if (root == nullptr)
     {
         return false;
     }
 
-    if (parent_id == INVALID_ID)
+    if (parent_id == INVALID_ID_64)
     {
         root->nodes.push_back(*element);
         return true;
@@ -159,10 +160,10 @@ bool _insert_element(u64 parent_id, u64 id, ui_element *root, ui_element *elemen
         }
     }
 
-    for(u32 i = 0 ; i < size ; i++)
+    for (u32 i = 0; i < size; i++)
     {
-        bool res = _insert_element(parent_id,id,&root->nodes[i], element);
-        if(res)
+        bool res = _insert_element(parent_id, id, &root->nodes[i], element);
+        if (res)
         {
             return true;
         }
@@ -170,34 +171,35 @@ bool _insert_element(u64 parent_id, u64 id, ui_element *root, ui_element *elemen
     return false;
 }
 
-bool ui_button(u64 parent_id, u64 id, vec2 position)
+static void _generate_element_geometry(ui_element *element)
 {
-    DASSERT(ui_sys_state_ptr);
+    if (element == nullptr)
+    {
+        return;
+    }
 
-    bool return_res = _check_if_pressed(id);
+    vec2 dimensions = vec2();
+    u32  length     = element->nodes.size();
 
-    u32 padding = 3;
+    for (u32 i = 0; i < length; i++)
+    {
+        _generate_element_geometry(&element->nodes[i]);
+    }
 
-    ui_element button{};
-    button.id       = id;
-    button.position = position;
-    button.color    = DARKBLUE;
-    button.text     = "Button";
-    button.init(ui_sys_state_ptr->arena);
+    for (u32 i = 0; i < length; i++)
+    {
+        dimensions.x += element->nodes[i].dimensions.x;
+        dimensions.y  = DMAX(element->nodes[i].dimensions.y, dimensions.y);
+    }
 
-    _insert_element(parent_id, id, &ui_sys_state_ptr->root, &button);
-
-    s32 x;
-    s32 y;
-    input_get_mouse_position(&x, &y);
-
-    dstring text = "Button";
+    u32     strlen = element->text.str_len;
+    if (strlen > 0)
     {
 
-        u32              strlen = text.str_len;
-        font_glyph_data *glyphs = ui_sys_state_ptr->system_font->glyphs;
-
-        u32 hash = INVALID_ID;
+        dstring text   = element->text;
+        font_glyph_data *glyphs  = ui_sys_state_ptr->system_font->glyphs;
+        u32              padding = 0;
+        u32              hash    = INVALID_ID;
 
         u32 txt_width = 0;
 
@@ -210,8 +212,8 @@ bool ui_button(u64 parent_id, u64 id, vec2 position)
             txt_width += glyphs[hash].xadvance;
         }
         // INFO: 20 because its the system font size;
-        s32 posx = position.x - padding;
-        s32 posy = position.y - padding;
+        s32 posx = element->position.x - padding;
+        s32 posy = element->position.y - padding;
 
         if (posx < 0)
         {
@@ -221,33 +223,85 @@ bool ui_button(u64 parent_id, u64 id, vec2 position)
         {
             posy = 0;
         }
+        s32 x, y = 0;
+        input_get_mouse_position(&x, &y);
 
         box box1 = {{(float)posx, (float)posy}, {(float)txt_width + padding, 20.0f + padding}};
         box box2 = {{(float)x, (float)y}, {1, 1}};
 
         vec4 color  = DARKBLUE;
-        bool is_hot = _check_if_hot(id, box1, box2);
+        bool is_hot = _check_if_hot(element->id, box1, box2);
         if (is_hot)
         {
             color = GRAY;
         }
 
-        ui_system_generate_quad_config(txt_width + padding, 20 + padding, posx, posy, color);
-    }
+        dimensions.x = txt_width + padding;
+        u32 max      = 20.0f + padding;
+        dimensions.y = DMAX(max, dimensions.y);
 
-    ui_text(id, &text, {position.x, position.y}, WHITE);
+        _generate_quad_config(element->position, dimensions, color);
+        element->dimensions = dimensions;
+
+        ui_text(element->id, &element->text, element->position, color);
+    }
+    element->nodes.~darray();
+
+    return;
+}
+
+bool ui_dropdown(u64 parent_id, u64 id, vec2 position)
+{
+    DASSERT(ui_sys_state_ptr);
+
+    bool return_res = _check_if_pressed(id);
+
+    u32 padding = 3;
+
+    ui_element button{};
+    button.id         = id;
+    button.position   = position;
+    button.color      = VIOLET;
+    button.text       = "DropDown";
+    button.dimensions = vec2();
+    button.init(ui_sys_state_ptr->arena);
+
+    _insert_element(parent_id, id, &ui_sys_state_ptr->root, &button);
+    return return_res;
+}
+
+bool ui_button(u64 parent_id, u64 id, vec2 position)
+{
+    DASSERT(ui_sys_state_ptr);
+
+    bool return_res = _check_if_pressed(id);
+
+    u32 padding = 3;
+
+    ui_element button{};
+    button.id         = id;
+    button.position   = position;
+    button.color      = DARKBLUE;
+    button.text       = "Button";
+    button.dimensions = vec2();
+    button.init(ui_sys_state_ptr->arena);
+
+    _insert_element(parent_id, id, &ui_sys_state_ptr->root, &button);
 
     return return_res;
 }
 
-bool ui_system_generate_quad_config(f32 width, f32 height, f32 posx, f32 posy, vec4 color)
+bool _generate_quad_config(vec2 position, vec2 dimensions, vec4 color)
 {
-    if (width == 0)
+    f32 width  = 0;
+    f32 height = 0;
+
+    if (dimensions.x == 0)
     {
         DWARN("Width must be nonzero. Defaulting to one.");
         width = 1.0f;
     }
-    if (height == 0)
+    if (dimensions.y == 0)
     {
         DWARN("Height must be nonzero. Defaulting to one.");
         height = 1.0f;
@@ -264,19 +318,19 @@ bool ui_system_generate_quad_config(f32 width, f32 height, f32 posx, f32 posy, v
 
     u32 local_offset = ui_sys_state_ptr->local_index_offset;
 
-    vertices[vert_ind].position    = {posx, posy};
+    vertices[vert_ind].position    = {position.x, position.y};
     vertices[vert_ind].color       = color;
     vertices[vert_ind++].tex_coord = {0.0f, 0.0f};
 
-    vertices[vert_ind].position    = {posx + width, posy};
+    vertices[vert_ind].position    = {position.x + width, position.y};
     vertices[vert_ind].color       = color;
     vertices[vert_ind++].tex_coord = {0.0f, 0.0f};
 
-    vertices[vert_ind].position    = {posx, posy + height};
+    vertices[vert_ind].position    = {position.x, position.y + height};
     vertices[vert_ind].color       = color;
     vertices[vert_ind++].tex_coord = {0.0f, 0.0f};
 
-    vertices[vert_ind].position    = {width + posx, posy + height};
+    vertices[vert_ind].position    = {width + position.x, position.y + height};
     vertices[vert_ind].color       = color;
     vertices[vert_ind++].tex_coord = {0.0f, 0.0f};
 
@@ -417,7 +471,7 @@ bool ui_text(u64 id, dstring *text, vec2 position, vec4 color)
         s32 x, y = 0;
         input_get_mouse_position(&x, &y);
 
-        box box1 = {position, {pos.x, 20.0f}};
+        box box1 = {position, {pos.x - position.x, 20.0f}};
         box box2 = {{(float)x, (float)y}, {1, 1}};
 
         bool is_hot = _check_if_hot(id, box1, box2);
@@ -468,9 +522,10 @@ bool ui_text(u64 id, dstring *text, vec2 position, vec4 color)
 
 u64 ui_system_flush_geometries()
 {
-    ui_sys_state_ptr->ui_geometry_config.type = GEO_TYPE_2D;
 
     u64 id = ui_sys_state_ptr->geometry_id;
+
+    _generate_element_geometry(&ui_sys_state_ptr->root);
 
     if (id == INVALID_ID_64)
     {
@@ -481,6 +536,8 @@ u64 ui_system_flush_geometries()
     {
         geometry_system_update_geometry(&ui_sys_state_ptr->ui_geometry_config, id);
     }
+
+    ui_sys_state_ptr->root.init(ui_sys_state_ptr->arena);
     ui_sys_state_ptr->local_index_offset              = 0;
     ui_sys_state_ptr->ui_geometry_config.vertex_count = 0;
     ui_sys_state_ptr->ui_geometry_config.index_count  = 0;

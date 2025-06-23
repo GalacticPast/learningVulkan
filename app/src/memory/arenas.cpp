@@ -126,7 +126,6 @@ void arena_reset_arena(arena *in_arena)
 {
     DASSERT(in_arena);
     in_arena->free_ptr = in_arena->start_ptr;
-    dzero_memory(in_arena->start_ptr, in_arena->total_size);
     in_arena->allocated = 0;
 }
 

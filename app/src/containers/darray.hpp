@@ -53,7 +53,7 @@ template <typename T> darray<T>::darray()
     element_size = sizeof(T);
     capacity     = 0;
     length       = 0;
-    data         = 0;
+    data         = nullptr;
     arena        = nullptr;
     //DTRACE("This doesnt do anything, this should not be called by anyone except the compiler.");
 }
@@ -62,7 +62,7 @@ template <typename T> darray<T>::~darray()
     element_size = 0;
     capacity     = 0;
     length       = 0;
-    data         = 0;
+    data         = nullptr;
     arena        = nullptr;
     //DTRACE("This doesnt do anything, this should not be called by anyone except the compiler.");
 }
