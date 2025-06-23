@@ -18,9 +18,10 @@ layout (set = 1 , binding = 0) uniform sampler2D font_atlas;
 
 void main()
 {
+    bool no_tex = all(equal(in_dto.tex_coord,vec2(0,0)));
     float alpha = texture(font_atlas, in_dto.tex_coord).r;
 
-    if(mode == 1)
+    if(no_tex || mode == 1)
     {
         out_color = in_dto.color;
     }

@@ -11,11 +11,11 @@ struct vec2
         {
             union {
                 // The first element.
-                f32 x, r, s, u;
+                f32 x, r, s, u, w;
             };
             union {
                 // The second element.
-                f32 y, g, t, v;
+                f32 y, g, t, v, h;
             };
         };
     };

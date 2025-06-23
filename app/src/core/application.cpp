@@ -17,6 +17,7 @@
 #include "resources/material_system.hpp"
 #include "resources/shader_system.hpp"
 #include "resources/texture_system.hpp"
+#include "resources/ui_system.hpp"
 
 static application_state *app_state_ptr;
 
@@ -88,6 +89,9 @@ bool application_initialize(application_state *state, application_config *config
     DASSERT(result == true);
 
     result = geometry_system_initialize(system_arena, resource_system_arena);
+    DASSERT(result == true);
+
+    result = ui_system_initialize(system_arena, resource_system_arena);
     DASSERT(result == true);
 
     u64 buffer_usg_mem_requirements = 0;

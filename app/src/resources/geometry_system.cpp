@@ -13,7 +13,6 @@
 #include "math/dmath.hpp"
 
 #include "memory/arenas.hpp"
-#include "platform/platform.hpp"
 #include "renderer/vulkan/vulkan_backend.hpp"
 #include "resources/font_system.hpp"
 #include "resources/material_system.hpp"
@@ -28,15 +27,6 @@ struct geometry_system_state
     dhashtable<geometry> hashtable;
     u64                  default_geo_id;
     arena               *arena;
-
-    // HACK:
-
-    u64             font_geometry_id;
-    u32             vertex_offset_ind = INVALID_ID;
-    u32             index_offset_ind  = INVALID_ID;
-    geometry_config font_geometry_config;
-
-    font_data *system_font;
 };
 
 static geometry_system_state *geo_sys_state_ptr;
@@ -62,17 +52,6 @@ bool geometry_system_initialize(arena *system_arena, arena *resource_arena)
     geo_sys_state_ptr->hashtable.is_non_resizable = true;
     geo_sys_state_ptr->loaded_geometry.reserve(system_arena);
     geo_sys_state_ptr->arena = resource_arena;
-
-    {
-        geo_sys_state_ptr->vertex_offset_ind = 0;
-        geo_sys_state_ptr->index_offset_ind  = 0;
-        geo_sys_state_ptr->font_geometry_id           = INVALID_ID_64;
-        geo_sys_state_ptr->font_geometry_config.vertices =
-            dallocate(resource_arena, sizeof(vertex_2D) * MB(1), MEM_TAG_GEOMETRY);
-        geo_sys_state_ptr->font_geometry_config.indices =
-            static_cast<u32 *>(dallocate(resource_arena, sizeof(u32) * MB(1), MEM_TAG_GEOMETRY));
-        geo_sys_state_ptr->system_font = font_system_get_system_font();
-    }
 
     geometry_system_create_default_geometry();
     return true;
@@ -1467,188 +1446,4 @@ static void calculate_tangents(geometry_config *config)
         vertices[i1].tangent = t4;
         vertices[i2].tangent = t4;
     }
-}
-
-bool geometry_system_generate_text_geometry(dstring *text, vec2 position, vec4 color)
-{
-    DASSERT(text);
-    u32              length       = INVALID_ID;
-    font_glyph_data *glyphs       = geo_sys_state_ptr->system_font->glyphs;
-    u32              atlas_height = geo_sys_state_ptr->system_font->atlas_height;
-
-    DASSERT(glyphs);
-
-    u32 scr_width;
-    u32 scr_height;
-
-    platform_get_window_dimensions(&scr_width, &scr_height);
-
-    float pixel_scale = 2.0f / scr_width;
-
-    u32  strlen = text->str_len;
-    u32  hash   = 0;
-    vec2 pos    = position;
-
-    vertex_2D q0;
-    vertex_2D q1;
-    vertex_2D q2;
-    vertex_2D q3;
-
-    q0.color = color;
-    q1.color = color;
-    q2.color = color;
-    q3.color = color;
-
-    vertex_2D *vertices = static_cast<vertex_2D *>(geo_sys_state_ptr->font_geometry_config.vertices);
-    u32       *indices  = geo_sys_state_ptr->font_geometry_config.indices;
-
-    // this is the ptr to the next starting block
-    u32 vert_ind = geo_sys_state_ptr->vertex_offset_ind;
-
-    // this is the ptr to the next starting block
-    u32 index_ind = geo_sys_state_ptr->font_geometry_config.index_count;
-
-    u32 local_offset = geo_sys_state_ptr->index_offset_ind;
-    u32 padding      = 3;
-
-    float x = F32_MIN;
-    float y = F32_MAX;
-
-    for (u32 i = 0; i < strlen; i++)
-    {
-        char ch = (*text)[i];
-        if (ch == '\0')
-            break;
-        hash        = ch - 32;
-        float x_off = glyphs[hash].xoff;
-        float y_off = glyphs[hash].yoff;
-
-        x = DMAX(x, x_off);
-        y = DMIN(y, y_off);
-    }
-
-    float baseline = position.y - y;
-
-    for (u32 i = 0; i < strlen; i++)
-    {
-        char ch = (*text)[i];
-        if (ch == '\0')
-            break;
-        hash = ch - 32;
-
-        float u0 = (glyphs[hash].x0 / (float)atlas_height);
-        float v0 = -(glyphs[hash].y0 / (float)atlas_height);
-        float u1 = (glyphs[hash].x1 / (float)atlas_height);
-        float v1 = -(glyphs[hash].y1 / (float)atlas_height);
-
-        float width  = (glyphs[hash].x1 - glyphs[hash].x0);
-        float height = (glyphs[hash].y1 - glyphs[hash].y0);
-
-        float xoff = glyphs[hash].xoff;
-        float yoff = glyphs[hash].yoff;
-
-        float x_pos = pos.x + xoff;
-        float y_pos = baseline + yoff;
-
-        q0.tex_coord = {u0, v0}; // Top-left
-        q1.tex_coord = {u1, v0}; // Top-right
-        q2.tex_coord = {u0, v1}; // Bottom-left
-        q3.tex_coord = {u1, v1}; // Bottom-right
-
-        q0.position = {x_pos, y_pos};
-        q1.position = {x_pos + width, y_pos};
-        q2.position = {x_pos, y_pos + height};
-        q3.position = {x_pos + width, y_pos + height};
-
-        vertices[vert_ind++] = q2;
-        vertices[vert_ind++] = q0;
-        vertices[vert_ind++] = q1;
-        vertices[vert_ind++] = q3;
-
-        indices[index_ind++] = local_offset + 0;
-        indices[index_ind++] = local_offset + 1;
-        indices[index_ind++] = local_offset + 2;
-
-        indices[index_ind++] = local_offset + 0;
-        indices[index_ind++] = local_offset + 2;
-        indices[index_ind++] = local_offset + 3;
-
-        // advacnce the index offset by 4 so that the next quad has the proper offset;
-        local_offset += 4;
-
-        pos.x += glyphs[hash].xadvance;
-    }
-
-    // INFO: creating a semi-transparent bounding box for the entire text
-    {
-
-        float x_pos = position.x;
-        float y_pos = position.y;
-
-        q0.color = color; // Top-left
-        q1.color = color; // Top-right
-        q2.color = color; // Bottom-left
-        q3.color = color; // Bottom-right
-
-        q0.color.a = 0.5; // Top-left
-        q1.color.a = 0.5; // Top-right
-        q2.color.a = 0.5; // Bottom-left
-        q3.color.a = 0.5; // Bottom-right
-
-        q0.tex_coord = {0, 0}; // Top-left
-        q1.tex_coord = {0, 0}; // Top-right
-        q2.tex_coord = {0, 0}; // Bottom-left
-        q3.tex_coord = {0, 0}; // Bottom-right
-
-        q0.position = {x_pos, y_pos};
-        q1.position = {x_pos + pos.x, y_pos};
-        q2.position = {x_pos, y_pos + 20};
-        q3.position = {x_pos + pos.x, y_pos + 20};
-
-        vertices[vert_ind++] = q2;
-        vertices[vert_ind++] = q0;
-        vertices[vert_ind++] = q1;
-        vertices[vert_ind++] = q3;
-
-        indices[index_ind++] = local_offset + 0;
-        indices[index_ind++] = local_offset + 1;
-        indices[index_ind++] = local_offset + 2;
-
-        indices[index_ind++] = local_offset + 0;
-        indices[index_ind++] = local_offset + 2;
-        indices[index_ind++] = local_offset + 3;
-
-        // advacnce the index offset by 4 so that the next quad has the proper offset;
-        local_offset += 4;
-    }
-
-    geo_sys_state_ptr->vertex_offset_ind                 = vert_ind;
-    geo_sys_state_ptr->index_offset_ind                  = local_offset;
-    geo_sys_state_ptr->font_geometry_config.vertex_count = vert_ind;
-    geo_sys_state_ptr->font_geometry_config.index_count  = index_ind;
-
-    return true;
-}
-
-u64 geometry_system_flush_text_geometries()
-{
-    geo_sys_state_ptr->font_geometry_config.type = GEO_TYPE_2D;
-
-    u64 id = geo_sys_state_ptr->font_geometry_id;
-
-    if (id == INVALID_ID_64)
-    {
-        id                         = geometry_system_create_geometry(&geo_sys_state_ptr->font_geometry_config, false);
-        geo_sys_state_ptr->font_geometry_id = id;
-    }
-    else
-    {
-        geometry_system_update_geometry(&geo_sys_state_ptr->font_geometry_config, id);
-    }
-    geo_sys_state_ptr->index_offset_ind                  = 0;
-    geo_sys_state_ptr->vertex_offset_ind                 = 0;
-    geo_sys_state_ptr->font_geometry_config.vertex_count = 0;
-    geo_sys_state_ptr->font_geometry_config.index_count  = 0;
-
-    return id;
 }

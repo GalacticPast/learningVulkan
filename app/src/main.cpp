@@ -6,7 +6,6 @@
 #include "core/input.hpp"
 #include "core/logger.hpp"
 
-
 #include "defines.hpp"
 
 #include "math/dmath.hpp"
@@ -19,6 +18,7 @@
 #include "resources/material_system.hpp"
 #include "resources/resource_types.hpp"
 #include "resources/shader_system.hpp"
+#include "resources/ui_system.hpp"
 
 void update_camera(scene_global_uniform_buffer_object *ubo, ui_global_uniform_buffer_object *ui_ubo,
                    light_global_uniform_buffer_object *lbo, f64 start_time);
@@ -159,8 +159,9 @@ int main()
     s32 mouse_y = 0;
 
     dstring mouse;
-
     dstring camera_pos;
+    dstring fps_text;
+
     while (app_state.is_running)
     {
         ZoneScoped;
@@ -181,15 +182,22 @@ int main()
                                                 triangle.scene_ubo.camera_pos.z);
 
         input_get_mouse_position(&mouse_x, &mouse_y);
-        mouse.str_len = string_copy_format(mouse.string, "Cursor_pos: x: %d y: %d", 0, mouse_x, mouse_y);
+        mouse.str_len    = string_copy_format(mouse.string, "Cursor_pos: x: %d y: %d", 0, mouse_x, mouse_y);
+        fps_text.str_len = string_copy_format(fps_text.string, "FPS: %d", 0, fps);
 
-        geometry_system_generate_text_geometry(&mouse, {0, 440}, RED);
-        geometry_system_generate_text_geometry(&camera_pos, {0, 500}, GREEN);
+        ui_text(&mouse, {0, 400}, GREEN);
+        ui_text(&camera_pos, {0, 380}, WHITE);
+        ui_text(&fps_text, {0, 0}, YELLOW);
 
-        u64 quad_id          = geometry_system_flush_text_geometries();
+        bool result = ui_button(reinterpret_cast<uintptr_t>(&test), {100, 100});
+        if (result)
+        {
+            DDEBUG("Button pressed");
+        }
+
+        u64 quad_id          = ui_system_flush_geometries();
         geos_2D[0]           = geometry_system_get_geometry(quad_id);
         geos_2D[0]->material = material_system_get_from_name(&font_atlas);
-
 
         shader_system_bind_shader(def_material_shader);
         shader_system_update_per_frame(&triangle.scene_ubo, &triangle.light_ubo);
@@ -205,7 +213,6 @@ int main()
 
         renderer_draw_frame(&triangle);
 
-
         // Figure out how long the frame took and, if below
         f64 frame_end_time    = platform_get_absolute_time();
         frame_elapsed_time    = frame_end_time - frame_start_time;
@@ -220,13 +227,13 @@ int main()
                 platform_sleep(remaining_ms - 1);
             }
         }
+
         frame_end_time     = platform_get_absolute_time();
         frame_elapsed_time = frame_end_time - frame_start_time;
         fps                = 1 / (frame_elapsed_time);
         frames++;
 
         input_update(frame_elapsed_time);
-
     }
     application_shutdown();
 }

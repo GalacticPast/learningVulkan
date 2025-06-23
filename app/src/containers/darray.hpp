@@ -55,7 +55,7 @@ template <typename T> darray<T>::darray()
     length       = 0;
     data         = 0;
     arena        = nullptr;
-    DTRACE("This doesnt do anything, this should not be called by anyone except the compiler.");
+    //DTRACE("This doesnt do anything, this should not be called by anyone except the compiler.");
 }
 template <typename T> darray<T>::~darray()
 {
@@ -64,7 +64,7 @@ template <typename T> darray<T>::~darray()
     length       = 0;
     data         = 0;
     arena        = nullptr;
-    DTRACE("This doesnt do anything, this should not be called by anyone except the compiler.");
+    //DTRACE("This doesnt do anything, this should not be called by anyone except the compiler.");
 }
 
 template <typename T> void darray<T>::c_init(struct arena *in_arena)

@@ -7,6 +7,7 @@ bool geometry_system_shutdowm();
 
 // call this first
 u64 geometry_system_create_geometry(geometry_config *config, bool use_name);
+bool geometry_system_update_geometry(geometry_config *config, u64 id);
 
 geometry_config* geometry_system_generate_config(dstring obj_file_name);
 
@@ -31,7 +32,4 @@ geometry_config geometry_system_generate_plane_config(f32 width, f32 height, u32
 geometry_config geometry_system_generate_quad_config(f32 width, f32 height,f32 posx, f32 posy, dstring *name);
 
 void geometry_system_copy_config(geometry_config *dst_config, const geometry_config *src_config);
-
-bool geometry_system_generate_text_geometry(dstring* text, vec2 position, vec4 color);
-u64 geometry_system_flush_text_geometries();
 
