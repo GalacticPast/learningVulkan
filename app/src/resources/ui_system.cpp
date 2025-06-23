@@ -15,12 +15,17 @@ struct ui_element
 {
     u64 id = INVALID_ID_64;
 
-    dstring string;
+    dstring text;
     vec2    position; // absolute position
-    vec4    color;
     vec2    dimensions;
+    vec4    color;
 
     darray<ui_element> nodes; // aka children
+
+    void init(arena *arena)
+    {
+        nodes.c_init(arena);
+    }
 };
 
 struct ui_system_state
@@ -40,9 +45,8 @@ struct ui_system_state
 };
 
 static ui_system_state *ui_sys_state_ptr;
-static u64              _generate_id();
+static bool             _insert_element(u64 parent_id, u64 id, ui_element *root, ui_element *element);
 static bool             ui_system_generate_quad_config(f32 width, f32 height, f32 posx, f32 posy, vec4 color);
-#define CURSOR_AABB {{(float)x, (float)y}, {5, 5}}
 
 bool ui_system_initialize(arena *system_arena, arena *resource_arena)
 {
@@ -64,16 +68,15 @@ bool ui_system_initialize(arena *system_arena, arena *resource_arena)
     return true;
 }
 
-u64 _generate_id()
+bool ui_system_set_arena(arena *arena)
 {
-    // SplitMix64 (used in PCG and others)
-    // -> https://github.com/indiesoftby/defold-splitmix64?tab=readme-ov-file
-    u64 x  = drandom_s64();
-    x     += 0x9e3779b97f4a7c15;
-    x      = (x ^ (x >> 30)) * 0xbf58476d1ce4e5b9;
-    x      = (x ^ (x >> 27)) * 0x94d049bb133111eb;
-    return x ^ (x >> 31);
+    DASSERT(arena);
+    ui_sys_state_ptr->arena = arena;
+    // HACK:
+    ui_sys_state_ptr->root.init(arena);
+    return true;
 }
+
 // box1 top left corner
 // box2 top left corner
 struct box
@@ -131,7 +134,43 @@ bool _check_if_hot(u64 id, box a, box b)
     return is_hot;
 }
 
-bool ui_button(u64 id, vec2 position)
+bool _insert_element(u64 parent_id, u64 id, ui_element *root, ui_element *element)
+{
+    DASSERT(id != INVALID_ID);
+    //INFO: this should never happen anyways.
+    if(root == nullptr)
+    {
+        return false;
+    }
+
+    if (parent_id == INVALID_ID)
+    {
+        root->nodes.push_back(*element);
+        return true;
+    }
+
+    u32 size = root->nodes.size();
+    for (u32 i = 0; i < size; i++)
+    {
+        if (root->nodes[i].id == parent_id)
+        {
+            root->nodes[i].nodes.push_back(*element);
+            return true;
+        }
+    }
+
+    for(u32 i = 0 ; i < size ; i++)
+    {
+        bool res = _insert_element(parent_id,id,&root->nodes[i], element);
+        if(res)
+        {
+            return true;
+        }
+    }
+    return false;
+}
+
+bool ui_button(u64 parent_id, u64 id, vec2 position)
 {
     DASSERT(ui_sys_state_ptr);
 
@@ -140,7 +179,13 @@ bool ui_button(u64 id, vec2 position)
     u32 padding = 3;
 
     ui_element button{};
-    button.id = id;
+    button.id       = id;
+    button.position = position;
+    button.color    = DARKBLUE;
+    button.text     = "Button";
+    button.init(ui_sys_state_ptr->arena);
+
+    _insert_element(parent_id, id, &ui_sys_state_ptr->root, &button);
 
     s32 x;
     s32 y;
@@ -364,7 +409,6 @@ bool ui_text(u64 id, dstring *text, vec2 position, vec4 color)
         q2.tex_coord = {0, 0}; // Bottom-left
         q3.tex_coord = {0, 0}; // Bottom-right
 
-
         q0.position = {x_pos, y_pos};
         q1.position = {pos.x, y_pos};
         q2.position = {x_pos, y_pos + 20};
@@ -378,13 +422,12 @@ bool ui_text(u64 id, dstring *text, vec2 position, vec4 color)
 
         bool is_hot = _check_if_hot(id, box1, box2);
 
-
         q0.color = color; // Top-left
         q1.color = color; // Top-right
         q2.color = color; // Bottom-left
         q3.color = color; // Bottom-right
 
-        if(is_hot)
+        if (is_hot)
         {
             q0.color.a = 0.5; // Top-left
             q1.color.a = 0.5; // Top-right
@@ -414,7 +457,6 @@ bool ui_text(u64 id, dstring *text, vec2 position, vec4 color)
 
         // advacnce the index offset by 4 so that the next quad has the proper offset;
         local_offset += 4;
-
     }
 
     ui_sys_state_ptr->local_index_offset              = local_offset;
