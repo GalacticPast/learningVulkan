@@ -189,7 +189,7 @@ int main()
         ui_text(reinterpret_cast<uintptr_t>(&camera_pos),&camera_pos, {0, 380}, WHITE);
         ui_text(reinterpret_cast<uintptr_t>(&fps_text),&fps_text, {0, 0}, YELLOW);
 
-        bool result = ui_button(reinterpret_cast<uintptr_t>(&test), {100, 100});
+        bool result = ui_button(INVALID_ID_64, reinterpret_cast<uintptr_t>(&test), {100, 100});
         if (result)
         {
             DDEBUG("Button pressed");
