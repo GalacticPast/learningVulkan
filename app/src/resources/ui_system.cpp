@@ -42,6 +42,7 @@ struct ui_system_state
 static ui_system_state *ui_sys_state_ptr;
 static u64              _generate_id();
 static bool             ui_system_generate_quad_config(f32 width, f32 height, f32 posx, f32 posy, vec4 color);
+#define CURSOR_AABB {{(float)x, (float)y}, {5, 5}}
 
 bool ui_system_initialize(arena *system_arena, arena *resource_arena)
 {
@@ -87,15 +88,11 @@ bool _check_collision(box a, box b)
             a.position.y < b.position.y + b.dimensions.h && a.position.y + a.dimensions.h > b.position.y);
 }
 
-bool ui_button(u64 id, vec2 position)
+// it will also transition it
+bool _check_if_pressed(u64 id)
 {
-    DASSERT(ui_sys_state_ptr);
-
     bool result     = false;
     bool return_res = false;
-
-    u32 padding = 3;
-
     if (ui_sys_state_ptr->active_id == id)
     {
         result = input_is_button_up(BUTTON_LEFT);
@@ -117,29 +114,37 @@ bool ui_button(u64 id, vec2 position)
             ui_sys_state_ptr->active_id = id;
         }
     }
+    return return_res;
+}
+
+bool _check_if_hot(u64 id, box a, box b)
+{
     // check the bounding box of the curosr against the bounding box of the button
     bool is_hot = false;
     {
-        s32 x;
-        s32 y;
-        input_get_mouse_position(&x, &y);
-        box box1 = {position, {60, 30}};
-        box box2 = {{(float)x, (float)y}, {5, 5}};
-        if (_check_collision(box1, box2))
+        if (_check_collision(a, b))
         {
             ui_sys_state_ptr->hot_id = id;
             is_hot                   = true;
         }
     }
+    return is_hot;
+}
+
+bool ui_button(u64 id, vec2 position)
+{
+    DASSERT(ui_sys_state_ptr);
+
+    bool return_res = _check_if_pressed(id);
+
+    u32 padding = 3;
 
     ui_element button{};
     button.id = id;
 
-    vec4 color = DARKBLUE;
-    if (is_hot)
-    {
-        color = GRAY;
-    }
+    s32 x;
+    s32 y;
+    input_get_mouse_position(&x, &y);
 
     dstring text = "Button";
     {
@@ -172,10 +177,20 @@ bool ui_button(u64 id, vec2 position)
             posy = 0;
         }
 
+        box box1 = {{(float)posx, (float)posy}, {(float)txt_width + padding, 20.0f + padding}};
+        box box2 = {{(float)x, (float)y}, {1, 1}};
+
+        vec4 color  = DARKBLUE;
+        bool is_hot = _check_if_hot(id, box1, box2);
+        if (is_hot)
+        {
+            color = GRAY;
+        }
+
         ui_system_generate_quad_config(txt_width + padding, 20 + padding, posx, posy, color);
     }
 
-    ui_text(&text, {position.x, position.y}, WHITE);
+    ui_text(id, &text, {position.x, position.y}, WHITE);
 
     return return_res;
 }
@@ -235,7 +250,7 @@ bool ui_system_generate_quad_config(f32 width, f32 height, f32 posx, f32 posy, v
     return true;
 }
 
-bool ui_text(dstring *text, vec2 position, vec4 color)
+bool ui_text(u64 id, dstring *text, vec2 position, vec4 color)
 {
     DASSERT(text);
     u32              length       = INVALID_ID;
@@ -336,6 +351,70 @@ bool ui_text(dstring *text, vec2 position, vec4 color)
         local_offset += 4;
 
         pos.x += glyphs[hash].xadvance;
+    }
+
+    // INFO: creating a semi-transparent bounding box for the entire text
+    {
+
+        float x_pos = position.x;
+        float y_pos = position.y;
+
+        q0.tex_coord = {0, 0}; // Top-left
+        q1.tex_coord = {0, 0}; // Top-right
+        q2.tex_coord = {0, 0}; // Bottom-left
+        q3.tex_coord = {0, 0}; // Bottom-right
+
+
+        q0.position = {x_pos, y_pos};
+        q1.position = {pos.x, y_pos};
+        q2.position = {x_pos, y_pos + 20};
+        q3.position = {pos.x, y_pos + 20};
+
+        s32 x, y = 0;
+        input_get_mouse_position(&x, &y);
+
+        box box1 = {position, {pos.x, 20.0f}};
+        box box2 = {{(float)x, (float)y}, {1, 1}};
+
+        bool is_hot = _check_if_hot(id, box1, box2);
+
+
+        q0.color = color; // Top-left
+        q1.color = color; // Top-right
+        q2.color = color; // Bottom-left
+        q3.color = color; // Bottom-right
+
+        if(is_hot)
+        {
+            q0.color.a = 0.5; // Top-left
+            q1.color.a = 0.5; // Top-right
+            q2.color.a = 0.5; // Bottom-left
+            q3.color.a = 0.5; // Bottom-right
+        }
+        else
+        {
+            q0.color.a = 0;
+            q1.color.a = 0;
+            q2.color.a = 0;
+            q3.color.a = 0;
+        }
+
+        vertices[vert_ind++] = q2;
+        vertices[vert_ind++] = q0;
+        vertices[vert_ind++] = q1;
+        vertices[vert_ind++] = q3;
+
+        indices[index_ind++] = local_offset + 0;
+        indices[index_ind++] = local_offset + 1;
+        indices[index_ind++] = local_offset + 2;
+
+        indices[index_ind++] = local_offset + 0;
+        indices[index_ind++] = local_offset + 2;
+        indices[index_ind++] = local_offset + 3;
+
+        // advacnce the index offset by 4 so that the next quad has the proper offset;
+        local_offset += 4;
+
     }
 
     ui_sys_state_ptr->local_index_offset              = local_offset;

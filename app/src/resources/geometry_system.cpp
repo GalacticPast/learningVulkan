@@ -14,7 +14,6 @@
 
 #include "memory/arenas.hpp"
 #include "renderer/vulkan/vulkan_backend.hpp"
-#include "resources/font_system.hpp"
 #include "resources/material_system.hpp"
 #include "resources/resource_types.hpp"
 
@@ -1447,3 +1446,4 @@ static void calculate_tangents(geometry_config *config)
         vertices[i2].tangent = t4;
     }
 }
+
