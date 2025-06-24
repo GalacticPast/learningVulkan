@@ -1,4 +1,3 @@
-#include "ui_system.hpp"
 #include "containers/darray.hpp"
 #include "core/dasserts.hpp"
 #include "core/dmemory.hpp"
@@ -11,15 +10,24 @@
 #include "resources/font_system.hpp"
 #include "resources/geometry_system.hpp"
 #include "resources/resource_types.hpp"
+#include "ui_system.hpp"
+
+enum ui_element_type
+{
+    UI_UNKNOWN,
+    UI_BUTTON,
+    UI_DROPDOWN,
+};
 
 struct ui_element
 {
     u64 id = INVALID_ID_64;
 
-    dstring text;
-    vec2    position; // absolute position
-    vec2    dimensions;
-    vec4    color;
+    ui_element_type type;
+    dstring         text;
+    vec2            position; // absolute position
+    vec2            dimensions;
+    vec4            color;
 
     darray<ui_element> nodes; // aka children
 
@@ -188,15 +196,16 @@ static void _generate_element_geometry(ui_element *element)
 
     for (u32 i = 0; i < length; i++)
     {
-        dimensions.x += element->nodes[i].dimensions.x;
-        dimensions.y  = DMAX(element->nodes[i].dimensions.y, dimensions.y);
+        dimensions.x  = DMAX(element->nodes[i].dimensions.x, dimensions.x);
+        dimensions.y += element->nodes[i].dimensions.y;
     }
 
-    u32     strlen = element->text.str_len;
+    u32  strlen = element->text.str_len;
+    vec4 color  = DARKBLUE;
     if (strlen > 0)
     {
 
-        dstring text   = element->text;
+        dstring          text    = element->text;
         font_glyph_data *glyphs  = ui_sys_state_ptr->system_font->glyphs;
         u32              padding = 0;
         u32              hash    = INVALID_ID;
@@ -226,25 +235,33 @@ static void _generate_element_geometry(ui_element *element)
         s32 x, y = 0;
         input_get_mouse_position(&x, &y);
 
-        box box1 = {{(float)posx, (float)posy}, {(float)txt_width + padding, 20.0f + padding}};
+        dimensions.x  = DMAX(txt_width + padding, dimensions.x);
+        dimensions.y += 20;
+        box box1 = {{(float)posx, (float)posy}, dimensions};
         box box2 = {{(float)x, (float)y}, {1, 1}};
 
-        vec4 color  = DARKBLUE;
         bool is_hot = _check_if_hot(element->id, box1, box2);
+
         if (is_hot)
         {
-            color = GRAY;
+            if(element->type == UI_BUTTON)
+            {
+                color = GRAY;
+            }
+
+        }
+        else
+        {
+            color.a = 0.25;
         }
 
-        dimensions.x = txt_width + padding;
-        u32 max      = 20.0f + padding;
-        dimensions.y = DMAX(max, dimensions.y);
 
         _generate_quad_config(element->position, dimensions, color);
         element->dimensions = dimensions;
 
         ui_text(element->id, &element->text, element->position, color);
     }
+
     element->nodes.~darray();
 
     return;
@@ -258,15 +275,16 @@ bool ui_dropdown(u64 parent_id, u64 id, vec2 position)
 
     u32 padding = 3;
 
-    ui_element button{};
-    button.id         = id;
-    button.position   = position;
-    button.color      = VIOLET;
-    button.text       = "DropDown";
-    button.dimensions = vec2();
-    button.init(ui_sys_state_ptr->arena);
+    ui_element dropdown{};
+    dropdown.type       = UI_DROPDOWN;
+    dropdown.id         = id;
+    dropdown.position   = position;
+    dropdown.color      = VIOLET;
+    dropdown.text       = "DropDown";
+    dropdown.dimensions = vec2();
+    dropdown.init(ui_sys_state_ptr->arena);
 
-    _insert_element(parent_id, id, &ui_sys_state_ptr->root, &button);
+    _insert_element(parent_id, id, &ui_sys_state_ptr->root, &dropdown);
     return return_res;
 }
 
@@ -280,6 +298,7 @@ bool ui_button(u64 parent_id, u64 id, vec2 position)
 
     ui_element button{};
     button.id         = id;
+    button.type       = UI_BUTTON;
     button.position   = position;
     button.color      = DARKBLUE;
     button.text       = "Button";
@@ -293,8 +312,8 @@ bool ui_button(u64 parent_id, u64 id, vec2 position)
 
 bool _generate_quad_config(vec2 position, vec2 dimensions, vec4 color)
 {
-    f32 width  = 0;
-    f32 height = 0;
+    f32 width  = dimensions.x;
+    f32 height = dimensions.y;
 
     if (dimensions.x == 0)
     {
