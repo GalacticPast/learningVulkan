@@ -17,6 +17,7 @@ enum ui_element_type
     UI_UNKNOWN,
     UI_BUTTON,
     UI_DROPDOWN,
+    UI_SLIDER,
 };
 
 struct ui_element
@@ -302,6 +303,20 @@ bool ui_dropdown(u64 parent_id, u64 id, vec2 position)
 
     _insert_element(parent_id, id, &ui_sys_state_ptr->root, &dropdown);
     return true;
+}
+
+bool ui_slider(u64 parent_id, u64 id, s32 min, s32 max)
+{
+    ui_element slider{};
+
+    slider.id       = id;
+    slider.type     = UI_SLIDER;
+    slider.position = vec2();
+    slider.color    = DARKBLUE;
+    slider.text     = "slider";
+    bool return_res = _check_if_pressed(id);
+
+    return false;
 }
 
 bool ui_button(u64 parent_id, u64 id, dstring *text)
