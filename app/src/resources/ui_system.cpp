@@ -1,3 +1,4 @@
+#include "ui_system.hpp"
 #include "containers/darray.hpp"
 #include "core/dasserts.hpp"
 #include "core/dmemory.hpp"
@@ -10,7 +11,6 @@
 #include "resources/font_system.hpp"
 #include "resources/geometry_system.hpp"
 #include "resources/resource_types.hpp"
-#include "ui_system.hpp"
 
 enum ui_element_type
 {
@@ -25,9 +25,11 @@ struct ui_element
 
     ui_element_type type;
     dstring         text;
-    vec2            position; // absolute position
-    vec2            dimensions;
-    vec4            color;
+
+    vec2 position; // absolute position
+    vec2 interactable_dimensions;
+    vec2 dimensions;
+    vec4 color;
 
     darray<ui_element> nodes; // aka children
 
@@ -56,6 +58,7 @@ struct ui_system_state
 static ui_system_state *ui_sys_state_ptr;
 static bool             _insert_element(u64 parent_id, u64 id, ui_element *root, ui_element *element);
 static void             _generate_element_geometry(ui_element *element);
+static void             _calculate_element_sizes(ui_element *element);
 static bool             _generate_quad_config(vec2 position, vec2 dimensions, vec4 color);
 
 bool ui_system_initialize(arena *system_arena, arena *resource_arena)
@@ -179,6 +182,67 @@ bool _insert_element(u64 parent_id, u64 id, ui_element *root, ui_element *elemen
     return false;
 }
 
+static void _calculate_element_sizes(ui_element *element)
+{
+    if (element == nullptr)
+    {
+        return;
+    }
+
+    static font_glyph_data *glyphs = ui_sys_state_ptr->system_font->glyphs;
+
+    u32  length          = element->nodes.size();
+    vec2 dimensions      = vec2();
+    vec2 text_dimensions = vec2();
+    vec2 position        = vec2();
+    u32  padding         = 4;
+
+    if (length)
+    {
+        for (u32 i = 0; i < length; i++)
+        {
+            ui_element *elem = &element->nodes[i];
+            _calculate_element_sizes(elem);
+        }
+        for (u32 i = 0; i < length; i++)
+        {
+            dimensions.x  = DMAX(element->nodes[i].dimensions.x, dimensions.x);
+            dimensions.x += padding;
+            dimensions.y += element->nodes[i].dimensions.y + padding;
+        }
+    }
+
+    dstring text      = element->text;
+    u32     strlen    = text.str_len;
+    u32     hash      = 0;
+    u32     txt_width = 0;
+
+    for (u32 i = 0; i < strlen; i++)
+    {
+        char ch = text[i];
+        if (ch == '\0')
+            break;
+        hash       = ch - 32;
+        txt_width += glyphs[hash].xadvance;
+    }
+
+    text_dimensions.x  = DMAX(txt_width + padding, dimensions.x);
+    text_dimensions.y += 20 + padding;
+
+    if (element->type == UI_DROPDOWN)
+    {
+        element->interactable_dimensions  = text_dimensions;
+        dimensions.y                     += text_dimensions.y;
+        element->dimensions               = dimensions;
+    }
+    else
+    {
+        dimensions                       = text_dimensions;
+        element->interactable_dimensions = dimensions;
+        element->dimensions              = dimensions;
+    }
+}
+
 static void _generate_element_geometry(ui_element *element)
 {
     if (element == nullptr)
@@ -186,82 +250,36 @@ static void _generate_element_geometry(ui_element *element)
         return;
     }
 
-    vec2 dimensions = vec2();
-    u32  length     = element->nodes.size();
-
-    for (u32 i = 0; i < length; i++)
-    {
-        _generate_element_geometry(&element->nodes[i]);
-    }
-
-    for (u32 i = 0; i < length; i++)
-    {
-        dimensions.x  = DMAX(element->nodes[i].dimensions.x, dimensions.x);
-        dimensions.y += element->nodes[i].dimensions.y;
-    }
-
-    u32  strlen = element->text.str_len;
+    // if this is the first element it will have a position set.
+    // from second..n  will be calculated.
+    u32  length = element->nodes.size();
     vec4 color  = DARKBLUE;
-    if (strlen > 0)
+
+    if (length)
     {
-
-        dstring          text    = element->text;
-        font_glyph_data *glyphs  = ui_sys_state_ptr->system_font->glyphs;
-        u32              padding = 0;
-        u32              hash    = INVALID_ID;
-
-        u32 txt_width = 0;
-
-        for (u32 i = 0; i < strlen; i++)
+        if (element->type == UI_DROPDOWN)
         {
-            char ch = text[i];
-            if (ch == '\0')
-                break;
-            hash       = ch - 32;
-            txt_width += glyphs[hash].xadvance;
-        }
-        // INFO: 20 because its the system font size;
-        s32 posx = element->position.x - padding;
-        s32 posy = element->position.y - padding;
-
-        if (posx < 0)
-        {
-            posx = 0;
-        }
-        if (posy < 0)
-        {
-            posy = 0;
-        }
-        s32 x, y = 0;
-        input_get_mouse_position(&x, &y);
-
-        dimensions.x  = DMAX(txt_width + padding, dimensions.x);
-        dimensions.y += 20;
-        box box1 = {{(float)posx, (float)posy}, dimensions};
-        box box2 = {{(float)x, (float)y}, {1, 1}};
-
-        bool is_hot = _check_if_hot(element->id, box1, box2);
-
-        if (is_hot)
-        {
-            if(element->type == UI_BUTTON)
+            element->nodes[0].position = {element->position.x,
+                                          element->position.y + element->interactable_dimensions.y};
+            vec2 position              = element->nodes[0].position;
+            for (u32 i = 1; i < length; i++)
             {
-                color = GRAY;
+                position.x                  = element->position.x;
+                position.y                 += element->nodes[i - 1].interactable_dimensions.y;
+                element->nodes[i].position  = position;
             }
-
         }
-        else
+        for (u32 i = 0; i < length; i++)
         {
-            color.a = 0.25;
+            ui_element *elem = &element->nodes[i];
+            _generate_element_geometry(elem);
         }
-
-
-        _generate_quad_config(element->position, dimensions, color);
-        element->dimensions = dimensions;
-
-        ui_text(element->id, &element->text, element->position, color);
     }
 
+    color.a = 0.25;
+    _generate_quad_config(element->position, element->dimensions, color);
+
+    ui_text(element->id, &element->text, element->position, WHITE);
     element->nodes.~darray();
 
     return;
@@ -270,8 +288,6 @@ static void _generate_element_geometry(ui_element *element)
 bool ui_dropdown(u64 parent_id, u64 id, vec2 position)
 {
     DASSERT(ui_sys_state_ptr);
-
-    bool return_res = _check_if_pressed(id);
 
     u32 padding = 3;
 
@@ -285,23 +301,29 @@ bool ui_dropdown(u64 parent_id, u64 id, vec2 position)
     dropdown.init(ui_sys_state_ptr->arena);
 
     _insert_element(parent_id, id, &ui_sys_state_ptr->root, &dropdown);
-    return return_res;
+    return true;
 }
 
-bool ui_button(u64 parent_id, u64 id, vec2 position)
+bool ui_button(u64 parent_id, u64 id, dstring *text)
 {
     DASSERT(ui_sys_state_ptr);
+    DASSERT(id != INVALID_ID_64);
 
     bool return_res = _check_if_pressed(id);
 
-    u32 padding = 3;
-
     ui_element button{};
-    button.id         = id;
-    button.type       = UI_BUTTON;
-    button.position   = position;
-    button.color      = DARKBLUE;
-    button.text       = "Button";
+    button.id       = id;
+    button.type     = UI_BUTTON;
+    button.position = vec2();
+    button.color    = DARKBLUE;
+    if (text)
+    {
+        button.text = *text;
+    }
+    else
+    {
+        button.text = "BUTTON";
+    }
     button.dimensions = vec2();
     button.init(ui_sys_state_ptr->arena);
 
@@ -371,9 +393,9 @@ bool _generate_quad_config(vec2 position, vec2 dimensions, vec4 color)
 bool ui_text(u64 id, dstring *text, vec2 position, vec4 color)
 {
     DASSERT(text);
-    u32              length       = INVALID_ID;
-    font_glyph_data *glyphs       = ui_sys_state_ptr->system_font->glyphs;
-    u32              atlas_height = ui_sys_state_ptr->system_font->atlas_height;
+    u32                     length       = INVALID_ID;
+    static font_glyph_data *glyphs       = ui_sys_state_ptr->system_font->glyphs;
+    u32                     atlas_height = ui_sys_state_ptr->system_font->atlas_height;
 
     DASSERT(glyphs);
 
@@ -391,8 +413,8 @@ bool ui_text(u64 id, dstring *text, vec2 position, vec4 color)
     q2.color = color;
     q3.color = color;
 
-    vertex_2D *vertices = static_cast<vertex_2D *>(ui_sys_state_ptr->ui_geometry_config.vertices);
-    u32       *indices  = ui_sys_state_ptr->ui_geometry_config.indices;
+    static vertex_2D *vertices = static_cast<vertex_2D *>(ui_sys_state_ptr->ui_geometry_config.vertices);
+    static u32       *indices  = ui_sys_state_ptr->ui_geometry_config.indices;
 
     // this is the ptr to the next starting block
     u32 vert_ind = ui_sys_state_ptr->ui_geometry_config.vertex_count;
@@ -401,7 +423,6 @@ bool ui_text(u64 id, dstring *text, vec2 position, vec4 color)
     u32 index_ind = ui_sys_state_ptr->ui_geometry_config.index_count;
 
     u32 local_offset = ui_sys_state_ptr->local_index_offset;
-    u32 padding      = 3;
 
     float x = F32_MIN;
     float y = F32_MAX;
@@ -542,9 +563,18 @@ bool ui_text(u64 id, dstring *text, vec2 position, vec4 color)
 u64 ui_system_flush_geometries()
 {
 
-    u64 id = ui_sys_state_ptr->geometry_id;
-
-    _generate_element_geometry(&ui_sys_state_ptr->root);
+    u64 id     = ui_sys_state_ptr->geometry_id;
+    u32 length = ui_sys_state_ptr->root.nodes.size();
+    for (u32 i = 0; i < length; i++)
+    {
+        ui_element *elem = &ui_sys_state_ptr->root.nodes[i];
+        _calculate_element_sizes(elem);
+    }
+    for (u32 i = 0; i < length; i++)
+    {
+        ui_element *elem = &ui_sys_state_ptr->root.nodes[i];
+        _generate_element_geometry(elem);
+    }
 
     if (id == INVALID_ID_64)
     {
@@ -556,6 +586,7 @@ u64 ui_system_flush_geometries()
         geometry_system_update_geometry(&ui_sys_state_ptr->ui_geometry_config, id);
     }
 
+    ui_sys_state_ptr->root.nodes.~darray();
     ui_sys_state_ptr->root.init(ui_sys_state_ptr->arena);
     ui_sys_state_ptr->local_index_offset              = 0;
     ui_sys_state_ptr->ui_geometry_config.vertex_count = 0;

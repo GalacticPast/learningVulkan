@@ -152,7 +152,7 @@ int main()
     dstring font_atlas = DEFAULT_FONT_ATLAS_TEXTURE_HANDLE;
 
     dstring test;
-    test       = "FPS: ";
+    test = "FPS: ";
 
     dstring dropdown;
 
@@ -166,7 +166,7 @@ int main()
     dstring camera_pos;
     dstring fps_text;
 
-    arena* frame_arena = arena_get_arena();
+    arena *frame_arena = arena_get_arena();
     ui_system_set_arena(frame_arena);
 
     while (app_state.is_running)
@@ -192,16 +192,26 @@ int main()
         mouse.str_len    = string_copy_format(mouse.string, "Cursor_pos: x: %d y: %d", 0, mouse_x, mouse_y);
         fps_text.str_len = string_copy_format(fps_text.string, "FPS: %d", 0, fps);
 
-        ui_text(reinterpret_cast<uintptr_t>(&mouse),&mouse, {0, 400}, GREEN);
-        ui_text(reinterpret_cast<uintptr_t>(&camera_pos),&camera_pos, {0, 380}, WHITE);
-        ui_text(reinterpret_cast<uintptr_t>(&fps_text),&fps_text, {0, 0}, YELLOW);
+        ui_text(reinterpret_cast<uintptr_t>(&mouse), &mouse, {0, 400}, GREEN);
+        ui_text(reinterpret_cast<uintptr_t>(&camera_pos), &camera_pos, {0, 380}, WHITE);
+        ui_text(reinterpret_cast<uintptr_t>(&fps_text), &fps_text, {0, 0}, YELLOW);
 
-        ui_dropdown(INVALID_ID_64,reinterpret_cast<uintptr_t>(&dropdown),{100,100});
-
-        bool result = ui_button(reinterpret_cast<uintptr_t>(&dropdown), reinterpret_cast<uintptr_t>(&test), {100, 120});
+        bool result = ui_dropdown(INVALID_ID_64, reinterpret_cast<uintptr_t>(&dropdown), {100, 100});
         if (result)
         {
-            DDEBUG("Button pressed");
+            dstring text = "Button_1";
+            result       = ui_button(reinterpret_cast<uintptr_t>(&dropdown), reinterpret_cast<uintptr_t>(&test), &text);
+            if (result)
+            {
+                DDEBUG("Button_1 pressed");
+            }
+            text.clear();
+            text   = "Button_2";
+            result = ui_button(reinterpret_cast<uintptr_t>(&dropdown), reinterpret_cast<uintptr_t>(&mouse_x), &text);
+            if (result)
+            {
+                DDEBUG("Button_2 pressed");
+            }
         }
 
         u64 quad_id          = ui_system_flush_geometries();
