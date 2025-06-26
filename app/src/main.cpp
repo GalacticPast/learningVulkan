@@ -169,6 +169,8 @@ int main()
     arena *frame_arena = arena_get_arena();
     ui_system_set_arena(frame_arena);
 
+    s32 r = 0;
+
     while (app_state.is_running)
     {
         ZoneScoped;
@@ -196,24 +198,24 @@ int main()
         ui_text(reinterpret_cast<uintptr_t>(&camera_pos), &camera_pos, {0, 380}, WHITE);
         ui_text(reinterpret_cast<uintptr_t>(&fps_text), &fps_text, {0, 0}, WHITE);
 
-        bool result = ui_dropdown(INVALID_ID_64, reinterpret_cast<uintptr_t>(&dropdown), {100, 100});
+        bool result = ui_window(INVALID_ID_64, reinterpret_cast<uintptr_t>(&dropdown), {100, 100}, 3, 3);
         if (result)
         {
             dstring text = "Button_1";
-            result       = ui_button(reinterpret_cast<uintptr_t>(&dropdown), reinterpret_cast<uintptr_t>(&test), &text);
+            result = ui_button(reinterpret_cast<uintptr_t>(&dropdown), reinterpret_cast<uintptr_t>(&test), &text, 0, 0);
             if (result)
             {
                 DDEBUG("Button_1 pressed");
             }
             text.clear();
-            text   = "Button_2";
-            result = ui_button(reinterpret_cast<uintptr_t>(&dropdown), reinterpret_cast<uintptr_t>(&mouse_x), &text);
+            text = "Button_2";
+            result =
+                ui_button(reinterpret_cast<uintptr_t>(&dropdown), reinterpret_cast<uintptr_t>(&mouse_x), &text, 0, 1);
             if (result)
             {
                 DDEBUG("Button_2 pressed");
             }
-            s32 res = ui_slider(reinterpret_cast<uintptr_t>(&dropdown), reinterpret_cast<uintptr_t>(&index), 0, 255);
-
+            ui_slider(reinterpret_cast<uintptr_t>(&dropdown), reinterpret_cast<uintptr_t>(&index), 0, 255, &r, 1, 0);
         }
 
         u64 quad_id          = ui_system_flush_geometries();

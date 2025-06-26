@@ -12,14 +12,6 @@
 #include "resources/resource_types.hpp"
 #include "ui_system.hpp"
 
-enum ui_element_type
-{
-    UI_UNKNOWN,
-    UI_BUTTON,
-    UI_DROPDOWN,
-    UI_SLIDER,
-};
-
 #define BORDER_COLOR RED
 
 struct ui_element
@@ -27,7 +19,17 @@ struct ui_element
     u64 id = INVALID_ID_64;
 
     ui_element_type type;
-    dstring         text;
+
+    dstring text;
+    s32     slider_value;
+
+    // num of rows and columns
+    u32 num_rows    = INVALID_ID;
+    u32 num_columns = INVALID_ID;
+
+    // where it is positioned in respect to the parent.
+    u32 row_pos = INVALID_ID;
+    u32 col_pos = INVALID_ID;
 
     vec2 position; // absolute position
 
@@ -69,7 +71,8 @@ struct box
 static ui_system_state *ui_sys_state_ptr;
 static bool             _insert_element(u64 parent_id, u64 id, ui_element *root, ui_element *element);
 static void             _generate_element_geometry(ui_element *element);
-static void             _calculate_element_sizes(ui_element *element);
+static void             _calculate_element_dimensions(ui_element *element);
+static void             _calculate_element_positions(ui_element *element);
 static bool             _generate_quad_config(vec2 position, vec2 dimensions, vec4 color);
 static bool             _check_mouse_collision(box box);
 static bool             _check_box_if_hot(u64 id, box box1);
@@ -111,6 +114,7 @@ bool _check_collision(box a, box b)
 }
 
 // it will also transition it
+// INFO: There will always be a delay of one frame. Because _ui_flush() will set up the hot_id in the first iteration.
 bool _check_if_pressed(u64 id)
 {
     bool result     = false;
@@ -189,7 +193,11 @@ bool _insert_element(u64 parent_id, u64 id, ui_element *root, ui_element *elemen
     return false;
 }
 
-static void _calculate_element_sizes(ui_element *element)
+static void _calculate_element_positions(ui_element *element)
+{
+}
+
+static void _calculate_element_dimensions(ui_element *element)
 {
     if (element == nullptr)
     {
@@ -209,7 +217,7 @@ static void _calculate_element_sizes(ui_element *element)
         for (u32 i = 0; i < length; i++)
         {
             ui_element *elem = &element->nodes[i];
-            _calculate_element_sizes(elem);
+            _calculate_element_dimensions(elem);
         }
         for (u32 i = 0; i < length; i++)
         {
@@ -327,7 +335,7 @@ static bool _check_box_if_hot(u64 id, box box1)
     return is_hot;
 }
 
-bool ui_dropdown(u64 parent_id, u64 id, vec2 position)
+bool ui_window(u64 parent_id, u64 id, vec2 position, u32 num_rows, u32 num_columns)
 {
     DASSERT(ui_sys_state_ptr);
 
@@ -339,6 +347,9 @@ bool ui_dropdown(u64 parent_id, u64 id, vec2 position)
     dropdown.position = position;
     dropdown.color    = DARKGRAY;
 
+    dropdown.num_rows    = num_rows;
+    dropdown.num_columns = num_columns;
+
     dropdown.text       = "DropDown";
     dropdown.dimensions = vec2();
     dropdown.init(ui_sys_state_ptr->arena);
@@ -347,8 +358,10 @@ bool ui_dropdown(u64 parent_id, u64 id, vec2 position)
     return true;
 }
 
-s32 ui_slider(u64 parent_id, u64 id, s32 min, s32 max)
+void ui_slider(u64 parent_id, u64 id, s32 min, s32 max, s32 *value, u32 row, u32 column)
 {
+    DASSERT(value);
+
     ui_element slider{};
 
     slider.id       = id;
@@ -356,12 +369,21 @@ s32 ui_slider(u64 parent_id, u64 id, s32 min, s32 max)
     slider.position = vec2();
     slider.color    = DARKBLUE;
     slider.text     = "slider";
+
+    slider.row_pos = row;
+    slider.col_pos = column;
+
     bool return_res = _check_if_pressed(id);
 
-    return false;
+    // do the logic
+
+    //
+    if (return_res)
+    {
+    }
 }
 
-bool ui_button(u64 parent_id, u64 id, dstring *text)
+bool ui_button(u64 parent_id, u64 id, dstring *text, u32 row, u32 column)
 {
     DASSERT(ui_sys_state_ptr);
     DASSERT(id != INVALID_ID_64);
@@ -373,6 +395,10 @@ bool ui_button(u64 parent_id, u64 id, dstring *text)
     button.type     = UI_BUTTON;
     button.position = vec2();
     button.color    = DARKBLUE;
+
+    button.row_pos = row;
+    button.col_pos = column;
+
     if (text)
     {
         button.text = *text;
@@ -568,11 +594,18 @@ u64 ui_system_flush_geometries()
 
     u64 id     = ui_sys_state_ptr->geometry_id;
     u32 length = ui_sys_state_ptr->root.nodes.size();
+
     for (u32 i = 0; i < length; i++)
     {
         ui_element *elem = &ui_sys_state_ptr->root.nodes[i];
-        _calculate_element_sizes(elem);
+        _calculate_element_dimensions(elem);
     }
+    for (u32 i = 0; i < length; i++)
+    {
+        ui_element *elem = &ui_sys_state_ptr->root.nodes[i];
+        _calculate_element_positions(elem);
+    }
+
     for (u32 i = 0; i < length; i++)
     {
         ui_element *elem = &ui_sys_state_ptr->root.nodes[i];
