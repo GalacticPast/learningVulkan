@@ -294,9 +294,9 @@ static void _generate_element_geometry(ui_element *element)
         _generate_quad_config(element->position, header_dimensions, element->color);
         element->interactable_dimensions = header_dimensions;
     }
-    box box1 = {element->position, element->interactable_dimensions};
+    box  box1   = {element->position, element->interactable_dimensions};
     bool is_hot = _check_box_if_hot(element->id, box1);
-    if(is_hot)
+    if (is_hot)
     {
         ui_text(element->id, &element->text, element->position, YELLOW);
     }
@@ -347,7 +347,7 @@ bool ui_dropdown(u64 parent_id, u64 id, vec2 position)
     return true;
 }
 
-bool ui_slider(u64 parent_id, u64 id, s32 min, s32 max)
+s32 ui_slider(u64 parent_id, u64 id, s32 min, s32 max)
 {
     ui_element slider{};
 
@@ -503,7 +503,6 @@ bool ui_text(u64 id, dstring *text, vec2 position, vec4 color)
         y_off      = DMIN(y_off, y);
         txt_width += glyphs[hash].xadvance;
     }
-
 
     float baseline = position.y - y_off;
 
