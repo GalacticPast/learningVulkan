@@ -1,10 +1,10 @@
-#include "main.hpp"
 #include "core/application.hpp"
 #include "core/dclock.hpp"
 #include "core/dmemory.hpp"
 #include "core/dstring.hpp"
 #include "core/input.hpp"
 #include "core/logger.hpp"
+#include "main.hpp"
 
 #include "defines.hpp"
 
@@ -192,9 +192,9 @@ int main()
         mouse.str_len    = string_copy_format(mouse.string, "Cursor_pos: x: %d y: %d", 0, mouse_x, mouse_y);
         fps_text.str_len = string_copy_format(fps_text.string, "FPS: %d", 0, fps);
 
-        ui_text(reinterpret_cast<uintptr_t>(&mouse), &mouse, {0, 400}, GREEN);
+        ui_text(reinterpret_cast<uintptr_t>(&mouse), &mouse, {0, 400}, WHITE);
         ui_text(reinterpret_cast<uintptr_t>(&camera_pos), &camera_pos, {0, 380}, WHITE);
-        ui_text(reinterpret_cast<uintptr_t>(&fps_text), &fps_text, {0, 0}, YELLOW);
+        ui_text(reinterpret_cast<uintptr_t>(&fps_text), &fps_text, {0, 0}, WHITE);
 
         bool result = ui_dropdown(INVALID_ID_64, reinterpret_cast<uintptr_t>(&dropdown), {100, 100});
         if (result)

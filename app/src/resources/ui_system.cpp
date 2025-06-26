@@ -1,4 +1,3 @@
-#include "ui_system.hpp"
 #include "containers/darray.hpp"
 #include "core/dasserts.hpp"
 #include "core/dmemory.hpp"
@@ -11,6 +10,7 @@
 #include "resources/font_system.hpp"
 #include "resources/geometry_system.hpp"
 #include "resources/resource_types.hpp"
+#include "ui_system.hpp"
 
 enum ui_element_type
 {
@@ -20,6 +20,8 @@ enum ui_element_type
     UI_SLIDER,
 };
 
+#define BORDER_COLOR RED
+
 struct ui_element
 {
     u64 id = INVALID_ID_64;
@@ -28,8 +30,10 @@ struct ui_element
     dstring         text;
 
     vec2 position; // absolute position
+
     vec2 interactable_dimensions;
     vec2 dimensions;
+
     vec4 color;
 
     darray<ui_element> nodes; // aka children
@@ -56,11 +60,19 @@ struct ui_system_state
     ui_element root;
 };
 
+struct box
+{
+    vec2 position;
+    vec2 dimensions;
+};
+
 static ui_system_state *ui_sys_state_ptr;
 static bool             _insert_element(u64 parent_id, u64 id, ui_element *root, ui_element *element);
 static void             _generate_element_geometry(ui_element *element);
 static void             _calculate_element_sizes(ui_element *element);
 static bool             _generate_quad_config(vec2 position, vec2 dimensions, vec4 color);
+static bool             _check_mouse_collision(box box);
+static bool             _check_box_if_hot(u64 id, box box1);
 
 bool ui_system_initialize(arena *system_arena, arena *resource_arena)
 {
@@ -92,12 +104,6 @@ bool ui_system_set_arena(arena *arena)
 
 // box1 top left corner
 // box2 top left corner
-struct box
-{
-    vec2 position;
-    vec2 dimensions;
-};
-
 bool _check_collision(box a, box b)
 {
     return (a.position.x < b.position.x + b.dimensions.w && a.position.x + a.dimensions.w > b.position.x &&
@@ -253,37 +259,72 @@ static void _generate_element_geometry(ui_element *element)
 
     // if this is the first element it will have a position set.
     // from second..n  will be calculated.
-    u32  length = element->nodes.size();
-    vec4 color  = DARKBLUE;
+    u32 length = element->nodes.size();
+
+    static u32 padding = 4;
 
     if (length)
     {
         if (element->type == UI_DROPDOWN)
         {
-            element->nodes[0].position = {element->position.x,
-                                          element->position.y + element->interactable_dimensions.y};
+            element->nodes[0].position = {element->position.x + padding,
+                                          element->position.y + element->interactable_dimensions.y + padding};
             vec2 position              = element->nodes[0].position;
             for (u32 i = 1; i < length; i++)
             {
-                position.x                  = element->position.x;
-                position.y                 += element->nodes[i - 1].interactable_dimensions.y;
+                position.x                  = element->position.x + padding;
+                position.y                 += element->nodes[i - 1].interactable_dimensions.y + padding;
                 element->nodes[i].position  = position;
             }
         }
-        for (u32 i = 0; i < length; i++)
-        {
-            ui_element *elem = &element->nodes[i];
-            _generate_element_geometry(elem);
-        }
     }
 
-    color.a = 0.25;
-    _generate_quad_config(element->position, element->dimensions, color);
+    if (element->type == UI_DROPDOWN)
+    {
+        vec2 border_dimensions = {element->dimensions.x + 4, element->dimensions.y + 4};
+        vec2 position          = {element->position.x - 2, element->position.y - 2};
+        _generate_quad_config(position, border_dimensions, BORDER_COLOR);
+    }
 
-    ui_text(element->id, &element->text, element->position, WHITE);
+    _generate_quad_config(element->position, element->dimensions, element->color);
+
+    if (element->type == UI_DROPDOWN)
+    {
+        vec2 header_dimensions = {element->dimensions.x, 25};
+        _generate_quad_config(element->position, header_dimensions, element->color);
+        element->interactable_dimensions = header_dimensions;
+    }
+    box box1 = {element->position, element->interactable_dimensions};
+    bool is_hot = _check_box_if_hot(element->id, box1);
+    if(is_hot)
+    {
+        ui_text(element->id, &element->text, element->position, YELLOW);
+    }
+    else
+    {
+        ui_text(element->id, &element->text, element->position, WHITE);
+    }
+
+    for (u32 i = 0; i < length; i++)
+    {
+        ui_element *elem = &element->nodes[i];
+        _generate_element_geometry(elem);
+    }
+
     element->nodes.~darray();
 
     return;
+}
+
+static bool _check_box_if_hot(u64 id, box box1)
+{
+    s32 mouse_x, mouse_y = 0;
+    input_get_mouse_position(&mouse_x, &mouse_y);
+    box box2 = {{(float)mouse_x, (float)mouse_y}, {1, 1}};
+
+    bool is_hot = _check_if_hot(id, box1, box2);
+
+    return is_hot;
 }
 
 bool ui_dropdown(u64 parent_id, u64 id, vec2 position)
@@ -293,10 +334,11 @@ bool ui_dropdown(u64 parent_id, u64 id, vec2 position)
     u32 padding = 3;
 
     ui_element dropdown{};
-    dropdown.type       = UI_DROPDOWN;
-    dropdown.id         = id;
-    dropdown.position   = position;
-    dropdown.color      = VIOLET;
+    dropdown.type     = UI_DROPDOWN;
+    dropdown.id       = id;
+    dropdown.position = position;
+    dropdown.color    = DARKGRAY;
+
     dropdown.text       = "DropDown";
     dropdown.dimensions = vec2();
     dropdown.init(ui_sys_state_ptr->arena);
@@ -374,29 +416,32 @@ bool _generate_quad_config(vec2 position, vec2 dimensions, vec4 color)
 
     u32 local_offset = ui_sys_state_ptr->local_index_offset;
 
-    vertices[vert_ind].position    = {position.x, position.y};
-    vertices[vert_ind].color       = color;
-    vertices[vert_ind++].tex_coord = {0.0f, 0.0f};
+    // the full quad
+    {
+        vertices[vert_ind].position    = {position.x, position.y};
+        vertices[vert_ind].color       = color;
+        vertices[vert_ind++].tex_coord = {0.0f, 0.0f};
 
-    vertices[vert_ind].position    = {position.x + width, position.y};
-    vertices[vert_ind].color       = color;
-    vertices[vert_ind++].tex_coord = {0.0f, 0.0f};
+        vertices[vert_ind].position    = {position.x + width, position.y};
+        vertices[vert_ind].color       = color;
+        vertices[vert_ind++].tex_coord = {0.0f, 0.0f};
 
-    vertices[vert_ind].position    = {position.x, position.y + height};
-    vertices[vert_ind].color       = color;
-    vertices[vert_ind++].tex_coord = {0.0f, 0.0f};
+        vertices[vert_ind].position    = {position.x, position.y + height};
+        vertices[vert_ind].color       = color;
+        vertices[vert_ind++].tex_coord = {0.0f, 0.0f};
 
-    vertices[vert_ind].position    = {width + position.x, position.y + height};
-    vertices[vert_ind].color       = color;
-    vertices[vert_ind++].tex_coord = {0.0f, 0.0f};
+        vertices[vert_ind].position    = {width + position.x, position.y + height};
+        vertices[vert_ind].color       = color;
+        vertices[vert_ind++].tex_coord = {0.0f, 0.0f};
 
-    config->indices[index_ind++] = local_offset + 0;
-    config->indices[index_ind++] = local_offset + 2;
-    config->indices[index_ind++] = local_offset + 1;
+        config->indices[index_ind++] = local_offset + 0;
+        config->indices[index_ind++] = local_offset + 2;
+        config->indices[index_ind++] = local_offset + 1;
 
-    config->indices[index_ind++] = local_offset + 1;
-    config->indices[index_ind++] = local_offset + 2;
-    config->indices[index_ind++] = local_offset + 3;
+        config->indices[index_ind++] = local_offset + 1;
+        config->indices[index_ind++] = local_offset + 2;
+        config->indices[index_ind++] = local_offset + 3;
+    }
 
     ui_sys_state_ptr->local_index_offset              = local_offset + 4;
     ui_sys_state_ptr->ui_geometry_config.vertex_count = vert_ind;
@@ -414,9 +459,10 @@ bool ui_text(u64 id, dstring *text, vec2 position, vec4 color)
 
     DASSERT(glyphs);
 
-    u32  strlen = text->str_len;
-    u32  hash   = 0;
-    vec2 pos    = position;
+    u32  strlen  = text->str_len;
+    u32  hash    = 0;
+    vec2 pos     = position;
+    u32  padding = 4;
 
     vertex_2D q0;
     vertex_2D q1;
@@ -439,23 +485,27 @@ bool ui_text(u64 id, dstring *text, vec2 position, vec4 color)
 
     u32 local_offset = ui_sys_state_ptr->local_index_offset;
 
-    float x = F32_MIN;
-    float y = F32_MAX;
+    float x_off           = F32_MIN;
+    float y_off           = F32_MAX;
+    u32   txt_width       = 0;
+    vec2  text_dimensions = vec2();
 
     for (u32 i = 0; i < strlen; i++)
     {
         char ch = (*text)[i];
         if (ch == '\0')
             break;
-        hash        = ch - 32;
-        float x_off = glyphs[hash].xoff;
-        float y_off = glyphs[hash].yoff;
+        hash    = ch - 32;
+        float x = glyphs[hash].xoff;
+        float y = glyphs[hash].yoff;
 
-        x = DMAX(x, x_off);
-        y = DMIN(y, y_off);
+        x_off      = DMAX(x_off, x);
+        y_off      = DMIN(y_off, y);
+        txt_width += glyphs[hash].xadvance;
     }
 
-    float baseline = position.y - y;
+
+    float baseline = position.y - y_off;
 
     for (u32 i = 0; i < strlen; i++)
     {
@@ -505,67 +555,6 @@ bool ui_text(u64 id, dstring *text, vec2 position, vec4 color)
         local_offset += 4;
 
         pos.x += glyphs[hash].xadvance;
-    }
-
-    // INFO: creating a semi-transparent bounding box for the entire text
-    {
-
-        float x_pos = position.x;
-        float y_pos = position.y;
-
-        q0.tex_coord = {0, 0}; // Top-left
-        q1.tex_coord = {0, 0}; // Top-right
-        q2.tex_coord = {0, 0}; // Bottom-left
-        q3.tex_coord = {0, 0}; // Bottom-right
-
-        q0.position = {x_pos, y_pos};
-        q1.position = {pos.x, y_pos};
-        q2.position = {x_pos, y_pos + 20};
-        q3.position = {pos.x, y_pos + 20};
-
-        s32 x, y = 0;
-        input_get_mouse_position(&x, &y);
-
-        box box1 = {position, {pos.x - position.x, 20.0f}};
-        box box2 = {{(float)x, (float)y}, {1, 1}};
-
-        bool is_hot = _check_if_hot(id, box1, box2);
-
-        q0.color = color; // Top-left
-        q1.color = color; // Top-right
-        q2.color = color; // Bottom-left
-        q3.color = color; // Bottom-right
-
-        if (is_hot)
-        {
-            q0.color.a = 0.5; // Top-left
-            q1.color.a = 0.5; // Top-right
-            q2.color.a = 0.5; // Bottom-left
-            q3.color.a = 0.5; // Bottom-right
-        }
-        else
-        {
-            q0.color.a = 0;
-            q1.color.a = 0;
-            q2.color.a = 0;
-            q3.color.a = 0;
-        }
-
-        vertices[vert_ind++] = q2;
-        vertices[vert_ind++] = q0;
-        vertices[vert_ind++] = q1;
-        vertices[vert_ind++] = q3;
-
-        indices[index_ind++] = local_offset + 0;
-        indices[index_ind++] = local_offset + 1;
-        indices[index_ind++] = local_offset + 2;
-
-        indices[index_ind++] = local_offset + 0;
-        indices[index_ind++] = local_offset + 2;
-        indices[index_ind++] = local_offset + 3;
-
-        // advacnce the index offset by 4 so that the next quad has the proper offset;
-        local_offset += 4;
     }
 
     ui_sys_state_ptr->local_index_offset              = local_offset;

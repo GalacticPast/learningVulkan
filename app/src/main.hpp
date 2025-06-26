@@ -3,32 +3,38 @@
 #include "defines.hpp"
 #include "math/dmath_types.hpp"
 
-#define LIGHTGRAY  (vec4){0.7843f, 0.7843f, 0.7843f, 1.0f}
-#define GRAY       (vec4){0.5098f, 0.5098f, 0.5098f, 1.0f}
-#define DARKGRAY   (vec4){0.3137f, 0.3137f, 0.3137f, 1.0f}
-#define YELLOW     (vec4){0.9922f, 0.9765f, 0.0000f, 1.0f}
-#define GOLD       (vec4){1.0000f, 0.7961f, 0.0000f, 1.0f}
-#define ORANGE     (vec4){1.0000f, 0.6314f, 0.0000f, 1.0f}
-#define PINK       (vec4){1.0000f, 0.4275f, 0.7608f, 1.0f}
-#define RED        (vec4){0.9020f, 0.1608f, 0.2157f, 1.0f}
-#define MAROON     (vec4){0.7451f, 0.1294f, 0.2157f, 1.0f}
-#define GREEN      (vec4){0.0000f, 0.8941f, 0.1882f, 1.0f}
-#define LIME       (vec4){0.0000f, 0.6196f, 0.1843f, 1.0f}
-#define DARKGREEN  (vec4){0.0000f, 0.4588f, 0.1725f, 1.0f}
-#define SKYBLUE    (vec4){0.4000f, 0.7490f, 1.0000f, 1.0f}
-#define BLUE       (vec4){0.0000f, 0.4745f, 0.9451f, 1.0f}
-#define DARKBLUE   (vec4){0.0000f, 0.3216f, 0.6745f, 1.0f}
-#define PURPLE     (vec4){0.7843f, 0.4784f, 1.0000f, 1.0f}
-#define VIOLET     (vec4){0.5294f, 0.2353f, 0.7451f, 1.0f}
-#define DARKPURPLE (vec4){0.4392f, 0.1216f, 0.4941f, 1.0f}
-#define BEIGE      (vec4){0.8275f, 0.6902f, 0.5137f, 1.0f}
-#define BROWN      (vec4){0.4980f, 0.4157f, 0.3098f, 1.0f}
-#define DARKBROWN  (vec4){0.2980f, 0.2471f, 0.1843f, 1.0f}
+#define LIGHTGRAY  (vec4){0.85f, 0.85f, 0.85f, 1.0f}
+#define GRAY       (vec4){0.40f, 0.40f, 0.40f, 1.0f}
+#define DARKGRAY   (vec4){0.15f, 0.15f, 0.15f, 1.0f}
 
-#define WHITE      (vec4){1.0000f, 1.0000f, 1.0000f, 1.0f}
-#define BLACK      (vec4){0.0000f, 0.0000f, 0.0000f, 1.0f}
-#define BLANK      (vec4){0.0000f, 0.0000f, 0.0000f, 0.0f}
-#define MAGENTA    (vec4){1.0000f, 0.0000f, 1.0000f, 1.0f}
+#define YELLOW     (vec4){1.00f, 0.90f, 0.00f, 1.0f}
+#define GOLD       (vec4){1.00f, 0.68f, 0.00f, 1.0f}
+#define ORANGE     (vec4){1.00f, 0.45f, 0.00f, 1.0f}
+#define PINK       (vec4){1.00f, 0.25f, 0.60f, 1.0f}
+
+#define RED        (vec4){0.85f, 0.05f, 0.15f, 1.0f}
+#define MAROON     (vec4){0.60f, 0.00f, 0.10f, 1.0f}
+
+#define GREEN      (vec4){0.00f, 0.80f, 0.20f, 1.0f}
+#define LIME       (vec4){0.00f, 0.60f, 0.10f, 1.0f}
+#define DARKGREEN  (vec4){0.00f, 0.40f, 0.10f, 1.0f}
+
+#define SKYBLUE    (vec4){0.20f, 0.65f, 1.00f, 1.0f}
+#define BLUE       (vec4){0.00f, 0.35f, 0.90f, 1.0f}
+#define DARKBLUE   (vec4){0.00f, 0.20f, 0.50f, 1.0f}
+
+#define PURPLE     (vec4){0.70f, 0.30f, 1.00f, 1.0f}
+#define VIOLET     (vec4){0.50f, 0.10f, 0.75f, 1.0f}
+#define DARKPURPLE (vec4){0.35f, 0.00f, 0.40f, 1.0f}
+
+#define BEIGE      (vec4){0.90f, 0.75f, 0.50f, 1.0f}
+#define BROWN      (vec4){0.40f, 0.25f, 0.10f, 1.0f}
+#define DARKBROWN  (vec4){0.25f, 0.15f, 0.05f, 1.0f}
+
+#define WHITE      (vec4){1.00f, 1.00f, 1.00f, 1.0f}
+#define BLACK      (vec4){0.00f, 0.00f, 0.00f, 1.0f}
+#define BLANK      (vec4){0.00f, 0.00f, 0.00f, 0.0f}
+#define MAGENTA    (vec4){1.00f, 0.00f, 1.00f, 1.0f}
 
 struct application_config
 {
