@@ -20,7 +20,9 @@ struct ui_element
 
     ui_element_type type;
 
+    vec2    text_position;
     dstring text;
+
     s32     slider_value;
 
     // num of rows and columns
@@ -246,9 +248,8 @@ static void _calculate_element_dimensions(ui_element *element)
 
     if (element->type == UI_DROPDOWN)
     {
-        element->interactable_dimensions  = text_dimensions;
-        dimensions.y                     += text_dimensions.y;
-        element->dimensions               = dimensions;
+        dimensions.y        += text_dimensions.y;
+        element->dimensions  = dimensions;
     }
     else
     {
