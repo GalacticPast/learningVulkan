@@ -13,7 +13,7 @@
 #include "ui_system.hpp"
 
 #define BORDER_COLOR RED
-
+#define SLIDER_DEFAULT_DIMENSIONS (vec2){30, 60}
 struct ui_element
 {
     u64 id = INVALID_ID_64;
@@ -23,20 +23,22 @@ struct ui_element
     vec2    text_position;
     dstring text;
 
-    s32     slider_value;
+    s32 value = INVALID_ID_S32; // slider value if it is a slider
+    s32 min   = INVALID_ID_S32;
+    s32 max   = INVALID_ID_S32;
 
-    // num of rows and columns
+    // num of rows and columns if it's a container
     u32 num_rows    = INVALID_ID;
     u32 num_columns = INVALID_ID;
 
-    // where it is positioned in respect to the parent.
+    // where it is positioned in respect to the container if its a ui_primitive.
     u32 row_pos = INVALID_ID;
     u32 col_pos = INVALID_ID;
 
     vec2 position; // absolute position
 
-    vec2 interactable_dimensions;
     vec2 dimensions;
+    vec2 interactable_dimensions;
 
     vec4 color;
 
@@ -197,6 +199,41 @@ bool _insert_element(u64 parent_id, u64 id, ui_element *root, ui_element *elemen
 
 static void _calculate_element_positions(ui_element *element)
 {
+    if (element == nullptr)
+    {
+        return;
+    }
+    vec2 padding   = {4, 4};
+    vec2 position  = element->position;
+    position.x    += padding.x;
+
+    u32 length = element->nodes.size();
+    for (u32 i = 0; i < length; i++)
+    {
+        ui_element *elem     = &element->nodes[i];
+        position.y          += padding.y + elem->dimensions.y;
+        elem->position       = position;
+        elem->text_position  = position;
+
+        switch (elem->type)
+        {
+        case UI_DROPDOWN: {
+        }
+        break;
+        case UI_BUTTON: {
+        }
+        break;
+        case UI_SLIDER: {
+            elem->text_position = {elem->position.x + elem->interactable_dimensions.x, elem->position.y};
+        }
+        break;
+        case UI_UNKNOWN: {
+            DERROR("UI element %llu is unknown", element->id);
+        }
+        break;
+        }
+        position = elem->position;
+    }
 }
 
 static void _calculate_element_dimensions(ui_element *element)
@@ -246,16 +283,34 @@ static void _calculate_element_dimensions(ui_element *element)
     text_dimensions.x  = DMAX(txt_width + padding, dimensions.x);
     text_dimensions.y += 20 + padding;
 
-    if (element->type == UI_DROPDOWN)
+    switch (element->type)
     {
+    case UI_DROPDOWN: {
         dimensions.y        += text_dimensions.y;
         element->dimensions  = dimensions;
     }
-    else
-    {
+    break;
+    case UI_BUTTON: {
         dimensions                       = text_dimensions;
         element->interactable_dimensions = dimensions;
         element->dimensions              = dimensions;
+    }
+    break;
+    case UI_SLIDER: {
+        vec2 def_dimension = SLIDER_DEFAULT_DIMENSIONS;
+
+        dimensions    = text_dimensions;
+        dimensions.x += def_dimension.x;
+        dimensions.y  = DMAX(def_dimension.y + padding, dimensions.y);
+
+        element->dimensions              = dimensions;
+        element->interactable_dimensions = dimensions - text_dimensions;
+    }
+    break;
+    case UI_UNKNOWN: {
+        DERROR("UI element %llu is unknown", element->id);
+    }
+    break;
     }
 }
 
@@ -271,22 +326,6 @@ static void _generate_element_geometry(ui_element *element)
     u32 length = element->nodes.size();
 
     static u32 padding = 4;
-
-    if (length)
-    {
-        if (element->type == UI_DROPDOWN)
-        {
-            element->nodes[0].position = {element->position.x + padding,
-                                          element->position.y + element->interactable_dimensions.y + padding};
-            vec2 position              = element->nodes[0].position;
-            for (u32 i = 1; i < length; i++)
-            {
-                position.x                  = element->position.x + padding;
-                position.y                 += element->nodes[i - 1].interactable_dimensions.y + padding;
-                element->nodes[i].position  = position;
-            }
-        }
-    }
 
     if (element->type == UI_DROPDOWN)
     {
@@ -305,13 +344,14 @@ static void _generate_element_geometry(ui_element *element)
     }
     box  box1   = {element->position, element->interactable_dimensions};
     bool is_hot = _check_box_if_hot(element->id, box1);
+
     if (is_hot)
     {
-        ui_text(element->id, &element->text, element->position, YELLOW);
+        ui_text(element->id, &element->text, element->text_position, YELLOW);
     }
     else
     {
-        ui_text(element->id, &element->text, element->position, WHITE);
+        ui_text(element->id, &element->text, element->text_position, WHITE);
     }
 
     for (u32 i = 0; i < length; i++)
@@ -343,10 +383,11 @@ bool ui_window(u64 parent_id, u64 id, vec2 position, u32 num_rows, u32 num_colum
     u32 padding = 3;
 
     ui_element dropdown{};
-    dropdown.type     = UI_DROPDOWN;
-    dropdown.id       = id;
-    dropdown.position = position;
-    dropdown.color    = DARKGRAY;
+    dropdown.type          = UI_DROPDOWN;
+    dropdown.id            = id;
+    dropdown.text_position = position;
+    dropdown.position      = position;
+    dropdown.color         = DARKGRAY;
 
     dropdown.num_rows    = num_rows;
     dropdown.num_columns = num_columns;
@@ -359,7 +400,7 @@ bool ui_window(u64 parent_id, u64 id, vec2 position, u32 num_rows, u32 num_colum
     return true;
 }
 
-void ui_slider(u64 parent_id, u64 id, s32 min, s32 max, s32 *value, u32 row, u32 column)
+bool ui_slider(u64 parent_id, u64 id, s32 min, s32 max, s32 *value, u32 row, u32 column)
 {
     DASSERT(value);
 
@@ -367,6 +408,8 @@ void ui_slider(u64 parent_id, u64 id, s32 min, s32 max, s32 *value, u32 row, u32
 
     slider.id       = id;
     slider.type     = UI_SLIDER;
+    slider.min      = min;
+    slider.max      = max;
     slider.position = vec2();
     slider.color    = DARKBLUE;
     slider.text     = "slider";
@@ -381,7 +424,10 @@ void ui_slider(u64 parent_id, u64 id, s32 min, s32 max, s32 *value, u32 row, u32
     //
     if (return_res)
     {
+        slider.value = *value;
     }
+    _insert_element(parent_id, id, &ui_sys_state_ptr->root, &slider);
+    return return_res;
 }
 
 bool ui_button(u64 parent_id, u64 id, dstring *text, u32 row, u32 column)

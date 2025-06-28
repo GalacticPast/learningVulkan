@@ -215,7 +215,11 @@ int main()
             {
                 DDEBUG("Button_2 pressed");
             }
-            ui_slider(reinterpret_cast<uintptr_t>(&dropdown), reinterpret_cast<uintptr_t>(&index), 0, 255, &r, 1, 0);
+            result = ui_slider(reinterpret_cast<uintptr_t>(&dropdown), reinterpret_cast<uintptr_t>(&index), 0, 255, &r, 1, 0);
+            if(result)
+            {
+
+            }
         }
 
         u64 quad_id          = ui_system_flush_geometries();
