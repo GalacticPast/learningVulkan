@@ -100,7 +100,7 @@ bool material_system_create_material(material_config *config, u64 shader_id)
     mat_sys_state_ptr->hashtable.insert(config->mat_name.c_str(), mat);
     mat_sys_state_ptr->loaded_materials.push_back(config->mat_name);
 
-    DTRACE("Material %s created", config->mat_name);
+    DTRACE("Material %s created", config->mat_name.c_str());
 
     return true;
 }
