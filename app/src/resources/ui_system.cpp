@@ -13,7 +13,9 @@
 #include "ui_system.hpp"
 
 #define BORDER_COLOR RED
-#define SLIDER_DEFAULT_DIMENSIONS (vec2){30, 60}
+#define DEFAULT_SLIDER_DIMENSIONS (vec2){200, 20}
+#define DEFAULT_SLIDER_KNOB_DIMENSIONS (vec2){10, 20}
+
 struct ui_element
 {
     u64 id = INVALID_ID_64;
@@ -286,8 +288,9 @@ static void _calculate_element_dimensions(ui_element *element)
     switch (element->type)
     {
     case UI_DROPDOWN: {
-        dimensions.y        += text_dimensions.y;
-        element->dimensions  = dimensions;
+        dimensions.y                     += text_dimensions.y;
+        element->dimensions               = dimensions;
+        element->interactable_dimensions  = dimensions;
     }
     break;
     case UI_BUTTON: {
@@ -297,14 +300,9 @@ static void _calculate_element_dimensions(ui_element *element)
     }
     break;
     case UI_SLIDER: {
-        vec2 def_dimension = SLIDER_DEFAULT_DIMENSIONS;
-
-        dimensions    = text_dimensions;
-        dimensions.x += def_dimension.x;
-        dimensions.y  = DMAX(def_dimension.y + padding, dimensions.y);
-
-        element->dimensions              = dimensions;
-        element->interactable_dimensions = dimensions - text_dimensions;
+        element->dimensions               = DEFAULT_SLIDER_DIMENSIONS;
+        element->dimensions.x            += text_dimensions.x;
+        element->interactable_dimensions  = DEFAULT_SLIDER_DIMENSIONS;
     }
     break;
     case UI_UNKNOWN: {
@@ -329,19 +327,27 @@ static void _generate_element_geometry(ui_element *element)
 
     if (element->type == UI_DROPDOWN)
     {
-        vec2 border_dimensions = {element->dimensions.x + 4, element->dimensions.y + 4};
+        vec2 border_dimensions = {element->interactable_dimensions.x + 4, element->interactable_dimensions.y + 4};
         vec2 position          = {element->position.x - 2, element->position.y - 2};
         _generate_quad_config(position, border_dimensions, BORDER_COLOR);
     }
 
-    _generate_quad_config(element->position, element->dimensions, element->color);
+    _generate_quad_config(element->position, element->interactable_dimensions, element->color);
 
     if (element->type == UI_DROPDOWN)
     {
-        vec2 header_dimensions = {element->dimensions.x, 25};
+        vec2 header_dimensions = {element->interactable_dimensions.x, 25};
         _generate_quad_config(element->position, header_dimensions, element->color);
         element->interactable_dimensions = header_dimensions;
     }
+
+    if(element->type == UI_SLIDER)
+    {
+        vec2 slider_knob_dimensions = DEFAULT_SLIDER_KNOB_DIMENSIONS;
+        vec2 knob_position = {element->position.x + element->value, element->position.y};
+        _generate_quad_config(knob_position, slider_knob_dimensions, GREEN);
+    }
+
     box  box1   = {element->position, element->interactable_dimensions};
     bool is_hot = _check_box_if_hot(element->id, box1);
 
@@ -411,23 +417,32 @@ bool ui_slider(u64 parent_id, u64 id, s32 min, s32 max, s32 *value, u32 row, u32
     slider.min      = min;
     slider.max      = max;
     slider.position = vec2();
-    slider.color    = DARKBLUE;
+    slider.color    = DARKPURPLE;
     slider.text     = "slider";
+    slider.value = *value;
 
     slider.row_pos = row;
     slider.col_pos = column;
 
-    bool return_res = _check_if_pressed(id);
+    bool pressed = _check_if_pressed(id);
 
-    // do the logic
-
-    //
-    if (return_res)
+    if(pressed)
     {
-        slider.value = *value;
+        s32 prev_x, prev_y = 0;
+        input_get_previous_mouse_position(&prev_x, &prev_y);
+
+        s32 x, y = 0;
+        input_get_mouse_position(&x, &y);
+
+        s32 delta_x = x - prev_x;
+        s32 delta_y = y - prev_y;
+
+        slider.value += delta_x;
+        *value = slider.value;
     }
+
     _insert_element(parent_id, id, &ui_sys_state_ptr->root, &slider);
-    return return_res;
+    return pressed;
 }
 
 bool ui_button(u64 parent_id, u64 id, dstring *text, u32 row, u32 column)
