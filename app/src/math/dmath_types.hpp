@@ -28,10 +28,21 @@ struct vec2
         this->x += vec.x;
         this->y += vec.y;
     }
+    inline void operator+=(const f32& num)
+    {
+        this->x += num;
+        this->y += num;
+    }
+
     inline void operator-=(const vec2 &vec)
     {
         this->x -= vec.x;
         this->y -= vec.y;
+    }
+    inline void operator-=(const f32 &num)
+    {
+        this->x -= num;
+        this->y -= num;
     }
     inline void operator*=(const f32 n)
     {

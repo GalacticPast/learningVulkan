@@ -72,6 +72,7 @@ struct ui_system_state
     font_data *system_font;
 
     ui_element root;
+    vec2       elem_padding = {4, 8};
 
     dhashtable<vec2> container_dimensions;
     dhashtable<vec2> container_position;
@@ -88,10 +89,12 @@ static bool             _insert_element(u64 parent_id, u64 id, ui_element *root,
 static void             _generate_element_geometry(ui_element *element);
 static void             _calculate_element_dimensions(ui_element *element);
 static void             _calculate_element_positions(ui_element *element);
+static void             _adjust_sizes(ui_element *element);
 static void             _transition_state(ui_element *element);
 static bool             _generate_quad_config(vec2 position, vec2 dimensions, vec4 color);
 static bool             _check_mouse_collision(box box);
 static bool             _check_box_if_hot(u64 id, box box1);
+static bool             _check_if_pressed(u64 id);
 
 bool ui_system_initialize(arena *system_arena, arena *resource_arena)
 {
@@ -125,6 +128,103 @@ bool ui_system_set_arena(arena *arena)
     // HACK:
     ui_sys_state_ptr->root.init(arena);
     return true;
+}
+
+bool ui_window(u64 parent_id, u64 id, u32 num_rows, u32 num_columns)
+{
+    DASSERT(ui_sys_state_ptr);
+
+    ui_element window{};
+    window.type = UI_DROPDOWN;
+    window.id   = id;
+
+    window.color = DARKGRAY;
+
+    window.num_rows    = num_rows;
+    window.num_columns = num_columns;
+
+    window.text       = "DropDown";
+    window.dimensions = vec2();
+
+    window.init(ui_sys_state_ptr->arena);
+
+    _insert_element(parent_id, id, &ui_sys_state_ptr->root, &window);
+
+    return true;
+}
+
+bool ui_slider(u64 parent_id, u64 id, s32 min, s32 max, s32 *value, u32 row, u32 column)
+{
+    DASSERT(value);
+
+    ui_element slider{};
+
+    slider.id       = id;
+    slider.type     = UI_SLIDER;
+    slider.min      = min;
+    slider.max      = max;
+    slider.position = vec2();
+    slider.color    = DARKPURPLE;
+    slider.text     = "slider";
+    slider.value    = *value;
+
+    slider.row_pos = row;
+    slider.col_pos = column;
+    bool result    = false;
+
+    if (input_is_button_down(BUTTON_LEFT) && ui_sys_state_ptr->hot_id == id)
+    {
+        s32 prev_x, prev_y = 0;
+        input_get_previous_mouse_position(&prev_x, &prev_y);
+
+        s32 x, y = 0;
+        input_get_mouse_position(&x, &y);
+
+        s32 delta_x = x - prev_x;
+        s32 delta_y = y - prev_y;
+
+        slider.value += delta_x;
+        slider.value  = DMIN(max, slider.value);
+        slider.value  = DMAX(min, slider.value);
+
+        *value = slider.value;
+        result = true;
+    }
+
+    _insert_element(parent_id, id, &ui_sys_state_ptr->root, &slider);
+    return true;
+}
+
+bool ui_button(u64 parent_id, u64 id, dstring *text, u32 row, u32 column)
+{
+    DASSERT(ui_sys_state_ptr);
+    DASSERT(id != INVALID_ID_64);
+
+    bool return_res = _check_if_pressed(id);
+
+    ui_element button{};
+    button.id       = id;
+    button.type     = UI_BUTTON;
+    button.position = vec2();
+    button.color    = DARKBLUE;
+
+    button.row_pos = row;
+    button.col_pos = column;
+
+    if (text)
+    {
+        button.text = *text;
+    }
+    else
+    {
+        button.text = "BUTTON";
+    }
+    button.dimensions = vec2();
+    button.init(ui_sys_state_ptr->arena);
+
+    _insert_element(parent_id, id, &ui_sys_state_ptr->root, &button);
+
+    return return_res;
 }
 
 // box1 top left corner
@@ -222,8 +322,9 @@ static void _calculate_element_positions(ui_element *element)
     {
         return;
     }
-    vec2 padding  = {4, 4};
     vec2 position = element->position;
+
+    static vec2 padding = ui_sys_state_ptr->elem_padding;
 
     if (element->type == UI_DROPDOWN)
     {
@@ -241,18 +342,20 @@ static void _calculate_element_positions(ui_element *element)
         }
 
         ui_sys_state_ptr->container_position.update(element->id, position);
-        element->position = position;
+        element->position       = position;
+        element->text_position  = position;
+        position.y             += element->interactable_dimensions.y;
     }
-    element->text_position  = position;
-    position.x             += padding.x;
+
+    position += padding;
 
     u32 length = element->nodes.size();
     for (u32 i = 0; i < length; i++)
     {
-        ui_element *elem     = &element->nodes[i];
-        position.y          += padding.y + elem->dimensions.y;
-        elem->position       = position;
-        elem->text_position  = position;
+        ui_element *elem = &element->nodes[i];
+
+        elem->position      = position;
+        elem->text_position = position;
 
         switch (elem->type)
         {
@@ -271,7 +374,8 @@ static void _calculate_element_positions(ui_element *element)
         }
         break;
         }
-        position = elem->position;
+
+        position.y += padding.y + elem->dimensions.y;
     }
 }
 
@@ -282,13 +386,13 @@ static void _calculate_element_dimensions(ui_element *element)
         return;
     }
 
-    static font_glyph_data *glyphs = ui_sys_state_ptr->system_font->glyphs;
+    static font_glyph_data *glyphs  = ui_sys_state_ptr->system_font->glyphs;
+    static vec2             padding = ui_sys_state_ptr->elem_padding;
 
     u32  length          = element->nodes.size();
     vec2 dimensions      = vec2();
     vec2 text_dimensions = vec2();
     vec2 position        = vec2();
-    u32  padding         = 4;
 
     if (length)
     {
@@ -300,8 +404,8 @@ static void _calculate_element_dimensions(ui_element *element)
         for (u32 i = 0; i < length; i++)
         {
             dimensions.x  = DMAX(element->nodes[i].dimensions.x, dimensions.x);
-            dimensions.x += padding;
-            dimensions.y += element->nodes[i].dimensions.y + padding;
+            dimensions.x += padding.x;
+            dimensions.y += element->nodes[i].dimensions.y + padding.y;
         }
     }
 
@@ -319,8 +423,8 @@ static void _calculate_element_dimensions(ui_element *element)
         txt_width += glyphs[hash].xadvance;
     }
 
-    text_dimensions.x  = DMAX(txt_width + padding, dimensions.x);
-    text_dimensions.y += 20 + padding;
+    text_dimensions.x  = DMAX(txt_width, dimensions.x);
+    text_dimensions.y += 20;
 
     switch (element->type)
     {
@@ -399,16 +503,13 @@ static void _generate_element_geometry(ui_element *element)
     // from second..n  will be calculated.
     u32 length = element->nodes.size();
 
-    static u32 padding = 4;
-
-
-    vec2 border_dimensions = {element->interactable_dimensions.x + 4, element->interactable_dimensions.y + 4};
+    vec2 border_dimensions = {element->dimensions.x + 4, element->dimensions.y + 4};
     vec2 position          = {element->position.x - 2, element->position.y - 2};
     _generate_quad_config(position, border_dimensions, BORDER_COLOR);
 
     _generate_quad_config(element->position, element->dimensions, element->color);
-    _generate_quad_config(element->position, element->interactable_dimensions, element->color);
 
+    _generate_quad_config(element->position, element->interactable_dimensions, element->color);
 
     if (element->type == UI_SLIDER)
     {
@@ -449,103 +550,8 @@ static bool _check_box_if_hot(u64 id, box box1)
     return is_hot;
 }
 
-bool ui_window(u64 parent_id, u64 id, u32 num_rows, u32 num_columns)
+static void _adjust_sizes(ui_element *element)
 {
-    DASSERT(ui_sys_state_ptr);
-
-    u32 padding = 3;
-
-    ui_element window{};
-    window.type = UI_DROPDOWN;
-    window.id   = id;
-
-    window.color = DARKGRAY;
-
-    window.num_rows    = num_rows;
-    window.num_columns = num_columns;
-
-    window.text       = "DropDown";
-    window.dimensions = vec2();
-
-    window.init(ui_sys_state_ptr->arena);
-
-    _insert_element(parent_id, id, &ui_sys_state_ptr->root, &window);
-
-    return true;
-}
-
-bool ui_slider(u64 parent_id, u64 id, s32 min, s32 max, s32 *value, u32 row, u32 column)
-{
-    DASSERT(value);
-
-    ui_element slider{};
-
-    slider.id       = id;
-    slider.type     = UI_SLIDER;
-    slider.min      = min;
-    slider.max      = max;
-    slider.position = vec2();
-    slider.color    = DARKPURPLE;
-    slider.text     = "slider";
-    slider.value    = *value;
-
-    slider.row_pos = row;
-    slider.col_pos = column;
-    bool result    = false;
-
-    if (input_is_button_down(BUTTON_LEFT) && ui_sys_state_ptr->hot_id == id)
-    {
-        s32 prev_x, prev_y = 0;
-        input_get_previous_mouse_position(&prev_x, &prev_y);
-
-        s32 x, y = 0;
-        input_get_mouse_position(&x, &y);
-
-        s32 delta_x = x - prev_x;
-        s32 delta_y = y - prev_y;
-
-        slider.value += delta_x;
-        slider.value  = DMIN(max, slider.value);
-        slider.value  = DMAX(min, slider.value);
-
-        *value = slider.value;
-        result = true;
-    }
-
-    _insert_element(parent_id, id, &ui_sys_state_ptr->root, &slider);
-    return true;
-}
-
-bool ui_button(u64 parent_id, u64 id, dstring *text, u32 row, u32 column)
-{
-    DASSERT(ui_sys_state_ptr);
-    DASSERT(id != INVALID_ID_64);
-
-    bool return_res = _check_if_pressed(id);
-
-    ui_element button{};
-    button.id       = id;
-    button.type     = UI_BUTTON;
-    button.position = vec2();
-    button.color    = DARKBLUE;
-
-    button.row_pos = row;
-    button.col_pos = column;
-
-    if (text)
-    {
-        button.text = *text;
-    }
-    else
-    {
-        button.text = "BUTTON";
-    }
-    button.dimensions = vec2();
-    button.init(ui_sys_state_ptr->arena);
-
-    _insert_element(parent_id, id, &ui_sys_state_ptr->root, &button);
-
-    return return_res;
 }
 
 bool _generate_quad_config(vec2 position, vec2 dimensions, vec4 color)
@@ -618,10 +624,9 @@ bool ui_text(u64 id, dstring *text, vec2 position, vec4 color)
 
     DASSERT(glyphs);
 
-    u32  strlen  = text->str_len;
-    u32  hash    = 0;
-    vec2 pos     = position;
-    u32  padding = 4;
+    u32  strlen = text->str_len;
+    u32  hash   = 0;
+    vec2 pos    = position;
 
     vertex_2D q0;
     vertex_2D q1;
@@ -740,6 +745,12 @@ u64 ui_system_flush_geometries()
     {
         ui_element *elem = &ui_sys_state_ptr->root.nodes[i];
         _calculate_element_positions(elem);
+    }
+
+    for (u32 i = 0; i < length; i++)
+    {
+        ui_element *elem = &ui_sys_state_ptr->root.nodes[i];
+        _adjust_sizes(elem);
     }
 
     for (u32 i = 0; i < length; i++)
