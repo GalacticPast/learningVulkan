@@ -262,17 +262,17 @@ template <typename T> bool dhashtable<T>::update(const u64 key, T type)
     {
         DERROR("Invalid key for updating the entry.");
     }
-    u32 high = static_cast<u32>(dummy >> 32);
-    u32 low  = static_cast<u32>(dummy);
-
-    entry *entry_ptr = &table[low];
+    u32 high          = static_cast<u32>(dummy >> 32);
+    u32 low           = static_cast<u32>(dummy);
+    low              %= max_length;
+    entry *entry_ptr  = &table[low];
     if (table[low].is_initialized)
     {
-        entry_ptr->type              = type;
+        entry_ptr->type = type;
     }
     else
     {
-        DERROR("Coulndt associate a entry with key %llu, high %d low %d.",key, high, low);
+        DERROR("Coulndt associate a entry with key %llu, high %d low %d.", key, high, low);
         return false;
     }
     return true;
@@ -417,6 +417,7 @@ template <typename T> T *dhashtable<T>::find(const u64 key)
 
     u32 high = static_cast<u32>(key >> 32);
     u32 low  = static_cast<u32>(key);
+    low              %= max_length;
 
     entry *entry_ptr = &table[low];
 
@@ -429,7 +430,7 @@ template <typename T> T *dhashtable<T>::find(const u64 key)
                   key);
             return &default_entry->type;
         }
-        DERROR("The provided key %llu high: %d , low: %d, doesnt map to a entry. Returning nullptr", key, high, low);
+        DTRACE("The provided key %llu high: %d , low: %d, doesnt map to a entry. Returning nullptr", key, high, low);
         return nullptr;
     }
     if (entry_ptr->unique_identifier != high)
@@ -495,8 +496,9 @@ template <typename T> bool dhashtable<T>::erase(u64 key)
 
     u32 high = static_cast<u32>(key >> 32);
     u32 low  = static_cast<u32>(key);
-
+    low %= max_length;
     entry *entry_ptr = &table[low];
+
 
     if (!table[low].is_initialized)
     {

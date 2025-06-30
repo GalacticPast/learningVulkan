@@ -1,12 +1,16 @@
 #include "containers/darray.hpp"
+#include "containers/dhashtable.hpp"
+
 #include "core/dasserts.hpp"
 #include "core/dmemory.hpp"
 #include "core/dstring.hpp"
 #include "core/input.hpp"
+
 #include "defines.hpp"
 #include "main.hpp"
 #include "math/dmath.hpp"
 #include "memory/arenas.hpp"
+
 #include "resources/font_system.hpp"
 #include "resources/geometry_system.hpp"
 #include "resources/resource_types.hpp"
@@ -57,7 +61,9 @@ struct ui_system_state
     arena *arena;
 
     u64 active_id = INVALID_ID_64;
-    u64 hot_id    = INVALID_ID_64;
+
+    bool is_stale = true;
+    u64  hot_id   = INVALID_ID_64;
 
     u64             geometry_id = INVALID_ID_64;
     geometry_config ui_geometry_config;
@@ -66,6 +72,9 @@ struct ui_system_state
     font_data *system_font;
 
     ui_element root;
+
+    dhashtable<vec2> container_dimensions;
+    dhashtable<vec2> container_position;
 };
 
 struct box
@@ -79,6 +88,7 @@ static bool             _insert_element(u64 parent_id, u64 id, ui_element *root,
 static void             _generate_element_geometry(ui_element *element);
 static void             _calculate_element_dimensions(ui_element *element);
 static void             _calculate_element_positions(ui_element *element);
+static void             _transition_state(ui_element *element);
 static bool             _generate_quad_config(vec2 position, vec2 dimensions, vec4 color);
 static bool             _check_mouse_collision(box box);
 static bool             _check_box_if_hot(u64 id, box box1);
@@ -98,6 +108,12 @@ bool ui_system_initialize(arena *system_arena, arena *resource_arena)
         static_cast<u32 *>(dallocate(resource_arena, sizeof(u32) * MB(1), MEM_TAG_GEOMETRY));
     ui_sys_state_ptr->system_font             = font_system_get_system_font();
     ui_sys_state_ptr->ui_geometry_config.type = GEO_TYPE_2D;
+
+    ui_sys_state_ptr->container_dimensions.c_init(resource_arena, 4096);
+    ui_sys_state_ptr->container_dimensions.is_non_resizable = true;
+
+    ui_sys_state_ptr->container_position.c_init(resource_arena, 4096);
+    ui_sys_state_ptr->container_position.is_non_resizable = true;
 
     return true;
 }
@@ -156,8 +172,9 @@ bool _check_if_hot(u64 id, box a, box b)
     {
         if (_check_collision(a, b))
         {
-            ui_sys_state_ptr->hot_id = id;
-            is_hot                   = true;
+            ui_sys_state_ptr->hot_id   = id;
+            ui_sys_state_ptr->is_stale = false;
+            is_hot                     = true;
         }
     }
     return is_hot;
@@ -205,9 +222,29 @@ static void _calculate_element_positions(ui_element *element)
     {
         return;
     }
-    vec2 padding   = {4, 4};
-    vec2 position  = element->position;
-    position.x    += padding.x;
+    vec2 padding  = {4, 4};
+    vec2 position = element->position;
+
+    if (element->type == UI_DROPDOWN)
+    {
+        vec2 *prev_pos = ui_sys_state_ptr->container_position.find(element->id);
+
+        if (prev_pos)
+        {
+            position.x = DMAX(prev_pos->x, position.x);
+            position.y = DMAX(prev_pos->y, position.y);
+        }
+        else
+        {
+            position = {100, 100};
+            ui_sys_state_ptr->container_position.insert(element->id, position);
+        }
+
+        ui_sys_state_ptr->container_position.update(element->id, position);
+        element->position = position;
+    }
+    element->text_position  = position;
+    position.x             += padding.x;
 
     u32 length = element->nodes.size();
     for (u32 i = 0; i < length; i++)
@@ -288,9 +325,24 @@ static void _calculate_element_dimensions(ui_element *element)
     switch (element->type)
     {
     case UI_DROPDOWN: {
-        dimensions.y                     += text_dimensions.y;
-        element->dimensions               = dimensions;
-        element->interactable_dimensions  = dimensions;
+
+        vec2 *prev_dimensions = ui_sys_state_ptr->container_dimensions.find(element->id);
+        if (prev_dimensions)
+        {
+            dimensions.x = DMAX(prev_dimensions->x, dimensions.x);
+            dimensions.y = DMAX(prev_dimensions->y, dimensions.y);
+        }
+        else
+        {
+            dimensions.y += text_dimensions.y;
+            ui_sys_state_ptr->container_dimensions.insert(element->id, dimensions);
+        }
+
+        ui_sys_state_ptr->container_dimensions.update(element->id, dimensions);
+
+        element->dimensions              = dimensions;
+        vec2 header_dimensions           = {dimensions.x, 25};
+        element->interactable_dimensions = header_dimensions;
     }
     break;
     case UI_BUTTON: {
@@ -302,7 +354,7 @@ static void _calculate_element_dimensions(ui_element *element)
     case UI_SLIDER: {
         element->dimensions               = DEFAULT_SLIDER_DIMENSIONS;
         element->dimensions.x            += text_dimensions.x;
-        element->interactable_dimensions  = DEFAULT_SLIDER_DIMENSIONS;
+        element->interactable_dimensions  = DEFAULT_SLIDER_KNOB_DIMENSIONS;
     }
     break;
     case UI_UNKNOWN: {
@@ -310,6 +362,30 @@ static void _calculate_element_dimensions(ui_element *element)
     }
     break;
     }
+}
+
+static void _transition_state(ui_element *element)
+{
+    if (element == nullptr)
+    {
+        return;
+    }
+    u32 size = element->nodes.size();
+    for (u32 i = 0; i < size; i++)
+    {
+        ui_element *elem = &element->nodes[i];
+        _transition_state(elem);
+    }
+
+    box a = {element->position, element->interactable_dimensions};
+
+    if (element->type == UI_SLIDER)
+    {
+        vec2 knob_position = {element->position.x + element->value, element->position.y};
+        a.position         = knob_position;
+    }
+
+    _check_box_if_hot(element->id, a);
 }
 
 static void _generate_element_geometry(ui_element *element)
@@ -325,33 +401,24 @@ static void _generate_element_geometry(ui_element *element)
 
     static u32 padding = 4;
 
-    if (element->type == UI_DROPDOWN)
-    {
-        vec2 border_dimensions = {element->interactable_dimensions.x + 4, element->interactable_dimensions.y + 4};
-        vec2 position          = {element->position.x - 2, element->position.y - 2};
-        _generate_quad_config(position, border_dimensions, BORDER_COLOR);
-    }
 
+    vec2 border_dimensions = {element->interactable_dimensions.x + 4, element->interactable_dimensions.y + 4};
+    vec2 position          = {element->position.x - 2, element->position.y - 2};
+    _generate_quad_config(position, border_dimensions, BORDER_COLOR);
+
+    _generate_quad_config(element->position, element->dimensions, element->color);
     _generate_quad_config(element->position, element->interactable_dimensions, element->color);
 
-    if (element->type == UI_DROPDOWN)
+
+    if (element->type == UI_SLIDER)
     {
-        vec2 header_dimensions = {element->interactable_dimensions.x, 25};
-        _generate_quad_config(element->position, header_dimensions, element->color);
-        element->interactable_dimensions = header_dimensions;
+        vec2 knob_dimensions = DEFAULT_SLIDER_KNOB_DIMENSIONS;
+        vec2 knob_position   = {element->position.x + element->value, element->position.y};
+
+        _generate_quad_config(knob_position, knob_dimensions, GREEN);
     }
 
-    if(element->type == UI_SLIDER)
-    {
-        vec2 slider_knob_dimensions = DEFAULT_SLIDER_KNOB_DIMENSIONS;
-        vec2 knob_position = {element->position.x + element->value, element->position.y};
-        _generate_quad_config(knob_position, slider_knob_dimensions, GREEN);
-    }
-
-    box  box1   = {element->position, element->interactable_dimensions};
-    bool is_hot = _check_box_if_hot(element->id, box1);
-
-    if (is_hot)
+    if (element->id == ui_sys_state_ptr->hot_id)
     {
         ui_text(element->id, &element->text, element->text_position, YELLOW);
     }
@@ -382,27 +449,28 @@ static bool _check_box_if_hot(u64 id, box box1)
     return is_hot;
 }
 
-bool ui_window(u64 parent_id, u64 id, vec2 position, u32 num_rows, u32 num_columns)
+bool ui_window(u64 parent_id, u64 id, u32 num_rows, u32 num_columns)
 {
     DASSERT(ui_sys_state_ptr);
 
     u32 padding = 3;
 
-    ui_element dropdown{};
-    dropdown.type          = UI_DROPDOWN;
-    dropdown.id            = id;
-    dropdown.text_position = position;
-    dropdown.position      = position;
-    dropdown.color         = DARKGRAY;
+    ui_element window{};
+    window.type = UI_DROPDOWN;
+    window.id   = id;
 
-    dropdown.num_rows    = num_rows;
-    dropdown.num_columns = num_columns;
+    window.color = DARKGRAY;
 
-    dropdown.text       = "DropDown";
-    dropdown.dimensions = vec2();
-    dropdown.init(ui_sys_state_ptr->arena);
+    window.num_rows    = num_rows;
+    window.num_columns = num_columns;
 
-    _insert_element(parent_id, id, &ui_sys_state_ptr->root, &dropdown);
+    window.text       = "DropDown";
+    window.dimensions = vec2();
+
+    window.init(ui_sys_state_ptr->arena);
+
+    _insert_element(parent_id, id, &ui_sys_state_ptr->root, &window);
+
     return true;
 }
 
@@ -419,14 +487,13 @@ bool ui_slider(u64 parent_id, u64 id, s32 min, s32 max, s32 *value, u32 row, u32
     slider.position = vec2();
     slider.color    = DARKPURPLE;
     slider.text     = "slider";
-    slider.value = *value;
+    slider.value    = *value;
 
     slider.row_pos = row;
     slider.col_pos = column;
+    bool result    = false;
 
-    bool pressed = _check_if_pressed(id);
-
-    if(pressed)
+    if (input_is_button_down(BUTTON_LEFT) && ui_sys_state_ptr->hot_id == id)
     {
         s32 prev_x, prev_y = 0;
         input_get_previous_mouse_position(&prev_x, &prev_y);
@@ -438,11 +505,15 @@ bool ui_slider(u64 parent_id, u64 id, s32 min, s32 max, s32 *value, u32 row, u32
         s32 delta_y = y - prev_y;
 
         slider.value += delta_x;
+        slider.value  = DMIN(max, slider.value);
+        slider.value  = DMAX(min, slider.value);
+
         *value = slider.value;
+        result = true;
     }
 
     _insert_element(parent_id, id, &ui_sys_state_ptr->root, &slider);
-    return pressed;
+    return true;
 }
 
 bool ui_button(u64 parent_id, u64 id, dstring *text, u32 row, u32 column)
@@ -654,6 +725,8 @@ bool ui_text(u64 id, dstring *text, vec2 position, vec4 color)
 u64 ui_system_flush_geometries()
 {
 
+    ui_sys_state_ptr->is_stale = true;
+
     u64 id     = ui_sys_state_ptr->geometry_id;
     u32 length = ui_sys_state_ptr->root.nodes.size();
 
@@ -662,10 +735,17 @@ u64 ui_system_flush_geometries()
         ui_element *elem = &ui_sys_state_ptr->root.nodes[i];
         _calculate_element_dimensions(elem);
     }
+
     for (u32 i = 0; i < length; i++)
     {
         ui_element *elem = &ui_sys_state_ptr->root.nodes[i];
         _calculate_element_positions(elem);
+    }
+
+    for (u32 i = 0; i < length; i++)
+    {
+        ui_element *elem = &ui_sys_state_ptr->root.nodes[i];
+        _transition_state(elem);
     }
 
     for (u32 i = 0; i < length; i++)
@@ -689,6 +769,11 @@ u64 ui_system_flush_geometries()
     ui_sys_state_ptr->local_index_offset              = 0;
     ui_sys_state_ptr->ui_geometry_config.vertex_count = 0;
     ui_sys_state_ptr->ui_geometry_config.index_count  = 0;
+
+    if (ui_sys_state_ptr->is_stale)
+    {
+        ui_sys_state_ptr->hot_id = INVALID_ID_64;
+    }
 
     return id;
 }

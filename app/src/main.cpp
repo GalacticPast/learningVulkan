@@ -198,7 +198,7 @@ int main()
         ui_text(reinterpret_cast<uintptr_t>(&camera_pos), &camera_pos, {0, 380}, WHITE);
         ui_text(reinterpret_cast<uintptr_t>(&fps_text), &fps_text, {0, 0}, WHITE);
 
-        bool result = ui_window(INVALID_ID_64, reinterpret_cast<uintptr_t>(&dropdown), {100, 100}, 3, 3);
+        bool result = ui_window(INVALID_ID_64, reinterpret_cast<uintptr_t>(&dropdown), 3, 3);
         if (result)
         {
             dstring text = "Button_1";
