@@ -139,7 +139,7 @@ bool ui_window(u64 parent_id, u64 id, u32 num_rows, u32 num_columns)
     DASSERT(ui_sys_state_ptr);
 
     ui_element window{};
-    window.type = UI_DROPDOWN;
+    window.type = UI_WINDOW;
     window.id   = id;
 
     window.color = DARKGRAY;
@@ -330,19 +330,37 @@ static void _calculate_element_positions(ui_element *element)
 
     static vec2 padding = ui_sys_state_ptr->elem_padding;
 
-    if (element->type == UI_DROPDOWN)
+    if (element->type == UI_WINDOW)
     {
-        vec2 *prev_pos = ui_sys_state_ptr->container_position.find(element->id);
 
-        if (prev_pos)
-        {
-            position.x = DMAX(prev_pos->x, position.x);
-            position.y = DMAX(prev_pos->y, position.y);
-        }
-        else
+        vec2 *prev_pos = ui_sys_state_ptr->container_position.find(element->id);
+        if (!prev_pos)
         {
             position = {100, 100};
             ui_sys_state_ptr->container_position.insert(element->id, position);
+        }
+        else
+        {
+            position = *prev_pos;
+        }
+
+        bool return_val = element->id == ui_sys_state_ptr->hot_id && input_is_button_down(BUTTON_LEFT);
+        if (return_val)
+        {
+            s32 prev_x, prev_y = 0;
+            input_get_previous_mouse_position(&prev_x, &prev_y);
+
+            s32 x, y = 0;
+            input_get_mouse_position(&x, &y);
+
+            s32 delta_x = x - prev_x;
+            s32 delta_y = y - prev_y;
+
+            if (prev_pos)
+            {
+                position.x += delta_x;
+                position.y += delta_y;
+            }
         }
 
         ui_sys_state_ptr->container_position.update(element->id, position);
@@ -440,7 +458,7 @@ static void _calculate_element_positions(ui_element *element)
                 switch (elem->type)
                 {
                 case UI_BUTTON:
-                case UI_DROPDOWN: {
+                case UI_WINDOW: {
                     // center the text
                     elem->text_position = elem->position;
                 }
@@ -513,7 +531,7 @@ static void _calculate_element_dimensions(ui_element *element)
 
     switch (element->type)
     {
-    case UI_DROPDOWN: {
+    case UI_WINDOW: {
 
         vec2 *prev_dimensions = ui_sys_state_ptr->container_dimensions.find(element->id);
         if (prev_dimensions)
@@ -639,7 +657,7 @@ static void _adjust_sizes(ui_element *element) // if it needs to
     }
     static vec2 elem_padding = ui_sys_state_ptr->elem_padding;
 
-    if (element->type == UI_DROPDOWN)
+    if (element->type == UI_WINDOW)
     {
         u32  length     = element->nodes.size();
         vec2 dimensions = element->dimensions;
@@ -675,14 +693,14 @@ static void _adjust_sizes(ui_element *element) // if it needs to
                 grid_indicies[row_pos][col_pos] = i;
             }
 
-            u32 width  = 0;
+            u32 width = 0;
 
             u32 height = element->nodes[grid_indicies[0][0]].position.y - element->position.y;
 
             for (u32 i = 0; i < num_rows; i++)
             {
 
-                u32 row_width = 0;
+                u32 row_width  = 0;
                 u32 row_height = 0;
                 for (u32 j = 0; j < num_columns; j++)
                 {
@@ -698,13 +716,13 @@ static void _adjust_sizes(ui_element *element) // if it needs to
                     switch (elem->type)
                     {
                     case UI_BUTTON:
-                    case UI_DROPDOWN: {
-                        row_width  += elem->dimensions.x + elem_padding.x;
+                    case UI_WINDOW: {
+                        row_width += elem->dimensions.x + elem_padding.x;
                     }
                     break;
                     case UI_SLIDER: {
 
-                        row_width  += elem->dimensions.x + elem->text_dimensions.x + elem_padding.x + elem_padding.x;
+                        row_width += elem->dimensions.x + elem->text_dimensions.x + elem_padding.x + elem_padding.x;
                     }
                     break;
                     case UI_UNKNOWN: {
@@ -712,12 +730,12 @@ static void _adjust_sizes(ui_element *element) // if it needs to
                     break;
                     }
                 }
-                width = DMAX(width, row_width);
+                width   = DMAX(width, row_width);
                 height += row_height;
             }
 
-            dimensions.x = DMAX(width, dimensions.x);
-            dimensions.y = DMAX(height, dimensions.y);
+            dimensions.x        = DMAX(width, dimensions.x);
+            dimensions.y        = DMAX(height, dimensions.y);
             element->dimensions = dimensions;
 
             ui_sys_state_ptr->container_dimensions.update(element->id, dimensions);

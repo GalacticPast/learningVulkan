@@ -13,7 +13,7 @@ enum ui_element_type
     UI_SLIDER,
 
     /* DYNAMICS */
-    UI_DROPDOWN,
+    UI_WINDOW,
 };
 
 bool ui_system_initialize(arena *system_arena, arena *resource_arena);
