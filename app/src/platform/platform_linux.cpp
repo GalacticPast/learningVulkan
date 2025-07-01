@@ -601,9 +601,8 @@ keys translate_keycode(u32 xk_keycode)
 //
 #include <wayland-client.h>
 
-
-#include "platform/wayland/xdg-shell-client-protocol.h"
 #include "platform/wayland/xdg-decoration-unstable-v1.h"
+#include "platform/wayland/xdg-shell-client-protocol.h"
 
 #include <xkbcommon/xkbcommon-keysyms.h>
 #include <xkbcommon/xkbcommon.h> // sudo apt-get install libxkbcommon-dev
@@ -687,6 +686,27 @@ void wl_pointer_move(void *data, struct wl_pointer *wl_pointer, uint32_t time, w
 void wl_pointer_button_event(void *data, struct wl_pointer *wl_pointer, uint32_t serial, uint32_t time, uint32_t button,
                              uint32_t state)
 {
+    bool    pressed      = state;
+    buttons mouse_button = BUTTON_MAX_BUTTONS;
+
+    switch (button)
+    {
+    case 272:
+        mouse_button = BUTTON_LEFT;
+        break;
+    case 274:
+        mouse_button = BUTTON_MIDDLE;
+        break;
+    case 273:
+        mouse_button = BUTTON_RIGHT;
+        break;
+    }
+
+    // Pass over to the input subsystem.
+    if (mouse_button != BUTTON_MAX_BUTTONS)
+    {
+        input_process_button(mouse_button, pressed);
+    }
 }
 
 void wl_pointer_axis(void *data, struct wl_pointer *wl_pointer, uint32_t time, uint32_t axis, wl_fixed_t value)
@@ -978,9 +998,11 @@ bool platform_system_startup(arena *arena, application_config *app_config)
     wl_surface_commit(platform_state_ptr->wl_surface);
     platform_state_ptr->info = platform_get_info();
 
-    platform_state_ptr->zxdg_toplevel_decoration = zxdg_decoration_manager_v1_get_toplevel_decoration(platform_state_ptr->zxdg_decoration_manager_v1, platform_state_ptr->xdg_toplevel); // toplevel is from xdg_surface_get_toplevel
-    zxdg_toplevel_decoration_v1_set_mode(platform_state_ptr->zxdg_toplevel_decoration, ZXDG_TOPLEVEL_DECORATION_V1_MODE_SERVER_SIDE);
-
+    platform_state_ptr->zxdg_toplevel_decoration = zxdg_decoration_manager_v1_get_toplevel_decoration(
+        platform_state_ptr->zxdg_decoration_manager_v1,
+        platform_state_ptr->xdg_toplevel); // toplevel is from xdg_surface_get_toplevel
+    zxdg_toplevel_decoration_v1_set_mode(platform_state_ptr->zxdg_toplevel_decoration,
+                                         ZXDG_TOPLEVEL_DECORATION_V1_MODE_SERVER_SIDE);
 
     return true;
 }
