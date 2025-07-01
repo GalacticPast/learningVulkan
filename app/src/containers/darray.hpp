@@ -44,8 +44,11 @@ template <typename T> class darray
     void push_back(T a);
     T    pop_back();
     T    pop_at(u32 index);
+
     u64  size();
     void clear();
+
+    void fill(T type);
 };
 
 template <typename T> darray<T>::darray()
@@ -201,6 +204,18 @@ template <typename T> void darray<T>::resize(u64 out_size)
     {
         DERROR("Array hasn't been initialized properly. Call c_init, reserve or plain old constructor with arenas to initalize it.");
         debugBreak();
+    }
+}
+
+template <typename T> void darray<T>::fill(T type)
+{
+    if(data)
+    {
+        u64 len = capacity / element_size;
+        for(u64 i = 0 ; i < len ; i++)
+        {
+            data[i] = type;
+        }
     }
 }
 

@@ -15,6 +15,7 @@
 #include "resources/geometry_system.hpp"
 #include "resources/resource_types.hpp"
 #include "ui_system.hpp"
+#include <cstdio>
 
 #define BORDER_COLOR RED
 #define DEFAULT_SLIDER_DIMENSIONS (vec2){200, 20}
@@ -27,6 +28,7 @@ struct ui_element
     ui_element_type type;
 
     vec2    text_position;
+    vec2    text_dimensions;
     dstring text;
 
     s32 value = INVALID_ID_S32; // slider value if it is a slider
@@ -72,7 +74,7 @@ struct ui_system_state
     font_data *system_font;
 
     ui_element root;
-    vec2       elem_padding = {4, 8};
+    vec2       elem_padding;
 
     dhashtable<vec2> container_dimensions;
     dhashtable<vec2> container_position;
@@ -117,6 +119,8 @@ bool ui_system_initialize(arena *system_arena, arena *resource_arena)
 
     ui_sys_state_ptr->container_position.c_init(resource_arena, 4096);
     ui_sys_state_ptr->container_position.is_non_resizable = true;
+
+    ui_sys_state_ptr->elem_padding = {8, 8};
 
     return true;
 }
@@ -171,9 +175,8 @@ bool ui_slider(u64 parent_id, u64 id, s32 min, s32 max, s32 *value, u32 row, u32
     slider.row_pos = row;
     slider.col_pos = column;
 
-    bool is_hot = _check_if_pressed(id);
-
-    if (is_hot)
+    bool return_val = id == ui_sys_state_ptr->hot_id && input_is_button_down(BUTTON_LEFT);
+    if (return_val)
     {
         s32 prev_x, prev_y = 0;
         input_get_previous_mouse_position(&prev_x, &prev_y);
@@ -193,7 +196,7 @@ bool ui_slider(u64 parent_id, u64 id, s32 min, s32 max, s32 *value, u32 row, u32
 
     _insert_element(parent_id, id, &ui_sys_state_ptr->root, &slider);
 
-    return is_hot;
+    return return_val;
 }
 
 bool ui_button(u64 parent_id, u64 id, dstring *text, u32 row, u32 column)
@@ -343,40 +346,121 @@ static void _calculate_element_positions(ui_element *element)
         }
 
         ui_sys_state_ptr->container_position.update(element->id, position);
-        element->position       = position;
-        element->text_position  = position;
-        position.y             += element->interactable_dimensions.y;
+
+        element->position      = position;
+        element->text_position = position;
+
+        position.y += element->interactable_dimensions.y;
     }
 
-    position += padding;
+    position.x += padding.x;
 
     u32 length = element->nodes.size();
-    for (u32 i = 0; i < length; i++)
+    if (length)
     {
-        ui_element *elem = &element->nodes[i];
+        static arena *arena = ui_sys_state_ptr->arena;
 
-        elem->position      = position;
-        elem->text_position = position;
+        u32 num_rows    = element->num_rows;
+        u32 num_columns = element->num_columns;
+        // INFO: I might not need this tbh. This is implemented to guard againt the case where the elements were not
+        // sorted by the grid row layouts
+        //   for example we have 3 rows and 3 columsn
+        //   the element array might have been initialied with the 0,0 as the first element 1,0 as the second and third
+        //   might be the 0,1 element and so on.. so this is esentially sorting it by the rows. Well just storing the
+        //   indicies for faster computation. :)
+        darray<darray<u32>> grid_indicies;
+        grid_indicies.reserve(arena, element->num_rows);
 
-        switch (elem->type)
+        for (u32 i = 0; i < num_rows; i++)
         {
-        case UI_DROPDOWN: {
-        }
-        break;
-        case UI_BUTTON: {
-        }
-        break;
-        case UI_SLIDER: {
-            elem->text_position = {elem->position.x + elem->interactable_dimensions.x, elem->position.y};
-        }
-        break;
-        case UI_UNKNOWN: {
-            DERROR("UI element %llu is unknown", element->id);
-        }
-        break;
+            grid_indicies[i].reserve(arena, num_columns);
+            grid_indicies[i].fill(INVALID_ID);
         }
 
-        position.y += padding.y + elem->dimensions.y;
+        for (u32 i = 0; i < length; i++)
+        {
+            ui_element *elem = &element->nodes[i];
+
+            u32 row_pos = elem->row_pos;
+            u32 col_pos = elem->col_pos;
+
+            grid_indicies[row_pos][col_pos] = i;
+        }
+        for (u32 i = 0; i < num_rows; i++)
+        {
+            u32 row_ind = grid_indicies[i][0];
+            if (row_ind == INVALID_ID)
+            {
+                break;
+            }
+
+            ui_element *row = &element->nodes[row_ind];
+            row->position   = position;
+
+            position.y += row->dimensions.y + padding.y;
+        }
+        // calculate positions according to the set grid
+        for (u32 i = 0; i < num_rows; i++)
+        {
+            u32 row_ind = grid_indicies[i][0];
+            if (row_ind == INVALID_ID)
+            {
+                break;
+            }
+            ui_element *row = &element->nodes[row_ind];
+
+            position    = row->position;
+            position.x += row->dimensions.x + padding.x;
+
+            for (u32 j = 1; j < num_columns; j++)
+            {
+                u32 ind = grid_indicies[i][j];
+                if (ind == INVALID_ID)
+                {
+                    continue;
+                }
+                ui_element *elem = &element->nodes[ind];
+                elem->position   = position;
+
+                position.x += elem->dimensions.x + padding.x;
+            }
+        }
+
+        for (u32 i = 0; i < num_rows; i++)
+        {
+            for (u32 j = 0; j < num_columns; j++)
+            {
+                u32 ind = grid_indicies[i][j];
+                if (ind == INVALID_ID)
+                {
+                    continue;
+                }
+                ui_element *elem = &element->nodes[ind];
+
+                switch (elem->type)
+                {
+                case UI_BUTTON:
+                case UI_DROPDOWN: {
+                    // center the text
+                    elem->text_position = elem->position;
+                }
+                break;
+                case UI_SLIDER: {
+                    elem->text_position.x = elem->position.x + elem->dimensions.x;
+                    elem->text_position.y = elem->position.y;
+                }
+                break;
+                case UI_UNKNOWN: {
+                }
+                break;
+                }
+            }
+        }
+
+        for (u32 i = 0; i < num_rows; i++)
+        {
+            grid_indicies[i].~darray();
+        }
     }
 }
 
@@ -387,7 +471,7 @@ static void _calculate_element_dimensions(ui_element *element)
         return;
     }
 
-    static font_glyph_data *glyphs  = ui_sys_state_ptr->system_font->glyphs;
+    static font_glyph_data *glyphs = ui_sys_state_ptr->system_font->glyphs;
 
     u32  length          = element->nodes.size();
     vec2 dimensions      = vec2();
@@ -423,8 +507,9 @@ static void _calculate_element_dimensions(ui_element *element)
         txt_width += glyphs[hash].xadvance;
     }
 
-    text_dimensions.x  = DMAX(txt_width, dimensions.x);
-    text_dimensions.y += 20;
+    text_dimensions.x         = DMAX(txt_width, dimensions.x);
+    text_dimensions.y        += 20;
+    element->text_dimensions  = text_dimensions;
 
     switch (element->type)
     {
@@ -499,16 +584,11 @@ static void _generate_element_geometry(ui_element *element)
         return;
     }
 
-    // if this is the first element it will have a position set.
-    // from second..n  will be calculated.
-    u32 length = element->nodes.size();
-
     vec2 border_dimensions = {element->dimensions.x + 4, element->dimensions.y + 4};
     vec2 position          = {element->position.x - 2, element->position.y - 2};
     _generate_quad_config(position, border_dimensions, BORDER_COLOR);
 
     _generate_quad_config(element->position, element->dimensions, element->color);
-
     _generate_quad_config(element->position, element->interactable_dimensions, element->color);
 
     if (element->type == UI_SLIDER)
@@ -519,15 +599,15 @@ static void _generate_element_geometry(ui_element *element)
         _generate_quad_config(knob_position, knob_dimensions, GREEN);
     }
 
+    vec4 text_color = WHITE;
     if (element->id == ui_sys_state_ptr->hot_id)
     {
-        ui_text(element->id, &element->text, element->text_position, YELLOW);
-    }
-    else
-    {
-        ui_text(element->id, &element->text, element->text_position, WHITE);
+        text_color = YELLOW;
     }
 
+    ui_text(element->id, &element->text, element->text_position, text_color);
+
+    u32 length = element->nodes.size();
     for (u32 i = 0; i < length; i++)
     {
         ui_element *elem = &element->nodes[i];
@@ -550,8 +630,104 @@ static bool _check_box_if_hot(u64 id, box box1)
     return is_hot;
 }
 
-static void _adjust_sizes(ui_element *element)
+// this will also adjust the position of the final text.
+static void _adjust_sizes(ui_element *element) // if it needs to
 {
+    if (element == nullptr)
+    {
+        return;
+    }
+    static vec2 elem_padding = ui_sys_state_ptr->elem_padding;
+
+    if (element->type == UI_DROPDOWN)
+    {
+        u32  length     = element->nodes.size();
+        vec2 dimensions = element->dimensions;
+
+        if (length)
+        {
+            static arena *arena = ui_sys_state_ptr->arena;
+
+            u32 num_rows    = element->num_rows;
+            u32 num_columns = element->num_columns;
+            // INFO: I might not need this tbh. This is implemented to guard againt the case where the elements were not
+            // sorted by the grid row layouts
+            //   for example we have 3 rows and 3 columsn
+            //   the element array might have been initialied with the 0,0 as the first element 1,0 as the second and
+            //   third might be the 0,1 element and so on.. so this is esentially sorting it by the rows. Well just
+            //   storing the indicies for faster computation. :)
+            darray<darray<u32>> grid_indicies;
+            grid_indicies.reserve(arena, element->num_rows);
+
+            for (u32 i = 0; i < num_rows; i++)
+            {
+                grid_indicies[i].reserve(arena, num_columns);
+                grid_indicies[i].fill(INVALID_ID);
+            }
+
+            for (u32 i = 0; i < length; i++)
+            {
+                ui_element *elem = &element->nodes[i];
+
+                u32 row_pos = elem->row_pos;
+                u32 col_pos = elem->col_pos;
+
+                grid_indicies[row_pos][col_pos] = i;
+            }
+
+            u32 width  = 0;
+
+            u32 height = element->nodes[grid_indicies[0][0]].position.y - element->position.y;
+
+            for (u32 i = 0; i < num_rows; i++)
+            {
+
+                u32 row_width = 0;
+                u32 row_height = 0;
+                for (u32 j = 0; j < num_columns; j++)
+                {
+                    u32 ind = grid_indicies[i][j];
+                    if (ind == INVALID_ID)
+                    {
+                        continue;
+                    }
+
+                    ui_element *elem = &element->nodes[ind];
+
+                    row_height = DMAX(elem->dimensions.y, row_height);
+                    switch (elem->type)
+                    {
+                    case UI_BUTTON:
+                    case UI_DROPDOWN: {
+                        row_width  += elem->dimensions.x + elem_padding.x;
+                    }
+                    break;
+                    case UI_SLIDER: {
+
+                        row_width  += elem->dimensions.x + elem->text_dimensions.x + elem_padding.x + elem_padding.x;
+                    }
+                    break;
+                    case UI_UNKNOWN: {
+                    }
+                    break;
+                    }
+                }
+                width = DMAX(width, row_width);
+                height += row_height;
+            }
+
+            dimensions.x = DMAX(width, dimensions.x);
+            dimensions.y = DMAX(height, dimensions.y);
+            element->dimensions = dimensions;
+
+            ui_sys_state_ptr->container_dimensions.update(element->id, dimensions);
+
+            for (u32 i = 0; i < num_rows; i++)
+            {
+                grid_indicies[i].~darray();
+            }
+        }
+    }
 }
 
 bool _generate_quad_config(vec2 position, vec2 dimensions, vec4 color)
