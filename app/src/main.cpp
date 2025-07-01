@@ -218,7 +218,7 @@ int main()
             result = ui_slider(reinterpret_cast<uintptr_t>(&dropdown), reinterpret_cast<uintptr_t>(&index), 0, 255, &r, 1, 0);
             if(result)
             {
-
+                DDEBUG("Value %d", r);
             }
         }
 

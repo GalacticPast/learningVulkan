@@ -170,9 +170,10 @@ bool ui_slider(u64 parent_id, u64 id, s32 min, s32 max, s32 *value, u32 row, u32
 
     slider.row_pos = row;
     slider.col_pos = column;
-    bool result    = false;
 
-    if (input_is_button_down(BUTTON_LEFT) && ui_sys_state_ptr->hot_id == id)
+    bool is_hot = _check_if_pressed(id);
+
+    if (is_hot)
     {
         s32 prev_x, prev_y = 0;
         input_get_previous_mouse_position(&prev_x, &prev_y);
@@ -188,11 +189,11 @@ bool ui_slider(u64 parent_id, u64 id, s32 min, s32 max, s32 *value, u32 row, u32
         slider.value  = DMAX(min, slider.value);
 
         *value = slider.value;
-        result = true;
     }
 
     _insert_element(parent_id, id, &ui_sys_state_ptr->root, &slider);
-    return true;
+
+    return is_hot;
 }
 
 bool ui_button(u64 parent_id, u64 id, dstring *text, u32 row, u32 column)
@@ -387,7 +388,6 @@ static void _calculate_element_dimensions(ui_element *element)
     }
 
     static font_glyph_data *glyphs  = ui_sys_state_ptr->system_font->glyphs;
-    static vec2             padding = ui_sys_state_ptr->elem_padding;
 
     u32  length          = element->nodes.size();
     vec2 dimensions      = vec2();
@@ -401,11 +401,11 @@ static void _calculate_element_dimensions(ui_element *element)
             ui_element *elem = &element->nodes[i];
             _calculate_element_dimensions(elem);
         }
+
         for (u32 i = 0; i < length; i++)
         {
             dimensions.x  = DMAX(element->nodes[i].dimensions.x, dimensions.x);
-            dimensions.x += padding.x;
-            dimensions.y += element->nodes[i].dimensions.y + padding.y;
+            dimensions.y += element->nodes[i].dimensions.y;
         }
     }
 
