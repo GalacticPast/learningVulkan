@@ -198,6 +198,8 @@ int main()
         ui_text(reinterpret_cast<uintptr_t>(&camera_pos), &camera_pos, {0, 380}, WHITE);
         ui_text(reinterpret_cast<uintptr_t>(&fps_text), &fps_text, {0, 0}, WHITE);
 
+        ui_system_start_frame();
+
         bool result = ui_window(INVALID_ID_64, reinterpret_cast<uintptr_t>(&dropdown), 3, 3);
         if (result)
         {
@@ -221,8 +223,13 @@ int main()
                 DDEBUG("Value %d", r);
             }
         }
+        result = ui_window(INVALID_ID_64, reinterpret_cast<uintptr_t>(&frame_start_time), 3, 3);
+        if (result)
+        {
 
-        u64 quad_id          = ui_system_flush_geometries();
+        }
+
+        u64 quad_id          = ui_system_end_frame();
         geos_2D[0]           = geometry_system_get_geometry(quad_id);
         geos_2D[0]->material = material_system_get_from_name(&font_atlas);
 

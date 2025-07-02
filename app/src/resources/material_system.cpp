@@ -35,7 +35,8 @@ bool material_system_initialize(arena *system_arena, arena* resource_arena)
 
     mat_sys_state_ptr = static_cast<material_system_state *>(dallocate(system_arena, sizeof(material_system_state), MEM_TAG_APPLICATION));
 
-    mat_sys_state_ptr->loaded_materials.reserve(system_arena);
+    mat_sys_state_ptr->loaded_materials.c_init(resource_arena, MAX_MATERIALS_LOADED);
+    mat_sys_state_ptr->loaded_materials.resize(MAX_MATERIALS_LOADED);
     mat_sys_state_ptr->hashtable.c_init(system_arena, MAX_MATERIALS_LOADED);
     mat_sys_state_ptr->arena = resource_arena;
 

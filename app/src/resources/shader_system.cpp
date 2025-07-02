@@ -43,7 +43,8 @@ bool shader_system_startup(arena *system_arena, arena *resource_arena)
 
     shader_sys_state_ptr->shaders.c_init(system_arena, MAX_SHADER_COUNT);
     shader_sys_state_ptr->shader_configs.c_init(system_arena, MAX_SHADER_COUNT);
-    shader_sys_state_ptr->loaded_shaders.reserve(system_arena, MAX_SHADER_COUNT);
+    shader_sys_state_ptr->loaded_shaders.c_init(system_arena, MAX_SHADER_COUNT);
+    shader_sys_state_ptr->loaded_shaders.resize(MAX_SHADER_COUNT);
 
     return true;
 }

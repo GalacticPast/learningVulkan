@@ -48,7 +48,8 @@ bool vulkan_backend_initialize(arena *arena, u64 *vulkan_backend_memory_requirem
     vk_context->arena        = arena;
 
     {
-        vk_context->command_buffers.reserve(arena, MAX_FRAMES_IN_FLIGHT);
+        vk_context->command_buffers.c_init(arena, MAX_FRAMES_IN_FLIGHT);
+        vk_context->command_buffers.resize(MAX_FRAMES_IN_FLIGHT);
     }
 
     DDEBUG("Creating vulkan instance...");
@@ -648,7 +649,8 @@ bool vulkan_initialize_shader(shader_config *config, shader *in_shader)
             u32                                   per_frame_descriptor_binding_count = 0;
             darray<VkDescriptorSetLayoutBinding> &per_frame_descriptor_set_layout_bindings =
                 vk_shader->per_frame_descriptor_sets_layout_bindings;
-            per_frame_descriptor_set_layout_bindings.reserve(arena);
+            per_frame_descriptor_set_layout_bindings.c_init(arena);
+            per_frame_descriptor_set_layout_bindings.resize(INVALID_ID_64);
 
             darray<VkShaderStageFlags> per_frame_stage_flags{};
             per_frame_stage_flags.c_init(arena);
@@ -707,7 +709,8 @@ bool vulkan_initialize_shader(shader_config *config, shader *in_shader)
             VK_CHECK(result);
 
             darray<VkDescriptorSetLayout> per_frame_desc_set_layout;
-            per_frame_desc_set_layout.reserve(arena, MAX_FRAMES_IN_FLIGHT);
+            per_frame_desc_set_layout.c_init(arena, MAX_FRAMES_IN_FLIGHT);
+            per_frame_desc_set_layout.resize(MAX_FRAMES_IN_FLIGHT);
             for (u32 i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
             {
                 per_frame_desc_set_layout[i] = vk_shader->per_frame_descriptor_layout;
@@ -808,7 +811,8 @@ bool vulkan_initialize_shader(shader_config *config, shader *in_shader)
 
             darray<VkDescriptorSetLayoutBinding> &per_group_descriptor_set_layout_bindings =
                 vk_shader->per_group_descriptor_sets_layout_bindings;
-            per_group_descriptor_set_layout_bindings.reserve(arena);
+            per_group_descriptor_set_layout_bindings.c_init(arena);
+            per_group_descriptor_set_layout_bindings.resize(INVALID_ID_64);
 
             for (u32 i = 0; i < per_group_descriptors_binding_count; i++)
             {
@@ -853,7 +857,8 @@ bool vulkan_initialize_shader(shader_config *config, shader *in_shader)
                                             vk_context->vk_allocator, &vk_shader->per_group_descriptor_pool);
             VK_CHECK(result);
 
-            vk_shader->per_group_descriptor_sets.reserve(arena, max_descriptors);
+            vk_shader->per_group_descriptor_sets.c_init(arena, max_descriptors);
+            vk_shader->per_group_descriptor_sets.resize(max_descriptors);
 
             u32 &per_group_ubo_size = vk_shader->per_group_ubo_size;
             per_group_ubo_size      = 0;
@@ -890,7 +895,8 @@ bool vulkan_initialize_shader(shader_config *config, shader *in_shader)
         u32 vertex_input_attribute_descriptions_count = config->attributes.size();
         darray<VkVertexInputAttributeDescription> &vertex_input_attribute_descriptions =
             vk_shader->input_attribute_descriptions;
-        vertex_input_attribute_descriptions.reserve(arena, vertex_input_attribute_descriptions_count);
+        vertex_input_attribute_descriptions.c_init(arena, vertex_input_attribute_descriptions_count);
+        vertex_input_attribute_descriptions.resize(vertex_input_attribute_descriptions_count);
 
         u32 offset = 0;
 
@@ -927,20 +933,22 @@ bool vulkan_initialize_shader(shader_config *config, shader *in_shader)
         vertex_input_binding_description.inputRate                        = VK_VERTEX_INPUT_RATE_VERTEX;
     }
 
-    u64 vert_shader_code__size_requirements = INVALID_ID_64;
-    file_open_and_read(config->vert_spv_full_path.c_str(), &vert_shader_code__size_requirements, 0, 1);
-    DASSERT(vert_shader_code__size_requirements != INVALID_ID_64);
+    u64 vert_shader_code_size_requirements = INVALID_ID_64;
+    file_open_and_read(config->vert_spv_full_path.c_str(), &vert_shader_code_size_requirements, 0, 1);
+    DASSERT(vert_shader_code_size_requirements != INVALID_ID_64);
 
-    vk_shader->vertex_shader_code.reserve(arena, vert_shader_code__size_requirements);
-    file_open_and_read(config->vert_spv_full_path.c_str(), &vert_shader_code__size_requirements,
+    vk_shader->vertex_shader_code.c_init(arena, vert_shader_code_size_requirements);
+    vk_shader->vertex_shader_code.resize(vert_shader_code_size_requirements);
+    file_open_and_read(config->vert_spv_full_path.c_str(), &vert_shader_code_size_requirements,
                        vk_shader->vertex_shader_code.data, 1);
 
-    u64 frag_shader_code__size_requirements = INVALID_ID_64;
-    file_open_and_read(config->frag_spv_full_path.c_str(), &frag_shader_code__size_requirements, 0, 1);
-    DASSERT(frag_shader_code__size_requirements != INVALID_ID_64);
+    u64 frag_shader_code_size_requirements = INVALID_ID_64;
+    file_open_and_read(config->frag_spv_full_path.c_str(), &frag_shader_code_size_requirements, 0, 1);
+    DASSERT(frag_shader_code_size_requirements != INVALID_ID_64);
 
-    vk_shader->fragment_shader_code.reserve(arena, frag_shader_code__size_requirements);
-    file_open_and_read(config->frag_spv_full_path.c_str(), &frag_shader_code__size_requirements,
+    vk_shader->fragment_shader_code.c_init(arena, frag_shader_code_size_requirements);
+    vk_shader->fragment_shader_code.resize(frag_shader_code_size_requirements);
+    file_open_and_read(config->frag_spv_full_path.c_str(), &frag_shader_code_size_requirements,
                        vk_shader->fragment_shader_code.data, 1);
 
     vk_shader->stages = config->stages;
@@ -1280,7 +1288,8 @@ bool vulkan_check_validation_layer_support()
     arena *arena = vk_context->arena;
 
     darray<VkLayerProperties> inst_layer_properties;
-    inst_layer_properties.reserve(arena, inst_layer_properties_count);
+    inst_layer_properties.c_init(arena, inst_layer_properties_count);
+    inst_layer_properties.resize(inst_layer_properties_count);
     vkEnumerateInstanceLayerProperties(&inst_layer_properties_count,
                                        static_cast<VkLayerProperties *>(inst_layer_properties.data));
 

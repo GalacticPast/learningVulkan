@@ -72,8 +72,10 @@ struct ui_system_state
 
     font_data *system_font;
 
-    ui_element root;
-    vec2       elem_padding;
+    dhashtable<u32> window_indicies;
+    ui_element      root;
+
+    vec2 elem_padding;
 
     dhashtable<vec2> container_dimensions;
     dhashtable<vec2> container_position;
@@ -119,6 +121,8 @@ bool ui_system_initialize(arena *system_arena, arena *resource_arena)
     ui_sys_state_ptr->container_position.c_init(resource_arena, 4096);
     ui_sys_state_ptr->container_position.is_non_resizable = true;
 
+    ui_sys_state_ptr->window_indicies.c_init(resource_arena, 1024);
+
     ui_sys_state_ptr->elem_padding = {8, 8};
 
     return true;
@@ -128,9 +132,14 @@ bool ui_system_set_arena(arena *arena)
 {
     DASSERT(arena);
     ui_sys_state_ptr->arena = arena;
-    // HACK:
-    ui_sys_state_ptr->root.init(arena);
+
     return true;
+}
+
+void ui_system_start_frame()
+{
+    static arena* arena = ui_sys_state_ptr->arena;
+    ui_sys_state_ptr->root.nodes.c_init(arena);
 }
 
 bool ui_window(u64 parent_id, u64 id, u32 num_rows, u32 num_columns)
@@ -304,7 +313,39 @@ bool _insert_element(u64 parent_id, u64 id, ui_element *root, ui_element *elemen
 
     if (parent_id == INVALID_ID_64)
     {
-        root->nodes.push_back(*element);
+        u32 *index = ui_sys_state_ptr->window_indicies.find(id);
+        if (index)
+        {
+            u32         ind  = *index;
+            ui_element *elem = &root->nodes[ind];
+            {
+                elem->id                      = element->id;
+                elem->type                    = element->type;
+                elem->text_position           = element->text_position;
+                elem->text_dimensions         = element->text_dimensions;
+                elem->text                    = element->text;
+                elem->value                   = element->value; // slider value if it is a slider
+                elem->min                     = element->min;
+                elem->max                     = element->max;
+                elem->num_rows                = element->num_rows;
+                elem->num_columns             = element->num_columns;
+                elem->row_pos                 = element->row_pos;
+                elem->col_pos                 = element->col_pos;
+                elem->position                = element->position; // absolute position
+                elem->dimensions              = element->dimensions;
+                elem->interactable_dimensions = element->interactable_dimensions;
+                elem->color                   = element->color;
+                elem->nodes                   = element->nodes; // aka children
+            }
+            // HACK:
+            root->nodes.length = DMAX(ind + 1, root->nodes.length);
+        }
+        else
+        {
+            u32 ind = root->nodes.size();
+            root->nodes.push_back(*element);
+            ui_sys_state_ptr->window_indicies.insert(id, ind);
+        }
         return true;
     }
 
@@ -396,11 +437,13 @@ static void _calculate_element_positions(ui_element *element)
         //   might be the 0,1 element and so on.. so this is esentially sorting it by the rows. Well just storing the
         //   indicies for faster computation. :)
         darray<darray<u32>> grid_indicies;
-        grid_indicies.reserve(arena, element->num_rows);
+        grid_indicies.c_init(arena, element->num_rows);
+        grid_indicies.resize(element->num_rows);
 
         for (u32 i = 0; i < num_rows; i++)
         {
-            grid_indicies[i].reserve(arena, num_columns);
+            grid_indicies[i].c_init(arena, num_columns);
+            grid_indicies[i].resize(num_columns);
             grid_indicies[i].fill(INVALID_ID);
         }
 
@@ -549,8 +592,8 @@ static void _calculate_element_dimensions(ui_element *element)
             dimensions.x = DMAX(prev_dimensions->x, dimensions.x);
             dimensions.y = DMAX(prev_dimensions->y, dimensions.y);
 
-            box resize_box;
-            vec2 position = *ui_sys_state_ptr->container_position.find(element->id);
+            box  resize_box;
+            vec2 position         = *ui_sys_state_ptr->container_position.find(element->id);
             resize_box.dimensions = {10, 10};
             resize_box.position.x = position.x + dimensions.x - resize_box.dimensions.x;
             resize_box.position.y = position.y + dimensions.y - resize_box.dimensions.y;
@@ -625,6 +668,21 @@ static void _transition_state(ui_element *element)
     }
 
     _check_box_if_hot(element->id, a);
+
+    if (element->type == UI_WINDOW)
+    {
+        if (element->id == ui_sys_state_ptr->hot_id && input_is_button_down(BUTTON_LEFT))
+        {
+            u32       *index = ui_sys_state_ptr->window_indicies.find(element->id);
+            ui_element elem  = *element;
+            // well so that we dont pop and push back again.
+            if(ui_sys_state_ptr->root.nodes[*index].id == elem.id)
+            {
+                ui_sys_state_ptr->root.nodes.pop_at(*index);
+                ui_sys_state_ptr->root.nodes.push_back(elem);
+            }
+        }
+    }
 }
 
 static void _generate_element_geometry(ui_element *element)
@@ -644,7 +702,7 @@ static void _generate_element_geometry(ui_element *element)
     if (element->type == UI_WINDOW)
     {
         box resize_box;
-        resize_box.dimensions = {10,10};
+        resize_box.dimensions = {10, 10};
         resize_box.position.x = element->position.x + element->dimensions.x - resize_box.dimensions.x;
         resize_box.position.y = element->position.y + element->dimensions.y - resize_box.dimensions.y;
         _generate_quad_config(resize_box.position, resize_box.dimensions, YELLOW);
@@ -716,11 +774,13 @@ static void _adjust_sizes(ui_element *element) // if it needs to
             //   third might be the 0,1 element and so on.. so this is esentially sorting it by the rows. Well just
             //   storing the indicies for faster computation. :)
             darray<darray<u32>> grid_indicies;
-            grid_indicies.reserve(arena, element->num_rows);
+            grid_indicies.c_init(arena, num_rows);
+            grid_indicies.resize(num_rows);
 
             for (u32 i = 0; i < num_rows; i++)
             {
-                grid_indicies[i].reserve(arena, num_columns);
+                grid_indicies[i].c_init(arena, num_columns);
+                grid_indicies[i].resize(num_columns);
                 grid_indicies[i].fill(INVALID_ID);
             }
 
@@ -962,7 +1022,7 @@ bool ui_text(u64 id, dstring *text, vec2 position, vec4 color)
     return true;
 }
 
-u64 ui_system_flush_geometries()
+u64 ui_system_end_frame()
 {
 
     ui_sys_state_ptr->is_stale = true;
@@ -994,6 +1054,12 @@ u64 ui_system_flush_geometries()
         _transition_state(elem);
     }
 
+    for(u32 i = 0 ; i < length ; i++)
+    {
+        ui_element *elem = &ui_sys_state_ptr->root.nodes[i];
+        ui_sys_state_ptr->window_indicies.update(elem->id, i);
+    }
+
     for (u32 i = 0; i < length; i++)
     {
         ui_element *elem = &ui_sys_state_ptr->root.nodes[i];
@@ -1011,7 +1077,7 @@ u64 ui_system_flush_geometries()
     }
 
     ui_sys_state_ptr->root.nodes.~darray();
-    ui_sys_state_ptr->root.init(ui_sys_state_ptr->arena);
+
     ui_sys_state_ptr->local_index_offset              = 0;
     ui_sys_state_ptr->ui_geometry_config.vertex_count = 0;
     ui_sys_state_ptr->ui_geometry_config.index_count  = 0;

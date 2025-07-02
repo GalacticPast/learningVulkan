@@ -49,7 +49,8 @@ bool geometry_system_initialize(arena *system_arena, arena *resource_arena)
 
     geo_sys_state_ptr->hashtable.c_init(system_arena, MAX_GEOMETRIES_LOADED);
     geo_sys_state_ptr->hashtable.is_non_resizable = true;
-    geo_sys_state_ptr->loaded_geometry.reserve(system_arena);
+    geo_sys_state_ptr->loaded_geometry.c_init(system_arena);
+    geo_sys_state_ptr->loaded_geometry.resize(INVALID_ID_64);
     geo_sys_state_ptr->arena = resource_arena;
 
     geometry_system_create_default_geometry();
