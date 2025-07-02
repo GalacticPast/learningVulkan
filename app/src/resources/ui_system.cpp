@@ -15,7 +15,6 @@
 #include "resources/geometry_system.hpp"
 #include "resources/resource_types.hpp"
 #include "ui_system.hpp"
-#include <cstdio>
 
 #define BORDER_COLOR RED
 #define DEFAULT_SLIDER_DIMENSIONS (vec2){200, 20}
@@ -237,6 +236,16 @@ bool _check_collision(box a, box b)
 {
     return (a.position.x < b.position.x + b.dimensions.w && a.position.x + a.dimensions.w > b.position.x &&
             a.position.y < b.position.y + b.dimensions.h && a.position.y + a.dimensions.h > b.position.y);
+}
+
+static bool _check_mouse_collision(box box1)
+{
+    s32 mouse_x, mouse_y = 0;
+    input_get_mouse_position(&mouse_x, &mouse_y);
+    box box2 = {{(float)mouse_x, (float)mouse_y}, {1, 1}};
+
+    bool res = _check_collision(box1, box2);
+    return res;
 }
 
 // it will also transition it
@@ -524,7 +533,8 @@ static void _calculate_element_dimensions(ui_element *element)
         hash       = ch - 32;
         txt_width += glyphs[hash].xadvance;
     }
-
+    // FIXME: what if we resize then the text dimensions?? or what if we resize the container shouldn't that cutoff the
+    // text??
     text_dimensions.x         = DMAX(txt_width, dimensions.x);
     text_dimensions.y        += 20;
     element->text_dimensions  = text_dimensions;
@@ -538,6 +548,28 @@ static void _calculate_element_dimensions(ui_element *element)
         {
             dimensions.x = DMAX(prev_dimensions->x, dimensions.x);
             dimensions.y = DMAX(prev_dimensions->y, dimensions.y);
+
+            box resize_box;
+            vec2 position = *ui_sys_state_ptr->container_position.find(element->id);
+            resize_box.dimensions = {10, 10};
+            resize_box.position.x = position.x + dimensions.x - resize_box.dimensions.x;
+            resize_box.position.y = position.y + dimensions.y - resize_box.dimensions.y;
+
+            bool is_colliding = _check_mouse_collision(resize_box);
+            if (is_colliding && input_is_button_down(BUTTON_LEFT))
+            {
+                s32 prev_x, prev_y = 0;
+                input_get_previous_mouse_position(&prev_x, &prev_y);
+
+                s32 x, y = 0;
+                input_get_mouse_position(&x, &y);
+
+                s32 delta_x = x - prev_x;
+                s32 delta_y = y - prev_y;
+
+                dimensions.x += delta_x;
+                dimensions.y += delta_y;
+            }
         }
         else
         {
@@ -608,6 +640,15 @@ static void _generate_element_geometry(ui_element *element)
 
     _generate_quad_config(element->position, element->dimensions, element->color);
     _generate_quad_config(element->position, element->interactable_dimensions, element->color);
+
+    if (element->type == UI_WINDOW)
+    {
+        box resize_box;
+        resize_box.dimensions = {10,10};
+        resize_box.position.x = element->position.x + element->dimensions.x - resize_box.dimensions.x;
+        resize_box.position.y = element->position.y + element->dimensions.y - resize_box.dimensions.y;
+        _generate_quad_config(resize_box.position, resize_box.dimensions, YELLOW);
+    }
 
     if (element->type == UI_SLIDER)
     {
