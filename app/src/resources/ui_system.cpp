@@ -138,11 +138,11 @@ bool ui_system_set_arena(arena *arena)
 
 void ui_system_start_frame()
 {
-    static arena* arena = ui_sys_state_ptr->arena;
+    static arena *arena = ui_sys_state_ptr->arena;
     ui_sys_state_ptr->root.nodes.c_init(arena);
 }
 
-bool ui_window(u64 parent_id, u64 id, u32 num_rows, u32 num_columns)
+bool ui_window(u64 parent_id, u64 id, dstring label, u32 num_rows, u32 num_columns)
 {
     DASSERT(ui_sys_state_ptr);
 
@@ -152,11 +152,10 @@ bool ui_window(u64 parent_id, u64 id, u32 num_rows, u32 num_columns)
 
     window.color = DARKGRAY;
 
-    window.num_rows    = num_rows;
-    window.num_columns = num_columns;
+    window.num_rows    = 3;
+    window.num_columns = 3;
 
-    window.text       = "DropDown";
-    window.dimensions = vec2();
+    window.text = label;
 
     window.init(ui_sys_state_ptr->arena);
 
@@ -386,7 +385,9 @@ static void _calculate_element_positions(ui_element *element)
         vec2 *prev_pos = ui_sys_state_ptr->container_position.find(element->id);
         if (!prev_pos)
         {
-            position = {100, 100};
+            s32 x    = drandom_in_range(0, 800);
+            s32 y    = drandom_in_range(0, 600);
+            position = {(float)x, (float)y};
             ui_sys_state_ptr->container_position.insert(element->id, position);
         }
         else
@@ -676,7 +677,7 @@ static void _transition_state(ui_element *element)
             u32       *index = ui_sys_state_ptr->window_indicies.find(element->id);
             ui_element elem  = *element;
             // well so that we dont pop and push back again.
-            if(ui_sys_state_ptr->root.nodes[*index].id == elem.id)
+            if (ui_sys_state_ptr->root.nodes[*index].id == elem.id)
             {
                 ui_sys_state_ptr->root.nodes.pop_at(*index);
                 ui_sys_state_ptr->root.nodes.push_back(elem);
@@ -1054,7 +1055,7 @@ u64 ui_system_end_frame()
         _transition_state(elem);
     }
 
-    for(u32 i = 0 ; i < length ; i++)
+    for (u32 i = 0; i < length; i++)
     {
         ui_element *elem = &ui_sys_state_ptr->root.nodes[i];
         ui_sys_state_ptr->window_indicies.update(elem->id, i);

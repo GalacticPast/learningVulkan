@@ -23,7 +23,7 @@ bool ui_system_set_arena(arena *arena);
 void ui_system_start_frame();
 u64  ui_system_end_frame();
 
-bool ui_window(u64 parent_id, u64 id, u32 num_rows, u32 num_columns);
+bool ui_window(u64 parent_id, u64 id, dstring label, u32 num_rows, u32 num_columns);
 
 bool ui_button(u64 parent_id, u64 id, dstring *text, u32 row, u32 column);
 

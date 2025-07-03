@@ -171,6 +171,10 @@ int main()
 
     s32 r = 0;
 
+    dstring win_1 = "Window_1";
+    dstring win_2 = "Window_2";
+    dstring win_3 = "Window_3";
+
     while (app_state.is_running)
     {
         ZoneScoped;
@@ -200,7 +204,7 @@ int main()
 
         ui_system_start_frame();
 
-        bool result = ui_window(INVALID_ID_64, reinterpret_cast<uintptr_t>(&dropdown), 3, 3);
+        bool result = ui_window(INVALID_ID_64, reinterpret_cast<uintptr_t>(&dropdown),win_1, 3, 3);
         if (result)
         {
             dstring text = "Button_1";
@@ -223,7 +227,12 @@ int main()
                 DDEBUG("Value %d", r);
             }
         }
-        result = ui_window(INVALID_ID_64, reinterpret_cast<uintptr_t>(&frame_start_time), 3, 3);
+        result = ui_window(INVALID_ID_64, reinterpret_cast<uintptr_t>(&frame_start_time), win_2,3, 3);
+        if (result)
+        {
+
+        }
+        result = ui_window(INVALID_ID_64, reinterpret_cast<uintptr_t>(&frame_end_time), win_3, 3, 3);
         if (result)
         {
 
