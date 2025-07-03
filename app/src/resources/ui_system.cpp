@@ -17,6 +17,7 @@
 #include "ui_system.hpp"
 
 #define BORDER_COLOR RED
+#define DEFAULT_WINDOW_DIMENSIONS (vec2){200, 30}
 #define DEFAULT_SLIDER_DIMENSIONS (vec2){200, 20}
 #define DEFAULT_SLIDER_KNOB_DIMENSIONS (vec2){10, 20}
 
@@ -72,6 +73,7 @@ struct ui_system_state
 
     font_data *system_font;
 
+    u64             focsed_win_id = INVALID_ID_64;
     dhashtable<u32> window_indicies;
     ui_element      root;
 
@@ -93,7 +95,7 @@ static void             _generate_element_geometry(ui_element *element);
 static void             _calculate_element_dimensions(ui_element *element);
 static void             _calculate_element_positions(ui_element *element);
 static void             _adjust_sizes(ui_element *element);
-static void             _transition_state(ui_element *element);
+static bool             _transition_state(ui_element *element);
 static bool             _generate_quad_config(vec2 position, vec2 dimensions, vec4 color);
 static bool             _check_mouse_collision(box box);
 static bool             _check_box_if_hot(u64 id, box box1);
@@ -121,6 +123,7 @@ bool ui_system_initialize(arena *system_arena, arena *resource_arena)
     ui_sys_state_ptr->container_position.c_init(resource_arena, 4096);
     ui_sys_state_ptr->container_position.is_non_resizable = true;
 
+    ui_sys_state_ptr->focsed_win_id = INVALID_ID_64;
     ui_sys_state_ptr->window_indicies.c_init(resource_arena, 1024);
 
     ui_sys_state_ptr->elem_padding = {8, 8};
@@ -149,6 +152,8 @@ bool ui_window(u64 parent_id, u64 id, dstring label, u32 num_rows, u32 num_colum
     ui_element window{};
     window.type = UI_WINDOW;
     window.id   = id;
+
+    bool state = _check_if_pressed(id);
 
     window.color = DARKGRAY;
 
@@ -181,6 +186,8 @@ bool ui_slider(u64 parent_id, u64 id, s32 min, s32 max, s32 *value, u32 row, u32
 
     slider.row_pos = row;
     slider.col_pos = column;
+
+    bool state = _check_if_pressed(id);
 
     bool return_val = id == ui_sys_state_ptr->hot_id && input_is_button_down(BUTTON_LEFT);
     if (return_val)
@@ -588,6 +595,7 @@ static void _calculate_element_dimensions(ui_element *element)
     case UI_WINDOW: {
 
         vec2 *prev_dimensions = ui_sys_state_ptr->container_dimensions.find(element->id);
+        vec2  def             = DEFAULT_WINDOW_DIMENSIONS;
         if (prev_dimensions)
         {
             dimensions.x = DMAX(prev_dimensions->x, dimensions.x);
@@ -618,6 +626,10 @@ static void _calculate_element_dimensions(ui_element *element)
         else
         {
             dimensions.y += text_dimensions.y;
+
+            dimensions.x = DMAX(def.x, dimensions.x);
+            dimensions.y = DMAX(def.y, dimensions.y);
+
             ui_sys_state_ptr->container_dimensions.insert(element->id, dimensions);
         }
 
@@ -647,17 +659,19 @@ static void _calculate_element_dimensions(ui_element *element)
     }
 }
 
-static void _transition_state(ui_element *element)
+static bool _transition_state(ui_element *element)
 {
     if (element == nullptr)
     {
-        return;
+        return false;
     }
     u32 size = element->nodes.size();
     for (u32 i = 0; i < size; i++)
     {
         ui_element *elem = &element->nodes[i];
-        _transition_state(elem);
+        bool        res  = _transition_state(elem);
+        if (res)
+            return res;
     }
 
     box a = {element->position, element->interactable_dimensions};
@@ -668,22 +682,36 @@ static void _transition_state(ui_element *element)
         a.position         = knob_position;
     }
 
-    _check_box_if_hot(element->id, a);
+    bool is_hot     = _check_box_if_hot(element->id, a);
+    bool is_pressed = _check_if_pressed(element->id);
 
-    if (element->type == UI_WINDOW)
+    if(element->type == UI_WINDOW && is_hot)
     {
-        if (element->id == ui_sys_state_ptr->hot_id && input_is_button_down(BUTTON_LEFT))
+        if(is_pressed)
         {
-            u32       *index = ui_sys_state_ptr->window_indicies.find(element->id);
-            ui_element elem  = *element;
+            DDEBUG("In scope: %s", element->text.c_str());
+        }
+    }
+    if (element->type == UI_WINDOW && is_pressed)
+    {
+        box  b     = {element->position, element->dimensions};
+        bool check = _check_mouse_collision(b);
+
+        if (ui_sys_state_ptr->focsed_win_id == INVALID_ID_64 && check)
+        {
+            ui_sys_state_ptr->focsed_win_id = element->id;
+            u32       *index                = ui_sys_state_ptr->window_indicies.find(element->id);
+            ui_element elem                 = *element;
             // well so that we dont pop and push back again.
             if (ui_sys_state_ptr->root.nodes[*index].id == elem.id)
             {
                 ui_sys_state_ptr->root.nodes.pop_at(*index);
                 ui_sys_state_ptr->root.nodes.push_back(elem);
+                ui_sys_state_ptr->focsed_win_id = elem.id;
             }
         }
     }
+    return is_pressed;
 }
 
 static void _generate_element_geometry(ui_element *element)
@@ -1082,6 +1110,7 @@ u64 ui_system_end_frame()
     ui_sys_state_ptr->local_index_offset              = 0;
     ui_sys_state_ptr->ui_geometry_config.vertex_count = 0;
     ui_sys_state_ptr->ui_geometry_config.index_count  = 0;
+    ui_sys_state_ptr->focsed_win_id                   = INVALID_ID_64;
 
     if (ui_sys_state_ptr->is_stale)
     {
