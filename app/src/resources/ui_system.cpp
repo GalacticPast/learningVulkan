@@ -100,6 +100,7 @@ static bool             _generate_quad_config(vec2 position, vec2 dimensions, ve
 static bool             _check_mouse_collision(box box);
 static bool             _check_box_if_hot(u64 id, box box1);
 static bool             _check_if_pressed(u64 id);
+static void             _push_window(ui_element *element);
 
 bool ui_system_initialize(arena *system_arena, arena *resource_arena)
 {
@@ -420,6 +421,7 @@ static void _calculate_element_positions(ui_element *element)
                 position.x += delta_x;
                 position.y += delta_y;
             }
+            _push_window(element);
         }
 
         ui_sys_state_ptr->container_position.update(element->id, position);
@@ -660,6 +662,29 @@ static void _calculate_element_dimensions(ui_element *element)
     }
 }
 
+static void _push_window(ui_element *element)
+{
+    if (element->type == UI_WINDOW && ui_sys_state_ptr->hot_id == element->id)
+    {
+        box  b     = {element->position, element->dimensions};
+        bool check = _check_mouse_collision(b);
+
+        if (check && element->id == ui_sys_state_ptr->hover_win_id && input_was_button_down(BUTTON_LEFT) &&
+            input_is_button_up(BUTTON_LEFT))
+        {
+            u32       *index = ui_sys_state_ptr->window_indicies.find(element->id);
+            ui_element elem  = *element;
+            // well so that we dont pop and push back again.
+            if (ui_sys_state_ptr->root.nodes[*index].id == elem.id)
+            {
+                ui_sys_state_ptr->root.nodes.pop_at(*index);
+                ui_sys_state_ptr->root.nodes.push_back(elem);
+                ui_sys_state_ptr->hover_win_id = elem.id;
+            }
+        }
+    }
+}
+
 static void _transition_state(ui_element *element)
 {
     if (element == nullptr)
@@ -687,27 +712,9 @@ static void _transition_state(ui_element *element)
     if (is_hot && ui_sys_state_ptr->hover_win_id == INVALID_ID_64)
     {
         ui_sys_state_ptr->hover_win_id = element->id;
+        _push_window(element);
     }
 
-    if (element->type == UI_WINDOW && is_hot)
-    {
-        box  b     = {element->position, element->dimensions};
-        bool check = _check_mouse_collision(b);
-
-        if (check && element->id == ui_sys_state_ptr->hover_win_id && input_was_button_down(BUTTON_LEFT) &&
-            input_is_button_up(BUTTON_LEFT))
-        {
-            u32       *index = ui_sys_state_ptr->window_indicies.find(element->id);
-            ui_element elem  = *element;
-            // well so that we dont pop and push back again.
-            if (ui_sys_state_ptr->root.nodes[*index].id == elem.id)
-            {
-                ui_sys_state_ptr->root.nodes.pop_at(*index);
-                ui_sys_state_ptr->root.nodes.push_back(elem);
-                ui_sys_state_ptr->hover_win_id = elem.id;
-            }
-        }
-    }
     return;
 }
 
