@@ -791,8 +791,9 @@ static void _adjust_sizes(ui_element *element) // if it needs to
 
     if (element->type == UI_WINDOW)
     {
-        u32  length     = element->nodes.size();
-        vec2 dimensions = element->dimensions;
+        u32  length          = element->nodes.size();
+        vec2 win_dimensions  = element->dimensions;
+        vec2 calc_dimensions = vec2();
 
         if (length)
         {
@@ -827,8 +828,10 @@ static void _adjust_sizes(ui_element *element) // if it needs to
                 grid_indicies[row_pos][col_pos] = i;
             }
 
+            // width of the largest element of all the children's.
             u32 width = 0;
 
+            // INFO: height from the top-left corner of the window to the first child element's position.
             u32 height = element->nodes[grid_indicies[0][0]].position.y - element->position.y;
 
             for (u32 i = 0; i < num_rows; i++)
@@ -836,7 +839,7 @@ static void _adjust_sizes(ui_element *element) // if it needs to
 
                 u32 row_width  = 0;
                 u32 row_height = 0;
-                for (u32 j = 0; j < num_columns; j++)
+                for (s32 j = num_columns - 1; j >= 0; j--)
                 {
                     u32 ind = grid_indicies[i][j];
                     if (ind == INVALID_ID)
@@ -867,12 +870,57 @@ static void _adjust_sizes(ui_element *element) // if it needs to
                 width   = DMAX(width, row_width);
                 height += row_height;
             }
+            calc_dimensions.y = DMAX(height, calc_dimensions.y);
+            calc_dimensions.x = DMAX(width, calc_dimensions.x);
 
-            dimensions.x        = DMAX(width, dimensions.x);
-            dimensions.y        = DMAX(height, dimensions.y);
-            element->dimensions = dimensions;
+            // if the largest row's width is less than the window's width resize all the elements.
+            if (calc_dimensions.x < win_dimensions.x)
+            {
+                for (u32 i = 0; i < num_rows; i++)
+                {
 
-            ui_sys_state_ptr->container_dimensions.update(element->id, dimensions);
+                    for (s32 j = num_columns - 1; j >= 0; j--)
+                    {
+                        u32 ind = grid_indicies[i][j];
+                        if (ind == INVALID_ID)
+                        {
+                            continue;
+                        }
+
+                        ui_element *elem = &element->nodes[ind];
+
+                        vec2 new_dimensions    = vec2();
+                        vec2 relative_position = {elem->position.x - element->position.x,
+                                                  elem->position.y - element->position.y};
+                        new_dimensions.x       = win_dimensions.x - relative_position.x - elem_padding.x;
+                        new_dimensions.y       = elem->dimensions.y;
+
+                        switch (elem->type)
+                        {
+                        case UI_SLIDER: {
+                            elem->dimensions      = {new_dimensions.x - elem->text_dimensions.x, new_dimensions.y};
+                            elem->text_position.x = elem->position.x + elem->dimensions.x;
+                        }
+                        break;
+                        case UI_BUTTON:
+                        case UI_WINDOW: {
+                            elem->dimensions = new_dimensions;
+                        }
+                        break;
+                        case UI_UNKNOWN: {
+                        }
+                        break;
+                        }
+                    }
+                }
+            }
+            else if (calc_dimensions.x > win_dimensions.x)
+            {
+                win_dimensions.x = DMAX(win_dimensions.x, calc_dimensions.x);
+                win_dimensions.y = DMAX(win_dimensions.y, calc_dimensions.y);
+            }
+
+            ui_sys_state_ptr->container_dimensions.update(element->id, win_dimensions);
 
             for (u32 i = 0; i < num_rows; i++)
             {
