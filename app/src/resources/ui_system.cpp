@@ -15,6 +15,7 @@
 #include "resources/geometry_system.hpp"
 #include "resources/resource_types.hpp"
 #include "ui_system.hpp"
+#include <algorithm>
 
 #define BORDER_COLOR RED
 #define DEFAULT_WINDOW_DIMENSIONS (vec2){200, 30}
@@ -599,16 +600,24 @@ static void _calculate_element_dimensions(ui_element *element)
 
         vec2 *prev_dimensions = ui_sys_state_ptr->container_dimensions.find(element->id);
         vec2  def             = DEFAULT_WINDOW_DIMENSIONS;
-        if (prev_dimensions)
-        {
-            dimensions.x = DMAX(prev_dimensions->x, dimensions.x);
-            dimensions.y = DMAX(prev_dimensions->y, dimensions.y);
 
-            box  resize_box;
-            vec2 position         = *ui_sys_state_ptr->container_position.find(element->id);
+        if (!prev_dimensions)
+        {
+            dimensions = def;
+            ui_sys_state_ptr->container_dimensions.insert(element->id, dimensions);
+        }
+        else
+        {
+            dimensions = *prev_dimensions;
+        }
+
+        box   resize_box;
+        vec2 *position = ui_sys_state_ptr->container_position.find(element->id);
+        if (position)
+        {
             resize_box.dimensions = {10, 10};
-            resize_box.position.x = position.x + dimensions.x - resize_box.dimensions.x;
-            resize_box.position.y = position.y + dimensions.y - resize_box.dimensions.y;
+            resize_box.position.x = position->x + dimensions.x - resize_box.dimensions.x;
+            resize_box.position.y = position->y + dimensions.y - resize_box.dimensions.y;
 
             bool is_colliding = _check_mouse_collision(resize_box);
             if (is_colliding && input_is_button_down(BUTTON_LEFT))
@@ -626,18 +635,8 @@ static void _calculate_element_dimensions(ui_element *element)
                 dimensions.y += delta_y;
             }
         }
-        else
-        {
-            dimensions.y += text_dimensions.y;
-
-            dimensions.x = DMAX(def.x, dimensions.x);
-            dimensions.y = DMAX(def.y, dimensions.y);
-
-            ui_sys_state_ptr->container_dimensions.insert(element->id, dimensions);
-        }
 
         ui_sys_state_ptr->container_dimensions.update(element->id, dimensions);
-
         element->dimensions              = dimensions;
         vec2 header_dimensions           = {dimensions.x, 25};
         element->interactable_dimensions = header_dimensions;

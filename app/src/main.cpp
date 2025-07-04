@@ -226,6 +226,11 @@ int main()
             {
                 DDEBUG("Value %d", r);
             }
+            result = ui_slider(reinterpret_cast<uintptr_t>(&dropdown), reinterpret_cast<uintptr_t>(&index), 0, 255, &r, 1, 1);
+            if(result)
+            {
+                DDEBUG("Value %d", r);
+            }
         }
         result = ui_window(INVALID_ID_64, reinterpret_cast<uintptr_t>(&frame_start_time), win_2,3, 3);
         if (result)
