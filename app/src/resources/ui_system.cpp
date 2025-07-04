@@ -73,7 +73,7 @@ struct ui_system_state
 
     font_data *system_font;
 
-    u64             focsed_win_id = INVALID_ID_64;
+    u64             hover_win_id = INVALID_ID_64;
     dhashtable<u32> window_indicies;
     ui_element      root;
 
@@ -95,7 +95,7 @@ static void             _generate_element_geometry(ui_element *element);
 static void             _calculate_element_dimensions(ui_element *element);
 static void             _calculate_element_positions(ui_element *element);
 static void             _adjust_sizes(ui_element *element);
-static bool             _transition_state(ui_element *element);
+static void             _transition_state(ui_element *element);
 static bool             _generate_quad_config(vec2 position, vec2 dimensions, vec4 color);
 static bool             _check_mouse_collision(box box);
 static bool             _check_box_if_hot(u64 id, box box1);
@@ -123,7 +123,7 @@ bool ui_system_initialize(arena *system_arena, arena *resource_arena)
     ui_sys_state_ptr->container_position.c_init(resource_arena, 4096);
     ui_sys_state_ptr->container_position.is_non_resizable = true;
 
-    ui_sys_state_ptr->focsed_win_id = INVALID_ID_64;
+    ui_sys_state_ptr->hover_win_id = INVALID_ID_64;
     ui_sys_state_ptr->window_indicies.c_init(resource_arena, 1024);
 
     ui_sys_state_ptr->elem_padding = {8, 8};
@@ -143,6 +143,7 @@ void ui_system_start_frame()
 {
     static arena *arena = ui_sys_state_ptr->arena;
     ui_sys_state_ptr->root.nodes.c_init(arena);
+    ui_sys_state_ptr->hover_win_id = INVALID_ID_64;
 }
 
 bool ui_window(u64 parent_id, u64 id, dstring label, u32 num_rows, u32 num_columns)
@@ -298,7 +299,7 @@ bool _check_if_hot(u64 id, box a, box b)
     // check the bounding box of the curosr against the bounding box of the button
     bool is_hot = false;
     {
-        if (_check_collision(a, b))
+        if (_check_collision(a, b) && ui_sys_state_ptr->is_stale)
         {
             ui_sys_state_ptr->hot_id   = id;
             ui_sys_state_ptr->is_stale = false;
@@ -659,19 +660,17 @@ static void _calculate_element_dimensions(ui_element *element)
     }
 }
 
-static bool _transition_state(ui_element *element)
+static void _transition_state(ui_element *element)
 {
     if (element == nullptr)
     {
-        return false;
+        return;
     }
     u32 size = element->nodes.size();
     for (u32 i = 0; i < size; i++)
     {
         ui_element *elem = &element->nodes[i];
-        bool        res  = _transition_state(elem);
-        if (res)
-            return res;
+        _transition_state(elem);
     }
 
     box a = {element->position, element->interactable_dimensions};
@@ -685,33 +684,31 @@ static bool _transition_state(ui_element *element)
     bool is_hot     = _check_box_if_hot(element->id, a);
     bool is_pressed = _check_if_pressed(element->id);
 
-    if(element->type == UI_WINDOW && is_hot)
+    if (is_hot && ui_sys_state_ptr->hover_win_id == INVALID_ID_64)
     {
-        if(is_pressed)
-        {
-            DDEBUG("In scope: %s", element->text.c_str());
-        }
+        ui_sys_state_ptr->hover_win_id = element->id;
     }
-    if (element->type == UI_WINDOW && is_pressed)
+
+    if (element->type == UI_WINDOW && is_hot)
     {
         box  b     = {element->position, element->dimensions};
         bool check = _check_mouse_collision(b);
 
-        if (ui_sys_state_ptr->focsed_win_id == INVALID_ID_64 && check)
+        if (check && element->id == ui_sys_state_ptr->hover_win_id && input_was_button_down(BUTTON_LEFT) &&
+            input_is_button_up(BUTTON_LEFT))
         {
-            ui_sys_state_ptr->focsed_win_id = element->id;
-            u32       *index                = ui_sys_state_ptr->window_indicies.find(element->id);
-            ui_element elem                 = *element;
+            u32       *index = ui_sys_state_ptr->window_indicies.find(element->id);
+            ui_element elem  = *element;
             // well so that we dont pop and push back again.
             if (ui_sys_state_ptr->root.nodes[*index].id == elem.id)
             {
                 ui_sys_state_ptr->root.nodes.pop_at(*index);
                 ui_sys_state_ptr->root.nodes.push_back(elem);
-                ui_sys_state_ptr->focsed_win_id = elem.id;
+                ui_sys_state_ptr->hover_win_id = elem.id;
             }
         }
     }
-    return is_pressed;
+    return;
 }
 
 static void _generate_element_geometry(ui_element *element)
@@ -1077,7 +1074,7 @@ u64 ui_system_end_frame()
         _adjust_sizes(elem);
     }
 
-    for (u32 i = 0; i < length; i++)
+    for (s32 i = length - 1; i >= 0; i--)
     {
         ui_element *elem = &ui_sys_state_ptr->root.nodes[i];
         _transition_state(elem);
@@ -1110,7 +1107,7 @@ u64 ui_system_end_frame()
     ui_sys_state_ptr->local_index_offset              = 0;
     ui_sys_state_ptr->ui_geometry_config.vertex_count = 0;
     ui_sys_state_ptr->ui_geometry_config.index_count  = 0;
-    ui_sys_state_ptr->focsed_win_id                   = INVALID_ID_64;
+    ui_sys_state_ptr->hover_win_id                    = INVALID_ID_64;
 
     if (ui_sys_state_ptr->is_stale)
     {
